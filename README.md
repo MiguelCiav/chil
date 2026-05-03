@@ -1,10 +1,8 @@
-# Chil ⚜️
+# Chil 
 
-Chil: A native desktop app (macOS, Win, Linux) built with Tauri, React, and Rust. It automates scout recognition workflows: batch PDF generation, member verification, and statistical tracking via SQLite. A fast, secure tool for cooperators to manage records and custom storage folders.
+A native desktop app (macOS, Win, Linux) built with Tauri, React, and Rust. It automates scout recognition workflows: batch PDF generation, member verification, and statistical tracking via SQLite. A fast, secure tool for cooperators to manage records and custom storage folders.
 
----
-
-## 🚀 Key Features
+## Key Features
 
 *   **Member Verification**: Quickly check if a scout member has an active registration to authorize recognitions.
 *   **Batch Generation**: Input Group, District, and Region data to generate multiple recognitions at once.
@@ -13,9 +11,7 @@ Chil: A native desktop app (macOS, Win, Linux) built with Tauri, React, and Rust
 *   **Statistics & History**: Access a detailed table of generated recognitions for statistical analysis and record keeping.
 *   **Distribution Tracking**: Maintain lists of members from the latest batch to facilitate delivery to scout leaders.
 
----
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 *   **Framework**: React with Vite
@@ -31,9 +27,7 @@ Chil: A native desktop app (macOS, Win, Linux) built with Tauri, React, and Rust
 *   **Database**: SQLite
 *   **ORM**: SeaORM
 
----
-
-## 🧪 DevOps & Quality
+## DevOps & Quality
 
 *   **Testing**:
     *   **Frontend**: Vitest & React Testing Library.
