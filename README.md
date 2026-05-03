@@ -6,12 +6,12 @@ Chil: A native desktop app (macOS, Win, Linux) built with Tauri, React, and Rust
 
 ## 🚀 Key Features
 
-*   **Member Verification**: Quickly check if a scout member has an active registration to authorize recognitions[cite: 1].
-*   **Batch Generation**: Input Group, District, and Region data to generate multiple recognitions at once[cite: 1].
-*   **PDF Export**: Export individual or batch recognitions directly to PDF format[cite: 1].
-*   **Custom Storage**: Select specific folders to store and organize generated recognitions[cite: 1].
-*   **Statistics & History**: Access a detailed table of generated recognitions for statistical analysis and record keeping[cite: 1].
-*   **Distribution Tracking**: Maintain lists of members from the latest batch to facilitate delivery to scout leaders[cite: 1].
+*   **Member Verification**: Quickly check if a scout member has an active registration to authorize recognitions.
+*   **Batch Generation**: Input Group, District, and Region data to generate multiple recognitions at once.
+*   **PDF Export**: Export individual or batch recognitions directly to PDF format.
+*   **Custom Storage**: Select specific folders to store and organize generated recognitions.
+*   **Statistics & History**: Access a detailed table of generated recognitions for statistical analysis and record keeping.
+*   **Distribution Tracking**: Maintain lists of members from the latest batch to facilitate delivery to scout leaders.
 
 ---
 
