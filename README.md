@@ -20,7 +20,7 @@ A native desktop app (macOS, Win, Linux) built with Tauri, React, and Rust. It a
 ### Frontend
 *   **Framework**: React with Vite
 *   **Language**: TypeScript
-*   **Styling**: TailwindCSS & Shadcn/ui
+*   **Styling**: TailwindCSS
 *   **Navigation**: React Router
 *   **Data Handling**: TanStack Table & React Hook Form
 *   **Validation**: Zod
@@ -36,7 +36,10 @@ A native desktop app (macOS, Win, Linux) built with Tauri, React, and Rust. It a
 *   **Testing**:
     *   **Frontend**: Vitest & React Testing Library.
     *   **Backend**: Native Rust tests with SeaORM Mocking.
-    *   **E2E**: Playwright for cross-platform flow validation.
+    *   **E2E**: WebdriverIO & `tauri-driver` for native app testing.
+*   **Linting**:
+    *   **Frontend**: ESLint for code quality and style.
+    *   **Backend**: Cargo Clippy for idiomatic Rust lints.
 *   **CI/CD**: GitHub Actions for automated linting, testing, and multi-platform builds.
 *   **Workflow**: GitHub Flow (main + feature branches) with **Conventional Commits**.
 *   **Versioning**: Automatic SemVer and Changelog generation via **Changesets**.
