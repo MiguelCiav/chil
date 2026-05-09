@@ -61,6 +61,9 @@ jobs:
           cd src-tauri
           cargo test
 
+      - name: Build debug binary for E2E
+        run: npm run tauri build -- --debug
+
       # 3. E2E Testing
       - name: Install tauri-driver
         run: cargo install tauri-driver --locked
