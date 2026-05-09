@@ -60,7 +60,11 @@ npx changeset
 
 ### Step 4: Pull Request and Merge
 
-Upload your branch and open a PR on GitHub. Once approved and after passing the automatic tests, perform a **Squash Merge** to `main`.
+Upload your branch and open a PR on GitHub. Once approved and after passing the automatic tests, perform a **Squash Merge** to `main`. Remember to commit the changeset before merging. You can use a commit like this:
+
+```bash
+git commit -m "chore: add changeset"
+```
 
 ---
 
