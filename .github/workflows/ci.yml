@@ -47,6 +47,11 @@ jobs:
         with:
           components: clippy
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
       - name: Install Node dependencies
         run: npm ci
 
@@ -83,9 +88,37 @@ jobs:
           sleep 5
           npx wdio run wdio.conf.ts
 
-  build-and-release:
+  release-planner:
     needs: lint-and-test
     if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Create Release Pull Request
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: npm run version-packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-release:
+    needs: [lint-and-test, release-planner]
+    if: github.ref == 'refs/heads/main' && needs.release-planner.outputs.hasChangesets != 'true'
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
@@ -121,21 +154,15 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
       - name: Install Node dependencies
         run: npm ci
 
-      # 5. Semantic Release (Changesets)
-      # Run only on Linux to avoid duplicate PRs
-      - name: Create Release Pull Request or Publish
-        if: matrix.platform == 'ubuntu-latest'
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: npm run version-packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # 4. Build to compile Chil Installers (Tauri)
+      # Build to compile Chil Installers (Tauri)
       # This action builds the app and creates a GitHub Release if the version changed.
       - name: Build and Release Tauri App
         uses: tauri-apps/tauri-action@v0
