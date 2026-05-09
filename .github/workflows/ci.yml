@@ -2,10 +2,14 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, feature/ci-cd ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   lint-and-test:
@@ -78,7 +82,7 @@ jobs:
 
   build-and-release:
     needs: lint-and-test
-    if: github.ref == 'refs/heads/feature/ci-cd'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
