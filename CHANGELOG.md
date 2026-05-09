@@ -1,5 +1,11 @@
 # chil
 
+## 0.4.0
+
+### Minor Changes
+
+- b05c157: The CI/CD pipeline for the app development now works completely, it builds the app on Windows, Mac (both intel and arm), and Linux
+
 ## 0.3.0
 
 ### Minor Changes
