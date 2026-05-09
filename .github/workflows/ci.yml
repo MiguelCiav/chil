@@ -83,13 +83,19 @@ jobs:
   build-and-release:
     needs: lint-and-test
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install system dependencies
+      - name: Install system dependencies (Linux only)
+        if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -116,7 +122,9 @@ jobs:
         run: npm ci
 
       # 5. Semantic Release (Changesets)
+      # Run only on Linux to avoid duplicate PRs
       - name: Create Release Pull Request or Publish
+        if: matrix.platform == 'ubuntu-latest'
         id: changesets
         uses: changesets/action@v1
         with:
