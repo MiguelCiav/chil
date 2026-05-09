@@ -1,5 +1,15 @@
 # chil
 
+## 0.5.0
+
+### Minor Changes
+
+- c7426dd: The CI/CD pipeline for the app development now works completely, it builds the app on Windows, Mac (both intel and arm), and Linux
+
+### Patch Changes
+
+- c7426dd: The duplicated releases are now fixed
+
 ## 0.4.0
 
 ### Minor Changes
