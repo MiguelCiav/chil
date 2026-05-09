@@ -61,13 +61,8 @@ jobs:
           cd src-tauri
           cargo test
 
-      - name: Build frontend for E2E
-        run: npm run build
-
-      - name: Build backend binary for E2E
-        run: |
-          cd src-tauri
-          cargo build
+      - name: Build debug binary for E2E
+        run: npm run tauri build -- --debug --no-bundle
 
       # 3. E2E Testing
       - name: Install tauri-driver
