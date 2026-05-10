@@ -5,4 +5,5 @@ use tokio::sync::Mutex;
 /// Shared application state injected into all Tauri commands.
 pub struct AppState {
     pub db: Arc<Mutex<DatabaseConnection>>,
+    pub http_client: reqwest::Client,
 }

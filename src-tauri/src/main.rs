@@ -22,6 +22,10 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .manage(AppState {
             db: Arc::new(Mutex::new(db_conn)),
+            http_client: reqwest::Client::builder()
+                .cookie_store(true)
+                .build()
+                .expect("failed to create reqwest client"),
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping_db,
