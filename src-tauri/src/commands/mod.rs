@@ -1,6 +1,9 @@
 use crate::models::AppState;
 use sea_orm::DatabaseConnection;
 
+pub mod scraper;
+
+
 /// Core logic separated from Tauri's command wrapper.
 /// This makes it easily testable with a mock database.
 pub async fn check_db_connection(_db: &DatabaseConnection) -> Result<String, String> {

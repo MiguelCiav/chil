@@ -29,8 +29,8 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping_db,
-            // Register new commands here as features are added:
-            // commands::your_module::your_command,
+            commands::scraper::login,
+            commands::scraper::get_member_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
