@@ -3,6 +3,7 @@
 
 mod commands;
 mod db;
+mod entities;
 mod models;
 mod services;
 

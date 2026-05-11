@@ -1,4 +1,4 @@
-use sea_orm::{Database, DatabaseConnection, DbErr};
+use sea_orm::{Database, DatabaseConnection, DbErr, ConnectionTrait};
 use std::fs;
 use std::path::Path;
 
@@ -24,8 +24,29 @@ pub async fn establish_connection(db_url: &str) -> Result<DatabaseConnection, Db
 
     let db = Database::connect(db_url).await?;
 
-    // TODO: Run migrations when entities are defined
-    // e.g., Migrator::up(&db, None).await?;
+    // Create tables if they don't exist
+    let builder = db.get_database_backend();
+    let schema = sea_orm::Schema::new(builder);
+    
+    let mut stmt = schema.create_table_from_entity(crate::entities::region::Entity);
+    stmt.if_not_exists();
+    db.execute(builder.build(&stmt)).await?;
+
+    let mut stmt = schema.create_table_from_entity(crate::entities::district::Entity);
+    stmt.if_not_exists();
+    db.execute(builder.build(&stmt)).await?;
+
+    let mut stmt = schema.create_table_from_entity(crate::entities::scout_group::Entity);
+    stmt.if_not_exists();
+    db.execute(builder.build(&stmt)).await?;
+
+    let mut stmt = schema.create_table_from_entity(crate::entities::unit::Entity);
+    stmt.if_not_exists();
+    db.execute(builder.build(&stmt)).await?;
+
+    let mut stmt = schema.create_table_from_entity(crate::entities::scout_member::Entity);
+    stmt.if_not_exists();
+    db.execute(builder.build(&stmt)).await?;
 
     Ok(db)
 }
