@@ -32,6 +32,11 @@ fn main() {
             commands::ping_db,
             commands::scraper::login,
             commands::scraper::get_member_status,
+            commands::member::create_member,
+            commands::member::get_member,
+            commands::member::get_all_members,
+            commands::member::update_member,
+            commands::member::delete_member,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

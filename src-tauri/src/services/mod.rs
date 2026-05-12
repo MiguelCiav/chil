@@ -3,4 +3,5 @@
 //
 
 pub mod scraper_service;
+pub mod member_service;
 

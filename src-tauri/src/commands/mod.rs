@@ -2,6 +2,7 @@ use crate::models::AppState;
 use sea_orm::DatabaseConnection;
 
 pub mod scraper;
+pub mod member;
 
 
 /// Core logic separated from Tauri's command wrapper.
