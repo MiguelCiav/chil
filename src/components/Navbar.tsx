@@ -1,13 +1,17 @@
 import React from 'react';
 import { Bell, Settings, User } from 'lucide-react';
+import logo from '../assets/CHIL_LOGO.png';
 
 export const Navbar: React.FC = () => {
   return (
     <nav className="h-16 px-6 border-b border-gray-200 bg-white flex items-center justify-between">
       <div className="flex items-center h-full">
         {/* Logo */}
-        <div className="text-primary font-bold text-xl mr-8">
-          Chil
+        <div className="flex items-center mr-8">
+          <img src={logo} alt="Chil Logo" className="h-8 w-auto mr-2" />
+          <div className="text-primary font-bold text-xl">
+            Chil
+          </div>
         </div>
         
         {/* Navigation Links */}
