@@ -48,47 +48,58 @@ Make your changes following the commit standard. The system (Husky + Commitlint)
 
 ### Step 3: Change Registration (Changeset)
 
-Before finishing the branch, you must document the impact of the change for versioning:
+Before opening your Pull Request or merging, you must document the impact of your change for automated versioning:
 
 ```bash
 npx changeset
 ```
+*(Alternatively, you can run `npm run create-changeset`)*
 
-1. Select the affected package.
+1. Select the affected package (e.g., `chil`).
 2. Define if it is a **patch** change (bugfix), **minor** (feature), or **major** (breaking change).
-3. Write a short summary for `CHANGELOG.md`.
+3. Write a short summary of changes for `CHANGELOG.md`.
 
 ### Step 4: Pull Request and Merge
 
-Upload your branch and open a PR on GitHub. Once approved and after passing the automatic tests, perform a **Squash Merge** to `main`. Remember to commit the changeset before merging. You can use a commit like this:
-
-```bash
-git commit -m "chore: add changeset"
-```
+1. Commit the generated changeset file in your feature branch:
+   ```bash
+   git add .changeset/
+   git commit -m "chore: add changeset"
+   ```
+2. Upload your branch and open a PR on GitHub.
+3. Once approved and after passing the automated CI checks, perform a **Squash Merge** to `main`. 
 
 ---
 
-## 4. Versioning and Releases
+## 4. Automated Versioning and Releases
 
-Versioning follows the **SemVer** standard (Major.Minor.Patch). In the current phase of initial development, we use the **0.x.y** series.
+Versioning follows the **SemVer** standard (Major.Minor.Patch). In the current phase of initial development, we use the **0.x.y** series. 
 
-### To release a new version (in `main`):
+The entire release process is fully automated via our **GitHub Actions CI/CD Pipeline**, eliminating the need for manual versioning, changelog generation, or manual tagging on the `main` branch.
 
-1. **Update versions and files:**
-```bash
-npm run version-packages
+### Release Workflow
+
+The automated release workflow runs on every push or merge to the `main` branch:
+
+```mermaid
+graph TD
+    A[Feature PR Merged into main] --> B[CI/CD: lint-and-test runs]
+    B -->|Success| C{Are there outstanding changesets?}
+    C -->|Yes| D[CI/CD: release-planner runs]
+    D --> E[Automatically opens 'Version Packages' PR]
+    E --> F[Maintainer Merges 'Version Packages' PR]
+    F --> B
+    C -->|No| G[CI/CD: build-and-release runs]
+    G --> H[Compiles installers for Linux, macOS, and Windows]
+    G --> I[Creates GitHub Release and tags commit with v__VERSION__]
 ```
 
-*This consumes the files in the `.changeset` folder, updates `package.json`, `tauri.conf.json`, and generates `CHANGELOG.md`.*
+1. **Automatic Pull Request Generation ("Version Packages")**:
+   - When a feature branch with a changeset file is merged into `main`, the `release-planner` job is triggered.
+   - It automatically consumes the changeset files, increments version numbers in `package.json` and `tauri.conf.json` using `npm run version-packages`, generates/updates `CHANGELOG.md`, and opens a special **"Version Packages" Pull Request** on GitHub.
 
-2. **Release Commit:**
-```bash
-git add .
-git commit -m "chore: release vX.Y.Z"
-```
+2. **Publishing the Release**:
+   - A maintainer reviews and merges this **"Version Packages" Pull Request**.
+   - Upon merge, the `build-and-release` job runs. Since no outstanding changesets remain, it compiles the optimized installers for all platforms (`ubuntu-latest`, `macos-latest`, `macos-15-intel`, and `windows-latest`) using `tauri-action`.
+   - It then automatically creates a **GitHub Release**, uploads the compiled installers (e.g., `.deb`, `.app`, `.exe`), and tags the commit with the new version (e.g., `v0.5.0`).
 
-3. **Tag and Push:**
-```bash
-git tag vX.Y.Z
-git push origin main --tags
-```
