@@ -10,7 +10,7 @@ interface FieldProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLTe
   errorText?: string;
 }
 
-export const Field: React.FC<FieldProps> = ({
+export const Field = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, FieldProps>(({
   label,
   multiline = false,
   rows = 4,
@@ -20,7 +20,7 @@ export const Field: React.FC<FieldProps> = ({
   id,
   disabled,
   ...props
-}) => {
+}, ref) => {
   const fieldId = id || `field-${label.toLowerCase().replace(/\s+/g, '-')}`;
   
   // Base styles
@@ -57,6 +57,7 @@ export const Field: React.FC<FieldProps> = ({
           rows={rows}
           className={classes}
           disabled={disabled}
+          ref={ref as React.Ref<HTMLTextAreaElement>}
           {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
         />
       ) : (
@@ -64,6 +65,7 @@ export const Field: React.FC<FieldProps> = ({
           id={fieldId}
           className={classes}
           disabled={disabled}
+          ref={ref as React.Ref<HTMLInputElement>}
           {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
         />
       )}
@@ -73,4 +75,7 @@ export const Field: React.FC<FieldProps> = ({
       )}
     </div>
   );
-};
+});
+
+Field.displayName = 'Field';
+

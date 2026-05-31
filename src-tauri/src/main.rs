@@ -3,7 +3,6 @@
 
 mod commands;
 mod db;
-mod entities;
 mod models;
 mod services;
 
@@ -37,6 +36,9 @@ fn main() {
             commands::member::get_all_members,
             commands::member::update_member,
             commands::member::delete_member,
+            commands::batch::get_hierarchy_data,
+            commands::batch::create_batch,
+            commands::pdf::generate_batch_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
