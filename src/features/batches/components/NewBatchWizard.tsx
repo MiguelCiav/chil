@@ -34,7 +34,9 @@ import {
   createMember, 
   updateMember, 
   getMembersByBatchId,
-  RECOGNITION_TYPES 
+  RECOGNITION_TYPES,
+  getScraperCredentials,
+  loginScraper
 } from '../api';
 import { 
   Region, 
@@ -73,6 +75,8 @@ export const NewBatchWizard: React.FC = () => {
   const [verificationList, setVerificationList] = useState<MemberVerificationResult[]>([]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyProgress, setVerifyProgress] = useState({ current: 0, total: 0 });
+  const [showAuthAlert, setShowAuthAlert] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Step 3 State
   const [savedMembers, setSavedMembers] = useState<ScoutMember[]>([]);
@@ -248,13 +252,37 @@ export const NewBatchWizard: React.FC = () => {
     }
 
     setIsVerifying(true);
-    setVerifyProgress({ current: 0, total: allCedulas.length });
+    setAuthError(null);
 
-    // Perform queries sequentially or parallelized
-    const promises = allCedulas.map(item => verifyCedula(item.cedula, item.type));
-    await Promise.all(promises);
+    try {
+      // 1. Check if the credentials are saved
+      const creds = await getScraperCredentials();
+      if (!creds || !creds.email || !creds.password) {
+        setIsVerifying(false);
+        setShowAuthAlert(true);
+        return;
+      }
 
-    setIsVerifying(false);
+      // 2. If saved, invoke the Tauri login command first to authenticate
+      try {
+        await loginScraper(creds);
+      } catch (loginErr) {
+        setIsVerifying(false);
+        const errStr = loginErr instanceof Error ? loginErr.message : String(loginErr);
+        setAuthError(errStr);
+        return;
+      }
+
+      // 3. Initiate the parallel verification requests
+      setVerifyProgress({ current: 0, total: allCedulas.length });
+      const promises = allCedulas.map(item => verifyCedula(item.cedula, item.type));
+      await Promise.all(promises);
+    } catch (err) {
+      console.error("Verification main flow error:", err);
+      alert("Hubo un error inesperado al iniciar la verificación.");
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleToggleMemberType = async (cedula: string) => {
@@ -869,7 +897,79 @@ export const NewBatchWizard: React.FC = () => {
         )}
       </Modal>
 
+      {/* Scraper Authorization Alert Modal */}
+      <Modal isOpen={showAuthAlert} onClose={() => setShowAuthAlert(false)} className="max-w-md">
+        <ModalHeader onClose={() => setShowAuthAlert(false)}>
+          <span className="flex items-center gap-2 text-amber-600 font-bold">
+            <AlertTriangle className="w-5 h-5" />
+            Autenticación del Scraper Requerida
+          </span>
+        </ModalHeader>
+        <ModalBody className="space-y-4 text-neutral">
+          <p className="text-sm font-normal">
+            No se han configurado las credenciales de la <strong>Asociación de Scouts de Venezuela (ASV)</strong> en la aplicación.
+          </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-neutral/80 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-800">¿Por qué es necesario?</p>
+              <p className="mt-1">
+                La aplicación necesita consultar de forma segura el portal oficial de registro de la ASV. Sin credenciales de cooperador activas, las consultas automáticas fallarán con "Error de Red".
+              </p>
+            </div>
+          </div>
+          <p className="text-sm font-semibold">
+            Para continuar, por favor siga estos pasos:
+          </p>
+          <ol className="list-decimal list-inside text-sm space-y-2 text-neutral/80">
+            <li>Haga clic en el icono de <strong>Ajustes (engranaje ⚙️)</strong> en la barra de navegación superior.</li>
+            <li>Ingrese su correo y contraseña oficiales de la ASV.</li>
+            <li>Guarde los ajustes e intente la verificación de nuevo.</li>
+          </ol>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            variant="primary"
+            onClick={() => setShowAuthAlert(false)}
+            fullWidth
+          >
+            Entendido
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Scraper Login Error Modal */}
+      <Modal isOpen={authError !== null} onClose={() => setAuthError(null)} className="max-w-md">
+        <ModalHeader onClose={() => setAuthError(null)}>
+          <span className="flex items-center gap-2 text-red-600 font-bold">
+            <AlertCircle className="w-5 h-5" />
+            Error de Autenticación ASV
+          </span>
+        </ModalHeader>
+        <ModalBody className="space-y-4 text-neutral">
+          <p className="text-sm font-normal">
+            Se intentó iniciar sesión con sus credenciales guardadas de la ASV, pero el servidor retornó un error de acceso:
+          </p>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">
+            <p className="font-mono break-all">{authError}</p>
+          </div>
+          <p className="text-sm">
+            Por favor, haga clic en el icono de <strong>Ajustes (engranaje ⚙️)</strong> en la parte superior para verificar que su correo y contraseña sean correctos y guardarlos nuevamente.
+          </p>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            variant="outline"
+            onClick={() => setAuthError(null)}
+            fullWidth
+          >
+            Cerrar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
     </div>
   );
 };
 export default NewBatchWizard;
+

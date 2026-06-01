@@ -92,6 +92,14 @@ pub async fn get_hierarchy_data(db: &DatabaseConnection) -> Result<HierarchyData
     })
 }
 
+/// Retrieve all batch records ordered by `created_at` descending
+pub async fn get_all_batches(db: &DatabaseConnection) -> Result<Vec<batch::Model>, DbErr> {
+    batch::Entity::find()
+        .order_by_desc(batch::Column::CreatedAt)
+        .all(db)
+        .await
+}
+
 /// Creates a new batch and links active scout members of that scout group to it
 pub async fn create_batch(
     db: &DatabaseConnection,
@@ -309,5 +317,37 @@ mod tests {
         assert_eq!(details.group.name, "Grupo Scouts 45");
         assert_eq!(details.members.len(), 1);
         assert_eq!(details.members[0].first_name, "Juan");
+    }
+
+    #[tokio::test]
+    async fn test_get_all_batches() {
+        let db = MockDatabase::new(sea_orm::DatabaseBackend::Sqlite)
+            .append_query_results([vec![
+                batch::Model {
+                    id: 2,
+                    name: "Lote Reciente".to_string(),
+                    region_id: 1,
+                    district_id: 1,
+                    group_id: 1,
+                    created_at: "2026-05-31 13:00:00".to_string(),
+                },
+                batch::Model {
+                    id: 1,
+                    name: "Lote Inicial".to_string(),
+                    region_id: 1,
+                    district_id: 1,
+                    group_id: 1,
+                    created_at: "2026-05-31 12:00:00".to_string(),
+                },
+            ]])
+            .into_connection();
+
+        let batches = get_all_batches(&db).await.unwrap();
+
+        assert_eq!(batches.len(), 2);
+        assert_eq!(batches[0].id, 2);
+        assert_eq!(batches[0].name, "Lote Reciente");
+        assert_eq!(batches[1].id, 1);
+        assert_eq!(batches[1].name, "Lote Inicial");
     }
 }

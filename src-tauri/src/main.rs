@@ -31,6 +31,8 @@ fn main() {
             commands::ping_db,
             commands::scraper::login,
             commands::scraper::get_member_status,
+            commands::scraper::save_scraper_credentials,
+            commands::scraper::get_scraper_credentials,
             commands::member::create_member,
             commands::member::get_member,
             commands::member::get_all_members,
@@ -38,6 +40,8 @@ fn main() {
             commands::member::delete_member,
             commands::batch::get_hierarchy_data,
             commands::batch::create_batch,
+            commands::batch::get_all_batches,
+            commands::batch::get_batch_details,
             commands::pdf::generate_batch_report,
         ])
         .run(tauri::generate_context!())

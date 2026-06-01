@@ -268,11 +268,64 @@ export async function generateBatchReport(batchId: number): Promise<string> {
 }
 
 export async function getAllBatches(): Promise<Batch[]> {
+  if (isTauri) {
+    try {
+      return await invoke<Batch[]>('get_all_batches');
+    } catch (error) {
+      console.warn("get_all_batches IPC failed, falling back to mock", error);
+    }
+  }
   const batches = JSON.parse(safeGetItem('chil_batches') || '[]');
   return batches;
 }
 
 export async function getBatchById(id: number): Promise<Batch | null> {
+  if (isTauri) {
+    try {
+      interface RustBatchDetails {
+        batch: Batch;
+      }
+      const details = await invoke<RustBatchDetails | null>('get_batch_details', { batchId: id });
+      return details ? details.batch : null;
+    } catch (error) {
+      console.warn("get_batch_details IPC failed, falling back to mock", error);
+    }
+  }
   const batches = await getAllBatches();
   return batches.find(b => b.id === id) || null;
 }
+
+export interface ScraperCredentials {
+  email: string;
+  password: string;
+}
+
+export async function saveScraperCredentials(credentials: ScraperCredentials): Promise<void> {
+  if (isTauri) {
+    await invoke('save_scraper_credentials', { credentials });
+  } else {
+    safeSetItem('chil_scraper_credentials', JSON.stringify(credentials));
+  }
+}
+
+export async function getScraperCredentials(): Promise<ScraperCredentials | null> {
+  if (isTauri) {
+    try {
+      return await invoke<ScraperCredentials | null>('get_scraper_credentials');
+    } catch (e) {
+      console.warn("Failed to get scraper credentials, using safe localStorage", e);
+    }
+  }
+  const creds = safeGetItem('chil_scraper_credentials');
+  return creds ? JSON.parse(creds) : null;
+}
+
+export async function loginScraper(credentials: ScraperCredentials): Promise<void> {
+  if (isTauri) {
+    await invoke('login', { email: credentials.email, password: credentials.password });
+  } else {
+    // Simulator mock login delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+}
+
