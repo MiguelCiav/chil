@@ -68,9 +68,88 @@ pub async fn establish_connection(db_url: &str) -> Result<DatabaseConnection, Db
     Ok(db)
 }
 
+async fn seed_from_external_db(db: &DatabaseConnection) -> Result<bool, DbErr> {
+    let relative_paths = vec!["../reconocimientos.db", "reconocimientos.db"];
+    let mut db_path = None;
+    for path_str in relative_paths {
+        let path = Path::new(path_str);
+        if path.exists() {
+            if let Ok(abs_path) = fs::canonicalize(path) {
+                db_path = Some(abs_path);
+                break;
+            }
+        }
+    }
+
+    let db_path = match db_path {
+        Some(path) => path,
+        None => return Ok(false),
+    };
+
+    let db_path_str = match db_path.to_str() {
+        Some(s) => s,
+        None => return Ok(false),
+    };
+
+    let builder = db.get_database_backend();
+
+    // Attach database
+    db.execute(sea_orm::Statement::from_string(
+        builder,
+        format!("ATTACH DATABASE '{}' AS source_db;", db_path_str),
+    ))
+    .await?;
+
+    // Copy region records
+    let res_region = db.execute(sea_orm::Statement::from_string(
+        builder,
+        "INSERT OR IGNORE INTO region (id, name) SELECT id, nombre FROM source_db.regiones;".to_string(),
+    ))
+    .await;
+
+    // Copy district records
+    let res_district = db.execute(sea_orm::Statement::from_string(
+        builder,
+        "INSERT OR IGNORE INTO district (id, name, region_id) SELECT id, nombre, region_id FROM source_db.distritos;".to_string(),
+    ))
+    .await;
+
+    // Copy scout_group records
+    let res_group = db.execute(sea_orm::Statement::from_string(
+        builder,
+        "INSERT OR IGNORE INTO scout_group (id, name, district_id) SELECT id, nombre, distrito_id FROM source_db.grupos;".to_string(),
+    ))
+    .await;
+
+    // Detach database
+    let detach_res = db.execute(sea_orm::Statement::from_string(
+        builder,
+        "DETACH DATABASE source_db;".to_string(),
+    ))
+    .await;
+
+    // Propagate errors
+    res_region?;
+    res_district?;
+    res_group?;
+    detach_res?;
+
+    Ok(true)
+}
+
 async fn seed_database(db: &DatabaseConnection) -> Result<(), DbErr> {
     use crate::db::entities::{district, region, scout_group, unit};
     use sea_orm::{ActiveModelTrait, EntityTrait, PaginatorTrait};
+
+    let count = region::Entity::find().count(db).await?;
+    if count <= 2 {
+        if let Ok(true) = seed_from_external_db(db).await {
+            let new_count = region::Entity::find().count(db).await?;
+            if new_count > 2 {
+                return Ok(());
+            }
+        }
+    }
 
     let count = region::Entity::find().count(db).await?;
     if count == 0 {

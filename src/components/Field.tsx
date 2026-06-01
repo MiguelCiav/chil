@@ -24,7 +24,7 @@ export const Field = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, Fi
   const fieldId = id || `field-${label.toLowerCase().replace(/\s+/g, '-')}`;
   
   // Base styles
-  const baseStyles = "w-full rounded-field p-4 transition-all resize-none focus:outline-none focus:ring-2 focus:border-transparent";
+  const baseStyles = "w-full rounded-field py-2.5 px-4 transition-all resize-none focus:outline-none focus:ring-2 focus:border-transparent";
   
   // Variant styles
   const variants: Record<FieldVariant, string> = {

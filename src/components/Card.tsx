@@ -19,8 +19,8 @@ interface CardHeaderProps {
 }
 
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => (
-  <div className={`px-6 py-4 border-b border-primary/10 bg-white ${className}`}>
-    <div className="text-lg font-semibold text-neutral">{children}</div>
+  <div className={`px-6 py-4 border-b border-primary/10 bg-white flex flex-row items-center justify-between gap-4 text-lg font-semibold text-neutral ${className}`}>
+    {children}
   </div>
 );
 

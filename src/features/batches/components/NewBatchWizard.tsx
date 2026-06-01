@@ -496,10 +496,10 @@ export const NewBatchWizard: React.FC = () => {
       {/* Premium Step Wizard Navigation Bar */}
       <div className="relative">
         {/* Background connector bar */}
-        <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2 rounded-full z-0" />
+        <div className="absolute top-6 left-6 right-6 h-1 bg-gray-200 -translate-y-1/2 rounded-full z-0" />
         <div 
-          className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 rounded-full transition-all duration-500 z-0"
-          style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
+          className="absolute top-6 left-6 h-1 bg-primary -translate-y-1/2 rounded-full transition-all duration-500 z-0"
+          style={{ width: `calc(${(currentStep - 1) / 2} * (100% - 3rem))` }}
         />
 
         <div className="relative z-10 flex justify-between">
@@ -547,15 +547,6 @@ export const NewBatchWizard: React.FC = () => {
               <div className="grid md:grid-cols-2 gap-6">
                 
                 <div className="space-y-6">
-                  <Field
-                    label="Nombre del Lote *"
-                    placeholder="Ej. Lote Aniversario Mayo 2026"
-                    errorText={errors.name?.message}
-                    variant={errors.name ? 'error' : 'default'}
-                    disabled={loadingHierarchy}
-                    {...register('name')}
-                  />
-
                   {/* Region Select */}
                   <div className="w-full">
                     <label htmlFor="region-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
@@ -563,7 +554,7 @@ export const NewBatchWizard: React.FC = () => {
                     </label>
                     <select
                       id="region-select"
-                      className={`w-full rounded-field p-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary ${
+                      className={`w-full rounded-field py-2.5 px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed ${
                         errors.regionId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
                       }`}
                       disabled={loadingHierarchy}
@@ -586,7 +577,7 @@ export const NewBatchWizard: React.FC = () => {
                     </label>
                     <select
                       id="district-select"
-                      className={`w-full rounded-field p-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary ${
+                      className={`w-full rounded-field py-2.5 px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed ${
                         errors.districtId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
                       }`}
                       disabled={!selectedRegionId || loadingHierarchy}
@@ -601,9 +592,7 @@ export const NewBatchWizard: React.FC = () => {
                       <p className="mt-1.5 text-sm text-red-500 font-medium">{errors.districtId.message}</p>
                     )}
                   </div>
-                </div>
 
-                <div className="space-y-6">
                   {/* Group Select */}
                   <div className="w-full">
                     <label htmlFor="group-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
@@ -611,7 +600,7 @@ export const NewBatchWizard: React.FC = () => {
                     </label>
                     <select
                       id="group-select"
-                      className={`w-full rounded-field p-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary ${
+                      className={`w-full rounded-field py-2.5 px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed ${
                         errors.groupId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
                       }`}
                       disabled={!selectedDistrictId || loadingHierarchy}
@@ -626,6 +615,17 @@ export const NewBatchWizard: React.FC = () => {
                       <p className="mt-1.5 text-sm text-red-500 font-medium">{errors.groupId.message}</p>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-6">
+                  <Field
+                    label="Nombre del Lote *"
+                    placeholder="Ej. Lote Aniversario Mayo 2026"
+                    errorText={errors.name?.message}
+                    variant={errors.name ? 'error' : 'default'}
+                    disabled={loadingHierarchy}
+                    {...register('name')}
+                  />
 
                   {/* Recognition Type Select */}
                   <div className="w-full">
@@ -634,7 +634,7 @@ export const NewBatchWizard: React.FC = () => {
                     </label>
                     <select
                       id="recognition-select"
-                      className={`w-full rounded-field p-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary ${
+                      className={`w-full rounded-field py-2.5 px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed ${
                         errors.recognitionType ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
                       }`}
                       disabled={loadingHierarchy}
