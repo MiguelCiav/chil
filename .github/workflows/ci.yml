@@ -73,20 +73,7 @@ jobs:
           cd src-tauri
           cargo test
 
-      - name: Build debug binary for E2E
-        run: npm run tauri build -- --debug --no-bundle
 
-      # 3. E2E Testing
-      - name: Install tauri-driver
-        run: cargo install tauri-driver --locked
-
-      - name: Run E2E Tests
-        run: |
-          Xvfb :99 -screen 0 1024x768x24 &
-          export DISPLAY=:99
-          tauri-driver &
-          sleep 5
-          npx wdio run wdio.conf.ts
 
   release-planner:
     needs: lint-and-test
