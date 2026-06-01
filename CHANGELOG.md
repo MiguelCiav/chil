@@ -1,5 +1,11 @@
 # chil
 
+## 0.6.0
+
+### Minor Changes
+
+- 450623d: Implement premium visual wizard refinements, button-modal search selectors for Regions, Districts, and Groups, dynamic SQLite database seeding from external db using ATTACH DATABASE, and integrated automated test coverage pipelines for Vitest and Rust.
+
 ## 0.5.0
 
 ### Minor Changes
