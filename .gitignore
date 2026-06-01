@@ -30,3 +30,12 @@ dist-ssr
 
 #env
 .env
+
+# Coverage
+src-tauri/lcov.info
+lcov.info
+coverage/
+.nyc_output/
+
+# Wireframes
+wireframes/

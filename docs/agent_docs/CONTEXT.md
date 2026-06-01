@@ -11,11 +11,12 @@ Welcome to the active developer context for **Chil**. This document serves as th
 
 * **Frontend (`src/`)**: 100% functional React 19 single-page-app with client-side routing under `react-router-dom`. Features a premium persistent layout, statistical dashboards, a cascading hierarchy selection form, and parallel scraping status checks.
 * **Módulo de Nuevo Lote Wizard & Views (`src/features/batches`)**:
-  * **Step 1 (Organización)**: Cascading selection logic for Regions, Districts, and Groups. Form validation with Zod and React Hook Form.
+  * **Step 1 (Organización)**: Cascading selection logic for Regions, Districts, and Groups using premium button-based search modals. Form validation with Zod and React Hook Form.
   * **Step 2 (Miembros & Verificación)**: Bulk verification via parallel async scraping calls (`get_member_status`). Commits successful active scouts to SQLite (`create_member` / `update_member`) and flags pending registrations.
   * **Step 3 (Revisión)**: Search filters, validation tab sorting, and manual edit modal allowing correction of member records.
   * **Pantalla de Éxito & Detalles**: KPI metrics dashboards, alert indicators for pending items, and premium PDF report generation (`generate_batch_report`).
-* **Backend (`src-tauri/`)**: Fully integrated. Database CRUD commands successfully sync batch identifiers (`batch_id`) on scraped members in SQLite.
+* **Backend (`src-tauri/`)**: Fully integrated database and API service layer. Relational scout data seeds dynamically from an external SQLite seed database `reconocimientos.db` using high-speed ATTACH DATABASE.
+* **Test Coverage**: Frontend test coverage configured using `@vitest/coverage-v8` (Statements: ~74%). Rust backend test coverage set up and verified using `cargo-llvm-cov` (Statements: ~42%, `batch_service.rs` at **98.21%**), with a portable `coverage.sh` automation script.
 
 ---
 
@@ -74,11 +75,13 @@ Below are the active Tauri IPC commands exposed to the frontend:
 2.  **Decoupled Service Layers**: All services under `src-tauri/src/services/` accept raw references to `&DatabaseConnection`. This guarantees that database unit tests can mock all transactions easily using `sea-orm::MockDatabase`.
 3.  **Dynamic PDF Reports**: Built-in Helvetica fonts with custom Spanish glyph sanitizers prevent PDF encoding failures while keeping executable sizes small. Supporting sequential Mock database queries and execution results ensures 100% test coverage.
 4.  **Scraper Redirect Detection & Database Upserts**: Implemented robust redirection and error checking inside `scraper_service` to identify when credentials fail (returning a proper login error modal) or when a session is unauthenticated, distinguishing it from an unregistered member. In addition, the `create_member` service was upgraded to perform safe upserts rather than raw inserts, avoiding SQLite unique primary key constraint violations which previously manifested as silent network errors in the UI.
+5.  **ATTACH DATABASE for Seeding**: Employed high-speed atomic SQLite queries (`ATTACH DATABASE ... AS source_db`) to seed 200+ hierarchical rows (Regions, Districts, Groups) from an external database directly in Rust, ensuring instant database loading without loop overheads.
+6.  **Button-Modal Hierarchy Selection**: Swapped long dropdown menus with clean button-modals featuring real-time client-side search filtering, ensuring perfect height uniformity across all form controls.
 
 ---
 
 ## 5. Next Architectural Milestones
 
 1.  **Módulo de Reconocimientos (M4)**: Implement frontend and backend tracking for scout recognition awards, categories, and badge printing template layouts.
-2.  **Frontend Binding & UI Wizards**: Wire feature select fields and validation tabs in `/features/batches` directly to the new `get_hierarchy_data` and `create_batch` IPC commands.
-3.  **PDF Report Previews**: Introduce interactive PDF preview modals in the client-side UI before confirming report downloads.
+2.  **PDF Report Previews**: Introduce interactive PDF preview modals in the client-side UI before confirming report downloads.
+3.  **Expand Test Coverage**: Unignore and mock the scraper service tests and add unit testing to `member_service.rs` to raise statement coverage above 80%.
