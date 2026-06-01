@@ -27,3 +27,15 @@ dist-ssr
 *.db-journal
 *.db-shm
 *.db-wal
+
+#env
+.env
+
+# Coverage
+src-tauri/lcov.info
+lcov.info
+coverage/
+.nyc_output/
+
+# Wireframes
+wireframes/

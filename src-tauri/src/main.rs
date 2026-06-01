@@ -7,8 +7,6 @@ mod models;
 mod services;
 
 use models::AppState;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 fn main() {
     let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -21,12 +19,28 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState {
-            db: Arc::new(Mutex::new(db_conn)),
+            db: db_conn,
+            http_client: reqwest::Client::builder()
+                .cookie_store(true)
+                .build()
+                .expect("failed to create reqwest client"),
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping_db,
-            // Register new commands here as features are added:
-            // commands::your_module::your_command,
+            commands::scraper::login_scraper,
+            commands::scraper::get_member_status,
+            commands::scraper::save_scraper_credentials,
+            commands::scraper::has_scraper_credentials,
+            commands::member::create_member,
+            commands::member::get_member,
+            commands::member::get_all_members,
+            commands::member::update_member,
+            commands::member::delete_member,
+            commands::batch::get_hierarchy_data,
+            commands::batch::create_batch,
+            commands::batch::get_all_batches,
+            commands::batch::get_batch_details,
+            commands::pdf::generate_batch_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

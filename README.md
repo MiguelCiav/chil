@@ -97,6 +97,11 @@ Maintains code quality and consistency across both languages.
 - **Frontend (ESLint):** `npm run lint`
 - **Backend (Cargo Clippy):** `cd src-tauri && cargo clippy`
 
+### 5. Code Coverage Reports
+You can run automated test coverage reports on both frontend and backend code:
+- **Frontend Coverage (Vitest):** Run `npx vitest run --coverage`. Reports are generated under `coverage/`.
+- **Backend Coverage (Rust):** Navigate to the backend directory `cd src-tauri` and run the executable coverage runner `./coverage.sh`. It checks dependencies and launches `cargo-llvm-cov` to print a terminal report, export LCOV files (`lcov.info`), or open interactive browser views (`./coverage.sh --open`).
+
 ---
 
 ## Building for Production
