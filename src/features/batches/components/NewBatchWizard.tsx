@@ -178,13 +178,17 @@ export const NewBatchWizard: React.FC = () => {
 
     try {
       const res = await getMemberStatus(cedula);
+      
+      const isScrapedActive = res.status && res.status.toLowerCase() === 'activo';
+      const rowStatus = isScrapedActive ? 'Registro válido' : 'No registrado';
+
       // Success! Update list with results
       setVerificationList(prev => prev.map(item => 
         item.cedula === cedula 
           ? { 
               cedula, 
               name: res.nombre_completo, 
-              status: 'Registro válido', 
+              status: rowStatus, 
               type, 
               details: res 
             } 
@@ -201,7 +205,7 @@ export const NewBatchWizard: React.FC = () => {
           email: res.correo_electronico,
           phone: res.telefono,
           member_type: type,
-          status: 'active',
+          status: isScrapedActive ? 'active' : 'pending',
           batch_id: batchId
         });
       }

@@ -13,14 +13,21 @@ pub struct MemberDetails {
 
 /// Performs login and stores session cookies in the client.
 pub async fn login(client: &Client, email: &str, password: &str) -> Result<(), String> {
-    // 1. Get the login page to extract the authenticity token
+    // 1. Get the login page to extract the authenticity token or check if already logged in
     let resp = client
         .get("https://registro.scouts.org.ve/")
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
+    let final_url = resp.url().as_str().to_string();
     let html_content = resp.text().await.map_err(|e| e.to_string())?;
+
+    // If we are already logged in, the page will not have the sign-in inputs and we won't be on the sign-in URL
+    if !final_url.contains("/users/sign_in") && !final_url.contains("/login") && !html_content.contains("user[email]") {
+        return Ok(());
+    }
+
     let token = {
         let document = Html::parse_document(&html_content);
         let token_selector = Selector::parse("input[name='authenticity_token']").unwrap();
@@ -71,7 +78,7 @@ pub async fn get_member_status(client: &Client, cedula: &str) -> Result<MemberDe
         .await
         .map_err(|e| e.to_string())?;
 
-    let final_url = result_resp.url().as_str();
+    let final_url = result_resp.url().as_str().to_string();
     if final_url.contains("/users/sign_in") {
         return Err("Error de red: Sesión de scraper no autenticada o expirada".to_string());
     }
