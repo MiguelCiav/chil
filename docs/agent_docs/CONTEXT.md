@@ -73,6 +73,7 @@ Below are the active Tauri IPC commands exposed to the frontend:
 1.  **Scraper Session Persistence**: The reqwest client is constructed with cookie jars enabled and managed directly inside the Tauri `AppState` struct (`main.rs`). This maintains an authenticated session across sequential front-end command calls.
 2.  **Decoupled Service Layers**: All services under `src-tauri/src/services/` accept raw references to `&DatabaseConnection`. This guarantees that database unit tests can mock all transactions easily using `sea-orm::MockDatabase`.
 3.  **Dynamic PDF Reports**: Built-in Helvetica fonts with custom Spanish glyph sanitizers prevent PDF encoding failures while keeping executable sizes small. Supporting sequential Mock database queries and execution results ensures 100% test coverage.
+4.  **Scraper Redirect Detection & Database Upserts**: Implemented robust redirection and error checking inside `scraper_service` to identify when credentials fail (returning a proper login error modal) or when a session is unauthenticated, distinguishing it from an unregistered member. In addition, the `create_member` service was upgraded to perform safe upserts rather than raw inserts, avoiding SQLite unique primary key constraint violations which previously manifested as silent network errors in the UI.
 
 ---
 
