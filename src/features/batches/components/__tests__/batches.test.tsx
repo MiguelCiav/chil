@@ -63,7 +63,7 @@ describe('NewBatchWizard - Step 1 (Organización)', () => {
     
     // Wait for hierarchy to load
     await waitFor(() => {
-      expect(screen.getByText('Región Capital')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
     });
 
     const regionSelect = screen.getByLabelText(/Región Scout/i);
@@ -79,22 +79,37 @@ describe('NewBatchWizard - Step 1 (Organización)', () => {
       </BrowserRouter>
     );
 
+    // Wait for hierarchy to load
     await waitFor(() => {
-      expect(screen.getByText('Región Capital')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
     });
 
     const regionSelect = screen.getByLabelText(/Región Scout/i);
     const districtSelect = screen.getByLabelText(/Distrito Scout/i);
 
-    // Select Region Capital (ID = 1)
-    fireEvent.change(regionSelect, { target: { value: '1' } });
+    // Open Region Modal
+    fireEvent.click(regionSelect);
+
+    // Region Capital option should be present in the modal
+    const regionOption = await screen.findByText('Región Capital');
+    expect(regionOption).toBeInTheDocument();
+
+    // Select Region Capital
+    fireEvent.click(regionOption);
 
     // District select should be enabled
-    expect(districtSelect).not.toBeDisabled();
+    await waitFor(() => {
+      expect(districtSelect).not.toBeDisabled();
+    });
     
-    // Distrito Sucre (region 1) should be present
-    expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
-    // Distrito Valencia (region 2) should NOT be present under the options
+    // Open District Modal
+    fireEvent.click(districtSelect);
+
+    // Distrito Sucre should be present
+    const districtOption = await screen.findByText('Distrito Sucre');
+    expect(districtOption).toBeInTheDocument();
+
+    // Distrito Valencia (region 2) should NOT be present
     expect(screen.queryByText('Distrito Valencia')).not.toBeInTheDocument();
   });
 
@@ -105,8 +120,9 @@ describe('NewBatchWizard - Step 1 (Organización)', () => {
       </BrowserRouter>
     );
 
+    // Wait for hierarchy to load
     await waitFor(() => {
-      expect(screen.getByText('Región Capital')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
     });
 
     const nameInput = screen.getByLabelText(/Nombre del Lote/i);

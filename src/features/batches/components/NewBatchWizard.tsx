@@ -17,7 +17,8 @@ import {
   Sparkles,
   ClipboardList,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ChevronDown
 } from 'lucide-react';
 
 import { Card, CardHeader, CardBody, CardFooter } from '../../../components/Card';
@@ -86,6 +87,16 @@ export const NewBatchWizard: React.FC = () => {
   const [editingMember, setEditingMember] = useState<ScoutMember | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // Selector Modal States
+  const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
+  const [isDistrictModalOpen, setIsDistrictModalOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+
+  // Selector Search Query States
+  const [regionSearch, setRegionSearch] = useState('');
+  const [districtSearch, setDistrictSearch] = useState('');
+  const [groupSearch, setGroupSearch] = useState('');
+
   // --- Initialize Form (Step 1) ---
   const {
     register,
@@ -107,6 +118,7 @@ export const NewBatchWizard: React.FC = () => {
 
   const selectedRegionId = watch('regionId');
   const selectedDistrictId = watch('districtId');
+  const selectedGroupId = watch('groupId');
 
   // Load Hierarchy Data
   useEffect(() => {
@@ -137,6 +149,22 @@ export const NewBatchWizard: React.FC = () => {
 
   const filteredGroups = groups.filter(
     g => g.district_id === Number(selectedDistrictId)
+  );
+
+  const selectedRegion = regions.find(r => r.id.toString() === selectedRegionId);
+  const selectedDistrict = districts.find(d => d.id.toString() === selectedDistrictId);
+  const selectedGroup = groups.find(g => g.id.toString() === selectedGroupId);
+
+  const filteredRegionsList = regions.filter(r =>
+    r.name.toLowerCase().includes(regionSearch.toLowerCase())
+  );
+
+  const filteredDistrictsList = filteredDistricts.filter(d =>
+    d.name.toLowerCase().includes(districtSearch.toLowerCase())
+  );
+
+  const filteredGroupsList = filteredGroups.filter(g =>
+    g.name.toLowerCase().includes(groupSearch.toLowerCase())
   );
 
   // --- Step 1 Submit: Create Batch ---
@@ -547,70 +575,95 @@ export const NewBatchWizard: React.FC = () => {
               <div className="grid md:grid-cols-2 gap-6">
                 
                 <div className="space-y-6">
-                  {/* Region Select */}
+                  {/* Hidden inputs for RHF validation */}
+                  <input type="hidden" {...register('regionId')} />
+                  <input type="hidden" {...register('districtId')} />
+                  <input type="hidden" {...register('groupId')} />
+
+                  {/* Region Selector */}
                   <div className="w-full">
-                    <label htmlFor="region-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                    <label htmlFor="region-selector" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
                       Región Scout *
                     </label>
-                    <select
-                      id="region-select"
-                      className={`w-full rounded-field py-2.5 px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed ${
-                        errors.regionId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                    <button
+                      type="button"
+                      id="region-selector"
+                      onClick={() => {
+                        setRegionSearch('');
+                        setIsRegionModalOpen(true);
+                      }}
+                      className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${
+                        errors.regionId 
+                          ? 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900' 
+                          : 'border-primary/20 text-neutral hover:border-primary/50'
                       }`}
                       disabled={loadingHierarchy}
-                      {...register('regionId')}
                     >
-                      <option value="">Seleccione una región</option>
-                      {regions.map(r => (
-                        <option key={r.id} value={r.id}>{r.name}</option>
-                      ))}
-                    </select>
+                      <span className="truncate">{selectedRegion ? selectedRegion.name : 'Seleccione una región'}</span>
+                      <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${loadingHierarchy ? 'text-neutral/20' : 'text-primary/70'}`} />
+                    </button>
                     {errors.regionId && (
                       <p className="mt-1.5 text-sm text-red-500 font-medium">{errors.regionId.message}</p>
                     )}
                   </div>
 
-                  {/* District Select */}
+                  {/* District Selector */}
                   <div className="w-full">
-                    <label htmlFor="district-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                    <label htmlFor="district-selector" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
                       Distrito Scout *
                     </label>
-                    <select
-                      id="district-select"
-                      className={`w-full rounded-field py-2.5 px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed ${
-                        errors.districtId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                    <button
+                      type="button"
+                      id="district-selector"
+                      onClick={() => {
+                        if (selectedRegionId) {
+                          setDistrictSearch('');
+                          setIsDistrictModalOpen(true);
+                        }
+                      }}
+                      className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${
+                        !selectedRegionId || loadingHierarchy
+                          ? 'bg-gray-100 text-neutral/30 border-gray-200 cursor-not-allowed opacity-50'
+                          : errors.districtId
+                            ? 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900'
+                            : 'border-primary/20 text-neutral hover:border-primary/50'
                       }`}
                       disabled={!selectedRegionId || loadingHierarchy}
-                      {...register('districtId')}
                     >
-                      <option value="">Seleccione un distrito</option>
-                      {filteredDistricts.map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
+                      <span className="truncate">{selectedDistrict ? selectedDistrict.name : 'Seleccione un distrito'}</span>
+                      <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${!selectedRegionId || loadingHierarchy ? 'text-neutral/20' : 'text-primary/70'}`} />
+                    </button>
                     {errors.districtId && (
                       <p className="mt-1.5 text-sm text-red-500 font-medium">{errors.districtId.message}</p>
                     )}
                   </div>
 
-                  {/* Group Select */}
+                  {/* Group Selector */}
                   <div className="w-full">
-                    <label htmlFor="group-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                    <label htmlFor="group-selector" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
                       Grupo Scout *
                     </label>
-                    <select
-                      id="group-select"
-                      className={`w-full rounded-field py-2.5 px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed ${
-                        errors.groupId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                    <button
+                      type="button"
+                      id="group-selector"
+                      onClick={() => {
+                        if (selectedDistrictId) {
+                          setGroupSearch('');
+                          setIsGroupModalOpen(true);
+                        }
+                      }}
+                      className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${
+                        !selectedDistrictId || loadingHierarchy
+                          ? 'bg-gray-100 text-neutral/30 border-gray-200 cursor-not-allowed opacity-50'
+                          : errors.groupId
+                            ? 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900'
+                            : 'border-primary/20 text-neutral hover:border-primary/50'
                       }`}
                       disabled={!selectedDistrictId || loadingHierarchy}
-                      {...register('groupId')}
                     >
-                      <option value="">Seleccione un grupo scout</option>
-                      {filteredGroups.map(g => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
-                      ))}
-                    </select>
+                      <span className="truncate">{selectedGroup ? selectedGroup.name : 'Seleccione un grupo scout'}</span>
+                      <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${!selectedDistrictId || loadingHierarchy ? 'text-neutral/20' : 'text-primary/70'}`} />
+                    </button>
                     {errors.groupId && (
                       <p className="mt-1.5 text-sm text-red-500 font-medium">{errors.groupId.message}</p>
                     )}
@@ -634,7 +687,7 @@ export const NewBatchWizard: React.FC = () => {
                     </label>
                     <select
                       id="recognition-select"
-                      className={`w-full rounded-field py-2.5 px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed ${
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed text-sm h-[46px] ${
                         errors.recognitionType ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
                       }`}
                       disabled={loadingHierarchy}
@@ -1000,6 +1053,144 @@ export const NewBatchWizard: React.FC = () => {
             Cerrar
           </Button>
         </ModalFooter>
+      </Modal>
+
+      {/* Region Selector Modal */}
+      <Modal isOpen={isRegionModalOpen} onClose={() => setIsRegionModalOpen(false)} className="max-w-md">
+        <ModalHeader onClose={() => setIsRegionModalOpen(false)}>
+          <span className="flex items-center gap-2 text-primary font-bold">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Seleccionar Región Scout
+          </span>
+        </ModalHeader>
+        <ModalBody className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Buscar región..."
+              value={regionSearch}
+              onChange={e => setRegionSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-primary/20 bg-primary/5 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm transition-all h-[46px]"
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+            {filteredRegionsList.length === 0 ? (
+              <p className="text-sm text-neutral/40 text-center py-4">No se encontraron regiones</p>
+            ) : (
+              filteredRegionsList.map(r => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => {
+                    setValue('regionId', r.id.toString(), { shouldValidate: true });
+                    setIsRegionModalOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between group ${
+                    selectedRegionId === r.id.toString()
+                      ? 'bg-primary text-white font-semibold'
+                      : 'hover:bg-primary/5 text-neutral'
+                  }`}
+                >
+                  <span>{r.name}</span>
+                  {selectedRegionId === r.id.toString() && <Check className="w-4 h-4" />}
+                </button>
+              ))
+            )}
+          </div>
+        </ModalBody>
+      </Modal>
+
+      {/* District Selector Modal */}
+      <Modal isOpen={isDistrictModalOpen} onClose={() => setIsDistrictModalOpen(false)} className="max-w-md">
+        <ModalHeader onClose={() => setIsDistrictModalOpen(false)}>
+          <span className="flex items-center gap-2 text-primary font-bold">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Seleccionar Distrito Scout
+          </span>
+        </ModalHeader>
+        <ModalBody className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Buscar distrito..."
+              value={districtSearch}
+              onChange={e => setDistrictSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-primary/20 bg-primary/5 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm transition-all h-[46px]"
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+            {filteredDistrictsList.length === 0 ? (
+              <p className="text-sm text-neutral/40 text-center py-4">No se encontraron distritos</p>
+            ) : (
+              filteredDistrictsList.map(d => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => {
+                    setValue('districtId', d.id.toString(), { shouldValidate: true });
+                    setIsDistrictModalOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between group ${
+                    selectedDistrictId === d.id.toString()
+                      ? 'bg-primary text-white font-semibold'
+                      : 'hover:bg-primary/5 text-neutral'
+                  }`}
+                >
+                  <span>{d.name}</span>
+                  {selectedDistrictId === d.id.toString() && <Check className="w-4 h-4" />}
+                </button>
+              ))
+            )}
+          </div>
+        </ModalBody>
+      </Modal>
+
+      {/* Group Selector Modal */}
+      <Modal isOpen={isGroupModalOpen} onClose={() => setIsGroupModalOpen(false)} className="max-w-md">
+        <ModalHeader onClose={() => setIsGroupModalOpen(false)}>
+          <span className="flex items-center gap-2 text-primary font-bold">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Seleccionar Grupo Scout
+          </span>
+        </ModalHeader>
+        <ModalBody className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Buscar grupo..."
+              value={groupSearch}
+              onChange={e => setGroupSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-primary/20 bg-primary/5 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm transition-all h-[46px]"
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+            {filteredGroupsList.length === 0 ? (
+              <p className="text-sm text-neutral/40 text-center py-4">No se encontraron grupos</p>
+            ) : (
+              filteredGroupsList.map(g => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => {
+                    setValue('groupId', g.id.toString(), { shouldValidate: true });
+                    setIsGroupModalOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between group ${
+                    selectedGroupId === g.id.toString()
+                      ? 'bg-primary text-white font-semibold'
+                      : 'hover:bg-primary/5 text-neutral'
+                  }`}
+                >
+                  <span>{g.name}</span>
+                  {selectedGroupId === g.id.toString() && <Check className="w-4 h-4" />}
+                </button>
+              ))
+            )}
+          </div>
+        </ModalBody>
       </Modal>
 
     </div>
