@@ -46,7 +46,14 @@ pub async fn login(client: &Client, email: &str, password: &str) -> Result<(), S
         .await
         .map_err(|e| e.to_string())?;
 
-    if login_resp.status().is_success() || login_resp.status().is_redirection() {
+    let status = login_resp.status();
+    let final_url = login_resp.url().as_str();
+
+    if final_url.contains("/users/sign_in") {
+        return Err("Credenciales incorrectas o inicio de sesión fallido".into());
+    }
+
+    if status.is_success() || status.is_redirection() {
         Ok(())
     } else {
         Err("Login failed".into())
@@ -63,6 +70,11 @@ pub async fn get_member_status(client: &Client, cedula: &str) -> Result<MemberDe
         .send()
         .await
         .map_err(|e| e.to_string())?;
+
+    let final_url = result_resp.url().as_str();
+    if final_url.contains("/users/sign_in") {
+        return Err("Error de red: Sesión de scraper no autenticada o expirada".to_string());
+    }
 
     let result_html = result_resp.text().await.map_err(|e| e.to_string())?;
 
@@ -96,6 +108,10 @@ pub async fn get_member_status(client: &Client, cedula: &str) -> Result<MemberDe
         }
     }
 
+    if member.nombre_completo.is_empty() {
+        return Err("No registrado".to_string());
+    }
+
     Ok(member)
 }
 
@@ -124,7 +140,7 @@ mod tests {
             .expect("Login failed");
 
         println!("Fetching member status via service...");
-        let member = get_member_status(&client, "30541929").await.unwrap();
+        let member = get_member_status(&client, "12345678").await.unwrap();
         println!("--- PARSED DATA START ---");
         println!("{:#?}", member);
         println!("--- PARSED DATA END ---");

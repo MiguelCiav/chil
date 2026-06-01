@@ -3,14 +3,36 @@ use crate::db::entities::scout_member::{
 };
 use sea_orm::*;
 
-/// Create a new scout member
+use sea_orm::ActiveValue::Set;
+
+/// Create a new scout member or update if already exists (upsert)
 pub async fn create_member(
     db: &DatabaseConnection,
     member_data: ScoutMemberModel,
 ) -> Result<ScoutMemberModel, DbErr> {
-    // Convert Model to ActiveModel to insert it
-    let active_model: ScoutMemberActiveModel = member_data.into_active_model();
-    active_model.insert(db).await
+    let existing = ScoutMember::find_by_id(member_data.identity.clone())
+        .one(db)
+        .await?;
+
+    let active_model = ScoutMemberActiveModel {
+        identity: Set(member_data.identity),
+        first_name: Set(member_data.first_name),
+        last_name: Set(member_data.last_name),
+        birth_date: Set(member_data.birth_date),
+        email: Set(member_data.email),
+        phone: Set(member_data.phone),
+        group_id: Set(member_data.group_id),
+        unit_id: Set(member_data.unit_id),
+        member_type: Set(member_data.member_type),
+        status: Set(member_data.status),
+        batch_id: Set(member_data.batch_id),
+    };
+
+    if existing.is_some() {
+        active_model.update(db).await
+    } else {
+        active_model.insert(db).await
+    }
 }
 
 /// Get a scout member by their identity (Cédula)
