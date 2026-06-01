@@ -25,6 +25,5 @@ pub async fn generate_batch_report(
         .to_str()
         .ok_or_else(|| "Invalid output path characters".to_string())?;
 
-    let db = state.db.lock().await;
-    pdf_service::generate_batch_report(&db, batch_id, path_str).await
+    pdf_service::generate_batch_report(&state.db, batch_id, path_str).await
 }

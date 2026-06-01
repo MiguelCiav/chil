@@ -35,8 +35,9 @@ import {
   updateMember, 
   getMembersByBatchId,
   RECOGNITION_TYPES,
-  getScraperCredentials,
-  loginScraper
+  hasScraperCredentials,
+  loginScraper,
+  ScraperMemberDetails
 } from '../api';
 import { 
   Region, 
@@ -176,9 +177,49 @@ export const NewBatchWizard: React.FC = () => {
       }
     });
 
+    let scrapedResult: ScraperMemberDetails | null = null;
+    let scrapeError: Error | null = null;
+
     try {
-      const res = await getMemberStatus(cedula);
-      
+      scrapedResult = await getMemberStatus(cedula);
+    } catch (err) {
+      scrapeError = err instanceof Error ? err : new Error(String(err));
+    }
+
+    if (scrapeError) {
+      const errStr = scrapeError.message;
+      const isUnregistered = errStr.includes("No registrado");
+      const status = isUnregistered ? 'No registrado' : 'Error de red';
+
+      setVerificationList(prev => prev.map(item => 
+        item.cedula === cedula 
+          ? { 
+              cedula, 
+              name: isUnregistered ? 'Usuario No Registrado' : 'Error de conexión', 
+              status, 
+              type 
+            } 
+          : item
+      ));
+
+      // If unregistered, save as pending in SQLite
+      if (isUnregistered && batchId) {
+        try {
+          await createMember({
+            identity: cedula,
+            first_name: 'Usuario',
+            last_name: 'No Registrado',
+            birth_date: '1990-01-01',
+            member_type: type,
+            status: 'pending',
+            batch_id: batchId
+          });
+        } catch (dbErr) {
+          console.error("Database save failed for unregistered member:", dbErr);
+        }
+      }
+    } else if (scrapedResult) {
+      const res = scrapedResult;
       const isScrapedActive = res.status && res.status.toLowerCase() === 'activo';
       const rowStatus = isScrapedActive ? 'Registro válido' : 'No registrado';
 
@@ -197,49 +238,25 @@ export const NewBatchWizard: React.FC = () => {
 
       // Save to SQLite
       if (batchId) {
-        await createMember({
-          identity: cedula,
-          first_name: res.nombre_completo.split(' ')[0] || 'Miembro',
-          last_name: res.nombre_completo.split(' ').slice(1).join(' ') || 'Scrapeado',
-          birth_date: res.fecha_nacimiento || '1990-01-01',
-          email: res.correo_electronico,
-          phone: res.telefono,
-          member_type: type,
-          status: isScrapedActive ? 'active' : 'pending',
-          batch_id: batchId
-        });
+        try {
+          await createMember({
+            identity: cedula,
+            first_name: res.nombre_completo.split(' ')[0] || 'Miembro',
+            last_name: res.nombre_completo.split(' ').slice(1).join(' ') || 'Scrapeado',
+            birth_date: res.fecha_nacimiento || '1990-01-01',
+            email: res.correo_electronico,
+            phone: res.telefono,
+            member_type: type,
+            status: isScrapedActive ? 'active' : 'pending',
+            batch_id: batchId
+          });
+        } catch (dbErr) {
+          console.error("Database save failed for active/inactive member:", dbErr);
+        }
       }
-    } catch (err) {
-      const errStr = err instanceof Error ? err.message : String(err);
-      const isUnregistered = errStr.includes("No registrado");
-      const status = isUnregistered ? 'No registrado' : 'Error de red';
-
-      setVerificationList(prev => prev.map(item => 
-        item.cedula === cedula 
-          ? { 
-              cedula, 
-              name: isUnregistered ? 'Usuario No Registrado' : 'Error de conexión', 
-              status, 
-              type 
-            } 
-          : item
-      ));
-
-      // If unregistered, save as pending in SQLite
-      if (isUnregistered && batchId) {
-        await createMember({
-          identity: cedula,
-          first_name: 'Usuario',
-          last_name: 'No Registrado',
-          birth_date: '1990-01-01',
-          member_type: type,
-          status: 'pending',
-          batch_id: batchId
-        });
-      }
-    } finally {
-      setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
     }
+
+    setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
   };
 
   const handleVerify = async () => {
@@ -260,8 +277,8 @@ export const NewBatchWizard: React.FC = () => {
 
     try {
       // 1. Check if the credentials are saved
-      const creds = await getScraperCredentials();
-      if (!creds || !creds.email || !creds.password) {
+      const hasCreds = await hasScraperCredentials();
+      if (!hasCreds) {
         setIsVerifying(false);
         setShowAuthAlert(true);
         return;
@@ -269,7 +286,7 @@ export const NewBatchWizard: React.FC = () => {
 
       // 2. If saved, invoke the Tauri login command first to authenticate
       try {
-        await loginScraper(creds);
+        await loginScraper();
       } catch (loginErr) {
         setIsVerifying(false);
         const errStr = loginErr instanceof Error ? loginErr.message : String(loginErr);
@@ -290,25 +307,38 @@ export const NewBatchWizard: React.FC = () => {
   };
 
   const handleToggleMemberType = async (cedula: string) => {
-    setVerificationList(prev => prev.map(item => {
-      if (item.cedula === cedula) {
-        const nextType = item.type === 'young' ? 'adult' as const : 'young' as const;
-        
-        // Update sqlite background
-        if (batchId) {
-          getMembersByBatchId(batchId).then(async (members) => {
-            const current = members.find(m => m.identity === cedula);
-            if (current) {
-              current.member_type = nextType;
-              await updateMember(current);
-            }
-          });
+    // 1. Find the current item to determine next type
+    const currentItem = verificationList.find(item => item.cedula === cedula);
+    if (!currentItem) return;
+
+    const originalType = currentItem.type;
+    const nextType = originalType === 'young' ? 'adult' as const : 'young' as const;
+
+    // 2. Optimistic UI update
+    setVerificationList(prev => prev.map(item => 
+      item.cedula === cedula ? { ...item, type: nextType } : item
+    ));
+
+    // 3. Perform database update in background
+    if (batchId) {
+      try {
+        const members = await getMembersByBatchId(batchId);
+        const currentMember = members.find(m => m.identity === cedula);
+        if (currentMember) {
+          currentMember.member_type = nextType;
+          await updateMember(currentMember);
+        } else {
+          throw new Error("Miembro no encontrado en la base de datos.");
         }
-        
-        return { ...item, type: nextType };
+      } catch (err) {
+        console.error("Error al actualizar tipo de miembro en DB:", err);
+        // Revert UI to original state
+        setVerificationList(prev => prev.map(item => 
+          item.cedula === cedula ? { ...item, type: originalType } : item
+        ));
+        alert("No se pudo actualizar el tipo de miembro en la base de datos. Se ha revertido el cambio.");
       }
-      return item;
-    }));
+    }
   };
 
   // Move from Step 2 to Step 3

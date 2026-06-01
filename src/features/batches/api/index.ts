@@ -308,21 +308,21 @@ export async function saveScraperCredentials(credentials: ScraperCredentials): P
   }
 }
 
-export async function getScraperCredentials(): Promise<ScraperCredentials | null> {
+export async function hasScraperCredentials(): Promise<boolean> {
   if (isTauri) {
     try {
-      return await invoke<ScraperCredentials | null>('get_scraper_credentials');
+      return await invoke<boolean>('has_scraper_credentials');
     } catch (e) {
-      console.warn("Failed to get scraper credentials, using safe localStorage", e);
+      console.warn("Failed to check if scraper credentials exist", e);
+      return false;
     }
   }
-  const creds = safeGetItem('chil_scraper_credentials');
-  return creds ? JSON.parse(creds) : null;
+  return safeGetItem('chil_scraper_credentials') !== null;
 }
 
-export async function loginScraper(credentials: ScraperCredentials): Promise<void> {
+export async function loginScraper(): Promise<void> {
   if (isTauri) {
-    await invoke('login', { email: credentials.email, password: credentials.password });
+    await invoke('login_scraper');
   } else {
     // Simulator mock login delay
     await new Promise(resolve => setTimeout(resolve, 500));

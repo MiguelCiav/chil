@@ -10,6 +10,5 @@ pub mod scraper;
 /// to the pure service layer.
 #[tauri::command]
 pub async fn ping_db(state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let db = state.db.lock().await;
-    services::system::check_db_connection(&db).await
+    services::system::check_db_connection(&state.db).await
 }

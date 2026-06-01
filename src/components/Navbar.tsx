@@ -5,12 +5,13 @@ import logo from '../assets/CHIL_LOGO.png';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from './Modal';
 import { Button } from './Button';
 import { Field } from './Field';
-import { getScraperCredentials, saveScraperCredentials } from '../features/batches/api';
+import { hasScraperCredentials, saveScraperCredentials } from '../features/batches/api';
 
 export const Navbar: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [hasCredentials, setHasCredentials] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -18,18 +19,14 @@ export const Navbar: React.FC = () => {
   // Fetch settings when modal is opened
   useEffect(() => {
     if (isSettingsOpen) {
-      getScraperCredentials()
-        .then(creds => {
-          if (creds) {
-            setEmail(creds.email);
-            setPassword(creds.password);
-          } else {
-            setEmail('');
-            setPassword('');
-          }
+      hasScraperCredentials()
+        .then(hasCreds => {
+          setHasCredentials(hasCreds);
+          setEmail('');
+          setPassword('');
         })
         .catch(err => {
-          console.error("Failed to load settings:", err);
+          console.error("Failed to check settings:", err);
         });
     }
   }, [isSettingsOpen]);
@@ -41,6 +38,7 @@ export const Navbar: React.FC = () => {
     setErrorMsg('');
     try {
       await saveScraperCredentials({ email, password });
+      setHasCredentials(true);
       setSuccessMsg('Credenciales guardadas exitosamente.');
       setTimeout(() => {
         setIsSettingsOpen(false);
@@ -125,13 +123,18 @@ export const Navbar: React.FC = () => {
             <p className="text-sm text-neutral/70">
               Ingrese sus credenciales de la Asociación de Scouts de Venezuela (ASV) para permitir la consulta y verificación automatizada de miembros.
             </p>
+            {hasCredentials && (
+              <p className="text-xs text-green-600 font-semibold bg-green-50 p-2.5 rounded-lg border border-green-200">
+                ✓ Credenciales configuradas. Rellene los campos si desea actualizarlas.
+              </p>
+            )}
             <Field
               label="Correo Electrónico"
               type="email"
               placeholder="ejemplo@scouts.org.ve"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
+              required={!hasCredentials}
             />
             <Field
               label="Contraseña"
@@ -139,7 +142,7 @@ export const Navbar: React.FC = () => {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              required={!hasCredentials}
             />
             {successMsg && (
               <p className="text-sm text-green-600 font-semibold bg-green-50 p-2.5 rounded-lg border border-green-200">

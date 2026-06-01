@@ -7,8 +7,6 @@ mod models;
 mod services;
 
 use models::AppState;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 fn main() {
     let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -21,7 +19,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState {
-            db: Arc::new(Mutex::new(db_conn)),
+            db: db_conn,
             http_client: reqwest::Client::builder()
                 .cookie_store(true)
                 .build()
@@ -29,10 +27,10 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::ping_db,
-            commands::scraper::login,
+            commands::scraper::login_scraper,
             commands::scraper::get_member_status,
             commands::scraper::save_scraper_credentials,
-            commands::scraper::get_scraper_credentials,
+            commands::scraper::has_scraper_credentials,
             commands::member::create_member,
             commands::member::get_member,
             commands::member::get_all_members,
