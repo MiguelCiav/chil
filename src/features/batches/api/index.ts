@@ -70,6 +70,23 @@ export async function createBatch(params: BatchCreationParams): Promise<Batch> {
   return newBatch;
 }
 
+export async function updateBatch(id: number, params: BatchCreationParams): Promise<Batch> {
+  const batchRef = doc(db, "batches", String(id));
+  const docSnap = await getDoc(batchRef);
+  
+  const updatedBatch: Batch = {
+    id,
+    name: params.name,
+    region_id: params.region_id,
+    district_id: params.district_id,
+    group_id: params.group_id,
+    created_at: docSnap.exists() ? (docSnap.data() as Batch).created_at : new Date().toISOString()
+  };
+
+  await setDoc(batchRef, updatedBatch);
+  return updatedBatch;
+}
+
 export interface ScraperMemberDetails {
   nombre_completo: string;
   status: string;

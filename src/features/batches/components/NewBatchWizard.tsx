@@ -31,6 +31,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { 
   getHierarchyData, 
   createBatch, 
+  updateBatch,
   getMemberStatus, 
   createMember, 
   updateMember, 
@@ -169,22 +170,30 @@ export const NewBatchWizard: React.FC = () => {
     g.name.toLowerCase().includes(groupSearch.toLowerCase())
   );
 
-  // --- Step 1 Submit: Create Batch ---
+  // --- Step 1 Submit: Create or Update Batch ---
   const onSubmitStep1 = async (data: Step1FormData) => {
     try {
-      const created = await createBatch({
+      let created;
+      const params = {
         name: data.name,
         region_id: Number(data.regionId),
         district_id: Number(data.districtId),
         group_id: Number(data.groupId),
         recognition_type: data.recognitionType
-      });
+      };
+
+      if (batchId) {
+        created = await updateBatch(batchId, params);
+      } else {
+        created = await createBatch(params);
+      }
+
       setBatchId(created.id);
       setBatchName(created.name);
       setCurrentStep(2);
     } catch (err) {
-      console.error("Failed to create batch:", err);
-      alert("Error al crear el lote. Inténtelo de nuevo.");
+      console.error("Failed to save batch:", err);
+      alert("Error al guardar el lote. Inténtelo de nuevo.");
     }
   };
 
