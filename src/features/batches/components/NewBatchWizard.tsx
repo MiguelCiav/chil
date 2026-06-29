@@ -79,6 +79,8 @@ export const NewBatchWizard: React.FC = () => {
   const [verifyProgress, setVerifyProgress] = useState({ current: 0, total: 0 });
   const [showAuthAlert, setShowAuthAlert] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Step 3 State
   const [savedMembers, setSavedMembers] = useState<ScoutMember[]>([]);
@@ -245,6 +247,10 @@ export const NewBatchWizard: React.FC = () => {
         } catch (dbErr) {
           console.error("Database save failed for unregistered member:", dbErr);
         }
+      } else if (!isUnregistered) {
+        setToastMessage(`Error de red al verificar la cédula ${cedula}`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 4000);
       }
     } else if (scrapedResult) {
       const res = scrapedResult;
@@ -519,8 +525,16 @@ export const NewBatchWizard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 font-sans">
+    <div className="max-w-5xl mx-auto space-y-8 font-sans relative">
       
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
+          <AlertCircle className="w-5 h-5 text-yellow-400" />
+          <span className="text-sm font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
       {/* Premium Step Wizard Navigation Bar */}
       <div className="relative">
         {/* Background connector bar */}
