@@ -694,13 +694,6 @@ export const NewBatchWizard: React.FC = () => {
                 </div>
 
                 <div className="space-y-6">
-                  <Field
-                    label="Comentario (Opcional)"
-                    placeholder="Ej. Lote Aniversario Mayo 2026"
-                    disabled={loadingHierarchy}
-                    {...register('comment')}
-                  />
-
                   {/* Recognition Type Select */}
                   <div className="w-full">
                     <label htmlFor="recognition-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
@@ -723,6 +716,13 @@ export const NewBatchWizard: React.FC = () => {
                       <p className="mt-1.5 text-sm text-red-500 font-medium">{errors.recognitionType.message}</p>
                     )}
                   </div>
+
+                  <Field
+                    label="Comentario (Opcional)"
+                    placeholder="Ej. Lote Aniversario Mayo 2026"
+                    disabled={loadingHierarchy}
+                    {...register('comment')}
+                  />
                 </div>
               </div>
 
