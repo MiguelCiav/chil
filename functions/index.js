@@ -40,8 +40,13 @@ function getCredentialsKey(credentials) {
 async function performLogin(email, password) {
   logger.info("Attempting login to registro.scouts.org.ve...");
   
+  const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
   // 1. Get login page to extract authenticity_token
   const getResp = await axios.get("https://registro.scouts.org.ve/", {
+    headers: {
+      'User-Agent': userAgent
+    },
     validateStatus: status => status >= 200 && status < 400
   });
   
@@ -62,8 +67,11 @@ async function performLogin(email, password) {
   const loginResp = await axios.post("https://registro.scouts.org.ve/users/sign_in", formData, {
     headers: {
       'Cookie': serializeCookies(cookies),
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': userAgent,
+      'Referer': 'https://registro.scouts.org.ve/users/sign_in'
     },
+    maxRedirects: 0,
     validateStatus: status => status >= 200 && status < 400
   });
 
@@ -79,13 +87,15 @@ async function performLogin(email, password) {
 }
 
 async function fetchMemberStatusWithCookies(cookies, cedula) {
+  const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
   const searchResp = await axios.get("https://registro.scouts.org.ve/members/status_member_submit", {
     params: {
       cedula: cedula,
       commit: "Buscar"
     },
     headers: {
-      'Cookie': serializeCookies(cookies)
+      'Cookie': serializeCookies(cookies),
+      'User-Agent': userAgent
     },
     validateStatus: status => status >= 200 && status < 400
   });
