@@ -51,7 +51,7 @@ import {
 
 // Step 1 Validation Schema
 const step1Schema = z.object({
-  name: z.string().min(3, "El nombre del lote debe tener al menos 3 caracteres"),
+  comment: z.string().optional(),
   regionId: z.string().min(1, "Debe seleccionar una región"),
   districtId: z.string().min(1, "Debe seleccionar un distrito"),
   groupId: z.string().min(1, "Debe seleccionar un grupo scout"),
@@ -111,7 +111,7 @@ export const NewBatchWizard: React.FC = () => {
     resolver: zodResolver(step1Schema),
     mode: 'onChange',
     defaultValues: {
-      name: '',
+      comment: '',
       regionId: '',
       districtId: '',
       groupId: '',
@@ -175,7 +175,7 @@ export const NewBatchWizard: React.FC = () => {
     try {
       let created;
       const params = {
-        name: data.name,
+        comment: data.comment || '',
         region_id: Number(data.regionId),
         district_id: Number(data.districtId),
         group_id: Number(data.groupId),
@@ -189,7 +189,7 @@ export const NewBatchWizard: React.FC = () => {
       }
 
       setBatchId(created.id);
-      setBatchName(created.name);
+      setBatchName(created.comment || '');
       setCurrentStep(2);
     } catch (err) {
       console.error("Failed to save batch:", err);
@@ -695,12 +695,10 @@ export const NewBatchWizard: React.FC = () => {
 
                 <div className="space-y-6">
                   <Field
-                    label="Nombre del Lote *"
+                    label="Comentario (Opcional)"
                     placeholder="Ej. Lote Aniversario Mayo 2026"
-                    errorText={errors.name?.message}
-                    variant={errors.name ? 'error' : 'default'}
                     disabled={loadingHierarchy}
-                    {...register('name')}
+                    {...register('comment')}
                   />
 
                   {/* Recognition Type Select */}

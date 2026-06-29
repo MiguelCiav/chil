@@ -245,7 +245,7 @@ export const BatchDetail: React.FC = () => {
             Volver al listado
           </Link>
           <h1 className="text-3xl font-extrabold text-neutral tracking-tight">
-            {batch.name}
+            Lote #{batch.id} {batch.comment ? `(${batch.comment})` : ''}
           </h1>
           
           <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-neutral/50">

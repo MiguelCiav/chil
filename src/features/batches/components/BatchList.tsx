@@ -75,21 +75,28 @@ export const BatchList: React.FC = () => {
 
   const filteredBatches = batches.filter(b => {
     const term = searchQuery.toLowerCase();
-    const name = b.name.toLowerCase();
+    const comment = (b.comment || '').toLowerCase();
+    const idStr = b.id.toString();
     const region = getRegionName(b.region_id).toLowerCase();
     const district = getDistrictName(b.district_id).toLowerCase();
     const group = getGroupName(b.group_id).toLowerCase();
     
-    return name.includes(term) || region.includes(term) || district.includes(term) || group.includes(term);
+    return idStr.includes(term) || comment.includes(term) || region.includes(term) || district.includes(term) || group.includes(term);
   });
 
   const columns: ColumnDef<Batch>[] = [
     {
-      accessorKey: 'name',
-      header: 'Nombre del Lote',
-      cell: (info) => (
-        <span className="font-semibold text-neutral">{info.getValue() as string}</span>
-      )
+      accessorKey: 'id',
+      header: 'Lote / Comentario',
+      cell: (info) => {
+        const rowData = info.row.original;
+        return (
+          <div className="flex flex-col">
+            <span className="font-semibold text-neutral">Lote #{rowData.id}</span>
+            {rowData.comment && <span className="text-xs text-neutral/50">{rowData.comment}</span>}
+          </div>
+        );
+      }
     },
     {
       accessorKey: 'region_id',

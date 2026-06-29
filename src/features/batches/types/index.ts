@@ -1,6 +1,6 @@
 export interface Batch {
   id: number;
-  name: string;
+  comment?: string;
   region_id: number;
   district_id: number;
   group_id: number;
@@ -53,7 +53,7 @@ export interface MemberVerificationResult {
 }
 
 export interface BatchCreationParams {
-  name: string;
+  comment?: string;
   region_id: number;
   district_id: number;
   group_id: number;

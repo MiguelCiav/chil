@@ -24,7 +24,7 @@ vi.mock('../../api', async (importOriginal) => {
     })),
     createBatch: vi.fn(async (params) => ({
       id: 123,
-      name: params.name,
+      comment: params.comment,
       region_id: params.region_id,
       district_id: params.district_id,
       group_id: params.group_id,
@@ -59,7 +59,7 @@ describe('NewBatchWizard - Step 1 (Organización)', () => {
     expect(screen.getByText('Configuración del Lote')).toBeInTheDocument();
 
     // Verify Fields exist
-    expect(screen.getByLabelText(/Nombre del Lote/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Comentario \(Opcional\)/i)).toBeInTheDocument();
     
     // Wait for hierarchy to load
     await waitFor(() => {
@@ -125,18 +125,16 @@ describe('NewBatchWizard - Step 1 (Organización)', () => {
       expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
     });
 
-    const nameInput = screen.getByLabelText(/Nombre del Lote/i);
+    const commentInput = screen.getByLabelText(/Comentario \(Opcional\)/i);
     const submitBtn = screen.getByText('Siguiente paso');
 
     // Button should be disabled initially
     expect(submitBtn).toBeDisabled();
 
-    // Fill name with too short text
-    fireEvent.change(nameInput, { target: { value: 'Lo' } });
-    fireEvent.blur(nameInput);
+    // Fill comment
+    fireEvent.change(commentInput, { target: { value: 'Lote de prueba' } });
 
-    await waitFor(() => {
-      expect(screen.getByText('El nombre del lote debe tener al menos 3 caracteres')).toBeInTheDocument();
-    });
+    // Submit button should still be disabled because dropdowns are not selected
+    expect(submitBtn).toBeDisabled();
   });
 });

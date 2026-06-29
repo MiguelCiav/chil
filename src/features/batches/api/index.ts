@@ -58,7 +58,7 @@ export async function createBatch(params: BatchCreationParams): Promise<Batch> {
   const numericId = Math.floor(Math.random() * 1000000) + 1;
   const newBatch: Batch = {
     id: numericId,
-    name: params.name,
+    comment: params.comment || '',
     region_id: params.region_id,
     district_id: params.district_id,
     group_id: params.group_id,
@@ -76,7 +76,7 @@ export async function updateBatch(id: number, params: BatchCreationParams): Prom
   
   const updatedBatch: Batch = {
     id,
-    name: params.name,
+    comment: params.comment || '',
     region_id: params.region_id,
     district_id: params.district_id,
     group_id: params.group_id,
@@ -219,7 +219,7 @@ export async function generateBatchReport(batchId: number): Promise<string> {
   
   docPdf.setFont("helvetica", "normal");
   docPdf.setFontSize(11);
-  docPdf.text(`Nombre: ${batch.name}`, 14, 50);
+  docPdf.text(`Comentario: ${batch.comment || 'Ninguno'}`, 14, 50);
   docPdf.text(`ID del Lote: ${batch.id}`, 14, 56);
   docPdf.text(`Fecha de Creación: ${new Date(batch.created_at).toLocaleString()}`, 14, 62);
   

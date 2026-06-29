@@ -205,7 +205,7 @@ export const SuccessPage: React.FC = () => {
         </div>
         <div>
           <h1 className="text-3xl font-extrabold text-neutral tracking-tight">¡Lote Generado Exitosamente!</h1>
-          <p className="text-neutral/50 font-medium mt-1">El lote <span className="text-primary font-bold">{batch.name}</span> está listo para ser procesado.</p>
+          <p className="text-neutral/50 font-medium mt-1">El lote <span className="text-primary font-bold">#{batch?.id}</span> está listo para ser procesado.</p>
         </div>
         <div className="flex justify-center gap-3 pt-3">
           <Button
