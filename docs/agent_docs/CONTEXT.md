@@ -11,77 +11,74 @@ Welcome to the active developer context for **Chil**. This document serves as th
 
 * **Frontend (`src/`)**: 100% functional React 19 single-page-app with client-side routing under `react-router-dom`. Features a premium persistent layout, statistical dashboards, a cascading hierarchy selection form, and parallel scraping status checks.
 * **Módulo de Nuevo Lote Wizard & Views (`src/features/batches`)**:
-  * **Step 1 (Organización)**: Cascading selection logic for Regions, Districts, and Groups using premium button-based search modals. Form validation with Zod and React Hook Form.
-  * **Step 2 (Miembros & Verificación)**: Bulk verification via parallel async scraping calls (`get_member_status`). Commits successful active scouts to SQLite (`create_member` / `update_member`) and flags pending registrations.
+  * **Step 1 (Organización)**: Cascading selection logic for Regions, Districts, and Groups using static hierarchy data and premium button-based search modals. Form validation with Zod and React Hook Form.
+  * **Step 2 (Miembros & Verificación)**: Bulk verification via parallel async scraper calls (`getMemberStatus`). Commits successful active scouts to Firestore (`scout_members` collection) and flags pending registrations.
   * **Step 3 (Revisión)**: Search filters, validation tab sorting, and manual edit modal allowing correction of member records.
-  * **Pantalla de Éxito & Detalles**: KPI metrics dashboards, alert indicators for pending items, and premium PDF report generation (`generate_batch_report`).
-* **Backend (`src-tauri/`)**: Fully integrated database and API service layer. Relational scout data seeds dynamically from an external SQLite seed database `reconocimientos.db` using high-speed ATTACH DATABASE.
-* **Test Coverage**: Frontend test coverage configured using `@vitest/coverage-v8` (Statements: ~74%). Rust backend test coverage set up and verified using `cargo-llvm-cov` (Statements: ~42%, `batch_service.rs` at **98.21%**), with a portable `coverage.sh` automation script.
+  * **Pantalla de Éxito & Detalles**: KPI metrics dashboards, alert indicators for pending items, and client-side PDF report generation (`generateBatchReport`) using `jsPDF`.
+* **Backend (`functions/` & `src/lib/firebase.ts`)**: Relies entirely on a serverless backend using Firebase Firestore, Cloud Functions, and Firebase Hosting. No local SQLite database connection or native desktop runner is used.
+* **Test Coverage**: Frontend test coverage configured using `@vitest/coverage-v8` (Statements: ~74%), running on Vitest with exclusions configured to ignore the Cloud Functions subfolders.
 
 ---
 
 ## 2. Active Database Schema & Models
 
-Our local SQLite schema (`sqlite.db`) is structured relationally using SeaORM:
+Our data is stored relationally inside **Firebase Firestore**:
 
 ```mermaid
 erDiagram
-    REGION ||--o{ DISTRICT : contains
-    DISTRICT ||--o{ SCOUT_GROUP : contains
-    SCOUT_GROUP ||--o{ UNIT : contains
-    UNIT ||--o{ SCOUT_MEMBER : has
-    REGION ||--o{ BATCH : geographic_region
-    DISTRICT ||--o{ BATCH : geographic_district
-    SCOUT_GROUP ||--o{ BATCH : geographic_group
     BATCH ||--o{ SCOUT_MEMBER : has
 ```
 
-* **`region`**: National scout organizational regions.
-* **`district`**: Regional scout districts.
-* **`scout_group`**: Local groups within districts.
-* **`unit`**: Section groups (e.g. Lobatos, Scouts, Rovers).
-* **`scout_member`**: Individual scout registrations including personal identity data (cédula), full name, dates, status, unit/group references, and optional `batch_id` foreign key.
-* **`batch`**: Batches submitted to the registry, linking to Region, District, Group, and grouping members.
+### Collections & Schema Structures
+
+* **`batches`**: Group submissions to the registry. Document IDs match their generated numeric IDs.
+  * `id`: `number` (Numeric ID)
+  * `name`: `string`
+  * `region_id`: `number`
+  * `district_id`: `number`
+  * `group_id`: `number`
+  * `created_at`: `string` (ISO Timestamp)
+* **`scout_members`**: Individual scout registrations. Document IDs are keyed by the unique national ID (`identity` / cédula).
+  * `identity`: `string` (Unique Cédula)
+  * `first_name`: `string`
+  * `last_name`: `string`
+  * `status`: `string` (`"active"` or `"pending"`)
+  * `member_type`: `string` (`"young"` or `"adult"`)
+  * `batch_id`: `number` (Reference to the parent `batch.id`)
+* **Static Hierarchy**: Region, District, and Group information is loaded client-side from the static data tree in `src/features/batches/api/hierarchy.json` representing the organizational hierarchy:
+  * `Region` -> contains `District` -> contains `ScoutGroup`.
 
 ---
 
-## 3. Implemented IPC Commands Surface
+## 3. Implemented API / Functions Surface
 
-Below are the active Tauri IPC commands exposed to the frontend:
+Below are the active Firebase endpoints exposed to the application:
 
-### Scraper Commands (`commands/scraper.rs`)
-*   `login(email, password) -> Result<(), String>`: Authenticates reqwest cookie session with external scout registry.
-*   `get_member_status(cedula) -> Result<MemberDetails, String>`: Scrapes and returns member profile status from the registry.
+### HTTPS Callable Cloud Functions (`functions/index.js`)
+*   `loginScraper({ credentials }) -> Promise<{ success: true }>`: Authenticates cookie session for external scout registry.
+*   `getMemberStatus({ cedula, credentials }) -> Promise<MemberDetails>`: Scrapes and returns member profile status from the registry.
 
-### Scout Member CRUD Commands (`commands/member.rs`)
-*   `create_member(member_data) -> Result<ScoutMember, String>`
-*   `get_member(identity) -> Result<Option<ScoutMember>, String>`
-*   `get_all_members() -> Result<Vec<ScoutMember>, String>`
-*   `update_member(member_data) -> Result<ScoutMember, String>`
-*   `delete_member(identity) -> Result<u64, String>` (returns rows affected)
-
-### Batch Commands (`commands/batch.rs`)
-*   `get_hierarchy_data() -> Result<HierarchyData, String>`: Returns full pre-structured Region -> District -> Group data tree.
-*   `create_batch(name, region_id, district_id, group_id) -> Result<Batch, String>`: Inserts a new batch and auto-assigns active members of that group to it.
-
-### PDF Commands (`commands/pdf.rs`)
-*   `generate_batch_report(batch_id, output_path) -> Result<String, String>`: Formats and prints a multi-page PDF batch report to `output_path`.
+### Firestore API Wrapper (`src/features/batches/api/index.ts`)
+*   `getHierarchyData() -> Promise<HierarchyData>`: Returns static Region -> District -> Group data tree.
+*   `createBatch(params) -> Promise<Batch>`: Inserts a new batch document into Firestore.
+*   `getMembersByBatchId(batchId) -> Promise<ScoutMember[]>`: Queries members associated with a specific batch.
+*   `getAllBatches() -> Promise<Batch[]>`: Retrieves all batches, sorted by creation date descending.
+*   `createMember(member) / updateMember(member) -> Promise<ScoutMember>`: Performs safe upserts to Firestore using the member's `identity` as the document key.
+*   `generateBatchReport(batchId) -> Promise<string>`: Generates a multi-page PDF batch report client-side using `jsPDF` and saves it.
 
 ---
 
 ## 4. Key Design Decisions
 
-1.  **Scraper Session Persistence**: The reqwest client is constructed with cookie jars enabled and managed directly inside the Tauri `AppState` struct (`main.rs`). This maintains an authenticated session across sequential front-end command calls.
-2.  **Decoupled Service Layers**: All services under `src-tauri/src/services/` accept raw references to `&DatabaseConnection`. This guarantees that database unit tests can mock all transactions easily using `sea-orm::MockDatabase`.
-3.  **Dynamic PDF Reports**: Built-in Helvetica fonts with custom Spanish glyph sanitizers prevent PDF encoding failures while keeping executable sizes small. Supporting sequential Mock database queries and execution results ensures 100% test coverage.
-4.  **Scraper Redirect Detection & Database Upserts**: Implemented robust redirection and error checking inside `scraper_service` to identify when credentials fail (returning a proper login error modal) or when a session is unauthenticated, distinguishing it from an unregistered member. In addition, the `create_member` service was upgraded to perform safe upserts rather than raw inserts, avoiding SQLite unique primary key constraint violations which previously manifested as silent network errors in the UI.
-5.  **ATTACH DATABASE for Seeding**: Employed high-speed atomic SQLite queries (`ATTACH DATABASE ... AS source_db`) to seed 200+ hierarchical rows (Regions, Districts, Groups) from an external database directly in Rust, ensuring instant database loading without loop overheads.
-6.  **Button-Modal Hierarchy Selection**: Swapped long dropdown menus with clean button-modals featuring real-time client-side search filtering, ensuring perfect height uniformity across all form controls.
+1.  **Scraper Session Caching**: The scraper cookie jar is cached in-memory inside the Firebase Functions instance (`functions/index.js`). Sessions are keyed by credentials to avoid authenticating on every lookup call.
+2.  **Client-Side PDF Generation**: Replaced backend Rust PDF generation with `jsPDF` entirely on the frontend, removing binary compilation overhead and allowing direct browser file downloads.
+3.  **Static Hierarchy Loading**: Replaced ATTACH DATABASE seeding with a pre-compiled JSON file (`hierarchy.json`) loaded client-side. This yields instant dropdown population and avoids database connection latency.
+4.  **Firestore Document ID Keys for Upserts**: In Firestore, `scout_members` are saved using their unique national ID (`identity`) as the Document ID. This ensures `createMember` and `updateMember` act as safe upserts rather than duplicating records or throwing index conflicts.
 
 ---
 
 ## 5. Next Architectural Milestones
 
-1.  **Módulo de Reconocimientos (M4)**: Implement frontend and backend tracking for scout recognition awards, categories, and badge printing template layouts.
-2.  **PDF Report Previews**: Introduce interactive PDF preview modals in the client-side UI before confirming report downloads.
-3.  **Expand Test Coverage**: Unignore and mock the scraper service tests and add unit testing to `member_service.rs` to raise statement coverage above 80%.
+1.  **Módulo de Reconocimientos (M4)**: Implement tracking for scout recognition awards, categories, and badge printing templates.
+2.  **PDF Report Previews**: Introduce interactive PDF preview modals in the client-side UI before downloading files.
+3.  **Expand Test Coverage**: Expand Vitest coverage across features to raise statement coverage above 80%.

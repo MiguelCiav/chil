@@ -89,17 +89,17 @@ graph TD
     D --> E[Automatically opens 'Version Packages' PR]
     E --> F[Maintainer Merges 'Version Packages' PR]
     F --> B
-    C -->|No| G[CI/CD: build-and-release runs]
-    G --> H[Compiles installers for Linux, macOS, and Windows]
-    G --> I[Creates GitHub Release and tags commit with v__VERSION__]
+    C -->|No| G[CI/CD: build-and-deploy runs]
+    G --> H[Compiles the React production bundle]
+    G --> I[Deploys the static site to Firebase Hosting and Functions to Firebase]
+    G --> J[Creates GitHub Release and tags commit with v__VERSION__]
 ```
 
 1. **Automatic Pull Request Generation ("Version Packages")**:
    - When a feature branch with a changeset file is merged into `main`, the `release-planner` job is triggered.
-   - It automatically consumes the changeset files, increments version numbers in `package.json` and `tauri.conf.json` using `npm run version-packages`, generates/updates `CHANGELOG.md`, and opens a special **"Version Packages" Pull Request** on GitHub.
+   - It automatically consumes the changeset files, increments version numbers in `package.json` using `npm run version-packages`, generates/updates `CHANGELOG.md`, and opens a special **"Version Packages" Pull Request** on GitHub.
 
-2. **Publishing the Release**:
+2. **Publishing and Deploying the Release**:
    - A maintainer reviews and merges this **"Version Packages" Pull Request**.
-   - Upon merge, the `build-and-release` job runs. Since no outstanding changesets remain, it compiles the optimized installers for all platforms (`ubuntu-latest`, `macos-latest`, `macos-15-intel`, and `windows-latest`) using `tauri-action`.
-   - It then automatically creates a **GitHub Release**, uploads the compiled installers (e.g., `.deb`, `.app`, `.exe`), and tags the commit with the new version (e.g., `v0.5.0`).
-
+   - Upon merge, the build and deploy job runs. Since no outstanding changesets remain, it compiles the production-optimized React web app bundle (`npm run build`).
+   - It then automatically deploys the static files to **Firebase Hosting** and the scraper backend services to **Firebase Cloud Functions**, creates a **GitHub Release**, and tags the commit with the new version (e.g., `v0.5.0`).
