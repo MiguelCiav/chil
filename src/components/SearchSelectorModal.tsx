@@ -1,0 +1,88 @@
+import React, { useState } from 'react';
+import { Search, Sparkles } from 'lucide-react';
+import { Modal, ModalHeader, ModalBody } from './Modal';
+
+export interface SearchSelectorModalProps<T> {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  placeholder: string;
+  items: T[];
+  selectedId: string | null;
+  onSelect: (item: T) => void;
+  searchFilter: (item: T, query: string) => boolean;
+  renderItem: (item: T, isSelected: boolean) => React.ReactNode;
+  keyExtractor: (item: T) => string | number;
+}
+
+export function SearchSelectorModal<T>({
+  isOpen,
+  onClose,
+  title,
+  placeholder,
+  items,
+  selectedId,
+  onSelect,
+  searchFilter,
+  renderItem,
+  keyExtractor,
+}: SearchSelectorModalProps<T>) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleClose = () => {
+    setSearchQuery('');
+    onClose();
+  };
+
+  const filteredItems = items.filter(item => searchFilter(item, searchQuery));
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-md">
+      <ModalHeader onClose={handleClose}>
+        <span className="flex items-center gap-2 text-primary font-bold">
+          <Sparkles className="w-5 h-5 text-primary" />
+          {title}
+        </span>
+      </ModalHeader>
+      <ModalBody className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
+          <input
+            type="text"
+            placeholder={placeholder}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-primary/20 bg-primary/5 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm transition-all h-[46px]"
+          />
+        </div>
+        <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+          {filteredItems.length === 0 ? (
+            <p className="text-sm text-neutral/40 text-center py-4">No se encontraron resultados</p>
+          ) : (
+            filteredItems.map(item => {
+              const id = String(keyExtractor(item));
+              const isSelected = selectedId === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(item);
+                    onClose();
+                  }}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between group ${
+                    isSelected
+                      ? 'bg-primary text-white font-semibold'
+                      : 'hover:bg-primary/5 text-neutral'
+                  }`}
+                >
+                  {renderItem(item, isSelected)}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </ModalBody>
+    </Modal>
+  );
+}
