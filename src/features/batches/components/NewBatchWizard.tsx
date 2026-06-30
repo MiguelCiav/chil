@@ -974,24 +974,20 @@ export const NewBatchWizard: React.FC = () => {
                   required
                 />
               </div>
-              <Field
-                label="Fecha de Nacimiento *"
-                type="date"
-                value={editingMember.birth_date}
-                onChange={e => setEditingMember({ ...editingMember, birth_date: e.target.value })}
-                required
-              />
-              <Field
-                label="Correo Electrónico"
-                type="email"
-                value={editingMember.email || ''}
-                onChange={e => setEditingMember({ ...editingMember, email: e.target.value })}
-              />
-              <Field
-                label="Teléfono de Contacto"
-                value={editingMember.phone || ''}
-                onChange={e => setEditingMember({ ...editingMember, phone: e.target.value })}
-              />
+              <div className="w-full">
+                <label className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                  Tipo de Miembro *
+                </label>
+                <select
+                  className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                  value={editingMember.member_type}
+                  onChange={e => setEditingMember({ ...editingMember, member_type: e.target.value as 'young' | 'adult' })}
+                  required
+                >
+                  <option value="young">Joven</option>
+                  <option value="adult">Adulto</option>
+                </select>
+              </div>
             </ModalBody>
             <ModalFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
