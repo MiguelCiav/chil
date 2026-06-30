@@ -263,7 +263,8 @@ export const BatchDetail: React.FC = () => {
         <Button
           variant="primary"
           onClick={handleDownloadPDF}
-          disabled={downloading}
+          disabled={downloading || totals.valid === 0}
+          title={totals.valid === 0 ? "No hay miembros activos en este lote para generar un reporte" : undefined}
           icon={<Download size={18} />}
         >
           {downloading ? 'Generando PDF...' : 'Exportar PDF'}

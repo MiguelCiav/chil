@@ -211,7 +211,8 @@ export const SuccessPage: React.FC = () => {
           <Button
             variant="primary"
             onClick={handleDownloadPDF}
-            disabled={downloading}
+            disabled={downloading || members.filter(m => m.status === 'active').length === 0}
+            title={members.filter(m => m.status === 'active').length === 0 ? "No hay miembros activos en este lote para generar un reporte" : undefined}
             icon={<Download size={18} />}
           >
             {downloading ? 'Generando PDF...' : 'Descargar PDF del Reporte'}

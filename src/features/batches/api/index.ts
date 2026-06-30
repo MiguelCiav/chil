@@ -260,8 +260,16 @@ export async function generateBatchReport(batchId: number): Promise<string> {
   docPdf.setFont("helvetica", "normal");
   y += 6;
   
+  // Filter active members and sort them alphabetically by last_name, then first_name
+  const activeMembers = members.filter(m => m.status === 'active');
+  const sortedMembers = [...activeMembers].sort((a, b) => {
+    const nameA = `${a.last_name} ${a.first_name}`.toLowerCase();
+    const nameB = `${b.last_name} ${b.first_name}`.toLowerCase();
+    return nameA.localeCompare(nameB, 'es', { sensitivity: 'base' });
+  });
+
   // Table rows
-  for (const m of members) {
+  for (const m of sortedMembers) {
     if (y > 270) {
       docPdf.addPage();
       y = 20;
@@ -273,7 +281,7 @@ export async function generateBatchReport(batchId: number): Promise<string> {
     
     const fullName = `${m.first_name} ${m.last_name}`;
     const typeStr = m.member_type === 'young' ? 'Joven' : 'Adulto';
-    const statusStr = m.status === 'active' ? 'Registro Válido' : 'Pendiente';
+    const statusStr = 'Registro Válido';
     
     // Draw row separator
     docPdf.setDrawColor(245, 245, 245);
@@ -283,11 +291,7 @@ export async function generateBatchReport(batchId: number): Promise<string> {
     docPdf.text(fullName.substring(0, 35), 46, y);
     docPdf.text(typeStr, 116, y);
     
-    if (m.status === 'active') {
-      docPdf.setTextColor(40, 167, 69); // Green
-    } else {
-      docPdf.setTextColor(220, 53, 69); // Red
-    }
+    docPdf.setTextColor(40, 167, 69); // Green
     docPdf.text(statusStr, 146, y);
     docPdf.setTextColor(0, 0, 0); // Reset
     
