@@ -5,7 +5,8 @@ import {
   getDoc,
   setDoc,
   query,
-  where
+  where,
+  writeBatch
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { jsPDF } from 'jspdf';
@@ -50,8 +51,58 @@ const safeSetItem = (key: string, value: string): void => {
 };
 
 export async function getHierarchyData(): Promise<{ regions: Region[]; districts: District[]; groups: ScoutGroup[] }> {
-  // Return the static parsed SQLite seed database
-  return hierarchyData;
+  try {
+    const [regionsSnap, districtsSnap, groupsSnap] = await Promise.all([
+      getDocs(collection(db, "regions")),
+      getDocs(collection(db, "districts")),
+      getDocs(collection(db, "groups")),
+    ]);
+
+    const regions = regionsSnap.docs.map(d => d.data() as Region);
+    const districts = districtsSnap.docs.map(d => d.data() as District);
+    const groups = groupsSnap.docs.map(d => d.data() as ScoutGroup);
+
+    if (regions.length === 0) {
+      console.log("Firestore hierarchy collections empty. Seeding...");
+
+      // Seed Regions
+      const regionBatch = writeBatch(db);
+      for (const r of hierarchyData.regions) {
+        regionBatch.set(doc(db, "regions", String(r.id)), r);
+      }
+      await regionBatch.commit();
+
+      // Seed Districts
+      const districtBatch = writeBatch(db);
+      for (const d of hierarchyData.districts) {
+        districtBatch.set(doc(db, "districts", String(d.id)), d);
+      }
+      await districtBatch.commit();
+
+      // Seed Groups
+      const groupBatch = writeBatch(db);
+      for (const g of hierarchyData.groups) {
+        groupBatch.set(doc(db, "groups", String(g.id)), g);
+      }
+      await groupBatch.commit();
+
+      console.log("Seeding complete!");
+      return {
+        regions: hierarchyData.regions,
+        districts: hierarchyData.districts,
+        groups: hierarchyData.groups
+      };
+    }
+
+    regions.sort((a, b) => a.id - b.id);
+    districts.sort((a, b) => a.id - b.id);
+    groups.sort((a, b) => a.id - b.id);
+
+    return { regions, districts, groups };
+  } catch (error) {
+    console.error("Failed to fetch hierarchy from Firestore, falling back to local JSON:", error);
+    return hierarchyData;
+  }
 }
 
 export async function createBatch(params: BatchCreationParams): Promise<Batch> {
