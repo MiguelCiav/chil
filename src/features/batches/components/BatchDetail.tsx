@@ -240,9 +240,9 @@ export const BatchDetail: React.FC = () => {
       {/* Navigation & Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-2">
-          <Link to="/lotes" className="inline-flex items-center text-sm font-bold text-primary hover:text-primary/80 transition-colors">
+          <Link to="/lotes/nuevo" className="inline-flex items-center text-sm font-bold text-primary hover:text-primary/80 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Volver al listado
+            Crear nuevo lote
           </Link>
           <h1 className="text-3xl font-extrabold text-neutral tracking-tight">
             Lote #{batch.id} {batch.comment ? `(${batch.comment})` : ''}

@@ -55,7 +55,7 @@ export const Navbar: React.FC = () => {
     <nav className="h-16 px-6 border-b border-gray-200 bg-white flex items-center justify-between font-sans">
       <div className="flex items-center h-full">
         {/* Logo */}
-        <Link to="/lotes" className="flex items-center mr-8 hover:opacity-95 transition-opacity">
+        <Link to="/" className="flex items-center mr-8 hover:opacity-95 transition-opacity">
           <img src={logo} alt="Chil Logo" className="h-8 w-auto mr-2" />
           <div className="text-primary font-bold text-xl">
             Chil
@@ -75,19 +75,6 @@ export const Navbar: React.FC = () => {
             }
           >
             Nuevo lote
-          </NavLink>
-          <NavLink
-            to="/lotes"
-            end
-            className={({ isActive }) =>
-              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${
-                isActive
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-neutral hover:text-primary'
-              }`
-            }
-          >
-            Listado de lotes
           </NavLink>
         </div>
       </div>

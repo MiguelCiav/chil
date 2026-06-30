@@ -217,9 +217,9 @@ export const SuccessPage: React.FC = () => {
           >
             {downloading ? 'Generando PDF...' : 'Descargar PDF del Reporte'}
           </Button>
-          <Link to="/lotes">
+          <Link to="/lotes/nuevo">
             <Button variant="outline" icon={<ArrowLeft size={18} />}>
-              Volver al listado
+              Crear nuevo lote
             </Button>
           </Link>
         </div>
