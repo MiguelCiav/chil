@@ -431,7 +431,7 @@ export const NewBatchWizard: React.FC = () => {
                 loadingHierarchy={loadingHierarchy}
               />
 
-              <div className="flex justify-end pt-4 border-t border-gray-150">
+              <div className="flex justify-end pt-4 border-t border-primary/10">
                 <Button 
                   type="submit" 
                   variant="primary" 
