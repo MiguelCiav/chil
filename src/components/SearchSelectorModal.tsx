@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Sparkles } from 'lucide-react';
+import { Search, Check, Sparkles } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody } from './Modal';
 
-export interface SearchSelectorModalProps<T> {
+interface SearchSelectorModalProps<T> {
   isOpen: boolean;
   onClose: () => void;
   title: string;
@@ -11,7 +11,7 @@ export interface SearchSelectorModalProps<T> {
   selectedId: string | null;
   onSelect: (item: T) => void;
   searchFilter: (item: T, query: string) => boolean;
-  renderItem: (item: T, isSelected: boolean) => React.ReactNode;
+  renderItem: (item: T) => React.ReactNode;
   keyExtractor: (item: T) => string | number;
 }
 
@@ -25,19 +25,25 @@ export function SearchSelectorModal<T>({
   onSelect,
   searchFilter,
   renderItem,
-  keyExtractor,
+  keyExtractor
 }: SearchSelectorModalProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredItems = items.filter(item => searchFilter(item, searchQuery));
+
+  const handleSelect = (item: T) => {
+    onSelect(item);
+    setSearchQuery('');
+    onClose();
+  };
 
   const handleClose = () => {
     setSearchQuery('');
     onClose();
   };
 
-  const filteredItems = items.filter(item => searchFilter(item, searchQuery));
-
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-md">
+    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-md font-sans">
       <ModalHeader onClose={handleClose}>
         <span className="flex items-center gap-2 text-primary font-bold">
           <Sparkles className="w-5 h-5 text-primary" />
@@ -60,23 +66,23 @@ export function SearchSelectorModal<T>({
             <p className="text-sm text-neutral/40 text-center py-4">No se encontraron resultados</p>
           ) : (
             filteredItems.map(item => {
-              const id = String(keyExtractor(item));
-              const isSelected = selectedId === id;
+              const key = keyExtractor(item);
+              const itemId = String(key);
+              const isSelected = selectedId === itemId;
+
               return (
                 <button
-                  key={id}
+                  key={key}
                   type="button"
-                  onClick={() => {
-                    onSelect(item);
-                    onClose();
-                  }}
+                  onClick={() => handleSelect(item)}
                   className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between group ${
                     isSelected
                       ? 'bg-primary text-white font-semibold'
                       : 'hover:bg-primary/5 text-neutral'
                   }`}
                 >
-                  {renderItem(item, isSelected)}
+                  {renderItem(item)}
+                  {isSelected && <Check className="w-4 h-4" />}
                 </button>
               );
             })
