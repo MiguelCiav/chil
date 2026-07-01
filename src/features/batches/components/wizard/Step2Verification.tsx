@@ -177,7 +177,13 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
         {verificationList.length > 0 && (
           <div className="space-y-4">
             <div className="text-md font-bold text-neutral">Resultados de la Verificación</div>
-            <Table columns={columns} data={verificationList} />
+            <div className="max-h-[354px] overflow-y-auto border border-primary/20 rounded-2xl bg-white shadow-inner">
+              <Table 
+                columns={columns} 
+                data={verificationList} 
+                className="!border-0 !rounded-none" 
+              />
+            </div>
           </div>
         )}
       </CardBody>
