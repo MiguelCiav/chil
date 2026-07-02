@@ -34,8 +34,8 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      - name: Run Unit Tests
-        run: npm run test -- --run
+      - name: Run Unit Tests with Coverage
+        run: npm run test -- --run --coverage
 
       - name: Build Frontend
         run: npm run build

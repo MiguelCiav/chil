@@ -14,6 +14,9 @@ export default defineConfig(async () => ({
     globals: true,
     setupFiles: "./src/test/setup.ts",
     exclude: ["**/node_modules/**", "dist", "test/**/*", "functions/**"],
+    coverage: {
+      reporter: ["text", "lcov"],
+    },
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
