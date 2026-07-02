@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 env:
@@ -20,71 +20,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system dependencies (Tauri & E2E)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libssl-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            webkit2gtk-4.1-dev \
-            webkit2gtk-driver \
-            xvfb
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-
       - name: Install Node dependencies
         run: npm ci
 
-      # 1. Lint with ESLint and Clippy
       - name: Run ESLint
         run: npm run lint
 
-      - name: Run Cargo Clippy
-        run: |
-          cd src-tauri
-          cargo clippy -- -D warnings
+      - name: Run Unit Tests
+        run: npm run test -- --run
 
-      # 2. Unit Testing with Vitest, Rust Native and SeaORM
-      - name: Run Frontend Unit Tests (Vitest)
-        run: npm run test
+      - name: Build Frontend
+        run: npm run build
 
-      - name: Run Backend Unit Tests (Cargo)
-        run: |
-          cd src-tauri
-          cargo test
-
-
-
-  release-planner:
+  deploy:
     needs: lint-and-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    outputs:
-      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -92,72 +51,16 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Node dependencies
+      - name: Install root dependencies
         run: npm ci
 
-      - name: Create Release Pull Request
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: npm run version-packages
+      - name: Install functions dependencies
+        run: npm ci --prefix functions
+
+      - name: Build Frontend
+        run: npm run build
+
+      - name: Deploy to Firebase
+        run: npx firebase-tools deploy
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build-and-release:
-    needs: [lint-and-test, release-planner]
-    if: github.ref == 'refs/heads/main' && needs.release-planner.outputs.hasChangesets != 'true'
-    runs-on: ${{ matrix.platform }}
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [ubuntu-latest, macos-latest, macos-15-intel, windows-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install system dependencies (Linux only)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libssl-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            webkit2gtk-4.1-dev
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-
-      - name: Install Node dependencies
-        run: npm ci
-
-      # Build to compile Chil Installers (Tauri)
-      # This action builds the app and creates a GitHub Release if the version changed.
-      - name: Build and Release Tauri App
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: v__VERSION__
-          releaseName: 'Chil v__VERSION__'
-          releaseBody: 'See CHANGELOG.md for details.'
-          releaseDraft: false
-          prerelease: false
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
