@@ -6,7 +6,8 @@ import {
   setDoc,
   query,
   where,
-  writeBatch
+  writeBatch,
+  deleteDoc
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { jsPDF } from 'jspdf';
@@ -178,6 +179,10 @@ export async function createMember(member: ScoutMember): Promise<ScoutMember> {
 export async function updateMember(member: ScoutMember): Promise<ScoutMember> {
   await setDoc(doc(db, "scout_members", member.identity), member);
   return member;
+}
+
+export async function deleteMember(identity: string): Promise<void> {
+  await deleteDoc(doc(db, "scout_members", identity));
 }
 
 export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[]> {

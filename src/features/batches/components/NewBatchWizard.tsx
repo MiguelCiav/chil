@@ -24,6 +24,7 @@ import {
   getMemberStatus, 
   createMember, 
   updateMember, 
+  deleteMember,
   getMembersByBatchId,
   hasScraperCredentials,
   loginScraper,
@@ -340,6 +341,22 @@ export const NewBatchWizard: React.FC = () => {
   // Move from Step 2 to Step 3
   const handleStep2Continue = async () => {
     if (batchId) {
+      // 1. Get the current active inputs
+      const youngs = youngCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
+      const adults = adultCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
+      const currentInputCedulas = new Set([...youngs, ...adults]);
+
+      // 2. Fetch all members currently stored in the DB for this batch
+      const dbMembers = await getMembersByBatchId(batchId);
+
+      // 3. Delete any members from DB that are NOT in currentInputCedulas
+      const deletePromises = dbMembers
+        .filter(m => !currentInputCedulas.has(m.identity))
+        .map(m => deleteMember(m.identity));
+      
+      await Promise.all(deletePromises);
+
+      // 4. Reload the updated members list
       const members = await getMembersByBatchId(batchId);
       setSavedMembers(members);
       setCurrentStep(3);

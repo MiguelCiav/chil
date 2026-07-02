@@ -38,6 +38,16 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
   handleStep2Continue,
   onBack
 }) => {
+  const currentCedulas = React.useMemo(() => {
+    const youngs = youngCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
+    const adults = adultCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
+    return new Set([...youngs, ...adults]);
+  }, [youngCedulas, adultCedulas]);
+
+  const filteredVerificationList = React.useMemo(() => {
+    return verificationList.filter(item => currentCedulas.has(item.cedula));
+  }, [verificationList, currentCedulas]);
+
   const columns: ColumnDef<MemberVerificationResult>[] = [
     {
       accessorKey: 'cedula',
@@ -174,13 +184,13 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
           </Button>
         </div>
 
-        {verificationList.length > 0 && (
+        {filteredVerificationList.length > 0 && (
           <div className="space-y-4">
             <div className="text-md font-bold text-neutral">Resultados de la Verificación</div>
             <div className="max-h-[354px] overflow-y-auto border border-primary/20 rounded-2xl bg-white shadow-inner">
               <Table 
                 columns={columns} 
-                data={verificationList} 
+                data={filteredVerificationList} 
                 className="!border-0 !rounded-none" 
               />
             </div>
@@ -198,7 +208,7 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
         <Button
           variant="primary"
           onClick={handleStep2Continue}
-          disabled={verificationList.length === 0 || isVerifying}
+          disabled={filteredVerificationList.length === 0 || isVerifying}
           icon={<ArrowRight size={18} />}
           iconPosition="right"
         >
