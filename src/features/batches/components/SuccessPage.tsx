@@ -138,7 +138,7 @@ export const SuccessPage: React.FC = () => {
       cell: (info) => {
         const rowData = info.row.original;
         return (
-          <span className="font-semibold text-neutral">{rowData.first_name} {rowData.last_name}</span>
+          <span className="font-semibold text-neutral">{rowData.first_names} {rowData.last_names}</span>
         );
       }
     },

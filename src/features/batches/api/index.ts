@@ -316,11 +316,11 @@ export async function generateBatchReport(batchId: number): Promise<string> {
   docPdf.setFont("helvetica", "normal");
   y += 6;
   
-  // Filter active members and sort them alphabetically by last_name, then first_name
+  // Filter active members and sort them alphabetically by last_names, then first_names
   const activeMembers = members.filter(m => m.status === 'active');
   const sortedMembers = [...activeMembers].sort((a, b) => {
-    const nameA = `${a.last_name} ${a.first_name}`.toLowerCase();
-    const nameB = `${b.last_name} ${b.first_name}`.toLowerCase();
+    const nameA = `${a.last_names} ${a.first_names}`.toLowerCase();
+    const nameB = `${b.last_names} ${b.first_names}`.toLowerCase();
     return nameA.localeCompare(nameB, 'es', { sensitivity: 'base' });
   });
 
@@ -335,7 +335,7 @@ export async function generateBatchReport(batchId: number): Promise<string> {
       y += 10;
     }
     
-    const fullName = `${m.first_name} ${m.last_name}`;
+    const fullName = `${m.first_names} ${m.last_names}`;
     const typeStr = m.member_type === 'young' ? 'Joven' : 'Adulto';
     const statusStr = 'Registro Válido';
     

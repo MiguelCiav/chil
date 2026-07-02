@@ -9,8 +9,8 @@ export interface Batch {
 
 export interface ScoutMember {
   identity: string;
-  first_name: string;
-  last_name: string;
+  first_names: string;
+  last_names: string;
   birth_date: string;
   email?: string;
   phone?: string;

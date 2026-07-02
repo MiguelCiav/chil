@@ -32,7 +32,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
 
   const filteredStep3Members = (activeTab === 'valid' ? validMembers : pendingMembers).filter(m => {
     const term = searchQuery.toLowerCase();
-    const fullName = `${m.first_name} ${m.last_name}`.toLowerCase();
+    const fullName = `${m.first_names} ${m.last_names}`.toLowerCase();
     return fullName.includes(term) || m.identity.includes(term);
   });
 
@@ -137,7 +137,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
           {/* Members List */}
           <div className="space-y-3">
             {filteredStep3Members.map(member => {
-              const initials = `${member.first_name[0] || ''}${member.last_name[0] || ''}`.toUpperCase();
+              const initials = `${member.first_names[0] || ''}${member.last_names[0] || ''}`.toUpperCase();
               return (
                 <div
                   key={member.identity}
@@ -149,7 +149,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                       {initials}
                     </div>
                     <div>
-                      <div className="font-semibold text-neutral">{member.first_name} {member.last_name}</div>
+                      <div className="font-semibold text-neutral">{member.first_names} {member.last_names}</div>
                       <div className="text-xs text-neutral/50 font-medium">C.I. {member.identity} • {member.member_type === 'young' ? 'Joven' : 'Adulto'}</div>
                     </div>
                   </div>
@@ -209,15 +209,15 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             <ModalBody className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Field
-                  label="Primer Nombre *"
-                  value={editingMember.first_name}
-                  onChange={e => setEditingMember({ ...editingMember, first_name: e.target.value })}
+                  label="Nombres *"
+                  value={editingMember.first_names}
+                  onChange={e => setEditingMember({ ...editingMember, first_names: e.target.value })}
                   required
                 />
                 <Field
-                  label="Primer Apellido *"
-                  value={editingMember.last_name}
-                  onChange={e => setEditingMember({ ...editingMember, last_name: e.target.value })}
+                  label="Apellidos *"
+                  value={editingMember.last_names}
+                  onChange={e => setEditingMember({ ...editingMember, last_names: e.target.value })}
                   required
                 />
               </div>

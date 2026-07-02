@@ -52,6 +52,30 @@ const step1Schema = z.object({
 });
 
 type Step1FormData = z.infer<typeof step1Schema>;
+function splitFullName(name: string): { first_names: string; last_names: string } {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 4) {
+    return {
+      first_names: parts.slice(0, 2).join(' '),
+      last_names: parts.slice(2).join(' ')
+    };
+  } else if (parts.length === 3) {
+    return {
+      first_names: parts[0],
+      last_names: parts.slice(1).join(' ')
+    };
+  } else if (parts.length === 2) {
+    return {
+      first_names: parts[0],
+      last_names: parts[1]
+    };
+  } else {
+    return {
+      first_names: name,
+      last_names: ''
+    };
+  }
+}
 
 export const NewBatchWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -200,8 +224,8 @@ export const NewBatchWizard: React.FC = () => {
         try {
           await createMember({
             identity: cedula,
-            first_name: 'Usuario',
-            last_name: 'No Registrado',
+            first_names: 'Usuario',
+            last_names: 'No Registrado',
             birth_date: '1990-01-01',
             member_type: type,
             status: 'pending',
@@ -236,10 +260,11 @@ export const NewBatchWizard: React.FC = () => {
       // Save to Firestore
       if (batchId) {
         try {
+          const { first_names, last_names } = splitFullName(res.nombre_completo);
           await createMember({
             identity: cedula,
-            first_name: res.nombre_completo.split(' ')[0] || 'Miembro',
-            last_name: res.nombre_completo.split(' ').slice(1).join(' ') || 'Scrapeado',
+            first_names,
+            last_names,
             birth_date: res.fecha_nacimiento || '1990-01-01',
             email: res.correo_electronico,
             phone: res.telefono,

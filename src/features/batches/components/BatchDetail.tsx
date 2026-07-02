@@ -157,7 +157,7 @@ export const BatchDetail: React.FC = () => {
 
     // Search Query Filter
     const term = searchQuery.toLowerCase();
-    const fullName = `${m.first_name} ${m.last_name}`.toLowerCase();
+    const fullName = `${m.first_names} ${m.last_names}`.toLowerCase();
     return fullName.includes(term) || m.identity.includes(term);
   });
 
@@ -175,7 +175,7 @@ export const BatchDetail: React.FC = () => {
       cell: (info) => {
         const rowData = info.row.original;
         return (
-          <span className="font-semibold text-neutral">{rowData.first_name} {rowData.last_name}</span>
+          <span className="font-semibold text-neutral">{rowData.first_names} {rowData.last_names}</span>
         );
       }
     },
@@ -393,15 +393,15 @@ export const BatchDetail: React.FC = () => {
             <ModalBody className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Field
-                  label="Primer Nombre *"
-                  value={editingMember.first_name}
-                  onChange={e => setEditingMember({ ...editingMember, first_name: e.target.value })}
+                  label="Nombres *"
+                  value={editingMember.first_names}
+                  onChange={e => setEditingMember({ ...editingMember, first_names: e.target.value })}
                   required
                 />
                 <Field
-                  label="Primer Apellido *"
-                  value={editingMember.last_name}
-                  onChange={e => setEditingMember({ ...editingMember, last_name: e.target.value })}
+                  label="Apellidos *"
+                  value={editingMember.last_names}
+                  onChange={e => setEditingMember({ ...editingMember, last_names: e.target.value })}
                   required
                 />
               </div>
