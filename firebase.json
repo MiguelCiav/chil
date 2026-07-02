@@ -22,13 +22,6 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "redirects": [
-      {
-        "source": "/hola-ari",
-        "destination": "/#/hola-ari",
-        "type": 302
-      }
-    ],
     "rewrites": [
       {
         "source": "**",

@@ -60,7 +60,7 @@ src/features/batches/
     const numericId = Math.floor(Math.random() * 1000000) + 1;
     const newBatch: Batch = {
       id: numericId,
-      name: params.name,
+      comment: params.comment || '',
       region_id: params.region_id,
       district_id: params.district_id,
       group_id: params.group_id,
@@ -80,8 +80,10 @@ The backend code is located inside the `functions/` directory, structured as a s
 
 ```
 functions/
-├── index.js           # Cloud Functions entrypoint (exports HTTPS callable functions)
-├── package.json       # Backend dependencies (firebase-functions, firebase-admin, axios, cheerio)
+├── index.js           # Cloud Functions entrypoint (re-exports callable endpoints)
+├── handlers/          # Endpoint controllers (loginScraper.js, getMemberStatus.js)
+├── scraper/           # Scraper core modules (auth.js, lookup.js, cookieHelper.js)
+├── package.json       # Backend dependencies
 └── node_modules/      # Installed Node packages
 ```
 

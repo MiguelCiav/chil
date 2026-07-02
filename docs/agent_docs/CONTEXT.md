@@ -33,20 +33,19 @@ erDiagram
 
 * **`batches`**: Group submissions to the registry. Document IDs match their generated numeric IDs.
   * `id`: `number` (Numeric ID)
-  * `name`: `string`
+  * `comment`: `string` (Optional)
   * `region_id`: `number`
   * `district_id`: `number`
   * `group_id`: `number`
   * `created_at`: `string` (ISO Timestamp)
 * **`scout_members`**: Individual scout registrations. Document IDs are keyed by the unique national ID (`identity` / cédula).
   * `identity`: `string` (Unique Cédula)
-  * `first_name`: `string`
-  * `last_name`: `string`
+  * `first_names`: `string`
+  * `last_names`: `string`
   * `status`: `string` (`"active"` or `"pending"`)
   * `member_type`: `string` (`"young"` or `"adult"`)
   * `batch_id`: `number` (Reference to the parent `batch.id`)
-* **Static Hierarchy**: Region, District, and Group information is loaded client-side from the static data tree in `src/features/batches/api/hierarchy.json` representing the organizational hierarchy:
-  * `Region` -> contains `District` -> contains `ScoutGroup`.
+* **Firestore Hierarchy Data**: Region, District, and Group information is fetched dynamically from Firestore collections (`regions`, `districts`, `groups`). The database is auto-seeded with static data on the very first load if these collections are empty.
 
 ---
 
@@ -54,12 +53,12 @@ erDiagram
 
 Below are the active Firebase endpoints exposed to the application:
 
-### HTTPS Callable Cloud Functions (`functions/index.js`)
+### HTTPS Callable Cloud Functions
 *   `loginScraper({ credentials }) -> Promise<{ success: true }>`: Authenticates cookie session for external scout registry.
 *   `getMemberStatus({ cedula, credentials }) -> Promise<MemberDetails>`: Scrapes and returns member profile status from the registry.
 
 ### Firestore API Wrapper (`src/features/batches/api/index.ts`)
-*   `getHierarchyData() -> Promise<HierarchyData>`: Returns static Region -> District -> Group data tree.
+*   `getHierarchyData() -> Promise<HierarchyData>`: Queries Firestore collections with auto-seeding script fallback.
 *   `createBatch(params) -> Promise<Batch>`: Inserts a new batch document into Firestore.
 *   `getMembersByBatchId(batchId) -> Promise<ScoutMember[]>`: Queries members associated with a specific batch.
 *   `getAllBatches() -> Promise<Batch[]>`: Retrieves all batches, sorted by creation date descending.
@@ -70,9 +69,11 @@ Below are the active Firebase endpoints exposed to the application:
 
 ## 4. Key Design Decisions
 
-1.  **Scraper Session Caching**: The scraper cookie jar is cached in-memory inside the Firebase Functions instance (`functions/index.js`). Sessions are keyed by credentials to avoid authenticating on every lookup call.
+1.  **Scraper Session Caching**: The scraper cookie jar is cached in-memory inside the Node.js module context (`functions/scraper/auth.js`). Sessions are keyed by credentials to avoid repeating the login handshake.
 2.  **Client-Side PDF Generation**: Replaced backend Rust PDF generation with `jsPDF` entirely on the frontend, removing binary compilation overhead and allowing direct browser file downloads.
-3.  **Static Hierarchy Loading**: Replaced ATTACH DATABASE seeding with a pre-compiled JSON file (`hierarchy.json`) loaded client-side. This yields instant dropdown population and avoids database connection latency.
+3.  **Firestore Hierarchy Database**: Replaced static client-side JSON lookups with live Firestore collection queries (`regions`, `districts`, `groups`). Integrated self-healing client-side seeding on empty database status to keep layout collections manageable via the console.
+4.  **UI Verification Purge**: Configured Step 2 verification list and Firestore sync to immediately hide and purge entries removed from input text fields, ensuring only currently visible records persist.
+5.  **SonarQube Scan step**: Integrated static code analysis and test coverage metrics into the CI pipeline (via `@vitest/coverage-v8` lcov exports) to verify quality thresholds on every pull request.
 4.  **Firestore Document ID Keys for Upserts**: In Firestore, `scout_members` are saved using their unique national ID (`identity`) as the Document ID. This ensures `createMember` and `updateMember` act as safe upserts rather than duplicating records or throwing index conflicts.
 
 ---

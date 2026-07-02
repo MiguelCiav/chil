@@ -24,7 +24,7 @@ Our data is stored in the following collections:
     ```typescript
     interface Batch {
       id: number;
-      name: string;
+      comment?: string;
       region_id: number;
       district_id: number;
       group_id: number;
@@ -38,16 +38,16 @@ Our data is stored in the following collections:
     ```typescript
     interface ScoutMember {
       identity: string;      // Document ID
-      first_name: string;
-      last_name: string;
+      first_names: string;
+      last_names: string;
       status: 'active' | 'pending';
       member_type: 'young' | 'adult';
       batch_id: number;      // References Batch.id
     }
     ```
 
-### 3. Static Hierarchy
-*   Region, District, and Group structures are resolved client-side from the static data tree in `src/features/batches/api/hierarchy.json` instead of querying Firestore, improving performance.
+### 3. Firestore Hierarchy collections
+*   Region, District, and Group structures are resolved via parallel queries to Firestore collections (`regions`, `districts`, `groups`) with automatic client-side seeding on empty database status to keep layout collections manageable.
 
 ---
 
