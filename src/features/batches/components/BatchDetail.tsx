@@ -100,7 +100,7 @@ export const BatchDetail: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveMemberEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveMemberEdit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingMember || !batch) return;
 

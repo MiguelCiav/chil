@@ -8,19 +8,19 @@ import { Table } from '../../../../components/Table';
 import { MemberVerificationResult } from '../../types';
 
 interface Step2VerificationProps {
-  batchName: string;
-  youngCedulas: string;
-  setYoungCedulas: (val: string) => void;
-  adultCedulas: string;
-  setAdultCedulas: (val: string) => void;
-  isVerifying: boolean;
-  verifyProgress: { current: number; total: number };
-  verificationList: MemberVerificationResult[];
-  handleVerify: () => void;
-  verifyCedula: (cedula: string, type: 'young' | 'adult') => void;
-  handleToggleMemberType: (cedula: string) => void;
-  handleStep2Continue: () => void;
-  onBack: () => void;
+  readonly batchName: string;
+  readonly youngCedulas: string;
+  readonly setYoungCedulas: (val: string) => void;
+  readonly adultCedulas: string;
+  readonly setAdultCedulas: (val: string) => void;
+  readonly isVerifying: boolean;
+  readonly verifyProgress: { readonly current: number; readonly total: number };
+  readonly verificationList: readonly MemberVerificationResult[];
+  readonly handleVerify: () => void;
+  readonly verifyCedula: (cedula: string, type: 'young' | 'adult') => void;
+  readonly handleToggleMemberType: (cedula: string) => void;
+  readonly handleStep2Continue: () => void;
+  readonly onBack: () => void;
 }
 
 interface StatusBadgeProps {
@@ -105,6 +105,50 @@ const MemberTypeToggle: React.FC<MemberTypeToggleProps> = ({ type, onToggle }) =
   </div>
 );
 
+const CedulaCell: React.FC<{ readonly value: string }> = ({ value }) => (
+  <span className="font-semibold text-neutral">{value}</span>
+);
+
+const NameCell: React.FC<{ readonly value: string }> = ({ value }) => (
+  <span className="text-neutral/80">{value || 'Pendiente...'}</span>
+);
+
+const createStep2Columns = (
+  verifyCedula: (cedula: string, type: 'young' | 'adult') => void,
+  handleToggleMemberType: (cedula: string) => void
+): ColumnDef<MemberVerificationResult>[] => [
+  {
+    accessorKey: 'cedula',
+    header: 'Cédula',
+    cell: (info) => <CedulaCell value={info.getValue() as string} />
+  },
+  {
+    accessorKey: 'name',
+    header: 'Nombre Completo',
+    cell: (info) => <NameCell value={info.getValue() as string} />
+  },
+  {
+    accessorKey: 'status',
+    header: 'Estatus',
+    cell: (info) => (
+      <StatusBadge
+        status={info.getValue() as string}
+        onRetry={() => verifyCedula(info.row.original.cedula, info.row.original.type)}
+      />
+    )
+  },
+  {
+    accessorKey: 'type',
+    header: 'Tipo de Miembro',
+    cell: (info) => (
+      <MemberTypeToggle
+        type={info.getValue() as 'young' | 'adult'}
+        onToggle={() => handleToggleMemberType(info.row.original.cedula)}
+      />
+    )
+  }
+];
+
 export const Step2Verification: React.FC<Step2VerificationProps> = ({
   batchName,
   youngCedulas,
@@ -130,48 +174,10 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
     return verificationList.filter(item => currentCedulas.has(item.cedula));
   }, [verificationList, currentCedulas]);
 
-  const columns: ColumnDef<MemberVerificationResult>[] = React.useMemo(() => [
-    {
-      accessorKey: 'cedula',
-      header: 'Cédula',
-      cell: (info) => (
-        <span className="font-semibold text-neutral">{info.getValue() as string}</span>
-      )
-    },
-    {
-      accessorKey: 'name',
-      header: 'Nombre Completo',
-      cell: (info) => (
-        <span className="text-neutral/80">{(info.getValue() as string) || 'Pendiente...'}</span>
-      )
-    },
-    {
-      accessorKey: 'status',
-      header: 'Estatus',
-      cell: (info) => {
-        const rowData = info.row.original;
-        return (
-          <StatusBadge
-            status={info.getValue() as string}
-            onRetry={() => verifyCedula(rowData.cedula, rowData.type)}
-          />
-        );
-      }
-    },
-    {
-      accessorKey: 'type',
-      header: 'Tipo de Miembro',
-      cell: (info) => {
-        const rowData = info.row.original;
-        return (
-          <MemberTypeToggle
-            type={info.getValue() as 'young' | 'adult'}
-            onToggle={() => handleToggleMemberType(rowData.cedula)}
-          />
-        );
-      }
-    }
-  ], [verifyCedula, handleToggleMemberType]);
+  const columns = React.useMemo(
+    () => createStep2Columns(verifyCedula, handleToggleMemberType),
+    [verifyCedula, handleToggleMemberType]
+  );
 
   return (
     <Card className="shadow-lg border-primary/10">

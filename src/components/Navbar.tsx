@@ -31,7 +31,7 @@ export const Navbar: React.FC = () => {
     }
   }, [isSettingsOpen]);
 
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setSuccessMsg('');

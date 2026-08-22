@@ -48,7 +48,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEditedMember = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveEditedMember = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingMember || !batchId) return;
 
