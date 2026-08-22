@@ -25,6 +25,7 @@ describe('Navbar component', () => {
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
     expect(screen.getByText('Nuevo lote')).toBeInTheDocument();
+    expect(screen.getByText('Listado de lotes')).toBeInTheDocument();
   });
 
   it('opens scraper settings modal, enters credentials and saves', async () => {
@@ -60,5 +61,38 @@ describe('Navbar component', () => {
       });
       expect(screen.getByText('Credenciales guardadas exitosamente.')).toBeInTheDocument();
     });
+  });
+  it('highlights only "Nuevo lote" when path is /lotes/nuevo', () => {
+    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/nuevo']}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
+    const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
+
+    expect(nuevoLoteLink).toHaveClass('border-primary');
+    expect(nuevoLoteLink).toHaveClass('text-primary');
+    expect(listadoLotesLink).toHaveClass('border-transparent');
+  });
+
+  it('highlights only "Listado de lotes" when path is /lotes', () => {
+    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
+
+    render(
+      <MemoryRouter initialEntries={['/lotes']}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
+    const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
+
+    expect(listadoLotesLink).toHaveClass('border-primary');
+    expect(listadoLotesLink).toHaveClass('text-primary');
+    expect(nuevoLoteLink).toHaveClass('border-transparent');
   });
 });

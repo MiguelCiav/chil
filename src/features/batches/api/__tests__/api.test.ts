@@ -3,16 +3,21 @@ import {
   getHierarchyData,
   createBatch,
   updateBatch,
+  deleteBatch,
   getAllBatches,
   getBatchById,
   createMember,
   updateMember,
   deleteMember,
   getMembersByBatchId,
+  getAllMembers,
   saveScraperCredentials,
   hasScraperCredentials,
   loginScraper,
-  getMemberStatus
+  getMemberStatus,
+  getRecognitionBadgeStyle,
+  getRecognitionName,
+  exportMembersToCSV
 } from '../index';
 import * as firestore from 'firebase/firestore';
 import * as functionsSdk from 'firebase/functions';
@@ -128,7 +133,7 @@ describe('Batches API Layer', () => {
   });
 
   describe('Batch CRUD operations', () => {
-    it('creates a new batch with secure numeric ID', async () => {
+    it('creates a new batch with secure numeric ID and recognition type', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
 
       const newBatch = await createBatch({
@@ -136,11 +141,14 @@ describe('Batches API Layer', () => {
         region_id: 1,
         district_id: 10,
         group_id: 100,
-        recognition_type: 'sct-wood-badge'
+        recognition_type: 'sct-wood-badge',
+        recognition_duration: '3 años'
       });
 
       expect(newBatch.comment).toBe('Nuevo lote');
       expect(newBatch.id).toBeGreaterThan(0);
+      expect(newBatch.recognition_type).toBe('sct-wood-badge');
+      expect(newBatch.recognition_duration).toBe('3 años');
       expect(firestore.setDoc).toHaveBeenCalled();
     });
 
@@ -203,6 +211,27 @@ describe('Batches API Layer', () => {
       const b = await getBatchById(999);
       expect(b?.id).toBe(999);
     });
+    it('deletes batch and all its associated scout members atomically', async () => {
+      const deleteMock = vi.fn();
+      const commitMock = vi.fn();
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        delete: deleteMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      const mockMemberDocRef = { id: 'V-111' };
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        forEach: (cb: (doc: { ref: typeof mockMemberDocRef }) => void) => {
+          cb({ ref: mockMemberDocRef });
+        }
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      await deleteBatch(101);
+
+      expect(deleteMock).toHaveBeenCalledWith(mockMemberDocRef);
+      expect(deleteMock).toHaveBeenCalledWith(expect.objectContaining({ path: 'batches/101' }));
+      expect(commitMock).toHaveBeenCalled();
+    });
   });
 
   describe('Member CRUD operations', () => {
@@ -244,6 +273,68 @@ describe('Batches API Layer', () => {
       const list = await getMembersByBatchId(100);
       expect(list).toHaveLength(1);
       expect(list[0].identity).toBe('V-12345678');
+    });
+    it('gets all members across batches', async () => {
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        forEach: (cb: (doc: { data: () => unknown }) => void) => {
+          cb({ data: () => mockMember });
+        }
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const list = await getAllMembers();
+      expect(list).toHaveLength(1);
+      expect(list[0].identity).toBe('V-12345678');
+    });
+  });
+
+  describe('Recognition and Export Helpers', () => {
+
+    it('returns proper recognition names and badge styles', () => {
+      expect(getRecognitionName('sct-wood-badge')).toBe('Insignia de Madera');
+      expect(getRecognitionName(undefined)).toBe('-');
+      expect(getRecognitionName('Desconocido')).toBe('Desconocido');
+
+      const stylePlastic = getRecognitionBadgeStyle('Embajadores de la Marea de Plástico');
+      expect(stylePlastic.bg).toBe('bg-sky-100');
+
+      const styleEarth = getRecognitionBadgeStyle('Tribu de la Tierra');
+      expect(styleEarth.bg).toBe('bg-[#e9e7db]');
+
+      const styleNature = getRecognitionBadgeStyle('Campeones por la Naturaleza');
+      expect(styleNature.bg).toBe('bg-[#fee2d8]');
+
+      const styleSolar = getRecognitionBadgeStyle('Go Solar');
+      expect(styleSolar.bg).toBe('bg-amber-100');
+
+      const styleEmpty = getRecognitionBadgeStyle(undefined);
+      expect(styleEmpty.bg).toBe('bg-gray-100');
+    });
+
+    it('exports members list to CSV', () => {
+      const clickMock = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      const appendMock = vi.spyOn(document.body, 'appendChild');
+      const removeMock = vi.spyOn(document.body, 'removeChild');
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+      vi.spyOn(URL, 'revokeObjectURL').mockReturnValue();
+
+      exportMembersToCSV(
+        { id: 101, region_id: 1, district_id: 1, group_id: 1, created_at: '2026-01-01' },
+        [{
+          identity: 'V-100',
+          first_names: 'Ana',
+          last_names: 'Silva',
+          birth_date: '2000-01-01',
+          member_type: 'young',
+          status: 'active',
+          batch_id: 101
+        }]
+      );
+
+      expect(clickMock).toHaveBeenCalled();
+      expect(appendMock).toHaveBeenCalled();
+      expect(removeMock).toHaveBeenCalled();
+
+      clickMock.mockRestore();
     });
   });
 

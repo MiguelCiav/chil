@@ -1,33 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Download, 
-  Search, 
-  Users, 
-  GraduationCap, 
-  User, 
-  AlertCircle, 
-  Calendar,
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  ColumnDef,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  flexRender
+} from '@tanstack/react-table';
+import {
+  Download,
+  Search,
+  Users,
   MapPin,
-  CheckCircle,
+  Award,
+  AlertCircle,
   Edit2,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Trash2
 } from 'lucide-react';
 
-import { Card, CardHeader, CardBody } from '../../../components/Card';
+import { Card, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
-import { Table } from '../../../components/Table';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
 import { Field } from '../../../components/Field';
-import { ColumnDef } from '@tanstack/react-table';
 
-import { 
-  getBatchById, 
-  getMembersByBatchId, 
-  updateMember, 
-  generateBatchReport, 
-  getHierarchyData 
+import {
+  getBatchById,
+  getMembersByBatchId,
+  updateMember,
+  deleteBatch,
+  generateBatchReport,
+  getHierarchyData,
+  exportMembersToCSV,
+  getRecognitionName
 } from '../api';
 import { Batch, ScoutMember, Region, District, ScoutGroup } from '../types';
 
@@ -40,14 +50,23 @@ export const BatchDetail: React.FC = () => {
   const [members, setMembers] = useState<ScoutMember[]>([]);
   const [loading, setLoading] = useState(!isNaN(Number(id)));
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'valid' | 'pending'>('all');
   const [downloading, setDownloading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // Editing Member
+  // Dropdown action menu per member row
+  const [activeMenuMemberId, setActiveMenuMemberId] = useState<string | null>(null);
+
+  // Quick View Member Modal
+  const [viewingMember, setViewingMember] = useState<ScoutMember | null>(null);
+
+  // Editing Member Modal
   const [editingMember, setEditingMember] = useState<ScoutMember | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Deletion modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Hierarchy cache
   const [regions, setRegions] = useState<Region[]>([]);
@@ -72,7 +91,7 @@ export const BatchDetail: React.FC = () => {
         setGroups(hierarchy.groups);
       })
       .catch((err) => {
-        console.error(err);
+        console.error("Error loading batch details:", err);
       })
       .finally(() => {
         setLoading(false);
@@ -83,20 +102,34 @@ export const BatchDetail: React.FC = () => {
     if (!batch) return;
     setDownloading(true);
     try {
-      const path = await generateBatchReport(batch.id);
-      setToastMessage(`¡Reporte PDF descargado exitosamente en ${path}!`);
+      const fileName = await generateBatchReport(batch.id);
+      setToastMessage(`¡Reporte PDF descargado exitosamente en ${fileName}!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
-      console.error(err);
+      console.error("Error generating PDF:", err);
       alert("Error al generar el reporte PDF.");
     } finally {
       setDownloading(false);
     }
   };
 
+  const handleExportCSV = () => {
+    if (!batch) return;
+    try {
+      exportMembersToCSV(batch, members);
+      setToastMessage('¡Listado de miembros descargado exitosamente!');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      console.error("Error exporting CSV:", err);
+      alert("Error al exportar la lista.");
+    }
+  };
+
   const handleEditClick = (member: ScoutMember) => {
-    setEditingMember(member);
+    setActiveMenuMemberId(null);
+    setEditingMember({ ...member });
     setIsEditModalOpen(true);
   };
 
@@ -110,11 +143,190 @@ export const BatchDetail: React.FC = () => {
       setMembers(updated);
       setIsEditModalOpen(false);
       setEditingMember(null);
+      setToastMessage('Datos del miembro actualizados con éxito.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      console.error(err);
+      console.error("Error saving member edit:", err);
       alert("Error al actualizar la información del miembro.");
     }
   };
+
+  const handleConfirmDelete = async () => {
+    if (!batch) return;
+    setDeleting(true);
+    try {
+      await deleteBatch(batch.id);
+      navigate('/lotes');
+    } catch (err) {
+      console.error("Error deleting batch:", err);
+      alert("Error al eliminar el lote.");
+      setDeleting(false);
+    }
+  };
+
+  const getRegionName = (regId: number) => regions.find(r => r.id === regId)?.name || `Región ${regId}`;
+  const getDistrictName = (distId: number) => districts.find(d => d.id === distId)?.name || `Distrito ${distId}`;
+  const getGroupName = (grpId: number) => groups.find(g => g.id === grpId)?.name || `Grupo ${grpId}`;
+
+  // Totals calculations
+  const totals = useMemo(() => {
+    return {
+      total: members.length,
+      young: members.filter(m => m.member_type === 'young').length,
+      adult: members.filter(m => m.member_type === 'adult').length,
+      valid: members.filter(m => m.status === 'active').length,
+      pending: members.filter(m => m.status === 'pending').length
+    };
+  }, [members]);
+
+  // Filter & Search Logic
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery.trim()) return members;
+    const term = searchQuery.toLowerCase().trim();
+    return members.filter(m => {
+      const fullName = `${m.first_names} ${m.last_names}`.toLowerCase();
+      const code = (m.recognition_code || '').toLowerCase();
+      return fullName.includes(term) || m.identity.includes(term) || code.includes(term);
+    });
+  }, [members, searchQuery]);
+
+  // TanStack Table columns
+  const columns = useMemo<ColumnDef<ScoutMember>[]>(() => [
+    {
+      accessorKey: 'identity',
+      header: 'CÉDULA',
+      cell: (info) => (
+        <span className="font-mono text-xs sm:text-sm text-neutral/80">{info.getValue() as string}</span>
+      )
+    },
+    {
+      accessorKey: 'name',
+      header: 'NOMBRE',
+      cell: (info) => {
+        const rowData = info.row.original;
+        return (
+          <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>
+        );
+      }
+    },
+    {
+      accessorKey: 'member_type',
+      header: 'TIPO',
+      cell: (info) => {
+        const val = info.getValue() as 'young' | 'adult';
+        return (
+          <span className="text-neutral/70 font-medium text-sm">
+            {val === 'young' ? 'Joven' : 'Adulto'}
+          </span>
+        );
+      }
+    },
+    {
+      accessorKey: 'status',
+      header: 'ESTATUS',
+      cell: (info) => {
+        const val = info.getValue() as 'active' | 'pending';
+        return val === 'active' ? (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
+            Registro Válido
+          </span>
+        ) : (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
+            Registro Inválido
+          </span>
+        );
+      }
+    },
+    {
+      accessorKey: 'recognition_code',
+      header: 'CÓDIGO REC.',
+      cell: (info) => {
+        const rowData = info.row.original;
+        const code = (info.getValue() as string) || (rowData.status === 'active' ? `REC-${rowData.identity.slice(-4)}` : '-');
+        return (
+          <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>
+        );
+      }
+    },
+    {
+      id: 'actions',
+      header: 'ACCIONES',
+      cell: ({ row }) => {
+        const rowData = row.original;
+        const isMenuOpen = activeMenuMemberId === rowData.identity;
+
+        return (
+          <div className="flex items-center gap-2 relative">
+            {/* Quick View Eye Icon Button */}
+            <button
+              type="button"
+              onClick={() => setViewingMember(rowData)}
+              className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+              title="Ver detalle del miembro"
+              aria-label={`Ver detalle de ${rowData.first_names} ${rowData.last_names}`}
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+
+            {/* Actions 3-Dots Menu */}
+            <div className="relative inline-block">
+              <button
+                type="button"
+                onClick={() => setActiveMenuMemberId(isMenuOpen ? null : rowData.identity)}
+                className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
+                aria-label={`Opciones de ${rowData.first_names} ${rowData.last_names}`}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {isMenuOpen && (
+                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans">
+                  <button
+                    type="button"
+                    onClick={() => handleEditClick(rowData)}
+                    className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-primary" />
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveMenuMemberId(null);
+                      setViewingMember(rowData);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-primary" />
+                    Ver Ficha
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+    }
+  ], [activeMenuMemberId]);
+
+  const table = useReactTable({
+    data: filteredMembers,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 10
+      }
+    }
+  });
+
+  const currentPageRows = table.getRowModel().rows;
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageCount = table.getPageCount();
 
   if (loading) {
     return (
@@ -136,99 +348,13 @@ export const BatchDetail: React.FC = () => {
     );
   }
 
-  const getRegionName = (id: number) => regions.find(r => r.id === id)?.name || `Región ${id}`;
-  const getDistrictName = (id: number) => districts.find(d => d.id === id)?.name || `Distrito ${id}`;
-  const getGroupName = (id: number) => groups.find(g => g.id === id)?.name || `Grupo ${id}`;
-
-  // Stats
-  const totals = {
-    total: members.length,
-    young: members.filter(m => m.member_type === 'young').length,
-    adult: members.filter(m => m.member_type === 'adult').length,
-    valid: members.filter(m => m.status === 'active').length,
-    pending: members.filter(m => m.status === 'pending').length
-  };
-
-  // Filter & Search Logic
-  const filteredMembers = members.filter(m => {
-    // Tab Filter
-    if (activeTab === 'valid' && m.status !== 'active') return false;
-    if (activeTab === 'pending' && m.status !== 'pending') return false;
-
-    // Search Query Filter
-    const term = searchQuery.toLowerCase();
-    const fullName = `${m.first_names} ${m.last_names}`.toLowerCase();
-    return fullName.includes(term) || m.identity.includes(term);
-  });
-
-  const columns: ColumnDef<ScoutMember>[] = [
-    {
-      accessorKey: 'identity',
-      header: 'Cédula',
-      cell: (info) => (
-        <span className="font-semibold text-neutral">{info.getValue() as string}</span>
-      )
-    },
-    {
-      accessorKey: 'name',
-      header: 'Nombre Completo',
-      cell: (info) => {
-        const rowData = info.row.original;
-        return (
-          <span className="font-semibold text-neutral">{rowData.first_names} {rowData.last_names}</span>
-        );
-      }
-    },
-    {
-      accessorKey: 'status',
-      header: 'Estatus',
-      cell: (info) => {
-        const val = info.getValue() as 'active' | 'pending';
-        return val === 'active' ? (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-            <CheckCircle className="w-3.5 h-3.5 mr-1" />
-            Registro válido
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-            <AlertCircle className="w-3.5 h-3.5 mr-1" />
-            No registrado
-          </span>
-        );
-      }
-    },
-    {
-      accessorKey: 'member_type',
-      header: 'Tipo',
-      cell: (info) => {
-        const val = info.getValue() as 'young' | 'adult';
-        return (
-          <span className="text-neutral/60 font-semibold">{val === 'young' ? 'Joven' : 'Adulto'}</span>
-        );
-      }
-    },
-    {
-      id: 'actions',
-      header: 'Acciones',
-      cell: (info) => {
-        const rowData = info.row.original;
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleEditClick(rowData)}
-            icon={<Edit2 size={13} />}
-          >
-            Editar
-          </Button>
-        );
-      }
-    }
-  ];
+  const recognitionTitle = batch.recognition_type
+    ? getRecognitionName(batch.recognition_type)
+    : 'Servicio Prolongado';
+  const recognitionSub = batch.recognition_duration || '5 años';
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 font-sans relative">
-      
+    <div className="max-w-6xl mx-auto space-y-6 font-sans py-2 relative">
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
@@ -237,156 +363,251 @@ export const BatchDetail: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation & Header */}
+      {/* Header with Title and Action Buttons */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="space-y-2">
-          <Link to="/lotes/nuevo" className="inline-flex items-center text-sm font-bold text-primary hover:text-primary/80 transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Crear nuevo lote
-          </Link>
-          <h1 className="text-3xl font-extrabold text-neutral tracking-tight">
-            Lote #{batch.id} {batch.comment ? `(${batch.comment})` : ''}
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
+            Detalle de Lote #{batch.id ? `LT-${new Date(batch.created_at).getFullYear()}-${String(batch.id).padStart(3, '0')}` : 'LT-2024-089'}
+            {batch.comment ? ` (${batch.comment})` : ''}
           </h1>
-          
-          <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-neutral/50">
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-primary" />
-              {getRegionName(batch.region_id)} • {getDistrictName(batch.district_id)} • {getGroupName(batch.group_id)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-neutral/40" />
-              {new Date(batch.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
-            </span>
+          <p className="text-xs sm:text-sm text-neutral/60 font-medium mt-1">
+            Revisión y gestión de reconocimientos del lote actual.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsDeleteModalOpen(true)}
+            icon={<Trash2 size={16} />}
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-semibold text-xs sm:text-sm"
+          >
+            Eliminar Lote
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleExportCSV}
+            icon={<Download size={16} />}
+            className="border-gray-200 hover:bg-gray-50 text-neutral font-semibold text-xs sm:text-sm"
+          >
+            Descargar lista
+          </Button>
+
+          <Button
+            variant="primary"
+            onClick={handleDownloadPDF}
+            disabled={downloading || totals.valid === 0}
+            title={totals.valid === 0 ? "No hay miembros válidos en este lote para generar reporte" : undefined}
+            icon={<FileText size={16} />}
+            className="bg-[#5c371d] hover:bg-[#4b2c17] text-white font-semibold text-xs sm:text-sm"
+          >
+            {downloading ? 'Generando PDF...' : 'Descargar todos (PDF)'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Top 3 Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Card 1: Detalles del Lote */}
+        <Card className="shadow-sm border-gray-200">
+          <CardBody className="p-6 flex flex-col justify-between h-full space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <h2 className="font-bold text-neutral text-base">Detalles del Lote</h2>
+            </div>
+
+            <div className="space-y-2 text-xs sm:text-sm pt-2">
+              <div className="flex justify-between items-center text-neutral/60">
+                <span>Región</span>
+                <span className="font-semibold text-neutral">{getRegionName(batch.region_id)}</span>
+              </div>
+              <div className="flex justify-between items-center text-neutral/60">
+                <span>Distrito</span>
+                <span className="font-semibold text-neutral">{getDistrictName(batch.district_id)}</span>
+              </div>
+              <div className="flex justify-between items-center text-neutral/60">
+                <span>Grupo</span>
+                <span className="font-semibold text-neutral">{getGroupName(batch.group_id)}</span>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Card 2: Tipo de Reconocimiento */}
+        <Card className="shadow-sm border-gray-200">
+          <CardBody className="p-6 flex flex-col justify-between h-full space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <h2 className="font-bold text-neutral text-base">Tipo de Reconocimiento</h2>
+            </div>
+
+            <div className="text-center py-2">
+              <div className="text-xl sm:text-2xl font-extrabold text-[#743e1d]">
+                {recognitionTitle}
+              </div>
+              <div className="text-xs sm:text-sm text-neutral/60 font-semibold mt-1">
+                {recognitionSub}
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Card 3: Resumen de Miembros */}
+        <Card className="shadow-sm border-gray-200">
+          <CardBody className="p-6 flex flex-col justify-between h-full space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#e6f0fa] text-[#0284c7] flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5" />
+              </div>
+              <h2 className="font-bold text-neutral text-base">Resumen de Miembros</h2>
+            </div>
+
+            <div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-2xl sm:text-3xl font-black text-neutral">
+                  {totals.total}
+                </span>
+                <span className="text-xs sm:text-sm font-semibold text-neutral/50">Total</span>
+              </div>
+
+              {/* Sub-grid Adultos & Jóvenes */}
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="bg-[#f5f5f4] rounded-xl p-2 px-3">
+                  <div className="text-[10px] font-bold text-neutral/50 uppercase">Adultos</div>
+                  <div className="text-sm font-extrabold text-neutral">{totals.adult}</div>
+                </div>
+                <div className="bg-[#f5f5f4] rounded-xl p-2 px-3">
+                  <div className="text-[10px] font-bold text-neutral/50 uppercase">Jóvenes</div>
+                  <div className="text-sm font-extrabold text-neutral">{totals.young}</div>
+                </div>
+              </div>
+
+              {/* Sin registrar alert box */}
+              <div className="bg-[#feeae8] border border-[#fccfca] rounded-xl px-3 py-1.5 flex justify-between items-center text-xs font-bold text-[#c92a2a]">
+                <span>Sin registrar</span>
+                <span className="text-sm font-black">{totals.pending}</span>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Members Table Container ("Miembros del Lote") */}
+      <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+        {/* Table Header with Search Input */}
+        <div className="p-4 sm:p-5 border-b border-gray-200 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-base sm:text-lg font-bold text-neutral">
+            Miembros del Lote
+          </h2>
+
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Buscar miembro..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-[#faf8f5] text-neutral text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-neutral/40"
+            />
           </div>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={handleDownloadPDF}
-          disabled={downloading || totals.valid === 0}
-          title={totals.valid === 0 ? "No hay miembros activos en este lote para generar un reporte" : undefined}
-          icon={<Download size={18} />}
-        >
-          {downloading ? 'Generando PDF...' : 'Exportar PDF'}
-        </Button>
-      </div>
+        {/* TanStack Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse font-sans">
+            <thead>
+              <tr className="border-b border-gray-200 bg-[#faf8f5]">
+                {table.getHeaderGroups().map(headerGroup => (
+                  headerGroup.headers.map(header => (
+                    <th
+                      key={header.id}
+                      className="px-6 py-4 text-xs font-extrabold text-neutral/70 uppercase tracking-wider"
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
+                  ))
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {currentPageRows.length > 0 ? (
+                currentPageRows.map((row, index) => {
+                  const isLast = index === currentPageRows.length - 1;
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`hover:bg-[#faf8f5] transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}
+                    >
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id} className="px-6 py-4 text-sm whitespace-nowrap text-neutral">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={columns.length} className="px-6 py-12 text-center text-neutral/50">
+                    No se encontraron miembros para el criterio de búsqueda.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Dashboard KPI statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <Card className="shadow-sm">
-          <CardBody className="p-5 flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xl font-black text-neutral">{totals.total}</div>
-              <div className="text-[10px] text-neutral/50 font-bold uppercase tracking-wider">Miembros</div>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card className="shadow-sm">
-          <CardBody className="p-5 flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xl font-black text-neutral">{totals.young}</div>
-              <div className="text-[10px] text-neutral/50 font-bold uppercase tracking-wider">Jóvenes</div>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card className="shadow-sm">
-          <CardBody className="p-5 flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
-              <User className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xl font-black text-neutral">{totals.adult}</div>
-              <div className="text-[10px] text-neutral/50 font-bold uppercase tracking-wider">Adultos</div>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card className="shadow-sm border-red-100">
-          <CardBody className="p-5 flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${totals.pending > 0 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-green-50 text-green-600'}`}>
-              <AlertCircle className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xl font-black text-neutral">{totals.pending}</div>
-              <div className="text-[10px] text-neutral/50 font-bold uppercase tracking-wider">Pendientes</div>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
-
-      {/* Main Members Grid with filters */}
-      <Card className="shadow-lg border-primary/10">
-        <CardHeader className="bg-primary/5 border-b border-primary/10 flex flex-col sm:flex-row justify-between items-center gap-4">
-          {/* Tab Filters */}
-          <div className="flex bg-primary/5 p-1 rounded-xl border border-primary/15 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setActiveTab('all')}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === 'all' 
-                  ? 'bg-white text-primary shadow-sm' 
-                  : 'text-neutral/60 hover:text-primary'
-              }`}
-            >
-              Todos
-              <span className="ml-1.5 px-2 py-0.5 text-xs font-bold bg-neutral/10 text-neutral/70 rounded-full">
-                {totals.total}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('valid')}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === 'valid' 
-                  ? 'bg-white text-primary shadow-sm' 
-                  : 'text-neutral/60 hover:text-primary'
-              }`}
-            >
-              Válidos
-              <span className="ml-1.5 px-2 py-0.5 text-xs font-bold bg-green-50 text-green-600 rounded-full">
-                {totals.valid}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('pending')}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === 'pending' 
-                  ? 'bg-white text-primary shadow-sm' 
-                  : 'text-neutral/60 hover:text-primary'
-              }`}
-            >
-              Pendientes
-              <span className="ml-1.5 px-2 py-0.5 text-xs font-bold bg-red-50 text-red-600 rounded-full">
-                {totals.pending}
-              </span>
-            </button>
+        {/* Footer with Numbered Pagination Controls */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-neutral/60">
+          <div>
+            Mostrando {currentPageRows.length > 0 ? `${pageIndex * 10 + 1}-${Math.min((pageIndex + 1) * 10, filteredMembers.length)}` : 0} de {filteredMembers.length} miembros
           </div>
 
-          {/* Search Input */}
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre o cédula..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-primary/20 bg-primary/5 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm transition-all"
-            />
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Página anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {Array.from({ length: pageCount }, (_, i) => i).slice(0, 5).map(idx => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => table.setPageIndex(idx)}
+                className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                  pageIndex === idx
+                    ? 'bg-[#743e1d] text-white'
+                    : 'text-neutral/70 hover:bg-gray-100'
+                }`}
+              >
+                {idx + 1}
+              </button>
+            ))}
+
+            {pageCount > 5 && <span className="px-1 text-neutral/40">...</span>}
+
+            <button
+              type="button"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Página siguiente"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-        </CardHeader>
-        <CardBody className="p-0">
-          <Table columns={columns} data={filteredMembers} className="border-0 rounded-none shadow-none" />
-        </CardBody>
-      </Card>
+        </div>
+      </div>
 
       {/* Manual Member Edit Modal */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-xl">
@@ -408,13 +629,29 @@ export const BatchDetail: React.FC = () => {
                   required
                 />
               </div>
-              <Field
-                label="Fecha de Nacimiento *"
-                type="date"
-                value={editingMember.birth_date}
-                onChange={e => setEditingMember({ ...editingMember, birth_date: e.target.value })}
-                required
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <Field
+                  label="Fecha de Nacimiento *"
+                  type="date"
+                  value={editingMember.birth_date}
+                  onChange={e => setEditingMember({ ...editingMember, birth_date: e.target.value })}
+                  required
+                />
+                <div>
+                  <label htmlFor="member-type-select" className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral">
+                    Tipo de Miembro *
+                  </label>
+                  <select
+                    id="member-type-select"
+                    value={editingMember.member_type}
+                    onChange={e => setEditingMember({ ...editingMember, member_type: e.target.value as 'young' | 'adult' })}
+                    className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  >
+                    <option value="young">Joven</option>
+                    <option value="adult">Adulto</option>
+                  </select>
+                </div>
+              </div>
               <Field
                 label="Correo Electrónico"
                 type="email"
@@ -425,6 +662,12 @@ export const BatchDetail: React.FC = () => {
                 label="Teléfono de Contacto"
                 value={editingMember.phone || ''}
                 onChange={e => setEditingMember({ ...editingMember, phone: e.target.value })}
+              />
+              <Field
+                label="Código de Reconocimiento"
+                value={editingMember.recognition_code || ''}
+                onChange={e => setEditingMember({ ...editingMember, recognition_code: e.target.value })}
+                placeholder="Ej. SP-5Y-001"
               />
             </ModalBody>
             <ModalFooter>
@@ -439,7 +682,89 @@ export const BatchDetail: React.FC = () => {
         )}
       </Modal>
 
+      {/* Member Quick View Details Modal */}
+      <Modal isOpen={viewingMember !== null} onClose={() => setViewingMember(null)} className="max-w-md">
+        <ModalHeader onClose={() => setViewingMember(null)}>
+          Ficha del Miembro Scout
+        </ModalHeader>
+        {viewingMember && (
+          <ModalBody className="space-y-4 font-sans text-neutral">
+            <div className="bg-[#faf8f5] p-4 rounded-xl border border-gray-200 space-y-2.5 text-xs sm:text-sm">
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Cédula de Identidad</span>
+                <span className="font-mono font-bold text-neutral">{viewingMember.identity}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Nombre Completo</span>
+                <span className="font-bold text-neutral">{viewingMember.first_names} {viewingMember.last_names}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Tipo</span>
+                <span className="font-semibold text-neutral">{viewingMember.member_type === 'young' ? 'Joven' : 'Adulto'}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Estatus</span>
+                <span className={`font-bold ${viewingMember.status === 'active' ? 'text-green-700' : 'text-red-700'}`}>
+                  {viewingMember.status === 'active' ? '● Registro Válido' : '● Registro Inválido'}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Fecha Nacimiento</span>
+                <span className="font-semibold text-neutral">{viewingMember.birth_date || '-'}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Correo Electrónico</span>
+                <span className="font-semibold text-neutral">{viewingMember.email || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral/50 font-semibold">Teléfono</span>
+                <span className="font-semibold text-neutral">{viewingMember.phone || '-'}</span>
+              </div>
+            </div>
+          </ModalBody>
+        )}
+        <ModalFooter>
+          <Button variant="primary" onClick={() => setViewingMember(null)}>
+            Cerrar
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Modal: Confirmar Eliminación de Lote */}
+      <Modal isOpen={isDeleteModalOpen} onClose={() => !deleting && setIsDeleteModalOpen(false)} className="max-w-md">
+        <ModalHeader onClose={() => !deleting && setIsDeleteModalOpen(false)}>
+          Eliminar Lote
+        </ModalHeader>
+        <ModalBody className="space-y-3">
+          <p className="text-sm text-neutral">
+            ¿Está seguro de que desea eliminar el lote <span className="font-bold">#{batch.id}</span> {batch.comment ? `(${batch.comment})` : ''} y todos sus miembros asociados?
+          </p>
+          <p className="text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200">
+            Esta acción no se puede deshacer y eliminará permanentemente los datos del lote y sus registros de miembros asociados.
+          </p>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsDeleteModalOpen(false)}
+            disabled={deleting}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirmDelete}
+            disabled={deleting}
+            className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
+          >
+            {deleting ? 'Eliminando...' : 'Eliminar Lote'}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
     </div>
   );
 };
+
 export default BatchDetail;
