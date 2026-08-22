@@ -3,9 +3,19 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: write
@@ -43,46 +53,29 @@ jobs:
       - name: Build Frontend
         run: npm run build
 
+      - name: Upload Build Artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
 
-  release-planner:
+  release-and-deploy:
     needs: lint-and-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    outputs:
-      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Create Release Pull Request
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: npm run version-packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  deploy:
-    needs: [lint-and-test, release-planner]
-    if: github.ref == 'refs/heads/main' && needs.release-planner.outputs.hasChangesets != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -96,8 +89,40 @@ jobs:
       - name: Install functions dependencies
         run: npm ci --prefix functions
 
-      - name: Build Frontend
-        run: npm run build
+      - name: Process Version & Release
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CHANGESETS=$(find .changeset -maxdepth 1 -name "*.md" ! -name "README.md")
+          if [ -n "$CHANGESETS" ]; then
+            echo "Changesets detected. Updating package versions and changelog..."
+            npm run version-packages
+            
+            NEW_VERSION=$(node -p "require('./package.json').version")
+            echo "New version: $NEW_VERSION"
+            
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            
+            git add .
+            git commit -m "chore(release): v${NEW_VERSION} [skip ci]"
+            git push origin main
+            
+            git tag "v${NEW_VERSION}"
+            git push origin "v${NEW_VERSION}"
+            
+            gh release create "v${NEW_VERSION}" --title "v${NEW_VERSION}" --generate-notes
+            echo "Release v${NEW_VERSION} created successfully."
+          else
+            echo "No changesets to process."
+          fi
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
 
       - name: Deploy to Firebase
         run: npx firebase-tools deploy
