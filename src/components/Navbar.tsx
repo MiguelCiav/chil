@@ -66,6 +66,7 @@ export const Navbar: React.FC = () => {
         <div className="flex h-full space-x-6">
           <NavLink
             to="/lotes/nuevo"
+            end
             className={({ isActive }) =>
               `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${isActive
                 ? 'border-primary text-primary'
@@ -74,6 +75,18 @@ export const Navbar: React.FC = () => {
             }
           >
             Nuevo lote
+          </NavLink>
+          <NavLink
+            to="/lotes"
+            end
+            className={({ isActive }) =>
+              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${isActive
+                ? 'border-primary text-primary'
+                : 'border-transparent text-neutral hover:text-primary'
+              }`
+            }
+          >
+            Listado de lotes
           </NavLink>
         </div>
       </div>

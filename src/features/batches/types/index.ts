@@ -4,6 +4,8 @@ export interface Batch {
   region_id: number;
   district_id: number;
   group_id: number;
+  recognition_type?: string;
+  recognition_duration?: string;
   created_at: string;
 }
 
@@ -19,6 +21,7 @@ export interface ScoutMember {
   member_type: 'young' | 'adult'; // "young" (Joven) or "adult" (Adulto)
   status: 'active' | 'pending';   // "active" (Registro válido) or "pending" (No registrado)
   batch_id?: number;
+  recognition_code?: string;
 }
 
 export interface Region {
@@ -58,4 +61,12 @@ export interface BatchCreationParams {
   district_id: number;
   group_id: number;
   recognition_type: string;
+  recognition_duration?: string;
+}
+
+export interface ActiveFilterChip {
+  id: string;
+  label: string;
+  value: string;
+  type: 'date' | 'region' | 'district' | 'group' | 'unit' | 'recognition';
 }

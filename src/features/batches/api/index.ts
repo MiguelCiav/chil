@@ -22,12 +22,118 @@ import {
   BatchCreationParams
 } from '../types';
 
-export const RECOGNITION_TYPES = [
+export interface RecognitionTypeInfo {
+  id: string;
+  name: string;
+  category?: string;
+}
+
+export const RECOGNITION_TYPES: RecognitionTypeInfo[] = [
   { id: "sct-wood-badge", name: "Insignia de Madera" },
   { id: "sct-promesa", name: "Promesa Scout" },
   { id: "sct-merit", name: "Medalla al Mérito" },
-  { id: "sct-long-service", name: "Servicio Distinguido" }
+  { id: "sct-long-service", name: "Servicio Distinguido" },
+  { id: "sct-service-prolonged", name: "Servicio Prolongado" },
+  { id: "sct-plastic-tide", name: "Embajadores de la Marea de Plástico" },
+  { id: "sct-earth-tribe", name: "Tribu de la Tierra" },
+  { id: "sct-champions-nature", name: "Campeones por la Naturaleza" },
+  { id: "sct-go-solar", name: "Go Solar" }
 ];
+
+export function getRecognitionBadgeStyle(recognitionIdOrName?: string): { bg: string; text: string; border: string; pillClass: string } {
+  if (!recognitionIdOrName) {
+    return {
+      bg: 'bg-gray-100',
+      text: 'text-gray-700',
+      border: 'border-gray-200',
+      pillClass: 'bg-gray-100 text-gray-700 border border-gray-200'
+    };
+  }
+  const lower = recognitionIdOrName.toLowerCase();
+  if (lower.includes('plástico') || lower.includes('plastico') || lower.includes('marea') || lower.includes('plastic')) {
+    return {
+      bg: 'bg-sky-100',
+      text: 'text-sky-800',
+      border: 'border-sky-200',
+      pillClass: 'bg-sky-100 text-sky-800 border border-sky-200'
+    };
+  }
+  if (lower.includes('tribu') || lower.includes('tierra') || lower.includes('earth')) {
+    return {
+      bg: 'bg-[#e9e7db]',
+      text: 'text-[#5e5c46]',
+      border: 'border-[#d6d3c2]',
+      pillClass: 'bg-[#e9e7db] text-[#5e5c46] border border-[#d6d3c2]'
+    };
+  }
+  if (lower.includes('campeones') || lower.includes('naturaleza') || lower.includes('champions')) {
+    return {
+      bg: 'bg-[#fee2d8]',
+      text: 'text-[#c2410c]',
+      border: 'border-[#fdba74]',
+      pillClass: 'bg-[#fee2d8] text-[#c2410c] border border-[#fdba74]'
+    };
+  }
+  if (lower.includes('solar')) {
+    return {
+      bg: 'bg-amber-100',
+      text: 'text-amber-800',
+      border: 'border-amber-200',
+      pillClass: 'bg-amber-100 text-amber-800 border border-amber-200'
+    };
+  }
+  if (lower.includes('servicio') || lower.includes('service') || lower.includes('distinguido') || lower.includes('prolongado')) {
+    return {
+      bg: 'bg-amber-100',
+      text: 'text-amber-900',
+      border: 'border-amber-200',
+      pillClass: 'bg-amber-100 text-amber-900 border border-amber-200'
+    };
+  }
+  if (lower.includes('promesa') || lower.includes('wood') || lower.includes('madera')) {
+    return {
+      bg: 'bg-blue-100',
+      text: 'text-blue-800',
+      border: 'border-blue-200',
+      pillClass: 'bg-blue-100 text-blue-800 border border-blue-200'
+    };
+  }
+  if (lower.includes('mérito') || lower.includes('merito')) {
+    return {
+      bg: 'bg-emerald-100',
+      text: 'text-emerald-800',
+      border: 'border-emerald-200',
+      pillClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    };
+  }
+  return {
+    bg: 'bg-primary/10',
+    text: 'text-primary',
+    border: 'border-primary/20',
+    pillClass: 'bg-primary/10 text-primary border border-primary/20'
+  };
+}
+
+export function getRecognitionName(recognitionIdOrName?: string): string {
+  if (!recognitionIdOrName) return '-';
+  const found = RECOGNITION_TYPES.find(r => r.id === recognitionIdOrName || r.name.toLowerCase() === recognitionIdOrName.toLowerCase());
+  return found ? found.name : recognitionIdOrName;
+}
+
+export async function deleteBatch(batchId: number): Promise<void> {
+  const membersQuery = query(collection(db, "scout_members"), where("batch_id", "==", batchId));
+  const membersSnapshot = await getDocs(membersQuery);
+
+  const batchOp = writeBatch(db);
+  membersSnapshot.forEach((docSnapshot) => {
+    batchOp.delete(docSnapshot.ref);
+  });
+
+  const batchDocRef = doc(db, "batches", String(batchId));
+  batchOp.delete(batchDocRef);
+
+  await batchOp.commit();
+}
 
 // Helper to check and print browser environment details for storage
 const safeGetItem = (key: string): string | null => {
@@ -123,6 +229,8 @@ export async function createBatch(params: BatchCreationParams): Promise<Batch> {
     region_id: params.region_id,
     district_id: params.district_id,
     group_id: params.group_id,
+    recognition_type: params.recognition_type,
+    recognition_duration: params.recognition_duration || '',
     created_at: new Date().toISOString()
   };
 
@@ -141,6 +249,8 @@ export async function updateBatch(id: number, params: BatchCreationParams): Prom
     region_id: params.region_id,
     district_id: params.district_id,
     group_id: params.group_id,
+    recognition_type: params.recognition_type,
+    recognition_duration: params.recognition_duration || '',
     created_at: docSnap.exists() ? (docSnap.data() as Batch).created_at : new Date().toISOString()
   };
 
@@ -204,6 +314,15 @@ export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[
   return members;
 }
 
+export async function getAllMembers(): Promise<ScoutMember[]> {
+  const querySnapshot = await getDocs(collection(db, "scout_members"));
+  const members: ScoutMember[] = [];
+  querySnapshot.forEach((docSnapshot) => {
+    members.push(docSnapshot.data() as ScoutMember);
+  });
+  return members;
+}
+
 export async function getAllBatches(): Promise<Batch[]> {
   const querySnapshot = await getDocs(collection(db, "batches"));
   const batches: Batch[] = [];
@@ -249,6 +368,32 @@ export async function loginScraper(): Promise<void> {
     const err = error as Error;
     throw new Error(err?.message || "Credenciales incorrectas o inicio de sesión fallido", { cause: error });
   }
+}
+
+export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
+  const headers = ['Cédula', 'Nombres', 'Apellidos', 'Tipo', 'Estatus', 'Código Rec.', 'Fecha Nacimiento', 'Email', 'Teléfono'];
+  const rows = members.map(m => [
+    `"${m.identity || ''}"`,
+    `"${m.first_names || ''}"`,
+    `"${m.last_names || ''}"`,
+    `"${m.member_type === 'young' ? 'Joven' : 'Adulto'}"`,
+    `"${m.status === 'active' ? 'Registro Válido' : 'No registrado'}"`,
+    `"${m.recognition_code || '-'}"`,
+    `"${m.birth_date || '-'}"`,
+    `"${m.email || ''}"`,
+    `"${m.phone || ''}"`
+  ]);
+  
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `Lote_${batch.id}_miembros.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 export async function generateBatchReport(batchId: number): Promise<string> {
