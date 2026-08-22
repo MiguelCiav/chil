@@ -67,10 +67,9 @@ export const Navbar: React.FC = () => {
           <NavLink
             to="/lotes/nuevo"
             className={({ isActive }) =>
-              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${
-                isActive
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-neutral hover:text-primary'
+              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${isActive
+                ? 'border-primary text-primary'
+                : 'border-transparent text-neutral hover:text-primary'
               }`
             }
           >
@@ -84,7 +83,7 @@ export const Navbar: React.FC = () => {
         <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
           <Bell className="w-5 h-5" />
         </button>
-        <button 
+        <button
           onClick={() => {
             setSuccessMsg('');
             setErrorMsg('');
@@ -108,7 +107,7 @@ export const Navbar: React.FC = () => {
           </ModalHeader>
           <ModalBody className="space-y-4">
             <p className="text-sm text-neutral/70">
-              Ingrese sus credenciales de la Asociación de Scouts de Venezuela (ASV) para permitir la consulta y verificación automatizada de miembros.
+              Ingrese sus credenciales del sistema SERSIN para permitir la consulta y verificación automatizada de miembros.
             </p>
             {hasCredentials && (
               <p className="text-xs text-green-600 font-semibold bg-green-50 p-2.5 rounded-lg border border-green-200">

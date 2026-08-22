@@ -67,7 +67,7 @@ All database queries and Cloud Functions triggers are wrapped in the feature's A
 *   `loginScraper() -> Promise<void>`: Triggers the `loginScraper` Cloud Function to authenticate scraper credentials.
 
 ### PDF Report Service
-*   `generateBatchReport(batchId) -> Promise<string>`: Aggregates details from the batch and its members, builds A4 print pages with dynamic multi-page table wrapping, and prompts a local PDF download using `jsPDF`.
+*   `generateBatchReport(batchId) -> Promise<string>`: Aggregates details from the batch and all its members (both active and pending/unactive), builds A4 print pages with dynamic multi-page table wrapping, and prompts a local PDF download using `jsPDF`.
 
 ---
 

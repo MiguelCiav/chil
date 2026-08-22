@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Check, Sparkles } from 'lucide-react';
+import { Search, Check } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody } from './Modal';
 
 interface SearchSelectorModalProps<T> {
@@ -46,7 +46,6 @@ export function SearchSelectorModal<T>({
     <Modal isOpen={isOpen} onClose={handleClose} className="max-w-md font-sans">
       <ModalHeader onClose={handleClose}>
         <span className="flex items-center gap-2 text-primary font-bold">
-          <Sparkles className="w-5 h-5 text-primary" />
           {title}
         </span>
       </ModalHeader>
@@ -75,11 +74,10 @@ export function SearchSelectorModal<T>({
                   key={key}
                   type="button"
                   onClick={() => handleSelect(item)}
-                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between group ${
-                    isSelected
-                      ? 'bg-primary text-white font-semibold'
-                      : 'hover:bg-primary/5 text-neutral'
-                  }`}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between group ${isSelected
+                    ? 'bg-primary text-white font-semibold'
+                    : 'hover:bg-primary/5 text-neutral'
+                    }`}
                 >
                   {renderItem(item)}
                   {isSelected && <Check className="w-4 h-4" />}

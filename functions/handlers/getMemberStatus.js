@@ -3,9 +3,30 @@ const logger = require("firebase-functions/logger");
 const { getCachedCookies, setCachedCookies, performLogin } = require("../scraper/auth");
 const { fetchMemberStatusWithCookies } = require("../scraper/lookup");
 
+/**
+ * Firebase Callable Function: getMemberStatus
+ *
+ * Fetches member status information for a given national ID (`cedula`).
+ *
+ * How it works:
+ * 1. Validates request parameters (`cedula` and scraper `credentials`).
+ * 2. Attempts an initial lookup using cached session cookies (if present) to optimize response time.
+ * 3. If cached cookies are missing or expired/invalid, performs a full login via `performLogin`,
+ *    stores the fresh cookies in cache, and queries member status with `fetchMemberStatusWithCookies`.
+ * 4. Catches errors and throws corresponding Firebase `HttpsError` responses (`invalid-argument`, `not-found`, `internal`).
+ *
+ * @param {Object} request - The Firebase Callable request object.
+ * @param {Object} request.data - Input payload.
+ * @param {string} request.data.cedula - Member ID number.
+ * @param {Object} request.data.credentials - Scraper login credentials.
+ * @param {string} request.data.credentials.email - Scraper email.
+ * @param {string} request.data.credentials.password - Scraper password.
+ * @returns {Promise<Object>} Member status information.
+ * @throws {HttpsError} If inputs are missing, member is not registered, or authentication/network failure occurs.
+ */
 exports.getMemberStatus = onCall({ cors: true }, async (request) => {
   const { cedula, credentials } = request.data;
-  
+
   if (!cedula) {
     throw new HttpsError("invalid-argument", "La cédula es requerida");
   }

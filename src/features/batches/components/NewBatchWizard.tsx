@@ -3,39 +3,38 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowRight, 
-  ClipboardList, 
-  Users, 
-  CheckCircle2, 
-  AlertCircle, 
-  AlertTriangle,
-  Sparkles
+import {
+  ArrowRight,
+  ClipboardList,
+  Users,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 import { Card, CardHeader, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
 
-import { 
-  getHierarchyData, 
-  createBatch, 
+import {
+  getHierarchyData,
+  createBatch,
   updateBatch,
-  getMemberStatus, 
-  createMember, 
-  updateMember, 
+  getMemberStatus,
+  createMember,
+  updateMember,
   deleteMember,
   getMembersByBatchId,
   hasScraperCredentials,
   loginScraper,
   ScraperMemberDetails
 } from '../api';
-import { 
-  Region, 
-  District, 
-  ScoutGroup, 
+import {
+  Region,
+  District,
+  ScoutGroup,
   ScoutMember,
-  MemberVerificationResult 
+  MemberVerificationResult
 } from '../types';
 
 import { Step1Org } from './wizard/Step1Org';
@@ -208,14 +207,14 @@ export const NewBatchWizard: React.FC = () => {
       const isUnregistered = errStr.includes("No registrado");
       const status = isUnregistered ? 'No registrado' : 'Error de red';
 
-      setVerificationList(prev => prev.map(item => 
-        item.cedula === cedula 
-          ? { 
-              cedula, 
-              name: isUnregistered ? 'Usuario No Registrado' : 'Error de conexión', 
-              status, 
-              type 
-            } 
+      setVerificationList(prev => prev.map(item =>
+        item.cedula === cedula
+          ? {
+            cedula,
+            name: isUnregistered ? 'Usuario No Registrado' : 'Error de conexión',
+            status,
+            type
+          }
           : item
       ));
 
@@ -245,15 +244,15 @@ export const NewBatchWizard: React.FC = () => {
       const rowStatus = isScrapedActive ? 'Registro válido' : 'No registrado';
 
       // Success! Update list with results
-      setVerificationList(prev => prev.map(item => 
-        item.cedula === cedula 
-          ? { 
-              cedula, 
-              name: res.nombre_completo, 
-              status: rowStatus, 
-              type, 
-              details: res 
-            } 
+      setVerificationList(prev => prev.map(item =>
+        item.cedula === cedula
+          ? {
+            cedula,
+            name: res.nombre_completo,
+            status: rowStatus,
+            type,
+            details: res
+          }
           : item
       ));
 
@@ -337,7 +336,7 @@ export const NewBatchWizard: React.FC = () => {
     const nextType = originalType === 'young' ? 'adult' as const : 'young' as const;
 
     // 2. Optimistic UI update
-    setVerificationList(prev => prev.map(item => 
+    setVerificationList(prev => prev.map(item =>
       item.cedula === cedula ? { ...item, type: nextType } : item
     ));
 
@@ -355,7 +354,7 @@ export const NewBatchWizard: React.FC = () => {
       } catch (err) {
         console.error("Error al actualizar tipo de miembro en DB:", err);
         // Revert UI to original state
-        setVerificationList(prev => prev.map(item => 
+        setVerificationList(prev => prev.map(item =>
           item.cedula === cedula ? { ...item, type: originalType } : item
         ));
         alert("No se pudo actualizar el tipo de miembro en la base de datos. Se ha revertido el cambio.");
@@ -378,7 +377,7 @@ export const NewBatchWizard: React.FC = () => {
       const deletePromises = dbMembers
         .filter(m => !currentInputCedulas.has(m.identity))
         .map(m => deleteMember(m.identity));
-      
+
       await Promise.all(deletePromises);
 
       // 4. Reload the updated members list
@@ -395,7 +394,7 @@ export const NewBatchWizard: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 font-sans relative">
-      
+
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
@@ -408,8 +407,8 @@ export const NewBatchWizard: React.FC = () => {
       <div className="relative">
         {/* Background connector bar */}
         <div className="absolute top-6 left-6 right-6 h-1 bg-gray-200 -translate-y-1/2 rounded-full z-0" />
-        <div 
-          className="absolute top-6 left-6 h-1 bg-primary -translate-y-1/2 rounded-full transition-all duration-500 z-0" 
+        <div
+          className="absolute top-6 left-6 h-1 bg-primary -translate-y-1/2 rounded-full transition-all duration-500 z-0"
           style={{ width: `calc(${(currentStep - 1) / 2} * (100% - 3rem))` }}
         />
 
@@ -430,20 +429,18 @@ export const NewBatchWizard: React.FC = () => {
               className="flex flex-col items-center group focus:outline-none"
               disabled={item.step >= currentStep}
             >
-              <div 
-                className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                  currentStep === item.step
-                    ? 'bg-primary border-primary text-white shadow-lg ring-4 ring-primary/20 scale-110'
-                    : currentStep > item.step
-                      ? 'bg-green-500 border-green-500 text-white shadow-md'
-                      : 'bg-white border-gray-300 text-gray-400 hover:border-primary/50'
-                }`}
+              <div
+                className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${currentStep === item.step
+                  ? 'bg-primary border-primary text-white shadow-lg ring-4 ring-primary/20 scale-110'
+                  : currentStep > item.step
+                    ? 'bg-green-500 border-green-500 text-white shadow-md'
+                    : 'bg-white border-gray-300 text-gray-400 hover:border-primary/50'
+                  }`}
               >
                 {item.icon}
               </div>
-              <span className={`mt-2.5 text-sm font-bold transition-colors ${
-                currentStep === item.step ? 'text-primary' : 'text-neutral/70'
-              }`}>
+              <span className={`mt-2.5 text-sm font-bold transition-colors ${currentStep === item.step ? 'text-primary' : 'text-neutral/70'
+                }`}>
                 {item.title}
               </span>
               <span className="text-xs text-neutral/40 font-medium hidden sm:inline">{item.desc}</span>
@@ -456,12 +453,11 @@ export const NewBatchWizard: React.FC = () => {
       {currentStep === 1 && (
         <Card className="shadow-lg border-primary/10">
           <CardHeader className="bg-primary/5 border-b border-primary/10 flex items-center gap-3">
-            <Sparkles className="text-primary w-6 h-6 animate-pulse" />
             Configuración del Lote
           </CardHeader>
           <CardBody>
             <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-6">
-              
+
               <Step1Org
                 register={register}
                 setValue={setValue}
@@ -474,11 +470,11 @@ export const NewBatchWizard: React.FC = () => {
               />
 
               <div className="flex justify-end pt-4 border-t border-primary/10">
-                <Button 
-                  type="submit" 
-                  variant="primary" 
+                <Button
+                  type="submit"
+                  variant="primary"
                   disabled={!isValid || loadingHierarchy}
-                  icon={<ArrowRight size={18} />} 
+                  icon={<ArrowRight size={18} />}
                   iconPosition="right"
                 >
                   Siguiente paso
@@ -540,8 +536,8 @@ export const NewBatchWizard: React.FC = () => {
           <Button variant="outline" onClick={() => setShowAuthAlert(false)}>
             Cancelar
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={() => {
               setShowAuthAlert(false);
               // Trigger settings button click on Navbar

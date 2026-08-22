@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, GraduationCap, User, Search, Edit2, ArrowLeft, Sparkles } from 'lucide-react';
+import { Users, GraduationCap, User, Search, Edit2, ArrowLeft } from 'lucide-react';
 import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/Card';
 import { Button } from '../../../../components/Button';
 import { Field } from '../../../../components/Field';
@@ -95,11 +95,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             <div className="flex bg-primary/5 p-1 rounded-xl border border-primary/15 w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab('valid')}
-                className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  activeTab === 'valid'
-                    ? 'bg-white text-primary shadow-sm'
-                    : 'text-neutral/60 hover:text-primary'
-                }`}
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'valid'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-neutral/60 hover:text-primary'
+                  }`}
               >
                 Registros Válidos
                 <span className="ml-1.5 px-2 py-0.5 text-xs font-bold bg-primary/10 text-primary rounded-full">
@@ -108,11 +107,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
               </button>
               <button
                 onClick={() => setActiveTab('pending')}
-                className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  activeTab === 'pending'
-                    ? 'bg-white text-primary shadow-sm'
-                    : 'text-neutral/60 hover:text-primary'
-                }`}
+                className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'pending'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-neutral/60 hover:text-primary'
+                  }`}
               >
                 Registros Pendientes
                 <span className="ml-1.5 px-2 py-0.5 text-xs font-bold bg-red-50 text-red-600 rounded-full">
@@ -194,9 +192,8 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
           <Button
             variant="primary"
             onClick={handleFinalizeBatch}
-            icon={<Sparkles size={18} />}
           >
-            Generar Lote 🚀
+            Generar Lote
           </Button>
         </CardFooter>
       </Card>
