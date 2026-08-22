@@ -31,7 +31,7 @@ export const Navbar: React.FC = () => {
     }
   }, [isSettingsOpen]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setSuccessMsg('');
@@ -55,7 +55,7 @@ export const Navbar: React.FC = () => {
     <nav className="h-16 px-6 border-b border-gray-200 bg-white flex items-center justify-between font-sans">
       <div className="flex items-center h-full">
         {/* Logo */}
-        <Link to="/lotes" className="flex items-center mr-8 hover:opacity-95 transition-opacity">
+        <Link to="/" className="flex items-center mr-8 hover:opacity-95 transition-opacity">
           <img src={logo} alt="Chil Logo" className="h-8 w-auto mr-2" />
           <div className="text-primary font-bold text-xl">
             Chil
@@ -67,37 +67,24 @@ export const Navbar: React.FC = () => {
           <NavLink
             to="/lotes/nuevo"
             className={({ isActive }) =>
-              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${
-                isActive
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-neutral hover:text-primary'
+              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${isActive
+                ? 'border-primary text-primary'
+                : 'border-transparent text-neutral hover:text-primary'
               }`
             }
           >
             Nuevo lote
-          </NavLink>
-          <NavLink
-            to="/lotes"
-            end
-            className={({ isActive }) =>
-              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${
-                isActive
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-neutral hover:text-primary'
-              }`
-            }
-          >
-            Listado de lotes
           </NavLink>
         </div>
       </div>
 
       {/* Right Side Icons */}
       <div className="flex items-center space-x-4 text-neutral">
-        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+        <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
           <Bell className="w-5 h-5" />
         </button>
-        <button 
+        <button
+          type="button"
           onClick={() => {
             setSuccessMsg('');
             setErrorMsg('');
@@ -108,7 +95,7 @@ export const Navbar: React.FC = () => {
         >
           <Settings className="w-5 h-5" />
         </button>
-        <button className="ml-2 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border border-gray-300">
+        <button type="button" className="ml-2 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border border-gray-300">
           {/* Avatar Placeholder */}
           <User className="w-5 h-5 text-gray-500" />
         </button>
@@ -121,7 +108,7 @@ export const Navbar: React.FC = () => {
           </ModalHeader>
           <ModalBody className="space-y-4">
             <p className="text-sm text-neutral/70">
-              Ingrese sus credenciales de la Asociación de Scouts de Venezuela (ASV) para permitir la consulta y verificación automatizada de miembros.
+              Ingrese sus credenciales del sistema SERSIN para permitir la consulta y verificación automatizada de miembros.
             </p>
             {hasCredentials && (
               <p className="text-xs text-green-600 font-semibold bg-green-50 p-2.5 rounded-lg border border-green-200">

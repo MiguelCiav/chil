@@ -30,6 +30,7 @@ dist-ssr
 
 #env
 .env
+.firebase/
 
 # Coverage
 src-tauri/lcov.info
@@ -39,3 +40,6 @@ coverage/
 
 # Wireframes
 wireframes/
+
+.agent/
+.vscode/

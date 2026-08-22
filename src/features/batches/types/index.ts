@@ -1,6 +1,6 @@
 export interface Batch {
   id: number;
-  name: string;
+  comment?: string;
   region_id: number;
   district_id: number;
   group_id: number;
@@ -9,8 +9,8 @@ export interface Batch {
 
 export interface ScoutMember {
   identity: string;
-  first_name: string;
-  last_name: string;
+  first_names: string;
+  last_names: string;
   birth_date: string;
   email?: string;
   phone?: string;
@@ -53,7 +53,7 @@ export interface MemberVerificationResult {
 }
 
 export interface BatchCreationParams {
-  name: string;
+  comment?: string;
   region_id: number;
   district_id: number;
   group_id: number;

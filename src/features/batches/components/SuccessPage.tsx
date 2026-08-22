@@ -138,7 +138,7 @@ export const SuccessPage: React.FC = () => {
       cell: (info) => {
         const rowData = info.row.original;
         return (
-          <span className="font-semibold text-neutral">{rowData.first_name} {rowData.last_name}</span>
+          <span className="font-semibold text-neutral">{rowData.first_names} {rowData.last_names}</span>
         );
       }
     },
@@ -175,6 +175,7 @@ export const SuccessPage: React.FC = () => {
         return (
           <div className="flex gap-2">
             <button 
+              type="button"
               onClick={() => navigate(`/lotes/${batch.id}`)}
               className="p-1.5 border border-gray-200 hover:border-primary text-neutral hover:text-primary rounded-lg transition-all"
               title="Vista previa"
@@ -205,20 +206,21 @@ export const SuccessPage: React.FC = () => {
         </div>
         <div>
           <h1 className="text-3xl font-extrabold text-neutral tracking-tight">¡Lote Generado Exitosamente!</h1>
-          <p className="text-neutral/50 font-medium mt-1">El lote <span className="text-primary font-bold">{batch.name}</span> está listo para ser procesado.</p>
+          <p className="text-neutral/50 font-medium mt-1">El lote <span className="text-primary font-bold">#{batch?.id}</span> está listo para ser procesado.</p>
         </div>
         <div className="flex justify-center gap-3 pt-3">
           <Button
             variant="primary"
             onClick={handleDownloadPDF}
-            disabled={downloading}
+            disabled={downloading || members.filter(m => m.status === 'active').length === 0}
+            title={members.filter(m => m.status === 'active').length === 0 ? "No hay miembros activos en este lote para generar un reporte" : undefined}
             icon={<Download size={18} />}
           >
             {downloading ? 'Generando PDF...' : 'Descargar PDF del Reporte'}
           </Button>
-          <Link to="/lotes">
+          <Link to="/lotes/nuevo">
             <Button variant="outline" icon={<ArrowLeft size={18} />}>
-              Volver al listado
+              Crear nuevo lote
             </Button>
           </Link>
         </div>
@@ -276,6 +278,7 @@ export const SuccessPage: React.FC = () => {
             </div>
           </div>
           <button 
+            type="button"
             onClick={() => navigate(`/lotes/${batch.id}`)}
             className="flex items-center text-sm font-bold text-red-700 hover:text-red-900 transition-colors"
           >

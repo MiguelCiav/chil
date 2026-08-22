@@ -100,7 +100,7 @@ export const BatchDetail: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveMemberEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveMemberEdit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingMember || !batch) return;
 
@@ -157,7 +157,7 @@ export const BatchDetail: React.FC = () => {
 
     // Search Query Filter
     const term = searchQuery.toLowerCase();
-    const fullName = `${m.first_name} ${m.last_name}`.toLowerCase();
+    const fullName = `${m.first_names} ${m.last_names}`.toLowerCase();
     return fullName.includes(term) || m.identity.includes(term);
   });
 
@@ -175,7 +175,7 @@ export const BatchDetail: React.FC = () => {
       cell: (info) => {
         const rowData = info.row.original;
         return (
-          <span className="font-semibold text-neutral">{rowData.first_name} {rowData.last_name}</span>
+          <span className="font-semibold text-neutral">{rowData.first_names} {rowData.last_names}</span>
         );
       }
     },
@@ -240,12 +240,12 @@ export const BatchDetail: React.FC = () => {
       {/* Navigation & Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-2">
-          <Link to="/lotes" className="inline-flex items-center text-sm font-bold text-primary hover:text-primary/80 transition-colors">
+          <Link to="/lotes/nuevo" className="inline-flex items-center text-sm font-bold text-primary hover:text-primary/80 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Volver al listado
+            Crear nuevo lote
           </Link>
           <h1 className="text-3xl font-extrabold text-neutral tracking-tight">
-            {batch.name}
+            Lote #{batch.id} {batch.comment ? `(${batch.comment})` : ''}
           </h1>
           
           <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-neutral/50">
@@ -263,7 +263,8 @@ export const BatchDetail: React.FC = () => {
         <Button
           variant="primary"
           onClick={handleDownloadPDF}
-          disabled={downloading}
+          disabled={downloading || totals.valid === 0}
+          title={totals.valid === 0 ? "No hay miembros activos en este lote para generar un reporte" : undefined}
           icon={<Download size={18} />}
         >
           {downloading ? 'Generando PDF...' : 'Exportar PDF'}
@@ -327,6 +328,7 @@ export const BatchDetail: React.FC = () => {
           {/* Tab Filters */}
           <div className="flex bg-primary/5 p-1 rounded-xl border border-primary/15 w-full sm:w-auto">
             <button
+              type="button"
               onClick={() => setActiveTab('all')}
               className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === 'all' 
@@ -340,6 +342,7 @@ export const BatchDetail: React.FC = () => {
               </span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('valid')}
               className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === 'valid' 
@@ -353,6 +356,7 @@ export const BatchDetail: React.FC = () => {
               </span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('pending')}
               className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === 'pending' 
@@ -392,15 +396,15 @@ export const BatchDetail: React.FC = () => {
             <ModalBody className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Field
-                  label="Primer Nombre *"
-                  value={editingMember.first_name}
-                  onChange={e => setEditingMember({ ...editingMember, first_name: e.target.value })}
+                  label="Nombres *"
+                  value={editingMember.first_names}
+                  onChange={e => setEditingMember({ ...editingMember, first_names: e.target.value })}
                   required
                 />
                 <Field
-                  label="Primer Apellido *"
-                  value={editingMember.last_name}
-                  onChange={e => setEditingMember({ ...editingMember, last_name: e.target.value })}
+                  label="Apellidos *"
+                  value={editingMember.last_names}
+                  onChange={e => setEditingMember({ ...editingMember, last_names: e.target.value })}
                   required
                 />
               </div>
