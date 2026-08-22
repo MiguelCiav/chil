@@ -92,7 +92,7 @@ Below are the active Firebase endpoints exposed to the application:
 ## 4. Key Design Decisions
 
 1.  **Scraper Session Caching**: The scraper cookie jar is cached in-memory inside the Node.js module context (`functions/scraper/auth.js`). Sessions are keyed by credentials to avoid repeating the login handshake.
-2.  **Client-Side PDF & CSV Generation**: Generated directly in the browser via `jsPDF` and dynamic CSV Blob download, avoiding server roundtrips.
+2.  **Client-Side PDF & CSV Generation**: Replaced backend Rust PDF generation with `jsPDF` and dynamic CSV Blob download directly on the frontend, removing binary compilation overhead and allowing direct browser file downloads without server roundtrips.
 3.  **Firestore Hierarchy Database**: Replaced static client-side JSON lookups with live Firestore collection queries (`regions`, `districts`, `groups`). Integrated self-healing client-side seeding on empty database status to keep layout collections manageable via the console.
 4.  **UI Verification Purge**: Configured Step 2 verification list and Firestore sync to immediately hide and purge entries removed from input text fields, ensuring only currently visible records persist.
 5.  **SonarQube Scan & Coverage**: Integrated static code analysis and test coverage metrics into the CI pipeline (via `@vitest/coverage-v8` lcov exports) to verify quality thresholds on every pull request.

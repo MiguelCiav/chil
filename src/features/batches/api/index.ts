@@ -134,7 +134,6 @@ export async function deleteBatch(batchId: number): Promise<void> {
 
   await batchOp.commit();
 }
-
 // Helper to check and print browser environment details for storage
 const safeGetItem = (key: string): string | null => {
   try {
@@ -322,7 +321,6 @@ export async function getAllMembers(): Promise<ScoutMember[]> {
   });
   return members;
 }
-
 export async function getAllBatches(): Promise<Batch[]> {
   const querySnapshot = await getDocs(collection(db, "batches"));
   const batches: Batch[] = [];
@@ -395,7 +393,6 @@ export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
-
 export async function generateBatchReport(batchId: number): Promise<string> {
   const batch = await getBatchById(batchId);
   if (!batch) throw new Error("Lote no encontrado");

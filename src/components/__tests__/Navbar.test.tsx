@@ -62,7 +62,6 @@ describe('Navbar component', () => {
       expect(screen.getByText('Credenciales guardadas exitosamente.')).toBeInTheDocument();
     });
   });
-
   it('highlights only "Nuevo lote" when path is /lotes/nuevo', () => {
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
 

@@ -211,7 +211,6 @@ describe('Batches API Layer', () => {
       const b = await getBatchById(999);
       expect(b?.id).toBe(999);
     });
-
     it('deletes batch and all its associated scout members atomically', async () => {
       const deleteMock = vi.fn();
       const commitMock = vi.fn();
@@ -275,7 +274,6 @@ describe('Batches API Layer', () => {
       expect(list).toHaveLength(1);
       expect(list[0].identity).toBe('V-12345678');
     });
-
     it('gets all members across batches', async () => {
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
         forEach: (cb: (doc: { data: () => unknown }) => void) => {

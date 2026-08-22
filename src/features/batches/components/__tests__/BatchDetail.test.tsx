@@ -23,7 +23,6 @@ vi.mock('react-router-dom', async (importOriginal) => {
     useNavigate: () => mockNavigate
   };
 });
-
 describe('BatchDetail component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
