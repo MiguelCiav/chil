@@ -75,7 +75,7 @@ npx changeset
 
 Versioning follows the **SemVer** standard (Major.Minor.Patch). In the current phase of initial development, we use the **0.x.y** series. 
 
-The entire release process is fully automated via our **GitHub Actions CI/CD Pipeline**, eliminating manual versioning, changelog generation, manual tagging, or redundant intermediate release PRs.
+The entire release process is fully automated via our **GitHub Actions CI/CD Pipeline**, eliminating manual versioning, changelog generation, manual tagging, or redundant CI runs.
 
 ### Release Workflow
 
@@ -85,15 +85,18 @@ The automated release workflow runs on every push or merge to the `main` branch:
 graph TD
     A[Feature PR Merged into main] --> B[CI/CD: lint-and-test runs]
     B -->|Success & Upload Artifact| C{Are there outstanding changesets?}
-    C -->|Yes| D[Version packages, update CHANGELOG, commit with skip-ci]
-    D --> E[Create Git tag & GitHub Release]
-    E --> F[Deploy artifact to Firebase Hosting & Cloud Functions]
-    C -->|No| F
+    C -->|Yes| D[release-planner: Opens/Updates 'Version Packages' PR]
+    D --> E[Maintainer Merges 'Version Packages' PR into main]
+    E --> F[CI/CD: lint-and-test runs & uploads artifact]
+    F --> G[release-planner: Tags repo & creates GitHub Release]
+    G --> H[deploy: Downloads artifact & deploys to Firebase]
+    C -->|No| H
 ```
 
-1. **Direct Automated Release on `main`**:
-   - When a feature branch with a changeset file is merged into `main`, the CI pipeline verifies quality standards (`lint-and-test`) and uploads the built frontend artifact.
-   - The `release-and-deploy` job checks for outstanding changesets. If present, it increments version numbers in `package.json` using `npm run version-packages`, updates `CHANGELOG.md`, commits directly to `main` with `[skip ci]`, and creates a GitHub Release and tag (e.g., `v0.6.0`).
+1. **Feature PR Merge & "Version Packages" PR**:
+   - When a feature branch with a changeset file is merged into `main`, the `release-planner` job creates or updates the **"Version Packages" Pull Request**.
+   - **Zero CI Waste**: PRs from `changeset-release/*` skip `lint-and-test` automatically, avoiding duplicate tests or SonarQube scans.
 
-2. **Immediate Deployment**:
-   - The pipeline downloads the verified frontend artifact and deploys it directly to **Firebase Hosting** and backend services to **Firebase Cloud Functions**, keeping execution fast, cost-effective, and free of redundant intermediate PR cycles.
+2. **Publishing and Immediate Deployment**:
+   - When the maintainer merges the **"Version Packages" PR** into `main`, `release-planner` detects no remaining changesets, tags the release (e.g., `v0.7.1`), and generates the GitHub Release.
+   - The `deploy` job downloads the pre-built `dist` artifact and deploys directly to **Firebase Hosting** and **Firebase Cloud Functions** without recompiling.

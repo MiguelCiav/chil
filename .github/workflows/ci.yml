@@ -26,6 +26,7 @@ env:
 
 jobs:
   lint-and-test:
+    if: "!startsWith(github.head_ref, 'changeset-release/')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,15 +68,17 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
 
-  release-and-deploy:
+  release-planner:
     needs: lint-and-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    outputs:
+      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
+      published: ${{ steps.changesets.outputs.published }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -83,40 +86,33 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install root dependencies
+      - name: Install Node dependencies
         run: npm ci
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: npm run version-packages
+          publish: npx changeset tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: [lint-and-test, release-planner]
+    if: github.ref == 'refs/heads/main' && needs.release-planner.outputs.hasChangesets != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
       - name: Install functions dependencies
         run: npm ci --prefix functions
-
-      - name: Process Version & Release
-        id: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          CHANGESETS=$(find .changeset -maxdepth 1 -name "*.md" ! -name "README.md")
-          if [ -n "$CHANGESETS" ]; then
-            echo "Changesets detected. Updating package versions and changelog..."
-            npm run version-packages
-            
-            NEW_VERSION=$(node -p "require('./package.json').version")
-            echo "New version: $NEW_VERSION"
-            
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            
-            git add .
-            git commit -m "chore(release): v${NEW_VERSION} [skip ci]"
-            git push origin main
-            
-            git tag "v${NEW_VERSION}"
-            git push origin "v${NEW_VERSION}"
-            
-            gh release create "v${NEW_VERSION}" --title "v${NEW_VERSION}" --generate-notes
-            echo "Release v${NEW_VERSION} created successfully."
-          else
-            echo "No changesets to process."
-          fi
 
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
