@@ -1,6 +1,6 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
-const { performLogin, setCachedCookies } = require("../scraper/auth");
+const auth = require("../scraper/auth");
 /**
  * Firebase Callable Function: loginScraper
  *
@@ -20,18 +20,21 @@ const { performLogin, setCachedCookies } = require("../scraper/auth");
  * @returns {Promise<{success: boolean}>} Object indicating successful authentication and cookie caching.
  * @throws {HttpsError} If credentials are missing/incomplete or authentication fails.
  */
-exports.loginScraper = onCall({ cors: true }, async (request) => {
-  const { credentials } = request.data;
+const loginScraperHandler = async (request) => {
+  const { credentials } = request?.data || {};
   if (!credentials || !credentials.email || !credentials.password) {
     throw new HttpsError("invalid-argument", "Credenciales incompletas");
   }
 
   try {
-    const cookies = await performLogin(credentials.email, credentials.password);
-    setCachedCookies(credentials, cookies);
+    const cookies = await auth.performLogin(credentials.email, credentials.password);
+    auth.setCachedCookies(credentials, cookies);
     return { success: true };
   } catch (error) {
     logger.error("loginScraper error:", error);
     throw new HttpsError("unauthenticated", error.message || "Error al iniciar sesión");
   }
-});
+};
+
+exports.loginScraperHandler = loginScraperHandler;
+exports.loginScraper = onCall({ cors: true }, loginScraperHandler);

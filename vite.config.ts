@@ -13,9 +13,18 @@ export default defineConfig(async () => ({
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/test/setup.ts",
-    exclude: ["**/node_modules/**", "dist", "test/**/*", "functions/**"],
+    exclude: ["**/node_modules/**", "dist", "test/**/*", "functions/node_modules/**"],
     coverage: {
       reporter: ["text", "lcov"],
+      include: ["src/**/*.{ts,tsx}", "functions/**/*.js"],
+      exclude: [
+        "**/node_modules/**",
+        "dist",
+        "src/test/**",
+        "**/*.d.ts",
+        "src/assets/**",
+        "functions/node_modules/**"
+      ]
     },
   },
 

@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
-const { getCachedCookies, setCachedCookies, performLogin } = require("../scraper/auth");
-const { fetchMemberStatusWithCookies } = require("../scraper/lookup");
+const auth = require("../scraper/auth");
+const lookup = require("../scraper/lookup");
 
 /**
  * Firebase Callable Function: getMemberStatus
@@ -24,8 +24,8 @@ const { fetchMemberStatusWithCookies } = require("../scraper/lookup");
  * @returns {Promise<Object>} Member status information.
  * @throws {HttpsError} If inputs are missing, member is not registered, or authentication/network failure occurs.
  */
-exports.getMemberStatus = onCall({ cors: true }, async (request) => {
-  const { cedula, credentials } = request.data;
+const getMemberStatusHandler = async (request) => {
+  const { cedula, credentials } = request?.data || {};
 
   if (!cedula) {
     throw new HttpsError("invalid-argument", "La cédula es requerida");
@@ -36,11 +36,11 @@ exports.getMemberStatus = onCall({ cors: true }, async (request) => {
   }
 
   // If we have cached cookies for these credentials, try them first
-  const cachedCookies = getCachedCookies(credentials);
+  const cachedCookies = auth.getCachedCookies(credentials);
   if (cachedCookies) {
     try {
       logger.info(`Attempting lookup for ${cedula} with cached cookies...`);
-      const member = await fetchMemberStatusWithCookies(cachedCookies, cedula);
+      const member = await lookup.fetchMemberStatusWithCookies(cachedCookies, cedula);
       return member;
     } catch (error) {
       if (error.message === "No registrado") {
@@ -53,10 +53,10 @@ exports.getMemberStatus = onCall({ cors: true }, async (request) => {
 
   // Perform login and scrape
   try {
-    const cookies = await performLogin(credentials.email, credentials.password);
-    setCachedCookies(credentials, cookies);
+    const cookies = await auth.performLogin(credentials.email, credentials.password);
+    auth.setCachedCookies(credentials, cookies);
 
-    const member = await fetchMemberStatusWithCookies(cookies, cedula);
+    const member = await lookup.fetchMemberStatusWithCookies(cookies, cedula);
     return member;
   } catch (error) {
     logger.error(`getMemberStatus failed for ${cedula}:`, error);
@@ -65,4 +65,7 @@ exports.getMemberStatus = onCall({ cors: true }, async (request) => {
     }
     throw new HttpsError("internal", error.message || "Error de red al consultar miembro");
   }
-});
+};
+
+exports.getMemberStatusHandler = getMemberStatusHandler;
+exports.getMemberStatus = onCall({ cors: true }, getMemberStatusHandler);
