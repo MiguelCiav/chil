@@ -128,7 +128,7 @@ describe('Batches API Layer', () => {
   });
 
   describe('Batch CRUD operations', () => {
-    it('creates a new batch with random numeric ID', async () => {
+    it('creates a new batch with secure numeric ID', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
 
       const newBatch = await createBatch({

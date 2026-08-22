@@ -106,8 +106,17 @@ export async function getHierarchyData(): Promise<{ regions: Region[]; districts
   }
 }
 
+function generateSecureBatchId(): number {
+  const array = new Uint32Array(1);
+  if (typeof globalThis !== 'undefined' && globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(array);
+    return (array[0] % 1_000_000) + 1;
+  }
+  return (Date.now() % 1_000_000) + 1;
+}
+
 export async function createBatch(params: BatchCreationParams): Promise<Batch> {
-  const numericId = Math.floor(Math.random() * 1000000) + 1;
+  const numericId = generateSecureBatchId();
   const newBatch: Batch = {
     id: numericId,
     comment: params.comment || '',
