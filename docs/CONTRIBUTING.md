@@ -75,7 +75,7 @@ npx changeset
 
 Versioning follows the **SemVer** standard (Major.Minor.Patch). In the current phase of initial development, we use the **0.x.y** series. 
 
-The entire release process is fully automated via our **GitHub Actions CI/CD Pipeline**, eliminating the need for manual versioning, changelog generation, or manual tagging on the `main` branch.
+The entire release process is fully automated via our **GitHub Actions CI/CD Pipeline**, eliminating manual versioning, changelog generation, manual tagging, or redundant intermediate release PRs.
 
 ### Release Workflow
 
@@ -84,22 +84,16 @@ The automated release workflow runs on every push or merge to the `main` branch:
 ```mermaid
 graph TD
     A[Feature PR Merged into main] --> B[CI/CD: lint-and-test runs]
-    B -->|Success| C{Are there outstanding changesets?}
-    C -->|Yes| D[CI/CD: release-planner runs]
-    D --> E[Automatically opens 'Version Packages' PR]
-    E --> F[Maintainer Merges 'Version Packages' PR]
-    F --> B
-    C -->|No| G[CI/CD: build-and-deploy runs]
-    G --> H[Compiles the React production bundle]
-    G --> I[Deploys the static site to Firebase Hosting and Functions to Firebase]
-    G --> J[Creates GitHub Release and tags commit with v__VERSION__]
+    B -->|Success & Upload Artifact| C{Are there outstanding changesets?}
+    C -->|Yes| D[Version packages, update CHANGELOG, commit with skip-ci]
+    D --> E[Create Git tag & GitHub Release]
+    E --> F[Deploy artifact to Firebase Hosting & Cloud Functions]
+    C -->|No| F
 ```
 
-1. **Automatic Pull Request Generation ("Version Packages")**:
-   - When a feature branch with a changeset file is merged into `main`, the `release-planner` job is triggered.
-   - It automatically consumes the changeset files, increments version numbers in `package.json` using `npm run version-packages`, generates/updates `CHANGELOG.md`, and opens a special **"Version Packages" Pull Request** on GitHub.
+1. **Direct Automated Release on `main`**:
+   - When a feature branch with a changeset file is merged into `main`, the CI pipeline verifies quality standards (`lint-and-test`) and uploads the built frontend artifact.
+   - The `release-and-deploy` job checks for outstanding changesets. If present, it increments version numbers in `package.json` using `npm run version-packages`, updates `CHANGELOG.md`, commits directly to `main` with `[skip ci]`, and creates a GitHub Release and tag (e.g., `v0.6.0`).
 
-2. **Publishing and Deploying the Release**:
-   - A maintainer reviews and merges this **"Version Packages" Pull Request**.
-   - Upon merge, the build and deploy job runs. Since no outstanding changesets remain, it compiles the production-optimized React web app bundle (`npm run build`).
-   - It then automatically deploys the static files to **Firebase Hosting** and the scraper backend services to **Firebase Cloud Functions**, creates a **GitHub Release**, and tags the commit with the new version (e.g., `v0.5.0`).
+2. **Immediate Deployment**:
+   - The pipeline downloads the verified frontend artifact and deploys it directly to **Firebase Hosting** and backend services to **Firebase Cloud Functions**, keeping execution fast, cost-effective, and free of redundant intermediate PR cycles.
