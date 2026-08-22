@@ -175,6 +175,7 @@ export const SuccessPage: React.FC = () => {
         return (
           <div className="flex gap-2">
             <button 
+              type="button"
               onClick={() => navigate(`/lotes/${batch.id}`)}
               className="p-1.5 border border-gray-200 hover:border-primary text-neutral hover:text-primary rounded-lg transition-all"
               title="Vista previa"
@@ -277,6 +278,7 @@ export const SuccessPage: React.FC = () => {
             </div>
           </div>
           <button 
+            type="button"
             onClick={() => navigate(`/lotes/${batch.id}`)}
             className="flex items-center text-sm font-bold text-red-700 hover:text-red-900 transition-colors"
           >

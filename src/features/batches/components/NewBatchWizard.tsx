@@ -419,6 +419,7 @@ export const NewBatchWizard: React.FC = () => {
             { step: 3, title: 'Generación', desc: 'Revisión y Cierre', icon: <CheckCircle2 className="w-5 h-5" /> }
           ].map(item => (
             <button
+              type="button"
               key={item.step}
               onClick={() => {
                 // Only allow navigating backward to steps already completed

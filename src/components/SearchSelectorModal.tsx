@@ -3,16 +3,16 @@ import { Search, Check } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody } from './Modal';
 
 interface SearchSelectorModalProps<T> {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  placeholder: string;
-  items: T[];
-  selectedId: string | null;
-  onSelect: (item: T) => void;
-  searchFilter: (item: T, query: string) => boolean;
-  renderItem: (item: T) => React.ReactNode;
-  keyExtractor: (item: T) => string | number;
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly title: string;
+  readonly placeholder: string;
+  readonly items: readonly T[];
+  readonly selectedId: string | null;
+  readonly onSelect: (item: T) => void;
+  readonly searchFilter: (item: T, query: string) => boolean;
+  readonly renderItem: (item: T) => React.ReactNode;
+  readonly keyExtractor: (item: T) => string | number;
 }
 
 export function SearchSelectorModal<T>({
@@ -26,7 +26,7 @@ export function SearchSelectorModal<T>({
   searchFilter,
   renderItem,
   keyExtractor
-}: SearchSelectorModalProps<T>) {
+}: Readonly<SearchSelectorModalProps<T>>) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredItems = items.filter(item => searchFilter(item, searchQuery));

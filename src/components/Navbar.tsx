@@ -31,7 +31,7 @@ export const Navbar: React.FC = () => {
     }
   }, [isSettingsOpen]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setSuccessMsg('');
@@ -80,10 +80,11 @@ export const Navbar: React.FC = () => {
 
       {/* Right Side Icons */}
       <div className="flex items-center space-x-4 text-neutral">
-        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+        <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
           <Bell className="w-5 h-5" />
         </button>
         <button
+          type="button"
           onClick={() => {
             setSuccessMsg('');
             setErrorMsg('');
@@ -94,7 +95,7 @@ export const Navbar: React.FC = () => {
         >
           <Settings className="w-5 h-5" />
         </button>
-        <button className="ml-2 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border border-gray-300">
+        <button type="button" className="ml-2 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border border-gray-300">
           {/* Avatar Placeholder */}
           <User className="w-5 h-5 text-gray-500" />
         </button>

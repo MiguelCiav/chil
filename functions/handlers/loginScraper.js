@@ -22,7 +22,7 @@ const auth = require("../scraper/auth");
  */
 const loginScraperHandler = async (request) => {
   const { credentials } = request?.data || {};
-  if (!credentials || !credentials.email || !credentials.password) {
+  if (!credentials?.email || !credentials?.password) {
     throw new HttpsError("invalid-argument", "Credenciales incompletas");
   }
 

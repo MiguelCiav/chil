@@ -328,6 +328,7 @@ export const BatchDetail: React.FC = () => {
           {/* Tab Filters */}
           <div className="flex bg-primary/5 p-1 rounded-xl border border-primary/15 w-full sm:w-auto">
             <button
+              type="button"
               onClick={() => setActiveTab('all')}
               className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === 'all' 
@@ -341,6 +342,7 @@ export const BatchDetail: React.FC = () => {
               </span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('valid')}
               className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === 'valid' 
@@ -354,6 +356,7 @@ export const BatchDetail: React.FC = () => {
               </span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('pending')}
               className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                 activeTab === 'pending' 

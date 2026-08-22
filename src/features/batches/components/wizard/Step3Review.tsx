@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Users, GraduationCap, User, Search, Edit2, ArrowLeft } from 'lucide-react';
 import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/Card';
 import { Button } from '../../../../components/Button';
-import { Field } from '../../../../components/Field';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
+import { Field } from '../../../../components/Field';
 import { ScoutMember } from '../../types';
 import { updateMember, getMembersByBatchId } from '../../api';
 
@@ -30,11 +30,12 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   const validMembers = savedMembers.filter(m => m.status === 'active');
   const pendingMembers = savedMembers.filter(m => m.status === 'pending');
 
-  const filteredStep3Members = (activeTab === 'valid' ? validMembers : pendingMembers).filter(m => {
-    const term = searchQuery.toLowerCase();
-    const fullName = `${m.first_names} ${m.last_names}`.toLowerCase();
-    return fullName.includes(term) || m.identity.includes(term);
-  });
+  const currentTabMembers = activeTab === 'valid' ? validMembers : pendingMembers;
+  const filteredStep3Members = currentTabMembers.filter(m =>
+    m.first_names.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.last_names.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.identity.includes(searchQuery)
+  );
 
   const totals = {
     total: savedMembers.length,
@@ -94,25 +95,27 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             {/* Tab Filters */}
             <div className="flex bg-primary/5 p-1 rounded-xl border border-primary/15 w-full sm:w-auto">
               <button
+                type="button"
                 onClick={() => setActiveTab('valid')}
                 className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'valid'
                   ? 'bg-white text-primary shadow-sm'
                   : 'text-neutral/60 hover:text-primary'
                   }`}
               >
-                Registros Válidos
+                Registros Válidos{' '}
                 <span className="ml-1.5 px-2 py-0.5 text-xs font-bold bg-primary/10 text-primary rounded-full">
                   {validMembers.length}
                 </span>
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab('pending')}
                 className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'pending'
                   ? 'bg-white text-primary shadow-sm'
                   : 'text-neutral/60 hover:text-primary'
                   }`}
               >
-                Registros Pendientes
+                Registros Pendientes{' '}
                 <span className="ml-1.5 px-2 py-0.5 text-xs font-bold bg-red-50 text-red-600 rounded-full">
                   {pendingMembers.length}
                 </span>
@@ -164,8 +167,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                     )}
 
                     <button
+                      type="button"
                       onClick={() => handleEditMemberClick(member)}
                       className="p-2 border border-gray-200 hover:border-primary rounded-xl text-neutral hover:text-primary transition-all bg-white group-hover:scale-105"
+                      aria-label={`Editar información de ${member.first_names} ${member.last_names}`}
                     >
                       <Edit2 size={16} />
                     </button>
@@ -219,10 +224,11 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 />
               </div>
               <div className="w-full">
-                <label className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                <label htmlFor="edit-member-type-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
                   Tipo de Miembro *
                 </label>
                 <select
+                  id="edit-member-type-select"
                   className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
                   value={editingMember.member_type}
                   onChange={e => setEditingMember({ ...editingMember, member_type: e.target.value as 'young' | 'adult' })}

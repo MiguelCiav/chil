@@ -242,7 +242,7 @@ describe('Batches API Layer', () => {
       } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
       const list = await getMembersByBatchId(100);
-      expect(list.length).toBe(1);
+      expect(list).toHaveLength(1);
       expect(list[0].identity).toBe('V-12345678');
     });
   });

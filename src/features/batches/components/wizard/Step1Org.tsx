@@ -55,6 +55,26 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
   const selectedDistrict = districts.find(d => d.id.toString() === selectedDistrictId);
   const selectedGroup = groups.find(g => g.id.toString() === selectedGroupId);
 
+  const getDistrictButtonClass = () => {
+    if (!selectedRegionId || loadingHierarchy) {
+      return 'bg-gray-100 text-neutral/30 border-gray-200 cursor-not-allowed opacity-50';
+    }
+    if (errors.districtId) {
+      return 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900';
+    }
+    return 'border-primary/20 text-neutral hover:border-primary/50';
+  };
+
+  const getGroupButtonClass = () => {
+    if (!selectedDistrictId || loadingHierarchy) {
+      return 'bg-gray-100 text-neutral/30 border-gray-200 cursor-not-allowed opacity-50';
+    }
+    if (errors.groupId) {
+      return 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900';
+    }
+    return 'border-primary/20 text-neutral hover:border-primary/50';
+  };
+
   return (
     <div className="space-y-6">
       {/* Hidden inputs for RHF validation */}
@@ -101,13 +121,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
                   setIsDistrictModalOpen(true);
                 }
               }}
-              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${
-                !selectedRegionId || loadingHierarchy
-                  ? 'bg-gray-100 text-neutral/30 border-gray-200 cursor-not-allowed opacity-50'
-                  : errors.districtId
-                    ? 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900'
-                    : 'border-primary/20 text-neutral hover:border-primary/50'
-              }`}
+              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${getDistrictButtonClass()}`}
               disabled={!selectedRegionId || loadingHierarchy}
             >
               <span className="truncate">{selectedDistrict ? selectedDistrict.name : 'Seleccione un distrito'}</span>
@@ -131,13 +145,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
                   setIsGroupModalOpen(true);
                 }
               }}
-              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${
-                !selectedDistrictId || loadingHierarchy
-                  ? 'bg-gray-100 text-neutral/30 border-gray-200 cursor-not-allowed opacity-50'
-                  : errors.groupId
-                    ? 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900'
-                    : 'border-primary/20 text-neutral hover:border-primary/50'
-              }`}
+              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${getGroupButtonClass()}`}
               disabled={!selectedDistrictId || loadingHierarchy}
             >
               <span className="truncate">{selectedGroup ? selectedGroup.name : 'Seleccione un grupo scout'}</span>

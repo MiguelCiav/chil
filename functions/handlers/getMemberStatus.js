@@ -31,7 +31,7 @@ const getMemberStatusHandler = async (request) => {
     throw new HttpsError("invalid-argument", "La cédula es requerida");
   }
 
-  if (!credentials || !credentials.email || !credentials.password) {
+  if (!credentials?.email || !credentials?.password) {
     throw new HttpsError("invalid-argument", "Las credenciales del scraper son requeridas");
   }
 

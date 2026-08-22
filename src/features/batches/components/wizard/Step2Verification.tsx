@@ -23,6 +23,88 @@ interface Step2VerificationProps {
   onBack: () => void;
 }
 
+interface StatusBadgeProps {
+  readonly status: string;
+  readonly onRetry?: () => void;
+}
+
+const StatusBadge: React.FC<StatusBadgeProps> = ({ status, onRetry }) => {
+  if (status === 'Consultando...') {
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 animate-pulse border border-blue-200">
+        <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />
+        Consultando...
+      </span>
+    );
+  }
+  if (status === 'Registro válido') {
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+        <Check className="w-3.5 h-3.5 mr-1" />
+        Registro válido
+      </span>
+    );
+  }
+  if (status === 'No registrado') {
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+        <AlertTriangle className="w-3.5 h-3.5 mr-1" />
+        No registrado
+      </span>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
+        <AlertCircle className="w-3.5 h-3.5 mr-1" />
+        Error de red
+      </span>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="p-1 hover:bg-primary/10 rounded text-primary transition-colors"
+          title="Reintentar verificación"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+};
+
+interface MemberTypeToggleProps {
+  readonly type: 'young' | 'adult';
+  readonly onToggle: () => void;
+}
+
+const MemberTypeToggle: React.FC<MemberTypeToggleProps> = ({ type, onToggle }) => (
+  <div className="flex items-center">
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`px-3 py-1 rounded-l-md text-xs font-semibold border border-r-0 transition-colors ${
+        type === 'young'
+          ? 'bg-primary text-white border-primary'
+          : 'bg-white hover:bg-gray-50 border-gray-300 text-neutral'
+      }`}
+    >
+      Joven
+    </button>
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`px-3 py-1 rounded-r-md text-xs font-semibold border transition-colors ${
+        type === 'adult'
+          ? 'bg-primary text-white border-primary'
+          : 'bg-white hover:bg-gray-50 border-gray-300 text-neutral'
+      }`}
+    >
+      Adulto
+    </button>
+  </div>
+);
+
 export const Step2Verification: React.FC<Step2VerificationProps> = ({
   batchName,
   youngCedulas,
@@ -48,7 +130,7 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
     return verificationList.filter(item => currentCedulas.has(item.cedula));
   }, [verificationList, currentCedulas]);
 
-  const columns: ColumnDef<MemberVerificationResult>[] = [
+  const columns: ColumnDef<MemberVerificationResult>[] = React.useMemo(() => [
     {
       accessorKey: 'cedula',
       header: 'Cédula',
@@ -67,81 +149,29 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
       accessorKey: 'status',
       header: 'Estatus',
       cell: (info) => {
-        const val = info.getValue() as string;
-        if (val === 'Consultando...') {
-          return (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 animate-pulse border border-blue-200">
-              <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" />
-              Consultando...
-            </span>
-          );
-        } else if (val === 'Registro válido') {
-          return (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-              <Check className="w-3.5 h-3.5 mr-1" />
-              Registro válido
-            </span>
-          );
-        } else if (val === 'No registrado') {
-          return (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-              <AlertTriangle className="w-3.5 h-3.5 mr-1" />
-              No registrado
-            </span>
-          );
-        } else {
-          const rowData = info.row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                <AlertCircle className="w-3.5 h-3.5 mr-1" />
-                Error de red
-              </span>
-              <button
-                onClick={() => verifyCedula(rowData.cedula, rowData.type)}
-                className="p-1 hover:bg-primary/10 rounded text-primary transition-colors"
-                title="Reintentar verificación"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          );
-        }
+        const rowData = info.row.original;
+        return (
+          <StatusBadge
+            status={info.getValue() as string}
+            onRetry={() => verifyCedula(rowData.cedula, rowData.type)}
+          />
+        );
       }
     },
     {
       accessorKey: 'type',
       header: 'Tipo de Miembro',
       cell: (info) => {
-        const val = info.getValue() as 'young' | 'adult';
         const rowData = info.row.original;
         return (
-          <div className="flex items-center">
-            <button
-              onClick={() => handleToggleMemberType(rowData.cedula)}
-              className={`px-3 py-1 rounded-l-md text-xs font-semibold border border-r-0 transition-colors ${
-                val === 'young'
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white hover:bg-gray-50 border-gray-300 text-neutral'
-              }`}
-            >
-              Joven
-            </button>
-            <button
-              onClick={() => handleToggleMemberType(rowData.cedula)}
-              className={`px-3 py-1 rounded-r-md text-xs font-semibold border transition-colors ${
-                val === 'adult'
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white hover:bg-gray-50 border-gray-300 text-neutral'
-              }`}
-            >
-              Adulto
-            </button>
-          </div>
+          <MemberTypeToggle
+            type={info.getValue() as 'young' | 'adult'}
+            onToggle={() => handleToggleMemberType(rowData.cedula)}
+          />
         );
       }
     }
-  ];
+  ], [verifyCedula, handleToggleMemberType]);
 
   return (
     <Card className="shadow-lg border-primary/10">
