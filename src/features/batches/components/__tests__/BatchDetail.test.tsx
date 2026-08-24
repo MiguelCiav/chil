@@ -61,7 +61,7 @@ describe('BatchDetail component', () => {
     });
   });
 
-  it('renders full batch details, stats, member table, CSV and dynamic PDF batch download', async () => {
+  it('renders full batch details, stats, member table, PDF member list report and dynamic PDF batch download', async () => {
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 101,
       comment: 'Lote de Inspección',
@@ -101,6 +101,8 @@ describe('BatchDetail component', () => {
       groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
     });
 
+    vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_101.pdf');
+
     vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce(
       'Diplomas_Lote_101_servicio_prolongado.pdf'
     );
@@ -129,10 +131,14 @@ describe('BatchDetail component', () => {
     expect(screen.getByText('Ana Perez')).toBeInTheDocument();
     expect(screen.getByText('Carlos Gomez')).toBeInTheDocument();
 
-    // Check CSV Export button
-    const csvBtn = screen.getByRole('button', { name: /Descargar lista/i });
-    fireEvent.click(csvBtn);
-    expect(api.exportMembersToCSV).toHaveBeenCalled();
+    // Check Member List PDF Export button
+    const listBtn = screen.getByRole('button', { name: /Descargar lista/i });
+    fireEvent.click(listBtn);
+
+    await waitFor(() => {
+      expect(api.generateBatchReport).toHaveBeenCalled();
+      expect(screen.getByText(/Lista de miembros \(PDF\) generada exitosamente\./i)).toBeInTheDocument();
+    });
 
     // Trigger batch PDF download
     const downloadBtn = screen.getByRole('button', { name: /Descargar todos \(PDF\)/i });
@@ -571,7 +577,7 @@ describe('BatchDetail component', () => {
     alertSpy.mockRestore();
   });
 
-  it('handles single certificate download error and CSV export error gracefully', async () => {
+  it('handles single certificate download error and member list PDF generation error gracefully', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
     vi.mocked(api.getBatchById).mockResolvedValue({
@@ -602,9 +608,7 @@ describe('BatchDetail component', () => {
     });
 
     vi.mocked(recognitions.downloadSingleCertificatePdf).mockRejectedValueOnce(new Error('Diploma error'));
-    vi.mocked(api.exportMembersToCSV).mockImplementationOnce(() => {
-      throw new Error('CSV error');
-    });
+    vi.mocked(api.generateBatchReport).mockRejectedValueOnce(new Error('PDF report error'));
 
     render(
       <MemoryRouter initialEntries={['/lotes/101']}>
@@ -626,9 +630,12 @@ describe('BatchDetail component', () => {
       expect(alertSpy).toHaveBeenCalledWith('Error al descargar el diploma.');
     });
 
-    // Trigger CSV export error
+    // Trigger member list PDF export error
     fireEvent.click(screen.getByRole('button', { name: /Descargar lista/i }));
-    expect(alertSpy).toHaveBeenCalledWith('Error al exportar la lista.');
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Error al generar la lista de miembros en PDF.');
+    });
 
     alertSpy.mockRestore();
   });

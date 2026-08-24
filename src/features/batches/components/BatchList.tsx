@@ -401,9 +401,12 @@ export const BatchList: React.FC = () => {
     {
       id: 'actions',
       header: 'ACCIONES',
-      cell: ({ row }) => {
+      cell: ({ row, table }) => {
         const rowData = row.original;
         const isMenuOpen = openActionMenuId === rowData.id;
+        const totalRows = table.getRowModel().rows.length;
+        const isNearBottom = (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
+        const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
 
         return (
           <div className="flex items-center gap-1.5 relative">
@@ -418,7 +421,7 @@ export const BatchList: React.FC = () => {
               </button>
 
               {isMenuOpen && (
-                <div className="absolute left-0 mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans">
+                <div className={`absolute left-0 ${dropdownPosition} w-36 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
                   <button
                     type="button"
                     onClick={() => {
@@ -592,7 +595,7 @@ export const BatchList: React.FC = () => {
 
       {/* Batches Data Table */}
       <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[260px] pb-12">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
               <tr className="border-b border-gray-200 bg-[#faf8f5]">
@@ -680,7 +683,7 @@ export const BatchList: React.FC = () => {
 
       {/* Modal: Añadir Filtro */}
       <Modal isOpen={isAddFilterModalOpen} onClose={() => setIsAddFilterModalOpen(false)} className="max-w-md">
-        <form onSubmit={handleAddFilter}>
+        <form onSubmit={handleAddFilter} className="flex flex-col flex-1 overflow-hidden min-h-0">
           <ModalHeader onClose={() => setIsAddFilterModalOpen(false)}>
             Añadir Filtro al Listado
           </ModalHeader>

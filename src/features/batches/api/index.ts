@@ -393,11 +393,20 @@ export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
   link.remove();
   URL.revokeObjectURL(url);
 }
-export async function generateBatchReport(batchId: number): Promise<string> {
-  const batch = await getBatchById(batchId);
+export async function generateBatchReport(
+  batchOrId: number | Batch,
+  membersParam?: ScoutMember[],
+  hierarchyParam?: { regions: Region[]; districts: District[]; groups: ScoutGroup[] }
+): Promise<string> {
+  let batch: Batch | null = null;
+  if (typeof batchOrId === 'number') {
+    batch = await getBatchById(batchOrId);
+  } else {
+    batch = batchOrId;
+  }
   if (!batch) throw new Error("Lote no encontrado");
-  const members = await getMembersByBatchId(batchId);
-  const hierarchy = await getHierarchyData();
+  const members = membersParam || (await getMembersByBatchId(batch.id));
+  const hierarchy = hierarchyParam || (await getHierarchyData());
   
   const region = hierarchy.regions.find(r => r.id === batch.region_id)?.name || `Región ${batch.region_id}`;
   const district = hierarchy.districts.find(d => d.id === batch.district_id)?.name || `Distrito ${batch.district_id}`;
