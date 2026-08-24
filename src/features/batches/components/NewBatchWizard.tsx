@@ -80,10 +80,10 @@ function splitFullName(name: string): { first_names: string; last_names: string 
 
 function getStepCircleClasses(currentStep: number, itemStep: number): string {
   if (currentStep === itemStep) {
-    return 'bg-primary border-primary text-white shadow-lg ring-4 ring-primary/20 scale-110';
+    return 'bg-[#1b7a37] border-[#1b7a37] text-white shadow-md ring-4 ring-[#1b7a37]/15 scale-105';
   }
   if (currentStep > itemStep) {
-    return 'bg-green-500 border-green-500 text-white shadow-md';
+    return 'bg-[#e8f5e9] border-[#a5d6a7] text-[#2e7d32] shadow-xs';
   }
   return 'bg-white border-gray-300 text-gray-400 hover:border-primary/50';
 }

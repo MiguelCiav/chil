@@ -7,8 +7,7 @@ import {
   Edit2,
   ArrowLeft,
   RotateCcw,
-  Eraser,
-  Sparkles
+  Eraser
 } from 'lucide-react';
 import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/Card';
 import { Button } from '../../../../components/Button';
@@ -137,15 +136,15 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
               <p className="text-sm text-neutral/50 font-normal">Verifique la información antes de generar los documentos.</p>
             </div>
             <div className="flex gap-4 text-sm font-semibold text-neutral">
-              <div className="px-4 py-2 bg-primary/10 border border-primary/15 rounded-xl flex items-center gap-2">
+              <div className="px-4 py-2 bg-primary/5 border border-primary/10 text-primary rounded-xl flex items-center gap-2">
                 <Users className="w-4 h-4 text-primary" />
                 <span>Total: {totals.total}</span>
               </div>
-              <div className="px-4 py-2 bg-blue-50 border border-blue-150 rounded-xl flex items-center gap-2">
+              <div className="px-4 py-2 border border-blue-100 bg-blue-50/70 text-blue-800 rounded-xl flex items-center gap-2">
                 <GraduationCap className="w-4 h-4 text-blue-600" />
                 <span>Jóvenes: {totals.young}</span>
               </div>
-              <div className="px-4 py-2 bg-amber-50 border border-amber-150 rounded-xl flex items-center gap-2">
+              <div className="px-4 py-2 border border-amber-100 bg-amber-50/70 text-amber-800 rounded-xl flex items-center gap-2">
                 <User className="w-4 h-4 text-amber-600" />
                 <span>Adultos: {totals.adult}</span>
               </div>
@@ -157,14 +156,9 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
           {/* Recognition Code Strategy Control Bar */}
           <div className="bg-[#faf8f5] border border-primary/15 rounded-2xl p-4 sm:p-5 space-y-3.5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-neutral">Códigos de Reconocimiento</h3>
-                  <p className="text-xs text-neutral/50">Seleccione la estrategia de asignación de códigos para los diplomas.</p>
-                </div>
+              <div>
+                <h3 className="text-sm font-bold text-neutral">Códigos de Reconocimiento</h3>
+                <p className="text-xs text-neutral/50">Seleccione la estrategia de asignación de códigos para los diplomas.</p>
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -176,7 +170,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                     icon={<RotateCcw size={14} />}
                     className="text-xs font-semibold border-primary/20 hover:bg-primary/10 text-primary py-1.5 px-3"
                   >
-                    🔄 Regenerar códigos
+                    Regenerar códigos
                   </Button>
                 )}
                 <Button
