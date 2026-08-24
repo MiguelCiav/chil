@@ -55,6 +55,7 @@ describe('SuccessPage component', () => {
         birth_date: '2005-01-01',
         member_type: 'young',
         status: 'active',
+        recognition_code: 'REC-1111',
         batch_id: 555
       },
       {
@@ -80,11 +81,21 @@ describe('SuccessPage component', () => {
       expect(screen.getByText('¡Lote Generado Exitosamente!')).toBeInTheDocument();
     });
 
+    expect(screen.getByText('CÉDULA')).toBeInTheDocument();
+    expect(screen.getByText('NOMBRE COMPLETO')).toBeInTheDocument();
+    expect(screen.getByText('TIPO')).toBeInTheDocument();
+    expect(screen.getByText('ESTATUS')).toBeInTheDocument();
+    expect(screen.getByText('CÓDIGO REC.')).toBeInTheDocument();
+    expect(screen.getByText('ACCIONES')).toBeInTheDocument();
+
     expect(screen.getByText('#555')).toBeInTheDocument();
+    expect(screen.getByText('V-11111111')).toBeInTheDocument();
     expect(screen.getByText('Ana Perez')).toBeInTheDocument();
+    expect(screen.getByText('V-22222222')).toBeInTheDocument();
     expect(screen.getByText('Carlos Gomez')).toBeInTheDocument();
-    expect(screen.getByText('SCT-2026-1111')).toBeInTheDocument();
-    expect(screen.getByText('SCT-PENDIENTE')).toBeInTheDocument();
+    expect(screen.getByText('REC-1111')).toBeInTheDocument();
+    expect(screen.getByText('Registro Válido')).toBeInTheDocument();
+    expect(screen.getByText('Registro Inválido')).toBeInTheDocument();
 
     // Trigger PDF download
     const downloadBtn = screen.getByText(/Descargar PDF del Reporte/i);
