@@ -17,7 +17,9 @@ import {
   getMemberStatus,
   getRecognitionBadgeStyle,
   getRecognitionName,
-  exportMembersToCSV
+  exportMembersToCSV,
+  generateRecognitionCode,
+  assignBatchRecognitionCodes
 } from '../index';
 import * as firestore from 'firebase/firestore';
 import * as functionsSdk from 'firebase/functions';
@@ -336,6 +338,43 @@ describe('Batches API Layer', () => {
 
       clickMock.mockRestore();
       removeMock.mockRestore();
+    });
+
+    it('generates short unique alphanumeric recognition codes excluding ambiguous chars', () => {
+      const code = generateRecognitionCode('TEST', 6);
+      expect(code).toMatch(/^TEST-[A-Z2-9]{6}$/);
+      expect(code).not.toMatch(/[0O1I]/);
+    });
+
+    it('assigns batch recognition codes correctly for auto and manual modes', () => {
+      const members = [
+        {
+          identity: 'V-100',
+          first_names: 'Ana',
+          last_names: 'Silva',
+          birth_date: '2000-01-01',
+          member_type: 'young' as const,
+          status: 'active' as const,
+          batch_id: 101
+        },
+        {
+          identity: 'V-200',
+          first_names: 'Carlos',
+          last_names: 'Perez',
+          birth_date: '1995-01-01',
+          member_type: 'adult' as const,
+          status: 'pending' as const,
+          batch_id: 101
+        }
+      ];
+
+      const autoAssigned = assignBatchRecognitionCodes(members, 'auto');
+      expect(autoAssigned[0].recognition_code).toMatch(/^REC-[A-Z2-9]{6}$/);
+      expect(autoAssigned[1].recognition_code).toBe('');
+
+      const manualAssigned = assignBatchRecognitionCodes(autoAssigned, 'manual');
+      expect(manualAssigned[0].recognition_code).toBe('');
+      expect(manualAssigned[1].recognition_code).toBe('');
     });
   });
 

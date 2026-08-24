@@ -390,7 +390,8 @@ describe('BatchDetail component', () => {
         phone: '04141234567',
         member_type: 'young',
         status: 'active',
-        batch_id: 101
+        batch_id: 101,
+        recognition_code: 'REC-ANA01'
       }
     ]);
 
@@ -418,6 +419,7 @@ describe('BatchDetail component', () => {
     await waitFor(() => {
       expect(screen.getByText('Ficha del Miembro Scout')).toBeInTheDocument();
       expect(screen.getByText('ana@scouts.org')).toBeInTheDocument();
+      expect(screen.getAllByText('REC-ANA01')).toHaveLength(2);
     });
   });
 

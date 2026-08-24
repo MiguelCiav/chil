@@ -27,6 +27,7 @@ import {
   getMembersByBatchId,
   hasScraperCredentials,
   loginScraper,
+  assignBatchRecognitionCodes,
   ScraperMemberDetails
 } from '../api';
 import {
@@ -411,7 +412,8 @@ export const NewBatchWizard: React.FC = () => {
 
       // 4. Reload the updated members list
       const members = await getMembersByBatchId(batchId);
-      setSavedMembers(members);
+      const membersWithCodes = assignBatchRecognitionCodes(members, 'auto');
+      setSavedMembers(membersWithCodes);
       setCurrentStep(3);
     }
   };
