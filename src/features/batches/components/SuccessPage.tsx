@@ -18,8 +18,13 @@ import { Button } from '../../../components/Button';
 import { Table } from '../../../components/Table';
 import { ColumnDef } from '@tanstack/react-table';
 
-import { getBatchById, getMembersByBatchId, generateBatchReport } from '../api';
+import { getBatchById, getMembersByBatchId, getHierarchyData } from '../api';
 import { Batch, ScoutMember } from '../types';
+import {
+  generateBatchCertificatesPdf,
+  getRecognitionTypeById,
+  RecognitionType
+} from '../../recognitions';
 
 export const SuccessPage: React.FC = () => {
   const navigate = useNavigate();
@@ -70,13 +75,23 @@ export const SuccessPage: React.FC = () => {
     if (!batch) return;
     setDownloading(true);
     try {
-      const path = await generateBatchReport(batch.id);
-      setToastMessage(`¡Reporte descargado exitosamente en ${path}!`);
+      let recType: RecognitionType | null = null;
+      if (batch.recognition_type) {
+        recType = await getRecognitionTypeById(batch.recognition_type);
+      }
+      const hierarchy = await getHierarchyData();
+      const path = await generateBatchCertificatesPdf({
+        batch,
+        members,
+        recognition: recType,
+        hierarchy
+      });
+      setToastMessage(`¡Diplomas descargados exitosamente en ${path}!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error(err);
-      alert("Error al generar el reporte PDF.");
+      alert("Error al generar los diplomas en PDF.");
     } finally {
       setDownloading(false);
     }

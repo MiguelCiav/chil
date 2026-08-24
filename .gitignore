@@ -40,6 +40,9 @@ coverage/
 
 # Wireframes
 wireframes/
+views/
+*.jpeg
+*.jpg
 
 .agent/
 .vscode/

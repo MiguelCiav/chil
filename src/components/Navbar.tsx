@@ -88,6 +88,18 @@ export const Navbar: React.FC = () => {
           >
             Listado de lotes
           </NavLink>
+          <NavLink
+            to="/reconocimientos"
+            end
+            className={({ isActive }) =>
+              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${isActive
+                ? 'border-primary text-primary'
+                : 'border-transparent text-neutral hover:text-primary'
+              }`
+            }
+          >
+            Reconocimientos
+          </NavLink>
         </div>
       </div>
 

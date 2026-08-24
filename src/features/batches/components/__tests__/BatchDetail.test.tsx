@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BatchDetail } from '../BatchDetail';
 import * as api from '../../api';
+import * as recognitions from '../../../recognitions';
 
 vi.mock('../../api', () => ({
   getBatchById: vi.fn(),
@@ -15,6 +16,13 @@ vi.mock('../../api', () => ({
   getRecognitionName: vi.fn((name) => name || 'Servicio Prolongado')
 }));
 
+vi.mock('../../../recognitions', () => ({
+  generateBatchCertificatesPdf: vi.fn(),
+  downloadSingleCertificatePdf: vi.fn(),
+  getAllRecognitionTypes: vi.fn(() => Promise.resolve([])),
+  getRecognitionTypeById: vi.fn(() => Promise.resolve(null))
+}));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
@@ -23,9 +31,11 @@ vi.mock('react-router-dom', async (importOriginal) => {
     useNavigate: () => mockNavigate
   };
 });
+
 describe('BatchDetail component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(recognitions.getAllRecognitionTypes).mockResolvedValue([]);
   });
 
   it('renders loading state initially and not-found state when batch does not exist', async () => {
@@ -51,7 +61,7 @@ describe('BatchDetail component', () => {
     });
   });
 
-  it('renders full batch details, stats, member table, CSV and PDF download buttons', async () => {
+  it('renders full batch details, stats, member table, CSV and dynamic PDF batch download', async () => {
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 101,
       comment: 'Lote de Inspección',
@@ -91,7 +101,9 @@ describe('BatchDetail component', () => {
       groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
     });
 
-    vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_101.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce(
+      'Diplomas_Lote_101_servicio_prolongado.pdf'
+    );
 
     render(
       <MemoryRouter initialEntries={['/lotes/101']}>
@@ -122,13 +134,85 @@ describe('BatchDetail component', () => {
     fireEvent.click(csvBtn);
     expect(api.exportMembersToCSV).toHaveBeenCalled();
 
-    // Trigger PDF download
+    // Trigger batch PDF download
     const downloadBtn = screen.getByRole('button', { name: /Descargar todos \(PDF\)/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(api.generateBatchReport).toHaveBeenCalledWith(101);
-      expect(screen.getByText(/Reporte PDF descargado exitosamente/i)).toBeInTheDocument();
+      expect(recognitions.generateBatchCertificatesPdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          batch: expect.objectContaining({ id: 101 }),
+          members: expect.any(Array)
+        })
+      );
+      expect(
+        screen.getByText(/¡Diplomas descargados exitosamente en Diplomas_Lote_101_servicio_prolongado\.pdf!/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('downloads single member diploma when clicking option in member dropdown menu', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: 'Lote Conmemorativo',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      recognition_type: 'Insignia de Madera',
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    const activeMember = {
+      identity: 'V-11111111',
+      first_names: 'Ana',
+      last_names: 'Perez',
+      birth_date: '2005-01-01',
+      member_type: 'young' as const,
+      status: 'active' as const,
+      batch_id: 101,
+      recognition_code: 'REC-001'
+    };
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([activeMember]);
+
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [{ id: 1, name: 'Región Capital' }],
+      districts: [{ id: 10, name: 'Distrito Sucre', region_id: 1 }],
+      groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
+    });
+
+    vi.mocked(recognitions.downloadSingleCertificatePdf).mockResolvedValueOnce(
+      'Diploma_V-11111111_Lote_101_insignia_de_madera.pdf'
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Ana Perez')).toBeInTheDocument();
+    });
+
+    // Open row menu
+    const menuBtn = screen.getByLabelText(/Opciones de Ana Perez/i);
+    fireEvent.click(menuBtn);
+
+    // Click Descargar Diploma (PDF)
+    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar Diploma \(PDF\)/i });
+    fireEvent.click(downloadDiplomaBtn);
+
+    await waitFor(() => {
+      expect(recognitions.downloadSingleCertificatePdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          member: activeMember,
+          batch: expect.objectContaining({ id: 101 })
+        })
+      );
+      expect(screen.getByText(/¡Diploma descargado: Diploma_V-11111111_Lote_101_insignia_de_madera\.pdf!/i)).toBeInTheDocument();
     });
   });
 

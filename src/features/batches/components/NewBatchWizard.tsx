@@ -36,6 +36,7 @@ import {
   ScoutMember,
   MemberVerificationResult
 } from '../types';
+import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 
 import { Step1Org } from './wizard/Step1Org';
 import { Step2Verification } from './wizard/Step2Verification';
@@ -86,6 +87,7 @@ export const NewBatchWizard: React.FC = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [groups, setGroups] = useState<ScoutGroup[]>([]);
+  const [recognitionTypes, setRecognitionTypes] = useState<RecognitionType[]>([]);
   const [loadingHierarchy, setLoadingHierarchy] = useState(true);
 
   // Step 2 State
@@ -124,13 +126,20 @@ export const NewBatchWizard: React.FC = () => {
   const selectedRegionId = watch('regionId');
   const selectedDistrictId = watch('districtId');
 
-  // Load Hierarchy Data
+  // Load Hierarchy & Recognition Data
   useEffect(() => {
-    getHierarchyData()
-      .then(data => {
-        setRegions(data.regions);
-        setDistricts(data.districts);
-        setGroups(data.groups);
+    Promise.all([
+      getHierarchyData(),
+      getAllRecognitionTypes()
+    ])
+      .then(([hierarchy, recTypes]) => {
+        setRegions(hierarchy.regions);
+        setDistricts(hierarchy.districts);
+        setGroups(hierarchy.groups);
+        setRecognitionTypes(recTypes);
+      })
+      .catch((err) => {
+        console.error('Error loading initial batch metadata:', err);
       })
       .finally(() => {
         setLoadingHierarchy(false);
@@ -468,6 +477,7 @@ export const NewBatchWizard: React.FC = () => {
                 districts={districts}
                 groups={groups}
                 loadingHierarchy={loadingHierarchy}
+                recognitionTypes={recognitionTypes}
               />
 
               <div className="flex justify-end pt-4 border-t border-primary/10">

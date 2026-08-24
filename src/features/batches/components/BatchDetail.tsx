@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ColumnDef,
@@ -34,12 +34,17 @@ import {
   getMembersByBatchId,
   updateMember,
   deleteBatch,
-  generateBatchReport,
   getHierarchyData,
   exportMembersToCSV,
   getRecognitionName
 } from '../api';
 import { Batch, ScoutMember, Region, District, ScoutGroup } from '../types';
+import {
+  generateBatchCertificatesPdf,
+  downloadSingleCertificatePdf,
+  getAllRecognitionTypes,
+  RecognitionType
+} from '../../recognitions';
 
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +73,9 @@ export const BatchDetail: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Recognition template cache
+  const [recognition, setRecognition] = useState<RecognitionType | null>(null);
+
   // Hierarchy cache
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
@@ -81,14 +89,21 @@ export const BatchDetail: React.FC = () => {
     Promise.all([
       getBatchById(batchId),
       getMembersByBatchId(batchId),
-      getHierarchyData()
+      getHierarchyData(),
+      getAllRecognitionTypes()
     ])
-      .then(([b, m, hierarchy]) => {
+      .then(([b, m, hierarchy, recTypes]) => {
         setBatch(b);
         setMembers(m);
         setRegions(hierarchy.regions);
         setDistricts(hierarchy.districts);
         setGroups(hierarchy.groups);
+        if (b?.recognition_type) {
+          const found = recTypes.find(
+            r => r.id === b.recognition_type || r.name.toLowerCase() === b.recognition_type?.toLowerCase()
+          );
+          setRecognition(found || null);
+        }
       })
       .catch((err) => {
         console.error("Error loading batch details:", err);
@@ -102,17 +117,41 @@ export const BatchDetail: React.FC = () => {
     if (!batch) return;
     setDownloading(true);
     try {
-      const fileName = await generateBatchReport(batch.id);
-      setToastMessage(`¡Reporte PDF descargado exitosamente en ${fileName}!`);
+      const fileName = await generateBatchCertificatesPdf({
+        batch,
+        members,
+        recognition,
+        hierarchy: { regions, districts, groups }
+      });
+      setToastMessage(`¡Diplomas descargados exitosamente en ${fileName}!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error("Error generating PDF:", err);
-      alert("Error al generar el reporte PDF.");
+      alert("Error al generar los diplomas en PDF.");
     } finally {
       setDownloading(false);
     }
   };
+
+  const handleDownloadSingleDiploma = useCallback(async (member: ScoutMember) => {
+    setActiveMenuMemberId(null);
+    if (!batch) return;
+    try {
+      const fileName = await downloadSingleCertificatePdf({
+        member,
+        batch,
+        recognition,
+        hierarchy: { regions, districts, groups }
+      });
+      setToastMessage(`¡Diploma descargado: ${fileName}!`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      console.error("Error generating single diploma:", err);
+      alert("Error al descargar el diploma.");
+    }
+  }, [batch, recognition, regions, districts, groups]);
 
   const handleExportCSV = () => {
     if (!batch) return;
@@ -127,11 +166,11 @@ export const BatchDetail: React.FC = () => {
     }
   };
 
-  const handleEditClick = (member: ScoutMember) => {
+  const handleEditClick = useCallback((member: ScoutMember) => {
     setActiveMenuMemberId(null);
     setEditingMember({ ...member });
     setIsEditModalOpen(true);
-  };
+  }, []);
 
   const handleSaveMemberEdit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -283,7 +322,7 @@ export const BatchDetail: React.FC = () => {
               </button>
 
               {isMenuOpen && (
-                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans">
+                <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans">
                   <button
                     type="button"
                     onClick={() => handleEditClick(rowData)}
@@ -303,6 +342,16 @@ export const BatchDetail: React.FC = () => {
                     <Eye className="w-3.5 h-3.5 text-primary" />
                     Ver Ficha
                   </button>
+                  {rowData.status === 'active' && (
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadSingleDiploma(rowData)}
+                      className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+                    >
+                      <Award className="w-3.5 h-3.5 text-primary" />
+                      Descargar Diploma (PDF)
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -310,7 +359,7 @@ export const BatchDetail: React.FC = () => {
         );
       }
     }
-  ], [activeMenuMemberId]);
+  ], [activeMenuMemberId, handleEditClick, handleDownloadSingleDiploma]);
 
   const table = useReactTable({
     data: filteredMembers,

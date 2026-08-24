@@ -5,11 +5,14 @@ import { BatchList } from '../BatchList';
 import * as api from '../../api';
 import { ScoutMember } from '../../types';
 
+import * as recognitions from '../../../recognitions';
+
 vi.mock('../../api', () => ({
   getAllBatches: vi.fn(),
+  getBatchById: vi.fn(),
   getAllMembers: vi.fn(),
+  getMembersByBatchId: vi.fn(),
   getHierarchyData: vi.fn(),
-  generateBatchReport: vi.fn(),
   deleteBatch: vi.fn(),
   getRecognitionBadgeStyle: vi.fn(() => ({
     bg: 'bg-sky-100',
@@ -22,6 +25,11 @@ vi.mock('../../api', () => ({
     { id: 'sct-wood-badge', name: 'Insignia de Madera' },
     { id: 'sct-go-solar', name: 'Go Solar' }
   ]
+}));
+
+vi.mock('../../../recognitions', () => ({
+  generateBatchCertificatesPdf: vi.fn(),
+  getRecognitionTypeById: vi.fn(() => Promise.resolve(null))
 }));
 
 const mockNavigate = vi.fn();
@@ -228,7 +236,7 @@ describe('BatchList component', () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
-    vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_101.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Diplomas_Lote_101_go_solar.pdf');
 
     render(
       <MemoryRouter>
@@ -250,8 +258,13 @@ describe('BatchList component', () => {
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(api.generateBatchReport).toHaveBeenCalledWith(101);
-      expect(screen.getByText(/Reporte descargado: Reporte_101.pdf/i)).toBeInTheDocument();
+      expect(recognitions.generateBatchCertificatesPdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          batch: expect.objectContaining({ id: 101 }),
+          members: expect.any(Array)
+        })
+      );
+      expect(screen.getByText(/Diplomas descargados: Diplomas_Lote_101_go_solar\.pdf/i)).toBeInTheDocument();
     });
   });
 

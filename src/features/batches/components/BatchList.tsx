@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ColumnDef,
@@ -27,14 +27,20 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/
 
 import {
   getAllBatches,
+  getBatchById,
   getAllMembers,
+  getMembersByBatchId,
   getHierarchyData,
-  generateBatchReport,
   deleteBatch,
   getRecognitionBadgeStyle,
   getRecognitionName,
   RECOGNITION_TYPES
 } from '../api';
+import {
+  generateBatchCertificatesPdf,
+  getRecognitionTypeById,
+  RecognitionType
+} from '../../recognitions';
 import {
   Batch,
   ScoutMember,
@@ -109,26 +115,44 @@ export const BatchList: React.FC = () => {
       });
   }, []);
 
-  const handleDownloadPDF = async (batchId: number) => {
+  const handleDownloadPDF = useCallback(async (batchId: number) => {
     setDownloadingId(batchId);
     try {
-      const fileName = await generateBatchReport(batchId);
-      setToastMessage(`Reporte descargado: ${fileName}`);
+      const targetBatch = batches.find(b => b.id === batchId) || (await getBatchById(batchId));
+      if (!targetBatch) throw new Error('Lote no encontrado');
+
+      let batchMembers = members.filter(m => m.batch_id === batchId);
+      if (batchMembers.length === 0) {
+        batchMembers = await getMembersByBatchId(batchId);
+      }
+
+      let recType: RecognitionType | null = null;
+      if (targetBatch.recognition_type) {
+        recType = await getRecognitionTypeById(targetBatch.recognition_type);
+      }
+
+      const fileName = await generateBatchCertificatesPdf({
+        batch: targetBatch,
+        members: batchMembers,
+        recognition: recType,
+        hierarchy: { regions, districts, groups }
+      });
+      setToastMessage(`Diplomas descargados: ${fileName}`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error("Error downloading PDF:", err);
-      alert("Error al generar el reporte PDF.");
+      alert("Error al generar los diplomas en PDF.");
     } finally {
       setDownloadingId(null);
     }
-  };
+  }, [batches, members, regions, districts, groups]);
 
-  const handleDeleteClick = (rowData: BatchRowData) => {
+  const handleDeleteClick = useCallback((rowData: BatchRowData) => {
     setOpenActionMenuId(null);
     setBatchToDelete(rowData);
     setIsDeleteModalOpen(true);
-  };
+  }, []);
 
   const handleConfirmDelete = async () => {
     if (!batchToDelete) return;
@@ -405,7 +429,7 @@ export const BatchList: React.FC = () => {
         );
       }
     }
-  ], [openActionMenuId, downloadingId, navigate]);
+  ], [openActionMenuId, downloadingId, navigate, handleDownloadPDF, handleDeleteClick]);
 
   const table = useReactTable({
     data: filteredData,

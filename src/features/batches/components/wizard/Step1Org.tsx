@@ -23,6 +23,7 @@ interface Step1OrgProps {
   districts: District[];
   groups: ScoutGroup[];
   loadingHierarchy: boolean;
+  recognitionTypes?: { id: string; name: string }[];
 }
 
 export const Step1Org: React.FC<Step1OrgProps> = ({
@@ -33,7 +34,8 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
   regions,
   districts,
   groups,
-  loadingHierarchy
+  loadingHierarchy,
+  recognitionTypes = []
 }) => {
   const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
   const [isDistrictModalOpen, setIsDistrictModalOpen] = useState(false);
@@ -172,7 +174,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
               {...register('recognitionType')}
             >
               <option value="">Seleccione un reconocimiento</option>
-              {RECOGNITION_TYPES.map(t => (
+              {(recognitionTypes && recognitionTypes.length > 0 ? recognitionTypes : RECOGNITION_TYPES).map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>

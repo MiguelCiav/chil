@@ -3,11 +3,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { SuccessPage } from '../SuccessPage';
 import * as api from '../../api';
+import * as recognitions from '../../../recognitions';
 
 vi.mock('../../api', () => ({
   getBatchById: vi.fn(),
   getMembersByBatchId: vi.fn(),
-  generateBatchReport: vi.fn()
+  getHierarchyData: vi.fn(() => Promise.resolve({ regions: [], districts: [], groups: [] }))
+}));
+
+vi.mock('../../../recognitions', () => ({
+  generateBatchCertificatesPdf: vi.fn(),
+  getRecognitionTypeById: vi.fn(() => Promise.resolve(null))
 }));
 
 describe('SuccessPage component', () => {
@@ -37,6 +43,7 @@ describe('SuccessPage component', () => {
       region_id: 1,
       district_id: 10,
       group_id: 100,
+      recognition_type: 'Go Solar',
       created_at: '2026-08-21T12:00:00.000Z'
     });
 
@@ -61,7 +68,7 @@ describe('SuccessPage component', () => {
       }
     ]);
 
-    vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_555.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Diplomas_Lote_555_go_solar.pdf');
 
     render(
       <MemoryRouter initialEntries={[{ pathname: '/lotes/exito', state: { batchId: 555, name: 'Lote San Luis' } }]}>
@@ -84,8 +91,13 @@ describe('SuccessPage component', () => {
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(api.generateBatchReport).toHaveBeenCalledWith(555);
-      expect(screen.getByText(/¡Reporte descargado exitosamente en Reporte_Lote_555.pdf!/i)).toBeInTheDocument();
+      expect(recognitions.generateBatchCertificatesPdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          batch: expect.objectContaining({ id: 555 }),
+          members: expect.any(Array)
+        })
+      );
+      expect(screen.getByText(/¡Diplomas descargados exitosamente en Diplomas_Lote_555_go_solar\.pdf!/i)).toBeInTheDocument();
     });
   });
 });
