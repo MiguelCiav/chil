@@ -35,7 +35,7 @@ import {
   updateMember,
   deleteBatch,
   getHierarchyData,
-  exportMembersToCSV,
+  generateBatchReport,
   getRecognitionName
 } from '../api';
 import { Batch, ScoutMember, Region, District, ScoutGroup } from '../types';
@@ -56,6 +56,7 @@ export const BatchDetail: React.FC = () => {
   const [loading, setLoading] = useState(!Number.isNaN(Number(id)));
   const [searchQuery, setSearchQuery] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -153,16 +154,19 @@ export const BatchDetail: React.FC = () => {
     }
   }, [batch, recognition, regions, districts, groups]);
 
-  const handleExportCSV = () => {
+  const handleDownloadMemberListPDF = async () => {
     if (!batch) return;
+    setDownloadingReport(true);
     try {
-      exportMembersToCSV(batch, members);
-      setToastMessage('¡Listado de miembros descargado exitosamente!');
+      await generateBatchReport(batch, members, { regions, districts, groups });
+      setToastMessage('Lista de miembros (PDF) generada exitosamente.');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      console.error("Error exporting CSV:", err);
-      alert("Error al exportar la lista.");
+      console.error("Error generating member list PDF:", err);
+      alert("Error al generar la lista de miembros en PDF.");
+    } finally {
+      setDownloadingReport(false);
     }
   };
 
@@ -293,9 +297,12 @@ export const BatchDetail: React.FC = () => {
     {
       id: 'actions',
       header: 'ACCIONES',
-      cell: ({ row }) => {
+      cell: ({ row, table }) => {
         const rowData = row.original;
         const isMenuOpen = activeMenuMemberId === rowData.identity;
+        const totalRows = table.getRowModel().rows.length;
+        const isNearBottom = (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
+        const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
 
         return (
           <div className="flex items-center gap-2 relative">
@@ -322,7 +329,7 @@ export const BatchDetail: React.FC = () => {
               </button>
 
               {isMenuOpen && (
-                <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans">
+                <div className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
                   <button
                     type="button"
                     onClick={() => handleEditClick(rowData)}
@@ -436,11 +443,12 @@ export const BatchDetail: React.FC = () => {
 
           <Button
             variant="outline"
-            onClick={handleExportCSV}
+            onClick={handleDownloadMemberListPDF}
+            disabled={downloadingReport}
             icon={<Download size={16} />}
             className="border-gray-200 hover:bg-gray-50 text-neutral font-semibold text-xs sm:text-sm"
           >
-            Descargar lista
+            {downloadingReport ? 'Generando PDF...' : 'Descargar lista'}
           </Button>
 
           <Button
@@ -460,15 +468,15 @@ export const BatchDetail: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: Detalles del Lote */}
         <Card className="shadow-sm border-gray-200">
-          <CardBody className="p-6 flex flex-col justify-between h-full space-y-4">
-            <div className="flex items-center gap-3">
+          <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
                 <MapPin className="w-5 h-5" />
               </div>
               <h2 className="font-bold text-neutral text-base">Detalles del Lote</h2>
             </div>
 
-            <div className="space-y-2 text-xs sm:text-sm pt-2">
+            <div className="space-y-2 text-xs sm:text-sm my-auto">
               <div className="flex justify-between items-center text-neutral/60">
                 <span>Región</span>
                 <span className="font-semibold text-neutral">{getRegionName(batch.region_id)}</span>
@@ -487,15 +495,15 @@ export const BatchDetail: React.FC = () => {
 
         {/* Card 2: Tipo de Reconocimiento */}
         <Card className="shadow-sm border-gray-200">
-          <CardBody className="p-6 flex flex-col justify-between h-full space-y-4">
-            <div className="flex items-center gap-3">
+          <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
                 <Award className="w-5 h-5" />
               </div>
               <h2 className="font-bold text-neutral text-base">Tipo de Reconocimiento</h2>
             </div>
 
-            <div className="text-center py-2">
+            <div className="text-center my-auto py-2">
               <div className="text-xl sm:text-2xl font-extrabold text-[#743e1d]">
                 {recognitionTitle}
               </div>
@@ -567,7 +575,7 @@ export const BatchDetail: React.FC = () => {
         </div>
 
         {/* TanStack Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[260px] pb-12">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
               <tr className="border-b border-gray-200 bg-[#faf8f5]">
@@ -662,7 +670,7 @@ export const BatchDetail: React.FC = () => {
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-xl">
         <ModalHeader onClose={() => setIsEditModalOpen(false)}>Editar Datos de Miembro</ModalHeader>
         {editingMember && (
-          <form onSubmit={handleSaveMemberEdit}>
+          <form onSubmit={handleSaveMemberEdit} className="flex flex-col flex-1 overflow-hidden min-h-0">
             <ModalBody className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Field

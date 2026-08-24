@@ -207,7 +207,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-xl">
         <ModalHeader onClose={() => setIsEditModalOpen(false)}>Editar Información de Miembro</ModalHeader>
         {editingMember && (
-          <form onSubmit={handleSaveEditedMember}>
+          <form onSubmit={handleSaveEditedMember} className="flex flex-col flex-1 overflow-hidden min-h-0">
             <ModalBody className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Field

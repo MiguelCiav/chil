@@ -127,7 +127,7 @@ export const Navbar: React.FC = () => {
       </div>
 
       <Modal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} className="max-w-md">
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden min-h-0">
           <ModalHeader onClose={() => setIsSettingsOpen(false)}>
             Configuración del Scraper ASV
           </ModalHeader>
