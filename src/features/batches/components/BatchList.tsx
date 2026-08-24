@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  MoreVertical
 } from 'lucide-react';
 
 import { Card, CardBody } from '../../../components/Card';
@@ -40,6 +41,7 @@ import {
 import {
   generateBatchCertificatesPdf,
   getRecognitionTypeById,
+  getAllRecognitionTypes,
   RecognitionType
 } from '../../recognitions';
 import {
@@ -72,13 +74,76 @@ function formatBatchDate(dateStr: string): string {
   return dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function formatDateToDisplay(isoDate: string): string {
+  if (!isoDate) return '';
+  const parts = isoDate.split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+  return isoDate;
+}
+
+function matchesDateFilter(createdAt: string, filterValue: string): boolean {
+  const batchDate = new Date(createdAt);
+  if (Number.isNaN(batchDate.getTime())) return false;
+
+  const now = new Date();
+
+  // Predefined periods
+  if (filterValue === 'Este Año') {
+    return batchDate.getFullYear() === now.getFullYear();
+  }
+  if (filterValue === 'Este Mes') {
+    return (
+      batchDate.getFullYear() === now.getFullYear() &&
+      batchDate.getMonth() === now.getMonth()
+    );
+  }
+  if (filterValue === 'Últimos 30 días') {
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    return batchDate >= thirtyDaysAgo && batchDate <= now;
+  }
+  if (filterValue === 'Últimos 90 días') {
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    ninetyDaysAgo.setHours(0, 0, 0, 0);
+    return batchDate >= ninetyDaysAgo && batchDate <= now;
+  }
+  if (filterValue === 'Todo el histórico') {
+    return true;
+  }
+
+  // Date range: "DD/MM/YYYY - DD/MM/YYYY"
+  if (filterValue.includes(' - ')) {
+    const [startStr, endStr] = filterValue.split(' - ');
+    const [sDay, sMonth, sYear] = startStr.split('/').map(Number);
+    const [eDay, eMonth, eYear] = endStr.split('/').map(Number);
+    if (sDay && sMonth && sYear && eDay && eMonth && eYear) {
+      const startDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
+      const endDate = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
+      return batchDate >= startDate && batchDate <= endDate;
+    }
+  }
+
+  // Specific date: "DD/MM/YYYY"
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(filterValue)) {
+    const [day, month, year] = filterValue.split('/').map(Number);
+    if (day && month && year) {
+      const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+      return batchDate >= startOfDay && batchDate <= endOfDay;
+    }
+  }
+
+  return true;
+}
+
 function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip[]): boolean {
   for (const filter of activeFilters) {
     if (filter.type === 'date') {
-      if (filter.value === 'Este Año') {
-        const currentYear = new Date().getFullYear();
-        const rowYear = new Date(row.created_at).getFullYear();
-        if (rowYear !== currentYear) return false;
+      if (!matchesDateFilter(row.created_at, filter.value)) {
+        return false;
       }
     } else if (filter.type === 'region') {
       if (row.regionName !== filter.value && filter.value !== '-') return false;
@@ -87,7 +152,7 @@ function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip
     } else if (filter.type === 'group') {
       if (!row.groupName.toLowerCase().includes(filter.value.toLowerCase())) return false;
     } else if (filter.type === 'recognition') {
-      if (row.recognitionName !== filter.value) return false;
+      if (row.recognitionName !== filter.value && row.recognitionType !== filter.value) return false;
     }
   }
   return true;
@@ -96,7 +161,8 @@ function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip
 function getFilterLabelAndValue(
   filterType: 'date' | 'region' | 'district' | 'group' | 'recognition',
   filterValue: string,
-  hierarchy: { regions: Region[]; districts: District[]; groups: ScoutGroup[] }
+  hierarchy: { regions: Region[]; districts: District[]; groups: ScoutGroup[] },
+  recognitionTypes: RecognitionType[]
 ): { label: string; displayValue: string } {
   switch (filterType) {
     case 'date':
@@ -116,11 +182,15 @@ function getFilterLabelAndValue(
         label: 'Grupo',
         displayValue: hierarchy.groups.find(g => String(g.id) === filterValue)?.name || filterValue
       };
-    case 'recognition':
+    case 'recognition': {
+      const rec = recognitionTypes.find(
+        r => r.id === filterValue || r.name.toLowerCase() === filterValue.toLowerCase()
+      );
       return {
         label: 'Reconocimiento',
-        displayValue: getRecognitionName(filterValue)
+        displayValue: rec ? rec.name : getRecognitionName(filterValue)
       };
+    }
   }
 }
 
@@ -176,6 +246,7 @@ export const BatchList: React.FC = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [groups, setGroups] = useState<ScoutGroup[]>([]);
+  const [recognitionTypes, setRecognitionTypes] = useState<RecognitionType[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Deletion modal state
@@ -196,6 +267,13 @@ export const BatchList: React.FC = () => {
   const [newFilterType, setNewFilterType] = useState<'date' | 'region' | 'district' | 'group' | 'recognition'>('region');
   const [newFilterValue, setNewFilterValue] = useState<string>('');
 
+  // Date filter mode & values for Add Filter modal
+  const [dateFilterMode, setDateFilterMode] = useState<'predefined' | 'range' | 'specific'>('predefined');
+  const [datePredefinedValue, setDatePredefinedValue] = useState<string>('Este Año');
+  const [dateRangeStart, setDateRangeStart] = useState<string>('');
+  const [dateRangeEnd, setDateRangeEnd] = useState<string>('');
+  const [dateSpecificValue, setDateSpecificValue] = useState<string>('');
+
   // Dropdown action menu state per row
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
 
@@ -203,14 +281,16 @@ export const BatchList: React.FC = () => {
     Promise.all([
       getAllBatches(),
       getAllMembers(),
-      getHierarchyData()
+      getHierarchyData(),
+      getAllRecognitionTypes()
     ])
-      .then(([bList, mList, hierarchy]) => {
+      .then(([bList, mList, hierarchy, recTypes]) => {
         setBatches(bList);
         setMembers(mList);
         setRegions(hierarchy.regions);
         setDistricts(hierarchy.districts);
         setGroups(hierarchy.groups);
+        setRecognitionTypes(recTypes || []);
       })
       .catch(err => {
         console.error("Error loading batches list data:", err);
@@ -219,6 +299,14 @@ export const BatchList: React.FC = () => {
         setLoading(false);
       });
   }, []);
+
+  const resolveRecognitionName = useCallback((recType?: string) => {
+    if (!recType) return '-';
+    const found = recognitionTypes.find(
+      r => r.id === recType || r.name.toLowerCase() === recType.toLowerCase()
+    );
+    return found ? found.name : getRecognitionName(recType);
+  }, [recognitionTypes]);
 
   const handleDownloadPDF = useCallback(async (batchId: number) => {
     setDownloadingId(batchId);
@@ -285,12 +373,27 @@ export const BatchList: React.FC = () => {
 
   const handleAddFilter = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!newFilterValue) return;
+
+    let computedFilterValue = newFilterValue;
+    if (newFilterType === 'date') {
+      if (dateFilterMode === 'predefined') {
+        computedFilterValue = datePredefinedValue;
+      } else if (dateFilterMode === 'range') {
+        if (!dateRangeStart || !dateRangeEnd) return;
+        computedFilterValue = `${formatDateToDisplay(dateRangeStart)} - ${formatDateToDisplay(dateRangeEnd)}`;
+      } else if (dateFilterMode === 'specific') {
+        if (!dateSpecificValue) return;
+        computedFilterValue = formatDateToDisplay(dateSpecificValue);
+      }
+    }
+
+    if (!computedFilterValue) return;
 
     const { label, displayValue } = getFilterLabelAndValue(
       newFilterType,
-      newFilterValue,
-      { regions, districts, groups }
+      computedFilterValue,
+      { regions, districts, groups },
+      recognitionTypes
     );
 
     const newChip: ActiveFilterChip = {
@@ -303,6 +406,9 @@ export const BatchList: React.FC = () => {
     setActiveFilters(prev => [...prev.filter(f => f.type !== newFilterType), newChip]);
     setIsAddFilterModalOpen(false);
     setNewFilterValue('');
+    setDateRangeStart('');
+    setDateRangeEnd('');
+    setDateSpecificValue('');
   };
 
   // Compute top KPI metrics
@@ -314,14 +420,14 @@ export const BatchList: React.FC = () => {
     if (batches.length === 0) return 'Go Solar';
     const counts: Record<string, number> = {};
     for (const b of batches) {
-      const rec = b.recognition_type ? getRecognitionName(b.recognition_type) : '';
-      if (rec) {
+      const rec = resolveRecognitionName(b.recognition_type);
+      if (rec && rec !== '-') {
         counts[rec] = (counts[rec] || 0) + 1;
       }
     }
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     return sorted.length > 0 ? sorted[0][0] : 'Go Solar';
-  }, [batches]);
+  }, [batches, resolveRecognitionName]);
 
   // Format table rows
   const tableData = useMemo<BatchRowData[]>(() => {
@@ -342,12 +448,12 @@ export const BatchList: React.FC = () => {
         regionName: regionObj ? regionObj.name : '-',
         districtName: districtObj ? districtObj.name : '-',
         groupName: groupObj ? groupObj.name : (batch.comment || '-'),
-        recognitionName: getRecognitionName(batch.recognition_type),
+        recognitionName: resolveRecognitionName(batch.recognition_type),
         recognitionType: batch.recognition_type || '',
         memberCount
       };
     });
-  }, [batches, members, regions, districts, groups]);
+  }, [batches, members, regions, districts, groups, resolveRecognitionName]);
 
   // Filter table rows by active filters
   const filteredData = useMemo(() => {
@@ -409,87 +515,54 @@ export const BatchList: React.FC = () => {
         const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
 
         return (
-          <div className="flex items-center gap-1.5 relative">
-            {/* Acciones Dropdown Button */}
-            <div className="relative inline-block">
-              <button
-                type="button"
-                onClick={() => setOpenActionMenuId(isMenuOpen ? null : rowData.id)}
-                className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full border border-gray-300 bg-white text-neutral hover:bg-gray-50 focus:outline-none transition-colors"
-              >
-                Acciones
-              </button>
-
-              {isMenuOpen && (
-                <div className={`absolute left-0 ${dropdownPosition} w-36 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpenActionMenuId(null);
-                      navigate(`/lotes/${rowData.id}`);
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-primary" />
-                    Ver Detalle
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpenActionMenuId(null);
-                      handleDownloadPDF(rowData.id);
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-                  >
-                    <Download className="w-3.5 h-3.5 text-primary" />
-                    Descargar PDF
-                  </button>
-                  <div className="border-t border-gray-100 my-1" />
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteClick(rowData)}
-                    className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
-                    Eliminar Lote
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Detail View Icon Button */}
+          <div className="relative inline-block font-sans">
+            {/* Acciones 3-Dots Dropdown Button */}
             <button
               type="button"
-              onClick={() => navigate(`/lotes/${rowData.id}`)}
-              className="p-1.5 text-neutral/70 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-              title="Ver detalle del lote"
-              aria-label={`Ver detalle del lote ${rowData.id}`}
+              onClick={() => setOpenActionMenuId(isMenuOpen ? null : rowData.id)}
+              className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
+              aria-label={`Acciones del lote ${rowData.id}`}
+              title="Acciones"
             >
-              <FileText className="w-4 h-4" />
+              <MoreVertical className="w-4 h-4" />
             </button>
 
-            {/* Download PDF Icon Button */}
-            <button
-              type="button"
-              onClick={() => handleDownloadPDF(rowData.id)}
-              disabled={downloadingId === rowData.id}
-              className="p-1.5 text-neutral/70 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50"
-              title="Descargar reporte PDF"
-              aria-label={`Descargar PDF del lote ${rowData.id}`}
-            >
-              <Download className="w-4 h-4" />
-            </button>
-
-            {/* Quick Delete Icon Button */}
-            <button
-              type="button"
-              onClick={() => handleDeleteClick(rowData)}
-              className="p-1.5 text-neutral/70 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Eliminar lote"
-              aria-label={`Eliminar lote ${rowData.id}`}
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {isMenuOpen && (
+              <div className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    navigate(`/lotes/${rowData.id}`);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+                >
+                  <FileText className="w-3.5 h-3.5 text-primary" />
+                  Ver detalle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenActionMenuId(null);
+                    handleDownloadPDF(rowData.id);
+                  }}
+                  disabled={downloadingId === rowData.id}
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Download className="w-3.5 h-3.5 text-primary" />
+                  {downloadingId === rowData.id ? 'Descargando...' : 'Descargar diplomas (PDF)'}
+                </button>
+                <div className="border-t border-gray-100 my-1" />
+                <button
+                  type="button"
+                  onClick={() => handleDeleteClick(rowData)}
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                  Eliminar lote
+                </button>
+              </div>
+            )}
           </div>
         );
       }
@@ -585,7 +658,15 @@ export const BatchList: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => setIsAddFilterModalOpen(true)}
+          onClick={() => {
+            setNewFilterValue('');
+            setDateFilterMode('predefined');
+            setDatePredefinedValue('Este Año');
+            setDateRangeStart('');
+            setDateRangeEnd('');
+            setDateSpecificValue('');
+            setIsAddFilterModalOpen(true);
+          }}
           className="inline-flex items-center gap-1 text-primary font-bold text-sm hover:text-primary/80 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -767,24 +848,98 @@ export const BatchList: React.FC = () => {
                   required
                 >
                   <option value="">Seleccione un reconocimiento</option>
-                  {RECOGNITION_TYPES.map(t => (
+                  {(recognitionTypes.length > 0 ? recognitionTypes : RECOGNITION_TYPES).map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
               )}
 
               {newFilterType === 'date' && (
-                <select
-                  id="filter-value-select"
-                  value={newFilterValue}
-                  onChange={e => setNewFilterValue(e.target.value)}
-                  className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                  required
-                >
-                  <option value="">Seleccione un período</option>
-                  <option value="Este Año">Este Año</option>
-                  <option value="Todo el histórico">Todo el histórico</option>
-                </select>
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="date-mode-select" className="block text-xs font-semibold mb-1 text-neutral/70">
+                      Modalidad
+                    </label>
+                    <select
+                      id="date-mode-select"
+                      value={dateFilterMode}
+                      onChange={e => setDateFilterMode(e.target.value as 'predefined' | 'range' | 'specific')}
+                      className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                    >
+                      <option value="predefined">Período predefinido</option>
+                      <option value="range">Rango de fechas</option>
+                      <option value="specific">Fecha específica</option>
+                    </select>
+                  </div>
+
+                  {dateFilterMode === 'predefined' && (
+                    <div>
+                      <label htmlFor="date-predefined-select" className="block text-xs font-semibold mb-1 text-neutral/70">
+                        Período
+                      </label>
+                      <select
+                        id="date-predefined-select"
+                        value={datePredefinedValue}
+                        onChange={e => setDatePredefinedValue(e.target.value)}
+                        className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        required
+                      >
+                        <option value="Este Año">Este Año</option>
+                        <option value="Últimos 30 días">Últimos 30 días</option>
+                        <option value="Últimos 90 días">Últimos 90 días</option>
+                        <option value="Este Mes">Este Mes</option>
+                        <option value="Todo el histórico">Todo el histórico</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {dateFilterMode === 'range' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="date-start-input" className="block text-xs font-semibold mb-1 text-neutral/70">
+                          Fecha Inicio
+                        </label>
+                        <input
+                          id="date-start-input"
+                          type="date"
+                          value={dateRangeStart}
+                          onChange={e => setDateRangeStart(e.target.value)}
+                          className="w-full rounded-field px-3 py-2 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="date-end-input" className="block text-xs font-semibold mb-1 text-neutral/70">
+                          Fecha Fin
+                        </label>
+                        <input
+                          id="date-end-input"
+                          type="date"
+                          value={dateRangeEnd}
+                          onChange={e => setDateRangeEnd(e.target.value)}
+                          className="w-full rounded-field px-3 py-2 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {dateFilterMode === 'specific' && (
+                    <div>
+                      <label htmlFor="date-specific-input" className="block text-xs font-semibold mb-1 text-neutral/70">
+                        Fecha
+                      </label>
+                      <input
+                        id="date-specific-input"
+                        type="date"
+                        value={dateSpecificValue}
+                        onChange={e => setDateSpecificValue(e.target.value)}
+                        className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </ModalBody>
@@ -792,7 +947,19 @@ export const BatchList: React.FC = () => {
             <Button type="button" variant="outline" onClick={() => setIsAddFilterModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" variant="primary" disabled={!newFilterValue}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={
+                newFilterType === 'date'
+                  ? dateFilterMode === 'predefined'
+                    ? !datePredefinedValue
+                    : dateFilterMode === 'range'
+                      ? !dateRangeStart || !dateRangeEnd
+                      : !dateSpecificValue
+                  : !newFilterValue
+              }
+            >
               Aplicar Filtro
             </Button>
           </ModalFooter>

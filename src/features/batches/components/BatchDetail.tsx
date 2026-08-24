@@ -407,7 +407,6 @@ export const BatchDetail: React.FC = () => {
   const recognitionTitle = batch.recognition_type
     ? getRecognitionName(batch.recognition_type)
     : 'Servicio Prolongado';
-  const recognitionSub = batch.recognition_duration || '5 años';
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-sans py-2 relative">
@@ -506,9 +505,6 @@ export const BatchDetail: React.FC = () => {
             <div className="text-center my-auto py-2">
               <div className="text-xl sm:text-2xl font-extrabold text-[#743e1d]">
                 {recognitionTitle}
-              </div>
-              <div className="text-xs sm:text-sm text-neutral/60 font-semibold mt-1">
-                {recognitionSub}
               </div>
             </div>
           </CardBody>

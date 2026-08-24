@@ -95,15 +95,17 @@ describe('Modal component', () => {
     expect(header).toHaveClass('flex-shrink-0');
   });
 
-  it('renders ModalBody with flex-1, overflow-y-auto and pr-1 classes', () => {
+  it('renders ModalBody with symmetric horizontal padding (px-6), py-5, flex-1, overflow-y-auto and without pr-1', () => {
     const { container } = render(
       <ModalBody>Scrollable Body</ModalBody>
     );
 
     const body = container.firstElementChild;
+    expect(body).toHaveClass('px-6');
+    expect(body).toHaveClass('py-5');
     expect(body).toHaveClass('flex-1');
     expect(body).toHaveClass('overflow-y-auto');
-    expect(body).toHaveClass('pr-1');
+    expect(body).not.toHaveClass('pr-1');
   });
 
   it('renders ModalFooter with flex-shrink-0, sticky, bottom-0, bg-white, and border-t classes', () => {

@@ -75,7 +75,7 @@ interface ModalBodyProps {
 }
 
 export const ModalBody: React.FC<ModalBodyProps> = ({ children, className = '' }) => (
-  <div className={`p-6 overflow-y-auto flex-1 bg-white pr-1 ${className}`}>
+  <div className={`px-6 py-5 overflow-y-auto flex-1 bg-white ${className}`}>
     {children}
   </div>
 );

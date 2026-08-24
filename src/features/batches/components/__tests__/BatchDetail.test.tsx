@@ -125,6 +125,8 @@ describe('BatchDetail component', () => {
     expect(screen.getByText(/Grupo San Luis/i)).toBeInTheDocument();
     expect(screen.getByText(/Detalles del Lote/i)).toBeInTheDocument();
     expect(screen.getByText(/Tipo de Reconocimiento/i)).toBeInTheDocument();
+    expect(screen.getByText('Servicio Prolongado')).toBeInTheDocument();
+    expect(screen.queryByText('5 años')).not.toBeInTheDocument();
     expect(screen.getByText(/Resumen de Miembros/i)).toBeInTheDocument();
 
     // Check table rows
