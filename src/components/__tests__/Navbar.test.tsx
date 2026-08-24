@@ -26,6 +26,7 @@ describe('Navbar component', () => {
     expect(screen.getByText('Chil')).toBeInTheDocument();
     expect(screen.getByText('Nuevo lote')).toBeInTheDocument();
     expect(screen.getByText('Listado de lotes')).toBeInTheDocument();
+    expect(screen.getByText('Reconocimientos')).toBeInTheDocument();
   });
 
   it('opens scraper settings modal, enters credentials and saves', async () => {
@@ -73,10 +74,12 @@ describe('Navbar component', () => {
 
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
+    const recognitionsLink = screen.getByRole('link', { name: 'Reconocimientos' });
 
     expect(nuevoLoteLink).toHaveClass('border-primary');
     expect(nuevoLoteLink).toHaveClass('text-primary');
     expect(listadoLotesLink).toHaveClass('border-transparent');
+    expect(recognitionsLink).toHaveClass('border-transparent');
   });
 
   it('highlights only "Listado de lotes" when path is /lotes', () => {
@@ -90,9 +93,30 @@ describe('Navbar component', () => {
 
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
+    const recognitionsLink = screen.getByRole('link', { name: 'Reconocimientos' });
 
     expect(listadoLotesLink).toHaveClass('border-primary');
     expect(listadoLotesLink).toHaveClass('text-primary');
     expect(nuevoLoteLink).toHaveClass('border-transparent');
+    expect(recognitionsLink).toHaveClass('border-transparent');
+  });
+
+  it('highlights only "Reconocimientos" when path is /reconocimientos', () => {
+    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
+
+    render(
+      <MemoryRouter initialEntries={['/reconocimientos']}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
+    const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
+    const recognitionsLink = screen.getByRole('link', { name: 'Reconocimientos' });
+
+    expect(recognitionsLink).toHaveClass('border-primary');
+    expect(recognitionsLink).toHaveClass('text-primary');
+    expect(nuevoLoteLink).toHaveClass('border-transparent');
+    expect(listadoLotesLink).toHaveClass('border-transparent');
   });
 });

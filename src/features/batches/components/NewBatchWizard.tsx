@@ -36,6 +36,7 @@ import {
   ScoutMember,
   MemberVerificationResult
 } from '../types';
+import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 
 import { Step1Org } from './wizard/Step1Org';
 import { Step2Verification } from './wizard/Step2Verification';
@@ -76,6 +77,28 @@ function splitFullName(name: string): { first_names: string; last_names: string 
   }
 }
 
+function getStepCircleClasses(currentStep: number, itemStep: number): string {
+  if (currentStep === itemStep) {
+    return 'bg-primary border-primary text-white shadow-lg ring-4 ring-primary/20 scale-110';
+  }
+  if (currentStep > itemStep) {
+    return 'bg-green-500 border-green-500 text-white shadow-md';
+  }
+  return 'bg-white border-gray-300 text-gray-400 hover:border-primary/50';
+}
+
+function handleScrapeErrorResult(
+  err: Error | unknown
+): { name: string; status: 'No registrado' | 'Error de red'; isUnregistered: boolean } {
+  const errStr = err instanceof Error ? err.message : String(err);
+  const isUnregistered = errStr.includes("No registrado");
+  return {
+    name: isUnregistered ? 'Usuario No Registrado' : 'Error de conexión',
+    status: isUnregistered ? 'No registrado' : 'Error de red',
+    isUnregistered
+  };
+}
+
 export const NewBatchWizard: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -86,6 +109,7 @@ export const NewBatchWizard: React.FC = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [groups, setGroups] = useState<ScoutGroup[]>([]);
+  const [recognitionTypes, setRecognitionTypes] = useState<RecognitionType[]>([]);
   const [loadingHierarchy, setLoadingHierarchy] = useState(true);
 
   // Step 2 State
@@ -124,13 +148,20 @@ export const NewBatchWizard: React.FC = () => {
   const selectedRegionId = watch('regionId');
   const selectedDistrictId = watch('districtId');
 
-  // Load Hierarchy Data
+  // Load Hierarchy & Recognition Data
   useEffect(() => {
-    getHierarchyData()
-      .then(data => {
-        setRegions(data.regions);
-        setDistricts(data.districts);
-        setGroups(data.groups);
+    Promise.all([
+      getHierarchyData(),
+      getAllRecognitionTypes()
+    ])
+      .then(([hierarchy, recTypes]) => {
+        setRegions(hierarchy.regions);
+        setDistricts(hierarchy.districts);
+        setGroups(hierarchy.groups);
+        setRecognitionTypes(recTypes);
+      })
+      .catch((err) => {
+        console.error('Error loading initial batch metadata:', err);
       })
       .finally(() => {
         setLoadingHierarchy(false);
@@ -203,15 +234,13 @@ export const NewBatchWizard: React.FC = () => {
     }
 
     if (scrapeError) {
-      const errStr = scrapeError.message;
-      const isUnregistered = errStr.includes("No registrado");
-      const status = isUnregistered ? 'No registrado' : 'Error de red';
+      const { name, status, isUnregistered } = handleScrapeErrorResult(scrapeError);
 
       setVerificationList(prev => prev.map(item =>
         item.cedula === cedula
           ? {
             cedula,
-            name: isUnregistered ? 'Usuario No Registrado' : 'Error de conexión',
+            name,
             status,
             type
           }
@@ -240,7 +269,7 @@ export const NewBatchWizard: React.FC = () => {
       }
     } else if (scrapedResult) {
       const res = scrapedResult;
-      const isScrapedActive = res.status && res.status.toLowerCase() === 'activo';
+      const isScrapedActive = res.status?.toLowerCase() === 'activo';
       const rowStatus = isScrapedActive ? 'Registro válido' : 'No registrado';
 
       // Success! Update list with results
@@ -431,12 +460,7 @@ export const NewBatchWizard: React.FC = () => {
               disabled={item.step >= currentStep}
             >
               <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${currentStep === item.step
-                  ? 'bg-primary border-primary text-white shadow-lg ring-4 ring-primary/20 scale-110'
-                  : currentStep > item.step
-                    ? 'bg-green-500 border-green-500 text-white shadow-md'
-                    : 'bg-white border-gray-300 text-gray-400 hover:border-primary/50'
-                  }`}
+                className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${getStepCircleClasses(currentStep, item.step)}`}
               >
                 {item.icon}
               </div>
@@ -468,6 +492,7 @@ export const NewBatchWizard: React.FC = () => {
                 districts={districts}
                 groups={groups}
                 loadingHierarchy={loadingHierarchy}
+                recognitionTypes={recognitionTypes}
               />
 
               <div className="flex justify-end pt-4 border-t border-primary/10">

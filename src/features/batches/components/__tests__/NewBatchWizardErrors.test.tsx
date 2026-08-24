@@ -21,6 +21,10 @@ vi.mock('../../api', async (importOriginal) => {
   };
 });
 
+vi.mock('../../../recognitions', () => ({
+  getAllRecognitionTypes: vi.fn().mockResolvedValue([])
+}));
+
 describe('NewBatchWizard error cases & edge branches', () => {
   beforeEach(() => {
     vi.clearAllMocks();

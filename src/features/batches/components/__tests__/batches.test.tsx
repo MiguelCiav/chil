@@ -33,6 +33,10 @@ vi.mock('../../api', async (importOriginal) => {
   };
 });
 
+vi.mock('../../../recognitions', () => ({
+  getAllRecognitionTypes: vi.fn().mockResolvedValue([])
+}));
+
 // Mock react-router-dom navigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {

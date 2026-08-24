@@ -21,6 +21,10 @@ vi.mock('../../api', async (importOriginal) => {
   };
 });
 
+vi.mock('../../../recognitions', () => ({
+  getAllRecognitionTypes: vi.fn().mockResolvedValue([])
+}));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
