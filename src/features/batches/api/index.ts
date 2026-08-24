@@ -523,3 +523,6 @@ export async function generateBatchReport(
   docPdf.save(fileName);
   return fileName;
 }
+
+export * from '../utils/codeGenerator';
+

@@ -168,8 +168,10 @@ describe('NewBatchWizard full flow', () => {
     const finalizeBtn = screen.getByText('Generar Lote');
     fireEvent.click(finalizeBtn);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/lotes/exito', {
-      state: { batchId: 777, name: 'Mi Lote Completo' }
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/lotes/exito', {
+        state: { batchId: 777, name: 'Mi Lote Completo' }
+      });
     });
   });
 });

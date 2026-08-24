@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
-import { Users, GraduationCap, User, Search, Edit2, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Users,
+  GraduationCap,
+  User,
+  Search,
+  Edit2,
+  ArrowLeft,
+  RotateCcw,
+  Eraser,
+  Sparkles
+} from 'lucide-react';
 import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/Card';
 import { Button } from '../../../../components/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Field } from '../../../../components/Field';
 import { ScoutMember } from '../../types';
-import { updateMember, getMembersByBatchId } from '../../api';
+import { updateMember, getMembersByBatchId, assignBatchRecognitionCodes } from '../../api';
 
 interface Step3ReviewProps {
   batchId: number;
@@ -22,10 +32,48 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   handleFinalizeBatch,
   onBack
 }) => {
+  const [codeMode, setCodeMode] = useState<'auto' | 'manual'>('auto');
   const [activeTab, setActiveTab] = useState<'valid' | 'pending'>('valid');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingMember, setEditingMember] = useState<ScoutMember | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+
+  // Auto-assign codes on mount if auto mode and any active member has no code assigned
+  useEffect(() => {
+    const hasUnassignedActive = savedMembers.some(
+      m => m.status === 'active' && (!m.recognition_code || m.recognition_code.trim() === '')
+    );
+    if (hasUnassignedActive && codeMode === 'auto' && savedMembers.length > 0) {
+      const updated = assignBatchRecognitionCodes(savedMembers, 'auto');
+      onMembersUpdated(updated);
+    }
+  }, [savedMembers, codeMode, onMembersUpdated]);
+
+  const handleModeChange = (mode: 'auto' | 'manual') => {
+    setCodeMode(mode);
+    if (mode === 'auto') {
+      const updated = assignBatchRecognitionCodes(savedMembers, 'auto');
+      onMembersUpdated(updated);
+    }
+  };
+
+  const handleRegenerateCodes = () => {
+    const updated = assignBatchRecognitionCodes(savedMembers, 'auto');
+    onMembersUpdated(updated);
+  };
+
+  const handleClearCodes = () => {
+    const updated = assignBatchRecognitionCodes(savedMembers, 'manual');
+    onMembersUpdated(updated);
+  };
+
+  const handleInlineCodeChange = (identity: string, newCode: string) => {
+    const updated = savedMembers.map(m =>
+      m.identity === identity ? { ...m, recognition_code: newCode.toUpperCase() } : m
+    );
+    onMembersUpdated(updated);
+  };
 
   const validMembers = savedMembers.filter(m => m.status === 'active');
   const pendingMembers = savedMembers.filter(m => m.status === 'pending');
@@ -34,7 +82,8 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   const filteredStep3Members = currentTabMembers.filter(m =>
     m.first_names.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.last_names.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.identity.includes(searchQuery)
+    m.identity.includes(searchQuery) ||
+    (m.recognition_code || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totals = {
@@ -44,7 +93,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   };
 
   const handleEditMemberClick = (member: ScoutMember) => {
-    setEditingMember(member);
+    setEditingMember({ ...member });
     setIsEditModalOpen(true);
   };
 
@@ -61,6 +110,20 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
     } catch (err) {
       console.error(err);
       alert("Error al actualizar la información del miembro.");
+    }
+  };
+
+  const handleFinalize = async () => {
+    setIsFinalizing(true);
+    try {
+      // Commit all members with their recognition_code to Firestore
+      await Promise.all(savedMembers.map(member => updateMember(member)));
+      handleFinalizeBatch();
+    } catch (err) {
+      console.error("Error saving member recognition codes:", err);
+      alert("Error al guardar los códigos de reconocimiento de los miembros.");
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -90,6 +153,94 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
           </div>
         </CardHeader>
         <CardBody className="space-y-6">
+
+          {/* Recognition Code Strategy Control Bar */}
+          <div className="bg-[#faf8f5] border border-primary/15 rounded-2xl p-4 sm:p-5 space-y-3.5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral">Códigos de Reconocimiento</h3>
+                  <p className="text-xs text-neutral/50">Seleccione la estrategia de asignación de códigos para los diplomas.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {codeMode === 'auto' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRegenerateCodes}
+                    icon={<RotateCcw size={14} />}
+                    className="text-xs font-semibold border-primary/20 hover:bg-primary/10 text-primary py-1.5 px-3"
+                  >
+                    🔄 Regenerar códigos
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClearCodes}
+                  icon={<Eraser size={14} />}
+                  className="text-xs font-semibold border-gray-200 hover:bg-gray-100 text-neutral/70 py-1.5 px-3"
+                >
+                  Limpiar códigos
+                </Button>
+              </div>
+            </div>
+
+            {/* Strategy Selectors */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <label
+                className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                  codeMode === 'auto'
+                    ? 'bg-white border-primary shadow-sm ring-2 ring-primary/10'
+                    : 'bg-white/60 border-gray-200 hover:border-primary/40'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="recognitionCodeMode"
+                  value="auto"
+                  checked={codeMode === 'auto'}
+                  onChange={() => handleModeChange('auto')}
+                  className="mt-0.5 text-primary focus:ring-primary accent-primary"
+                />
+                <div className="text-xs">
+                  <div className="font-bold text-neutral">Generar automáticamente</div>
+                  <div className="text-neutral/50 mt-0.5">
+                    Genera hashes únicos alfanuméricos como <span className="font-mono font-semibold text-primary">REC-A8F2</span> para todos los scouts activos.
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                  codeMode === 'manual'
+                    ? 'bg-white border-primary shadow-sm ring-2 ring-primary/10'
+                    : 'bg-white/60 border-gray-200 hover:border-primary/40'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="recognitionCodeMode"
+                  value="manual"
+                  checked={codeMode === 'manual'}
+                  onChange={() => handleModeChange('manual')}
+                  className="mt-0.5 text-primary focus:ring-primary accent-primary"
+                />
+                <div className="text-xs">
+                  <div className="font-bold text-neutral">Ingreso manual</div>
+                  <div className="text-neutral/50 mt-0.5">
+                    Permite escribir o personalizar los números de certificado oficiales para cada scout en la tabla.
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           {/* Filter and Search Bar */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             {/* Tab Filters */}
@@ -142,11 +293,11 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
               return (
                 <div
                   key={member.identity}
-                  className="flex justify-between items-center p-4 bg-white border border-primary/10 rounded-2xl hover:bg-primary/5 transition-all shadow-sm group"
+                  className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 bg-white border border-primary/10 rounded-2xl hover:bg-primary/5 transition-all shadow-sm group"
                 >
                   <div className="flex items-center gap-4">
                     {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm tracking-wider">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm tracking-wider flex-shrink-0">
                       {initials}
                     </div>
                     <div>
@@ -155,7 +306,26 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
+                    {member.status === 'active' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-neutral/60 tracking-wider uppercase whitespace-nowrap">
+                          CÓDIGO:
+                        </span>
+                        <input
+                          id={`rec-code-${member.identity}`}
+                          type="text"
+                          value={member.recognition_code || ''}
+                          onChange={(e) => handleInlineCodeChange(member.identity, e.target.value)}
+                          placeholder="Ej. REC-001"
+                          className="w-32 sm:w-36 font-mono text-xs font-bold uppercase px-3 py-1.5 rounded-xl border border-primary/20 bg-white text-neutral focus:outline-none focus:ring-2 focus:ring-primary shadow-inner transition-all placeholder:font-sans placeholder:font-normal placeholder:text-neutral/40"
+                          aria-label={`Código de reconocimiento de ${member.first_names} ${member.last_names}`}
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-xs font-mono text-neutral/40 italic px-2">Sin código</span>
+                    )}
+
                     {member.status === 'active' ? (
                       <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 rounded-full">
                         Válido
@@ -196,9 +366,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
           </Button>
           <Button
             variant="primary"
-            onClick={handleFinalizeBatch}
+            onClick={handleFinalize}
+            disabled={isFinalizing}
           >
-            Generar Lote
+            {isFinalizing ? 'Guardando...' : 'Generar Lote'}
           </Button>
         </CardFooter>
       </Card>
@@ -238,6 +409,12 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   <option value="adult">Adulto</option>
                 </select>
               </div>
+              <Field
+                label="Código de Reconocimiento"
+                value={editingMember.recognition_code || ''}
+                onChange={e => setEditingMember({ ...editingMember, recognition_code: e.target.value.toUpperCase() })}
+                placeholder="Ej. REC-001"
+              />
             </ModalBody>
             <ModalFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
@@ -253,3 +430,4 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
     </div>
   );
 };
+

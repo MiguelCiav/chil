@@ -766,6 +766,10 @@ export const BatchDetail: React.FC = () => {
                 </span>
               </div>
               <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Código de Reconocimiento</span>
+                <span className="font-mono font-bold text-neutral">{viewingMember.recognition_code || '-'}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
                 <span className="text-neutral/50 font-semibold">Fecha Nacimiento</span>
                 <span className="font-semibold text-neutral">{viewingMember.birth_date || '-'}</span>
               </div>
