@@ -107,7 +107,7 @@ export const RecognitionCatalog: React.FC = () => {
     if (!dateStr) return '-';
     try {
       const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
+      if (Number.isNaN(d.getTime())) return dateStr;
       return d.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: 'short',

@@ -534,4 +534,93 @@ describe('CertificateDesigner component', () => {
     expect(screen.getByText('Dimensiones de Impresión:')).toBeInTheDocument();
     expect(screen.getByText(/229\.53 × 297 mm/)).toBeInTheDocument();
   });
+
+  it('selects field via keyboard Enter and Space keys and auto-opens properties tab', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognitionWithTemplate);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    const fieldElement = screen.getByText('[Nombre y Apellido]');
+
+    // Press Space on field element
+    fireEvent.keyDown(fieldElement, { key: ' ' });
+    expect(screen.getByText('Propiedades del Campo')).toBeInTheDocument();
+
+    // Switch back to Campos palette tab
+    const camposTabBtn = screen.getByRole('button', { name: /^Campos$/i });
+    fireEvent.click(camposTabBtn);
+    expect(screen.getByText('Paleta de Campos')).toBeInTheDocument();
+
+    // Press Enter on field element
+    fireEvent.keyDown(fieldElement, { key: 'Enter' });
+    expect(screen.getByText('Propiedades del Campo')).toBeInTheDocument();
+  });
+
+  it('shows error notification when background image processing fails', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognition);
+    vi.mocked(api.processBackgroundImageFile).mockRejectedValue(new Error('Corrupt image'));
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    const fileInput = screen.getByLabelText('Subir imagen de fondo');
+    const testFile = new File(['bad-data'], 'bad.png', { type: 'image/png' });
+
+    fireEvent.change(fileInput, { target: { files: [testFile] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Error al procesar la imagen de fondo.')).toBeInTheDocument();
+    });
+  });
+
+  it('closes field properties via top-right close icon and returns to palette tab', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognitionWithTemplate);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    const fieldElement = screen.getByText('[Nombre y Apellido]');
+    fireEvent.click(fieldElement);
+
+    expect(screen.getByText('Propiedades del Campo')).toBeInTheDocument();
+
+    const closePropsBtn = screen.getByLabelText('Cerrar propiedades');
+    fireEvent.click(closePropsBtn);
+
+    expect(screen.getByText('Paleta de Campos')).toBeInTheDocument();
+  });
+
+  it('triggers file input click when clicking Subir Fondo Personalizado or Cambiar in Fondo tab', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognition);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    // Switch to Fondo tab
+    const fondoTabBtn = screen.getByRole('button', { name: /^Fondo$/i });
+    fireEvent.click(fondoTabBtn);
+
+    const fileInput = screen.getByLabelText('Subir imagen de fondo');
+    const inputClickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {});
+
+    // Click "Subir Fondo Personalizado" button
+    const uploadCustomBtn = screen.getByRole('button', { name: /Subir Fondo Personalizado/i });
+    fireEvent.click(uploadCustomBtn);
+    expect(inputClickSpy).toHaveBeenCalledTimes(1);
+
+    inputClickSpy.mockRestore();
+  });
 });

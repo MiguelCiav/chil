@@ -313,7 +313,7 @@ describe('Batches API Layer', () => {
     it('exports members list to CSV', () => {
       const clickMock = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
       const appendMock = vi.spyOn(document.body, 'appendChild');
-      const removeMock = vi.spyOn(document.body, 'removeChild');
+      const removeMock = vi.spyOn(HTMLAnchorElement.prototype, 'remove').mockImplementation(() => {});
       vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
       vi.spyOn(URL, 'revokeObjectURL').mockReturnValue();
 
@@ -335,6 +335,7 @@ describe('Batches API Layer', () => {
       expect(removeMock).toHaveBeenCalled();
 
       clickMock.mockRestore();
+      removeMock.mockRestore();
     });
   });
 

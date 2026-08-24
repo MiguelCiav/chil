@@ -390,7 +390,7 @@ export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
   link.setAttribute('download', `Lote_${batch.id}_miembros.csv`);
   document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
+  link.remove();
   URL.revokeObjectURL(url);
 }
 export async function generateBatchReport(batchId: number): Promise<string> {

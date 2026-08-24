@@ -41,6 +41,7 @@ describe('Recognition Types API Layer', () => {
       expect(generateRecognitionId('Medalla al Mérito!')).toBe('sct-medalla-al-merito');
       expect(generateRecognitionId('  Tribu de la Tierra   ')).toBe('sct-tribu-de-la-tierra');
       expect(generateRecognitionId('---')).toBe('sct-custom');
+      expect(generateRecognitionId('')).toBe('sct-custom');
     });
   });
 
@@ -63,14 +64,15 @@ describe('Recognition Types API Layer', () => {
           id: 'sct-promesa',
           data: () => ({
             name: 'Promesa Scout',
-            created_at: '2026-01-01T00:00:00.000Z'
+            created_at: '2026-01-01T00:00:00.000Z',
+            template: { background_url: 'url1', fields: [] }
           })
         },
         {
           id: 'sct-wood-badge',
           data: () => ({
-            name: 'Insignia de Madera',
-            created_at: '2026-01-01T00:00:00.000Z'
+            name: '',
+            created_at: ''
           })
         }
       ];
@@ -83,8 +85,9 @@ describe('Recognition Types API Layer', () => {
       const result = await getAllRecognitionTypes();
 
       expect(result).toHaveLength(2);
-      expect(result[0].name).toBe('Insignia de Madera');
-      expect(result[1].name).toBe('Promesa Scout');
+      expect(result[0].name).toBe('Promesa Scout');
+      expect(result[1].name).toBe('sct-wood-badge');
+      expect(result[0].template).toBeDefined();
     });
 
     it('returns empty array on Firestore read error', async () => {
@@ -102,7 +105,8 @@ describe('Recognition Types API Layer', () => {
         id: 'sct-merit',
         data: () => ({
           name: 'Medalla al Mérito',
-          created_at: '2026-01-01T00:00:00.000Z'
+          created_at: '2026-01-01T00:00:00.000Z',
+          template: { background_url: 'bg', fields: [] }
         })
       } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
 
@@ -110,8 +114,22 @@ describe('Recognition Types API Layer', () => {
       expect(result).toEqual({
         id: 'sct-merit',
         name: 'Medalla al Mérito',
-        created_at: '2026-01-01T00:00:00.000Z'
+        created_at: '2026-01-01T00:00:00.000Z',
+        template: { background_url: 'bg', fields: [] }
       });
+    });
+
+    it('returns default fallback name and date when missing in document data', async () => {
+      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        id: 'sct-default',
+        data: () => ({})
+      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      const result = await getRecognitionTypeById('sct-default');
+      expect(result?.id).toBe('sct-default');
+      expect(result?.name).toBe('sct-default');
+      expect(result?.created_at).toBeDefined();
     });
 
     it('returns null when document does not exist', async () => {
@@ -147,6 +165,12 @@ describe('Recognition Types API Layer', () => {
         expect.objectContaining({ name: 'Orden del Sol Naciente' })
       );
     });
+
+    it('throws error when setDoc fails in createRecognitionType', async () => {
+      vi.mocked(firestore.setDoc).mockRejectedValueOnce(new Error('Write permission denied'));
+
+      await expect(createRecognitionType({ name: 'Falla DB' })).rejects.toThrow('Write permission denied');
+    });
   });
 
   describe('updateRecognitionType', () => {
@@ -156,7 +180,8 @@ describe('Recognition Types API Layer', () => {
         id: 'sct-merit',
         data: () => ({
           name: 'Medalla al Mérito',
-          created_at: '2026-01-01T00:00:00.000Z'
+          created_at: '2026-01-01T00:00:00.000Z',
+          template: { background_url: 'template_url', fields: [] }
         })
       } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
@@ -168,7 +193,34 @@ describe('Recognition Types API Layer', () => {
       expect(updated.id).toBe('sct-merit');
       expect(updated.name).toBe('Medalla al Mérito Extraordinario');
       expect(updated.created_at).toBe('2026-01-01T00:00:00.000Z');
+      expect(updated.template).toBeDefined();
       expect(firestore.setDoc).toHaveBeenCalled();
+    });
+
+    it('handles update when existing item has no previous data or template', async () => {
+      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
+        exists: () => false
+      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+      vi.mocked(firestore.setDoc).mockResolvedValueOnce();
+
+      const updated = await updateRecognitionType('sct-new-id', {
+        name: 'Nuevo Nombre'
+      });
+
+      expect(updated.id).toBe('sct-new-id');
+      expect(updated.name).toBe('Nuevo Nombre');
+      expect(updated.created_at).toBeDefined();
+    });
+
+    it('throws error when setDoc fails in updateRecognitionType', async () => {
+      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        id: 'sct-merit',
+        data: () => ({ name: 'Test' })
+      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+      vi.mocked(firestore.setDoc).mockRejectedValueOnce(new Error('Update failed'));
+
+      await expect(updateRecognitionType('sct-merit', { name: 'Update test' })).rejects.toThrow('Update failed');
     });
   });
 
@@ -181,6 +233,12 @@ describe('Recognition Types API Layer', () => {
       expect(firestore.deleteDoc).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'sct-merit' })
       );
+    });
+
+    it('throws error when deleteDoc fails', async () => {
+      vi.mocked(firestore.deleteDoc).mockRejectedValueOnce(new Error('Delete error'));
+
+      await expect(deleteRecognitionType('sct-error')).rejects.toThrow('Delete error');
     });
   });
 
@@ -217,6 +275,20 @@ describe('Recognition Types API Layer', () => {
         { merge: true }
       );
     });
+
+    it('throws error when setDoc fails in saveCertificateTemplate', async () => {
+      vi.mocked(firestore.setDoc).mockRejectedValueOnce(new Error('Template save error'));
+
+      await expect(
+        saveCertificateTemplate('sct-error', {
+          background_url: '',
+          page_width: 297,
+          page_height: 210,
+          orientation: 'landscape',
+          fields: []
+        })
+      ).rejects.toThrow('Template save error');
+    });
   });
 
   describe('processBackgroundImageFile', () => {
@@ -234,7 +306,26 @@ describe('Recognition Types API Layer', () => {
       expect(result.orientation).toBe('landscape');
     });
 
-    it('processes image file and returns image metadata', async () => {
+    it('rejects when non-image FileReader fails', async () => {
+      const mockFile = new File(['mock content'], 'test.pdf', { type: 'application/pdf' });
+      const originalFileReader = global.FileReader;
+
+      class FailingFileReader {
+        onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => unknown) | null = null;
+        onerror: ((err: unknown) => unknown) | null = null;
+        readAsDataURL() {
+          setTimeout(() => {
+            if (this.onerror) this.onerror(new Error('FileReader non-image failed'));
+          }, 0);
+        }
+      }
+
+      global.FileReader = FailingFileReader as unknown as typeof FileReader;
+      await expect(processBackgroundImageFile(mockFile)).rejects.toThrow();
+      global.FileReader = originalFileReader;
+    });
+
+    it('processes image file and returns image metadata for PNG', async () => {
       const mockFile = new File(['mock image content'], 'template.png', {
         type: 'image/png'
       });
@@ -247,6 +338,217 @@ describe('Recognition Types API Layer', () => {
       expect(result.aspectRatio).toBeGreaterThan(0);
       expect(['landscape', 'portrait']).toContain(result.orientation);
     });
+
+    it('processes image file for JPEG', async () => {
+      const mockFile = new File(['mock jpeg'], 'template.jpg', {
+        type: 'image/jpeg'
+      });
+
+      const result = await processBackgroundImageFile(mockFile);
+      expect(result).toBeDefined();
+      expect(typeof result.dataUrl).toBe('string');
+    });
+
+    it('processes image file for WebP', async () => {
+      const mockFile = new File(['mock webp'], 'template.webp', {
+        type: 'image/webp'
+      });
+
+      const result = await processBackgroundImageFile(mockFile);
+      expect(result).toBeDefined();
+      expect(typeof result.dataUrl).toBe('string');
+    });
+
+    it('handles image onload with simulated Image element for landscape and canvas webp export', async () => {
+      const originalImage = global.Image;
+      const originalCreateElement = document.createElement.bind(document);
+
+      class MockLandscapeImage {
+        src = '';
+        naturalWidth = 2400;
+        naturalHeight = 1600;
+        width = 2400;
+        height = 1600;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor() {
+          setTimeout(() => {
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      }
+
+      global.Image = MockLandscapeImage as unknown as typeof Image;
+
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: vi.fn(() => ({
+          drawImage: vi.fn()
+        })),
+        toDataURL: vi.fn((type: string) => `data:${type};base64,mockcanvasdata`)
+      };
+
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          return mockCanvas as unknown as HTMLCanvasElement;
+        }
+        return originalCreateElement(tagName);
+      });
+
+      const mockFile = new File(['mock image'], 'landscape.png', { type: 'image/png' });
+      const result = await processBackgroundImageFile(mockFile, 1920, 1080);
+
+      expect(result.naturalWidth).toBe(2400);
+      expect(result.orientation).toBe('landscape');
+      expect(result.normalizedWidth).toBe(297);
+      expect(result.dataUrl).toContain('data:image/webp');
+
+      global.Image = originalImage;
+      vi.restoreAllMocks();
+    });
+
+    it('handles image onload with simulated portrait Image and fallback to jpeg when webp throws', async () => {
+      const originalImage = global.Image;
+      const originalCreateElement = document.createElement.bind(document);
+
+      class MockPortraitImage {
+        src = '';
+        naturalWidth = 1080;
+        naturalHeight = 1920;
+        width = 1080;
+        height = 1920;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor() {
+          setTimeout(() => {
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      }
+
+      global.Image = MockPortraitImage as unknown as typeof Image;
+
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: vi.fn(() => ({
+          drawImage: vi.fn()
+        })),
+        toDataURL: vi.fn((type: string) => {
+          if (type === 'image/webp') {
+            throw new Error('WebP not supported');
+          }
+          return 'data:image/jpeg;base64,mockjpegdata';
+        })
+      };
+
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          return mockCanvas as unknown as HTMLCanvasElement;
+        }
+        return originalCreateElement(tagName);
+      });
+
+      const mockFile = new File(['mock portrait'], 'portrait.jpg', { type: 'image/jpeg' });
+      const result = await processBackgroundImageFile(mockFile, 1920, 1080);
+
+      expect(result.orientation).toBe('portrait');
+      expect(result.normalizedHeight).toBe(297);
+      expect(result.dataUrl).toContain('data:image/jpeg');
+
+      global.Image = originalImage;
+      vi.restoreAllMocks();
+    });
+
+    it('handles image onload when canvas.getContext returns null', async () => {
+      const originalImage = global.Image;
+      const originalCreateElement = document.createElement.bind(document);
+
+      class MockImage {
+        src = '';
+        naturalWidth = 1200;
+        naturalHeight = 800;
+        width = 1200;
+        height = 800;
+        onload: (() => void) | null = null;
+        constructor() {
+          setTimeout(() => {
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      }
+
+      global.Image = MockImage as unknown as typeof Image;
+
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: vi.fn(() => null)
+      };
+
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          return mockCanvas as unknown as HTMLCanvasElement;
+        }
+        return originalCreateElement(tagName);
+      });
+
+      const mockFile = new File(['mock image'], 'test.png', { type: 'image/png' });
+      const result = await processBackgroundImageFile(mockFile);
+
+      expect(result.width).toBe(1200);
+      expect(result.height).toBe(800);
+
+      global.Image = originalImage;
+      vi.restoreAllMocks();
+    });
+
+    it('handles image onerror fallback gracefully', async () => {
+      const originalImage = global.Image;
+
+      class FailingImage {
+        src = '';
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor() {
+          setTimeout(() => {
+            if (this.onerror) this.onerror();
+          }, 10);
+        }
+      }
+
+      global.Image = FailingImage as unknown as typeof Image;
+
+      const mockFile = new File(['corrupt image data'], 'broken.png', { type: 'image/png' });
+      const result = await processBackgroundImageFile(mockFile);
+
+      expect(result.width).toBe(297);
+      expect(result.height).toBe(210);
+      expect(result.orientation).toBe('landscape');
+
+      global.Image = originalImage;
+    });
+
+    it('rejects when image FileReader errors out', async () => {
+      const mockFile = new File(['mock content'], 'test.png', { type: 'image/png' });
+      const originalFileReader = global.FileReader;
+
+      class FailingFileReader {
+        onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => unknown) | null = null;
+        onerror: ((err: unknown) => unknown) | null = null;
+        readAsDataURL() {
+          setTimeout(() => {
+            if (this.onerror) this.onerror(new Error('Image reader failed'));
+          }, 0);
+        }
+      }
+
+      global.FileReader = FailingFileReader as unknown as typeof FileReader;
+      await expect(processBackgroundImageFile(mockFile)).rejects.toThrow();
+      global.FileReader = originalFileReader;
+    });
   });
 });
+
 

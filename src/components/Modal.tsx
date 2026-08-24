@@ -29,6 +29,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
       <div
         className="absolute inset-0 bg-neutral/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
+        role="presentation"
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
       />
 
       {/* Modal Content - No shadow, subtle primary border, rounded */}
@@ -54,6 +58,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({ children, onClose, cla
     <div className="text-lg font-semibold text-neutral">{children}</div>
     {onClose && (
       <button
+        type="button"
         onClick={onClose}
         className="p-1.5 text-neutral/60 hover:text-primary transition-colors rounded-lg hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary"
         aria-label="Cerrar modal"

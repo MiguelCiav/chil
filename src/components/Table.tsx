@@ -5,10 +5,10 @@ import {
   ColumnDef,
 } from '@tanstack/react-table';
 
-interface TableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
-  className?: string;
+export interface TableProps<TData, TValue> {
+  readonly columns: readonly ColumnDef<TData, TValue>[];
+  readonly data: readonly TData[];
+  readonly className?: string;
 }
 
 export function Table<TData, TValue>({
@@ -17,8 +17,8 @@ export function Table<TData, TValue>({
   className = '',
 }: TableProps<TData, TValue>) {
   const table = useReactTable({
-    data,
-    columns,
+    data: data as TData[],
+    columns: columns as ColumnDef<TData, TValue>[],
     getCoreRowModel: getCoreRowModel(),
   });
 

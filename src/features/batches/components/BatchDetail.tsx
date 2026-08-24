@@ -53,7 +53,7 @@ export const BatchDetail: React.FC = () => {
 
   const [batch, setBatch] = useState<Batch | null>(null);
   const [members, setMembers] = useState<ScoutMember[]>([]);
-  const [loading, setLoading] = useState(!isNaN(Number(id)));
+  const [loading, setLoading] = useState(!Number.isNaN(Number(id)));
   const [searchQuery, setSearchQuery] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -82,7 +82,7 @@ export const BatchDetail: React.FC = () => {
   const [groups, setGroups] = useState<ScoutGroup[]>([]);
 
   useEffect(() => {
-    if (isNaN(batchId)) {
+    if (Number.isNaN(batchId)) {
       return;
     }
 
@@ -786,7 +786,9 @@ export const BatchDetail: React.FC = () => {
         </ModalHeader>
         <ModalBody className="space-y-3">
           <p className="text-sm text-neutral">
-            ¿Está seguro de que desea eliminar el lote <span className="font-bold">#{batch.id}</span> {batch.comment ? `(${batch.comment})` : ''} y todos sus miembros asociados?
+            ¿Está seguro de que desea eliminar el lote{' '}
+            <span className="font-bold">#{batch.id}</span>
+            {batch.comment ? ` (${batch.comment})` : ''} y todos sus miembros asociados?
           </p>
           <p className="text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200">
             Esta acción no se puede deshacer y eliminará permanentemente los datos del lote y sus registros de miembros asociados.

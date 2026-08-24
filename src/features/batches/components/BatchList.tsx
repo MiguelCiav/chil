@@ -5,7 +5,8 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
-  flexRender
+  flexRender,
+  Row
 } from '@tanstack/react-table';
 import {
   Award,
@@ -61,6 +62,110 @@ interface BatchRowData {
   recognitionName: string;
   recognitionType: string;
   memberCount: number;
+}
+
+function formatBatchDate(dateStr: string): string {
+  const dateObj = new Date(dateStr);
+  if (Number.isNaN(dateObj.getTime())) {
+    return 'Fecha no disponible';
+  }
+  return dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip[]): boolean {
+  for (const filter of activeFilters) {
+    if (filter.type === 'date') {
+      if (filter.value === 'Este Año') {
+        const currentYear = new Date().getFullYear();
+        const rowYear = new Date(row.created_at).getFullYear();
+        if (rowYear !== currentYear) return false;
+      }
+    } else if (filter.type === 'region') {
+      if (row.regionName !== filter.value && filter.value !== '-') return false;
+    } else if (filter.type === 'district') {
+      if (row.districtName !== filter.value && filter.value !== '-') return false;
+    } else if (filter.type === 'group') {
+      if (!row.groupName.toLowerCase().includes(filter.value.toLowerCase())) return false;
+    } else if (filter.type === 'recognition') {
+      if (row.recognitionName !== filter.value) return false;
+    }
+  }
+  return true;
+}
+
+function getFilterLabelAndValue(
+  filterType: 'date' | 'region' | 'district' | 'group' | 'recognition',
+  filterValue: string,
+  hierarchy: { regions: Region[]; districts: District[]; groups: ScoutGroup[] }
+): { label: string; displayValue: string } {
+  switch (filterType) {
+    case 'date':
+      return { label: 'Fecha', displayValue: filterValue };
+    case 'region':
+      return {
+        label: 'Región',
+        displayValue: hierarchy.regions.find(r => String(r.id) === filterValue)?.name || filterValue
+      };
+    case 'district':
+      return {
+        label: 'Distrito',
+        displayValue: hierarchy.districts.find(d => String(d.id) === filterValue)?.name || filterValue
+      };
+    case 'group':
+      return {
+        label: 'Grupo',
+        displayValue: hierarchy.groups.find(g => String(g.id) === filterValue)?.name || filterValue
+      };
+    case 'recognition':
+      return {
+        label: 'Reconocimiento',
+        displayValue: getRecognitionName(filterValue)
+      };
+  }
+}
+
+function renderBatchTableRows(
+  loading: boolean,
+  rows: Row<BatchRowData>[],
+  columnsCount: number
+) {
+  if (loading) {
+    return (
+      <tr>
+        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/50 font-medium">
+          Cargando listado de lotes...
+        </td>
+      </tr>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <tr>
+        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/60">
+          <div className="space-y-2">
+            <AlertCircle className="w-8 h-8 text-neutral/30 mx-auto" />
+            <p className="font-semibold text-neutral">No se encontraron lotes registrados.</p>
+            <p className="text-xs text-neutral/50">Cree un nuevo lote o modifique los filtros activos.</p>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+  return rows.map((row, index) => {
+    const isLast = index === rows.length - 1;
+    return (
+      <tr
+        key={row.id}
+        className={`hover:bg-[#faf8f5] transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}
+      >
+        {row.getVisibleCells().map(cell => (
+          <td key={cell.id} className="px-6 py-4 text-sm whitespace-nowrap text-neutral">
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </td>
+        ))}
+      </tr>
+    );
+  });
 }
 
 export const BatchList: React.FC = () => {
@@ -182,31 +287,11 @@ export const BatchList: React.FC = () => {
     e.preventDefault();
     if (!newFilterValue) return;
 
-    let label = '';
-    let displayValue = '';
-
-    switch (newFilterType) {
-      case 'date':
-        label = 'Fecha';
-        displayValue = newFilterValue;
-        break;
-      case 'region':
-        label = 'Región';
-        displayValue = regions.find(r => String(r.id) === newFilterValue)?.name || newFilterValue;
-        break;
-      case 'district':
-        label = 'Distrito';
-        displayValue = districts.find(d => String(d.id) === newFilterValue)?.name || newFilterValue;
-        break;
-      case 'group':
-        label = 'Grupo';
-        displayValue = groups.find(g => String(g.id) === newFilterValue)?.name || newFilterValue;
-        break;
-      case 'recognition':
-        label = 'Reconocimiento';
-        displayValue = getRecognitionName(newFilterValue);
-        break;
-    }
+    const { label, displayValue } = getFilterLabelAndValue(
+      newFilterType,
+      newFilterValue,
+      { regions, districts, groups }
+    );
 
     const newChip: ActiveFilterChip = {
       id: `${newFilterType}-${Date.now()}`,
@@ -243,11 +328,7 @@ export const BatchList: React.FC = () => {
     return batches.map(batch => {
       const batchMembers = members.filter(m => m.batch_id === batch.id);
       const memberCount = batchMembers.length;
-
-      const dateObj = new Date(batch.created_at);
-      const formattedDate = isNaN(dateObj.getTime())
-        ? 'Fecha no disponible'
-        : dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+      const formattedDate = formatBatchDate(batch.created_at);
 
       const regionObj = regions.find(r => r.id === batch.region_id);
       const districtObj = districts.find(d => d.id === batch.district_id);
@@ -270,26 +351,7 @@ export const BatchList: React.FC = () => {
 
   // Filter table rows by active filters
   const filteredData = useMemo(() => {
-    return tableData.filter(row => {
-      for (const filter of activeFilters) {
-        if (filter.type === 'date') {
-          if (filter.value === 'Este Año') {
-            const currentYear = new Date().getFullYear();
-            const rowYear = new Date(row.created_at).getFullYear();
-            if (rowYear !== currentYear) return false;
-          }
-        } else if (filter.type === 'region') {
-          if (row.regionName !== filter.value && filter.value !== '-') return false;
-        } else if (filter.type === 'district') {
-          if (row.districtName !== filter.value && filter.value !== '-') return false;
-        } else if (filter.type === 'group') {
-          if (!row.groupName.toLowerCase().includes(filter.value.toLowerCase())) return false;
-        } else if (filter.type === 'recognition') {
-          if (row.recognitionName !== filter.value) return false;
-        }
-      }
-      return true;
-    });
+    return tableData.filter(row => matchesActiveFilters(row, activeFilters));
   }, [tableData, activeFilters]);
 
   // TanStack Table columns definition
@@ -547,39 +609,7 @@ export const BatchList: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={columns.length} className="px-6 py-12 text-center text-neutral/50 font-medium">
-                    Cargando listado de lotes...
-                  </td>
-                </tr>
-              ) : currentPageRows.length > 0 ? (
-                currentPageRows.map((row, index) => {
-                  const isLast = index === currentPageRows.length - 1;
-                  return (
-                    <tr
-                      key={row.id}
-                      className={`hover:bg-[#faf8f5] transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}
-                    >
-                      {row.getVisibleCells().map(cell => (
-                        <td key={cell.id} className="px-6 py-4 text-sm whitespace-nowrap text-neutral">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={columns.length} className="px-6 py-12 text-center text-neutral/60">
-                    <div className="space-y-2">
-                      <AlertCircle className="w-8 h-8 text-neutral/30 mx-auto" />
-                      <p className="font-semibold text-neutral">No se encontraron lotes registrados.</p>
-                      <p className="text-xs text-neutral/50">Cree un nuevo lote o modifique los filtros activos.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
+              {renderBatchTableRows(loading, currentPageRows, columns.length)}
             </tbody>
           </table>
         </div>
@@ -620,7 +650,9 @@ export const BatchList: React.FC = () => {
         </ModalHeader>
         <ModalBody className="space-y-3">
           <p className="text-sm text-neutral">
-            ¿Está seguro de que desea eliminar el lote <span className="font-bold">#{batchToDelete?.id}</span> {batchToDelete?.groupName && batchToDelete.groupName !== '-' ? `(${batchToDelete.groupName})` : ''} y todos sus miembros asociados?
+            ¿Está seguro de que desea eliminar el lote{' '}
+            <span className="font-bold">#{batchToDelete?.id}</span>
+            {batchToDelete?.groupName && batchToDelete.groupName !== '-' ? ` (${batchToDelete.groupName})` : ''} y todos sus miembros asociados?
           </p>
           <p className="text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200">
             Esta acción no se puede deshacer y eliminará permanentemente los datos del lote y sus registros de miembros asociados.

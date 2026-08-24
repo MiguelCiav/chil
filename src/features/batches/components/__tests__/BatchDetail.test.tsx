@@ -480,14 +480,375 @@ describe('BatchDetail component', () => {
     const namesInput = screen.getByLabelText(/Nombres \*/i);
     fireEvent.change(namesInput, { target: { value: 'Ana Maria' } });
 
+    const lastNamesInput = screen.getByLabelText(/Apellidos \*/i);
+    fireEvent.change(lastNamesInput, { target: { value: 'Perez Gomez' } });
+
+    const emailInput = screen.getByLabelText(/Correo Electrónico/i);
+    fireEvent.change(emailInput, { target: { value: 'anamaria@scouts.org' } });
+
+    const phoneInput = screen.getByLabelText(/Teléfono de Contacto/i);
+    fireEvent.change(phoneInput, { target: { value: '04120000000' } });
+
+    const recCodeInput = screen.getByLabelText(/Código de Reconocimiento/i);
+    fireEvent.change(recCodeInput, { target: { value: 'REC-ANAMARIA' } });
+
+    const typeSelect = screen.getByLabelText(/Tipo de Miembro \*/i);
+    fireEvent.change(typeSelect, { target: { value: 'adult' } });
+
     const saveBtn = screen.getByText('Guardar Cambios');
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
       expect(api.updateMember).toHaveBeenCalledWith(expect.objectContaining({
-        first_names: 'Ana Maria'
+        first_names: 'Ana Maria',
+        last_names: 'Perez Gomez',
+        email: 'anamaria@scouts.org',
+        phone: '04120000000',
+        recognition_code: 'REC-ANAMARIA',
+        member_type: 'adult'
       }));
       expect(screen.getByText(/Datos del miembro actualizados con éxito/i)).toBeInTheDocument();
     });
+  });
+
+  it('handles member edit submission error gracefully with alert', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: '',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        identity: 'V-11111111',
+        first_names: 'Ana',
+        last_names: 'Perez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 101
+      }
+    ]);
+
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    vi.mocked(api.updateMember).mockRejectedValueOnce(new Error('Update failed'));
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Ana Perez')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText(/Opciones de Ana Perez/i));
+    fireEvent.click(screen.getByText('Editar'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Editar Datos de Miembro')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Error al actualizar la información del miembro.');
+    });
+
+    alertSpy.mockRestore();
+  });
+
+  it('handles single certificate download error and CSV export error gracefully', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    vi.mocked(api.getBatchById).mockResolvedValue({
+      id: 101,
+      comment: '',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValue([
+      {
+        identity: 'V-11111111',
+        first_names: 'Ana',
+        last_names: 'Perez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 101
+      }
+    ]);
+
+    vi.mocked(api.getHierarchyData).mockResolvedValue({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    vi.mocked(recognitions.downloadSingleCertificatePdf).mockRejectedValueOnce(new Error('Diploma error'));
+    vi.mocked(api.exportMembersToCSV).mockImplementationOnce(() => {
+      throw new Error('CSV error');
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Ana Perez')).toBeInTheDocument();
+    });
+
+    // Trigger Single diploma error
+    fireEvent.click(screen.getByLabelText(/Opciones de Ana Perez/i));
+    fireEvent.click(screen.getByRole('button', { name: /Descargar Diploma \(PDF\)/i }));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Error al descargar el diploma.');
+    });
+
+    // Trigger CSV export error
+    fireEvent.click(screen.getByRole('button', { name: /Descargar lista/i }));
+    expect(alertSpy).toHaveBeenCalledWith('Error al exportar la lista.');
+
+    alertSpy.mockRestore();
+  });
+
+  it('supports pagination next and previous buttons in member list', async () => {
+    const manyMembers = Array.from({ length: 15 }, (_, i) => ({
+      identity: `V-${10000000 + i}`,
+      first_names: `Miembro ${i + 1}`,
+      last_names: `Scout`,
+      birth_date: '2005-01-01',
+      member_type: 'young' as const,
+      status: 'active' as const,
+      batch_id: 101
+    }));
+
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: '',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce(manyMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Mostrando 1-10 de 15 miembros/i)).toBeInTheDocument();
+    });
+
+    const nextBtn = screen.getByLabelText(/Página siguiente/i);
+    const prevBtn = screen.getByLabelText(/Página anterior/i);
+
+    expect(prevBtn).toBeDisabled();
+    expect(nextBtn).toBeEnabled();
+
+    // Click Next page
+    fireEvent.click(nextBtn);
+    expect(screen.getByText(/Mostrando 11-15 de 15 miembros/i)).toBeInTheDocument();
+    expect(nextBtn).toBeDisabled();
+    expect(prevBtn).toBeEnabled();
+
+    // Click Previous page
+    fireEvent.click(prevBtn);
+    expect(screen.getByText(/Mostrando 1-10 de 15 miembros/i)).toBeInTheDocument();
+  });
+
+  it('allows cancelling member edit modal without saving', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: '',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        identity: 'V-11111111',
+        first_names: 'Ana',
+        last_names: 'Perez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 101
+      }
+    ]);
+
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Ana Perez')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText(/Opciones de Ana Perez/i));
+    fireEvent.click(screen.getByText('Editar'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Editar Datos de Miembro')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Cancelar$/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Editar Datos de Miembro')).not.toBeInTheDocument();
+    });
+    expect(api.updateMember).not.toHaveBeenCalled();
+  });
+
+  it('renders quick view modal for pending adult member with empty contact fields and closes it', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: '',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        identity: 'V-99999999',
+        first_names: 'Roberto',
+        last_names: 'Blanco',
+        birth_date: '',
+        email: '',
+        phone: '',
+        member_type: 'adult',
+        status: 'pending',
+        batch_id: 101
+      }
+    ]);
+
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Roberto Blanco')).toBeInTheDocument();
+    });
+
+    const viewBtn = screen.getByLabelText(/Ver detalle de Roberto Blanco/i);
+    fireEvent.click(viewBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Ficha del Miembro Scout')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('● Registro Inválido')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Cerrar$/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Ficha del Miembro Scout')).not.toBeInTheDocument();
+    });
+  });
+
+  it('handles deleteBatch error gracefully with alert', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: '',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    vi.mocked(api.deleteBatch).mockRejectedValueOnce(new Error('Deletion failed'));
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Eliminar Lote/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Eliminar Lote/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/¿Está seguro de que desea eliminar el lote/i)).toBeInTheDocument();
+    });
+
+    const confirmBtn = screen.getAllByRole('button', { name: /^Eliminar Lote$/i })[1] || screen.getByRole('button', { name: /^Eliminar Lote$/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Error al eliminar el lote.');
+    });
+
+    alertSpy.mockRestore();
   });
 });

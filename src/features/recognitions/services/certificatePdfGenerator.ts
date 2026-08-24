@@ -45,7 +45,7 @@ export function hexToRgb(hex?: string): { r: number; g: number; b: number } {
     return { r: 33, g: 33, b: 33 };
   }
   const num = parseInt(cleanHex, 16);
-  if (isNaN(num)) {
+  if (Number.isNaN(num)) {
     return { r: 33, g: 33, b: 33 };
   }
   return {
@@ -61,7 +61,7 @@ export function hexToRgb(hex?: string): { r: number; g: number; b: number } {
 export function formatIssueDate(dateStr?: string): string {
   if (!dateStr) return '12 Oct 2026';
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
+  if (Number.isNaN(d.getTime())) return dateStr;
   const day = d.getUTCDate();
   const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const month = months[d.getUTCMonth()];
@@ -102,7 +102,7 @@ export function getNormalizedPageDimensions(
   if (!ar && template?.page_width && template?.page_height) {
     ar = template.page_width / template.page_height;
   }
-  if (!ar || isNaN(ar) || ar <= 0) {
+  if (!ar || Number.isNaN(ar) || ar <= 0) {
     ar = template?.orientation === 'portrait' ? 210 / 297 : 297 / 210;
   }
 

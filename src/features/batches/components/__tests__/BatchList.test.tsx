@@ -20,7 +20,11 @@ vi.mock('../../api', () => ({
     border: 'border-sky-200',
     pillClass: 'bg-sky-100 text-sky-800 border border-sky-200'
   })),
-  getRecognitionName: vi.fn((val) => val || 'Go Solar'),
+  getRecognitionName: vi.fn((val) => {
+    if (val === 'sct-go-solar' || val === 'Go Solar') return 'Go Solar';
+    if (val === 'sct-wood-badge' || val === 'Insignia de Madera') return 'Insignia de Madera';
+    return val || 'Go Solar';
+  }),
   RECOGNITION_TYPES: [
     { id: 'sct-wood-badge', name: 'Insignia de Madera' },
     { id: 'sct-go-solar', name: 'Go Solar' }
@@ -265,6 +269,145 @@ describe('BatchList component', () => {
       );
       expect(screen.getByText(/Diplomas descargados: Diplomas_Lote_101_go_solar\.pdf/i)).toBeInTheDocument();
     });
+  });
+
+  it('handles filtering by district, group, recognition and date filters', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValue(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValue(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValue(mockHierarchy);
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+    });
+
+    // 1. Add District filter
+    fireEvent.click(screen.getByText(/Añadir Filtro/i));
+    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'district' } });
+    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: '10' } });
+    fireEvent.click(screen.getByText('Aplicar Filtro'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Distrito: Distrito Sucre/i)).toBeInTheDocument();
+    });
+
+    // 2. Add Group filter
+    fireEvent.click(screen.getByText(/Añadir Filtro/i));
+    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'group' } });
+    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: '100' } });
+    fireEvent.click(screen.getByText('Aplicar Filtro'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Grupo: Grupo San Luis/i)).toBeInTheDocument();
+    });
+
+    // 3. Add Recognition filter
+    fireEvent.click(screen.getByText(/Añadir Filtro/i));
+    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'recognition' } });
+    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'sct-go-solar' } });
+    fireEvent.click(screen.getByText('Aplicar Filtro'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Reconocimiento: Go Solar/i)).toBeInTheDocument();
+    });
+
+    // 4. Add Date filter (Todo el histórico)
+    fireEvent.click(screen.getByText(/Añadir Filtro/i));
+    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'date' } });
+    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'Todo el histórico' } });
+    fireEvent.click(screen.getByText('Aplicar Filtro'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Fecha: Todo el histórico/i)).toBeInTheDocument();
+    });
+  });
+
+  it('handles pagination next and previous buttons correctly', async () => {
+    const manyBatches = Array.from({ length: 15 }, (_, i) => ({
+      id: 200 + i,
+      comment: `Lote ${i + 1}`,
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      recognition_type: 'Go Solar',
+      created_at: '2026-08-20T10:00:00.000Z'
+    }));
+
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(manyBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce([]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Mostrando 10 de 15 lotes')).toBeInTheDocument();
+    });
+
+    const nextBtn = screen.getByLabelText(/Página siguiente/i);
+    const prevBtn = screen.getByLabelText(/Página anterior/i);
+
+    expect(prevBtn).toBeDisabled();
+    expect(nextBtn).toBeEnabled();
+
+    // Click Next
+    fireEvent.click(nextBtn);
+    expect(screen.getByText('Mostrando 5 de 15 lotes')).toBeInTheDocument();
+    expect(nextBtn).toBeDisabled();
+    expect(prevBtn).toBeEnabled();
+
+    // Click Previous
+    fireEvent.click(prevBtn);
+    expect(screen.getByText('Mostrando 10 de 15 lotes')).toBeInTheDocument();
+    expect(prevBtn).toBeDisabled();
+  });
+
+  it('handles PDF download error and deletion error gracefully with alerts', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+    vi.mocked(recognitions.generateBatchCertificatesPdf).mockRejectedValueOnce(new Error('PDF generation failure'));
+    vi.mocked(api.deleteBatch).mockRejectedValueOnce(new Error('Delete failure'));
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Descargar PDF del lote 101/i)).toBeInTheDocument();
+    });
+
+    // Test download PDF error
+    const downloadBtn = screen.getByLabelText(/Descargar PDF del lote 101/i);
+    fireEvent.click(downloadBtn);
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Error al generar los diplomas en PDF.');
+    });
+
+    // Test delete error
+    const deleteBtn = screen.getByLabelText(/Eliminar lote 101/i);
+    fireEvent.click(deleteBtn);
+
+    const confirmBtn = screen.getByRole('button', { name: /^Eliminar Lote$/i });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Error al eliminar el lote.');
+    });
+
+    alertSpy.mockRestore();
   });
 
   it('displays empty state message when no batches match', async () => {

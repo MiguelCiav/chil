@@ -26,6 +26,40 @@ import {
   RecognitionType
 } from '../../recognitions';
 
+function getSCTCode(member: ScoutMember): string {
+  if (member.status === 'pending') return 'SCT-PENDIENTE';
+  const suffix = member.identity.slice(-4).padStart(4, '0');
+  return `SCT-2026-${suffix}`;
+}
+
+interface StatSummaryCardProps {
+  readonly title: string;
+  readonly value: number;
+  readonly icon: React.ReactNode;
+  readonly iconBgClass: string;
+  readonly iconColorClass: string;
+}
+
+const StatSummaryCard: React.FC<StatSummaryCardProps> = ({
+  title,
+  value,
+  icon,
+  iconBgClass,
+  iconColorClass
+}) => (
+  <Card className="shadow-sm hover:scale-[1.02] transition-transform">
+    <CardBody className="flex items-center gap-4">
+      <div className={`w-12 h-12 ${iconBgClass} rounded-2xl flex items-center justify-center ${iconColorClass}`}>
+        {icon}
+      </div>
+      <div>
+        <div className="text-2xl font-black text-neutral">{value}</div>
+        <div className="text-xs text-neutral/50 font-bold uppercase tracking-wider">{title}</div>
+      </div>
+    </CardBody>
+  </Card>
+);
+
 export const SuccessPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,7 +77,15 @@ export const SuccessPage: React.FC = () => {
     const loadBatchData = async () => {
       if (!batchId) {
         // Fallback: try to read the last created batch from localStorage
-        const batches = JSON.parse(localStorage.getItem('chil_batches') || '[]');
+        let batches: Batch[] = [];
+        try {
+          if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+            batches = JSON.parse(localStorage.getItem('chil_batches') || '[]');
+          }
+        } catch {
+          batches = [];
+        }
+
         if (batches.length > 0) {
           const lastBatch = batches[batches.length - 1];
           const lastBatchMembers = await getMembersByBatchId(lastBatch.id);
@@ -123,13 +165,6 @@ export const SuccessPage: React.FC = () => {
     young: members.filter(m => m.member_type === 'young').length,
     adult: members.filter(m => m.member_type === 'adult').length,
     pending: members.filter(m => m.status === 'pending').length
-  };
-
-  // Helper to generate the SCT code
-  const getSCTCode = (member: ScoutMember) => {
-    if (member.status === 'pending') return 'SCT-PENDIENTE';
-    const suffix = member.identity.slice(-4).padStart(4, '0');
-    return `SCT-2026-${suffix}`;
   };
 
   // Columns for Resumen del Lote
@@ -221,7 +256,11 @@ export const SuccessPage: React.FC = () => {
         </div>
         <div>
           <h1 className="text-3xl font-extrabold text-neutral tracking-tight">¡Lote Generado Exitosamente!</h1>
-          <p className="text-neutral/50 font-medium mt-1">El lote <span className="text-primary font-bold">#{batch?.id}</span> está listo para ser procesado.</p>
+          <p className="text-neutral/50 font-medium mt-1">
+            El lote{' '}
+            <span className="text-primary font-bold">#{batch?.id}</span>{' '}
+            está listo para ser procesado.
+          </p>
         </div>
         <div className="flex justify-center gap-3 pt-3">
           <Button
@@ -243,41 +282,29 @@ export const SuccessPage: React.FC = () => {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <Card className="shadow-sm hover:scale-[1.02] transition-transform">
-          <CardBody className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-neutral">{totals.total}</div>
-              <div className="text-xs text-neutral/50 font-bold uppercase tracking-wider">Miembros Totales</div>
-            </div>
-          </CardBody>
-        </Card>
+        <StatSummaryCard
+          title="Miembros Totales"
+          value={totals.total}
+          icon={<Users className="w-6 h-6" />}
+          iconBgClass="bg-primary/10"
+          iconColorClass="text-primary"
+        />
         
-        <Card className="shadow-sm hover:scale-[1.02] transition-transform">
-          <CardBody className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-              <GraduationCap className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-neutral">{totals.young}</div>
-              <div className="text-xs text-neutral/50 font-bold uppercase tracking-wider">Jóvenes Registrados</div>
-            </div>
-          </CardBody>
-        </Card>
+        <StatSummaryCard
+          title="Jóvenes Registrados"
+          value={totals.young}
+          icon={<GraduationCap className="w-6 h-6" />}
+          iconBgClass="bg-blue-50"
+          iconColorClass="text-blue-600"
+        />
 
-        <Card className="shadow-sm hover:scale-[1.02] transition-transform">
-          <CardBody className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
-              <User className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-neutral">{totals.adult}</div>
-              <div className="text-xs text-neutral/50 font-bold uppercase tracking-wider">Adultos Registrados</div>
-            </div>
-          </CardBody>
-        </Card>
+        <StatSummaryCard
+          title="Adultos Registrados"
+          value={totals.adult}
+          icon={<User className="w-6 h-6" />}
+          iconBgClass="bg-amber-50"
+          iconColorClass="text-amber-600"
+        />
       </div>
 
       {/* Alert Banner for Unregistered/Pending members */}

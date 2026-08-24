@@ -761,12 +761,23 @@ export const CertificateDesigner: React.FC = () => {
                 return (
                   <div
                     key={field.id}
+                    role="button"
+                    tabIndex={0}
                     onPointerDown={(e) => handlePointerDown(e, field.id)}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (!isPreviewMode) {
                         setSelectedFieldId(field.id);
                         setActiveSidebarTab('properties');
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (!isPreviewMode) {
+                          setSelectedFieldId(field.id);
+                          setActiveSidebarTab('properties');
+                        }
                       }
                     }}
                     className={`absolute z-10 select-none transition-shadow ${
