@@ -150,4 +150,3 @@ Below are the active Firebase endpoints exposed to the application:
 1.  **PDF Certificate Interactive Previews**: Introduce interactive modal previews of generated certificates directly in the browser UI prior to download.
 2.  **Exportación a Formatos Gráficos Adicionales**: Support PNG/SVG high-resolution single certificate export.
 3.  **Expand Test Coverage**: Maintain Vitest statement coverage above 80%.
-

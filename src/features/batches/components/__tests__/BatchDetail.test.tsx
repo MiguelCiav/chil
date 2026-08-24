@@ -215,7 +215,6 @@ describe('BatchDetail component', () => {
       expect(screen.getByText(/¡Diploma descargado: Diploma_V-11111111_Lote_101_insignia_de_madera\.pdf!/i)).toBeInTheDocument();
     });
   });
-
   it('opens delete confirmation modal, confirms deletion, calls deleteBatch API and navigates back to /lotes', async () => {
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 101,

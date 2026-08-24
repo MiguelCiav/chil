@@ -31,7 +31,6 @@ vi.mock('../../../recognitions', () => ({
   generateBatchCertificatesPdf: vi.fn(),
   getRecognitionTypeById: vi.fn(() => Promise.resolve(null))
 }));
-
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
