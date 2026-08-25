@@ -87,7 +87,7 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} className="max-w-lg">
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
         <ModalHeader onClose={handleClose}>
           {isEdit ? 'Editar Tipo de Reconocimiento' : 'Nuevo Tipo de Reconocimiento'}
         </ModalHeader>

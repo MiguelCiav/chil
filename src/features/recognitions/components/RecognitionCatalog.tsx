@@ -277,7 +277,7 @@ export const RecognitionCatalog: React.FC = () => {
 
       {/* Main Table */}
       <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[260px] pb-6">
           <table className="w-full text-left border-collapse">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (

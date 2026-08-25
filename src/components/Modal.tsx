@@ -54,7 +54,7 @@ interface ModalHeaderProps {
 }
 
 export const ModalHeader: React.FC<ModalHeaderProps> = ({ children, onClose, className = '' }) => (
-  <div className={`px-6 py-4 border-b border-primary/10 flex justify-between items-center bg-white ${className}`}>
+  <div className={`px-6 py-4 border-b border-primary/10 flex justify-between items-center bg-white flex-shrink-0 ${className}`}>
     <div className="text-lg font-semibold text-neutral">{children}</div>
     {onClose && (
       <button
@@ -75,7 +75,7 @@ interface ModalBodyProps {
 }
 
 export const ModalBody: React.FC<ModalBodyProps> = ({ children, className = '' }) => (
-  <div className={`p-6 overflow-y-auto flex-1 bg-white ${className}`}>
+  <div className={`px-6 py-5 overflow-y-auto flex-1 bg-white ${className}`}>
     {children}
   </div>
 );
@@ -86,8 +86,7 @@ interface ModalFooterProps {
 }
 
 export const ModalFooter: React.FC<ModalFooterProps> = ({ children, className = '' }) => (
-  // Using bg-primary/5 for the footer to match the image's slightly tinted footer area
-  <div className={`px-6 py-4 bg-primary/10 border-t border-primary/10 flex items-center justify-between ${className}`}>
+  <div className={`px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between flex-shrink-0 sticky bottom-0 z-10 ${className}`}>
     {children}
   </div>
 );

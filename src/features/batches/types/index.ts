@@ -9,6 +9,8 @@ export interface Batch {
   created_at: string;
 }
 
+export type MemberStatus = 'active' | 'pending' | 'exceptional';
+
 export interface ScoutMember {
   identity: string;
   first_names: string;
@@ -19,7 +21,7 @@ export interface ScoutMember {
   group_id?: number;
   unit_id?: number;
   member_type: 'young' | 'adult'; // "young" (Joven) or "adult" (Adulto)
-  status: 'active' | 'pending';   // "active" (Registro válido) or "pending" (No registrado)
+  status: MemberStatus;   // "active" (Registro válido), "pending" (No registrado), or "exceptional" (Emisión excepcional)
   batch_id?: number;
   recognition_code?: string;
 }

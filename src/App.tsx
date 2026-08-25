@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { NewBatchWizard, BatchDetail, BatchList, SuccessPage } from './features/batches';
 import { RecognitionCatalog, CertificateDesigner } from './features/recognitions';
+import { SummaryView } from './features/summary';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Route path="/lotes" element={<BatchList />} />
           <Route path="/lotes/:id" element={<BatchDetail />} />
           <Route path="/lotes/exito" element={<SuccessPage />} />
+          <Route path="/resumen" element={<SummaryView />} />
           <Route path="/reconocimientos" element={<RecognitionCatalog />} />
           <Route path="/reconocimientos/:id/plantilla" element={<CertificateDesigner />} />
           <Route path="*" element={<Navigate to="/lotes/nuevo" replace />} />

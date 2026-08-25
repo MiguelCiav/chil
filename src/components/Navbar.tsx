@@ -89,6 +89,18 @@ export const Navbar: React.FC = () => {
             Listado de lotes
           </NavLink>
           <NavLink
+            to="/resumen"
+            end
+            className={({ isActive }) =>
+              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${isActive
+                ? 'border-primary text-primary'
+                : 'border-transparent text-neutral hover:text-primary'
+              }`
+            }
+          >
+            Resumen
+          </NavLink>
+          <NavLink
             to="/reconocimientos"
             end
             className={({ isActive }) =>
@@ -127,7 +139,7 @@ export const Navbar: React.FC = () => {
       </div>
 
       <Modal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} className="max-w-md">
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden min-h-0">
           <ModalHeader onClose={() => setIsSettingsOpen(false)}>
             Configuración del Scraper ASV
           </ModalHeader>

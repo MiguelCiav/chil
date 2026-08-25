@@ -23,6 +23,7 @@ vi.mock('../../api', () => ({
   getRecognitionName: vi.fn((val) => {
     if (val === 'sct-go-solar' || val === 'Go Solar') return 'Go Solar';
     if (val === 'sct-wood-badge' || val === 'Insignia de Madera') return 'Insignia de Madera';
+    if (val === 'sct-custom') return 'Reconocimiento Personalizado';
     return val || 'Go Solar';
   }),
   RECOGNITION_TYPES: [
@@ -33,8 +34,14 @@ vi.mock('../../api', () => ({
 
 vi.mock('../../../recognitions', () => ({
   generateBatchCertificatesPdf: vi.fn(),
-  getRecognitionTypeById: vi.fn(() => Promise.resolve(null))
+  getRecognitionTypeById: vi.fn(() => Promise.resolve(null)),
+  getAllRecognitionTypes: vi.fn(() => Promise.resolve([
+    { id: 'sct-wood-badge', name: 'Insignia de Madera' },
+    { id: 'sct-go-solar', name: 'Go Solar' },
+    { id: 'sct-custom', name: 'Reconocimiento Personalizado' }
+  ]))
 }));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
@@ -45,10 +52,6 @@ vi.mock('react-router-dom', async (importOriginal) => {
 });
 
 describe('BatchList component', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   const mockBatches = [
     {
       id: 101,
@@ -56,7 +59,7 @@ describe('BatchList component', () => {
       region_id: 1,
       district_id: 10,
       group_id: 100,
-      recognition_type: 'Go Solar',
+      recognition_type: 'sct-go-solar',
       created_at: '2026-08-20T10:00:00.000Z'
     },
     {
@@ -65,7 +68,7 @@ describe('BatchList component', () => {
       region_id: 2,
       district_id: 20,
       group_id: 200,
-      recognition_type: 'Insignia de Madera',
+      recognition_type: 'sct-wood-badge',
       created_at: '2026-08-21T11:00:00.000Z'
     }
   ];
@@ -82,7 +85,18 @@ describe('BatchList component', () => {
     groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }, { id: 200, name: 'Grupo Scouts 45', district_id: 20 }]
   };
 
-  it('renders KPI cards and table with batches data, and verifies storage path is not rendered', async () => {
+  const mockRecTypes: recognitions.RecognitionType[] = [
+    { id: 'sct-wood-badge', name: 'Insignia de Madera', created_at: '2026-01-01T00:00:00.000Z' },
+    { id: 'sct-go-solar', name: 'Go Solar', created_at: '2026-01-01T00:00:00.000Z' },
+    { id: 'sct-custom', name: 'Reconocimiento Personalizado', created_at: '2026-01-01T00:00:00.000Z' }
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(recognitions.getAllRecognitionTypes).mockResolvedValue(mockRecTypes);
+  });
+
+  it('renders table with batches data, and verifies storage path is not rendered', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -94,12 +108,8 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Total Generado')).toBeInTheDocument();
+      expect(screen.getByText('FECHA DE EMISIÓN')).toBeInTheDocument();
     });
-
-    // Check KPI metrics
-    expect(screen.getByText('Reconocimiento más común')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument(); // 3 active certificates
 
     // Verify storage path banner is no longer rendered
     expect(screen.queryByText('RUTA DE GUARDADO LOCAL')).not.toBeInTheDocument();
@@ -120,7 +130,40 @@ describe('BatchList component', () => {
     expect(screen.getByText('1 Miembros')).toBeInTheDocument();
   });
 
-  it('opens delete confirmation modal, confirms deletion, calls deleteBatch API, removes row and shows toast', async () => {
+  it('renders only single 3-dots actions button per row and no loose action icon buttons', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+    });
+
+    // Verify single 3-dots action button exists
+    expect(screen.getByLabelText('Acciones del lote 101')).toBeInTheDocument();
+    expect(screen.getByLabelText('Acciones del lote 102')).toBeInTheDocument();
+
+    // Verify loose action buttons do NOT exist in the DOM
+    expect(screen.queryByLabelText('Ver detalle del lote 101')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Descargar PDF del lote 101')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Eliminar lote 101')).not.toBeInTheDocument();
+
+    // Open dropdown for row 101
+    fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
+
+    // Verify actions inside dropdown
+    expect(screen.getByRole('button', { name: /Ver detalle/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Descargar diplomas \(PDF\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Eliminar lote/i })).toBeInTheDocument();
+  });
+
+  it('opens delete confirmation modal via 3-dots dropdown, confirms deletion, calls deleteBatch API, removes row and shows toast', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -136,9 +179,12 @@ describe('BatchList component', () => {
       expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
-    // Open delete confirmation modal via quick delete button
-    const deleteBtn = screen.getByLabelText(/Eliminar lote 101/i);
-    fireEvent.click(deleteBtn);
+    // Open 3-dots dropdown menu for batch 101
+    fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
+
+    // Click Eliminar lote inside dropdown
+    const deleteOption = screen.getByRole('button', { name: /^Eliminar lote$/i });
+    fireEvent.click(deleteOption);
 
     await waitFor(() => {
       expect(screen.getByText(/¿Está seguro de que desea eliminar el lote/i)).toBeInTheDocument();
@@ -159,7 +205,7 @@ describe('BatchList component', () => {
     expect(screen.getByText('Grupo Scouts 45')).toBeInTheDocument();
   });
 
-  it('opens delete confirmation modal via dropdown and can be cancelled', async () => {
+  it('opens delete confirmation modal via 3-dots dropdown and can be cancelled', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -174,12 +220,11 @@ describe('BatchList component', () => {
       expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
-    // Click Acciones dropdown for first row
-    const accionesButtons = screen.getAllByRole('button', { name: /^Acciones$/i });
-    fireEvent.click(accionesButtons[0]);
+    // Open dropdown for first row
+    fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
 
-    // Click Eliminar Lote inside dropdown
-    const deleteDropdownItem = screen.getByRole('button', { name: /^Eliminar Lote$/i });
+    // Click Eliminar lote inside dropdown
+    const deleteDropdownItem = screen.getByRole('button', { name: /^Eliminar lote$/i });
     fireEvent.click(deleteDropdownItem);
 
     await waitFor(() => {
@@ -194,48 +239,7 @@ describe('BatchList component', () => {
     expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
   });
 
-  it('handles active filters removal and adding new filter', async () => {
-    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
-    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
-    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
-
-    render(
-      <MemoryRouter>
-        <BatchList />
-      </MemoryRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(/Fecha: Este Año/i)).toBeInTheDocument();
-    });
-
-    // Remove the default filter
-    const removeBtn = screen.getByLabelText(/Eliminar filtro Fecha/i);
-    fireEvent.click(removeBtn);
-
-    expect(screen.queryByText(/Fecha: Este Año/i)).not.toBeInTheDocument();
-
-    // Add a new filter
-    const addFilterBtn = screen.getByText(/Añadir Filtro/i);
-    fireEvent.click(addFilterBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText('Añadir Filtro al Listado')).toBeInTheDocument();
-    });
-
-    // Select region value
-    const valSelect = screen.getByLabelText(/Valor del Filtro/i);
-    fireEvent.change(valSelect, { target: { value: '1' } });
-
-    const applyBtn = screen.getByText('Aplicar Filtro');
-    fireEvent.click(applyBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Región: Región Capital/i)).toBeInTheDocument();
-    });
-  });
-
-  it('triggers PDF download and detail navigation from row actions', async () => {
+  it('triggers PDF download and detail navigation from 3-dots dropdown menu', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -248,16 +252,18 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Ver detalle del lote 101/i)).toBeInTheDocument();
+      expect(screen.getByLabelText('Acciones del lote 101')).toBeInTheDocument();
     });
 
-    // Click detail button
-    const detailBtn = screen.getByLabelText(/Ver detalle del lote 101/i);
+    // 1. Test Detail navigation
+    fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
+    const detailBtn = screen.getByRole('button', { name: /^Ver detalle$/i });
     fireEvent.click(detailBtn);
     expect(mockNavigate).toHaveBeenCalledWith('/lotes/101');
 
-    // Click download button
-    const downloadBtn = screen.getByLabelText(/Descargar PDF del lote 101/i);
+    // 2. Test Download PDF from dropdown
+    fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
+    const downloadBtn = screen.getByRole('button', { name: /^Descargar diplomas \(PDF\)$/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
@@ -271,7 +277,137 @@ describe('BatchList component', () => {
     });
   });
 
-  it('handles filtering by district, group, recognition and date filters', async () => {
+  it('loads dynamic recognition types and populates options in the filter modal', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+    });
+
+    // Click Añadir Filtro
+    fireEvent.click(screen.getByText(/Añadir Filtro/i));
+
+    await waitFor(() => {
+      expect(screen.getByText('Añadir Filtro al Listado')).toBeInTheDocument();
+    });
+
+    // Change filter type to recognition
+    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'recognition' } });
+
+    // Verify dynamic recognition options are present
+    expect(screen.getByRole('option', { name: 'Reconocimiento Personalizado' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Go Solar' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Insignia de Madera' })).toBeInTheDocument();
+
+    // Select custom recognition and apply
+    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'sct-custom' } });
+    fireEvent.click(screen.getByText('Aplicar Filtro'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Reconocimiento: Reconocimiento Personalizado/i)).toBeInTheDocument();
+    });
+  });
+
+  it('filters by date range mode with chip format Fecha: DD/MM/YYYY - DD/MM/YYYY', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+    });
+
+    // Remove existing default date filter
+    fireEvent.click(screen.getByLabelText(/Eliminar filtro Fecha/i));
+
+    // Open add filter modal
+    fireEvent.click(screen.getByText(/Añadir Filtro/i));
+
+    await waitFor(() => {
+      expect(screen.getByText('Añadir Filtro al Listado')).toBeInTheDocument();
+    });
+
+    // Change filter type to date
+    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'date' } });
+
+    // Select mode "Rango de fechas"
+    fireEvent.change(screen.getByLabelText(/Modalidad/i), { target: { value: 'range' } });
+
+    // Enter start and end dates
+    fireEvent.change(screen.getByLabelText(/Fecha Inicio/i), { target: { value: '2026-08-01' } });
+    fireEvent.change(screen.getByLabelText(/Fecha Fin/i), { target: { value: '2026-08-20' } });
+
+    fireEvent.click(screen.getByText('Aplicar Filtro'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Fecha: 01\/08\/2026 - 20\/08\/2026/i)).toBeInTheDocument();
+    });
+
+    // Batch 101 (2026-08-20) should be included, batch 102 (2026-08-21) should be excluded
+    expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+    expect(screen.queryByText('Grupo Scouts 45')).not.toBeInTheDocument();
+  });
+
+  it('filters by specific date mode with chip format Fecha: DD/MM/YYYY', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+    });
+
+    // Remove existing default date filter
+    fireEvent.click(screen.getByLabelText(/Eliminar filtro Fecha/i));
+
+    // Open add filter modal
+    fireEvent.click(screen.getByText(/Añadir Filtro/i));
+
+    await waitFor(() => {
+      expect(screen.getByText('Añadir Filtro al Listado')).toBeInTheDocument();
+    });
+
+    // Change filter type to date
+    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'date' } });
+
+    // Select mode "Fecha específica"
+    fireEvent.change(screen.getByLabelText(/Modalidad/i), { target: { value: 'specific' } });
+
+    // Enter specific date
+    fireEvent.change(screen.getByLabelText(/^Fecha$/i), { target: { value: '2026-08-21' } });
+
+    fireEvent.click(screen.getByText('Aplicar Filtro'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Fecha: 21\/08\/2026/i)).toBeInTheDocument();
+    });
+
+    // Batch 102 (2026-08-21) should be included, batch 101 (2026-08-20) excluded
+    expect(screen.getByText('Grupo Scouts 45')).toBeInTheDocument();
+    expect(screen.queryByText('Grupo San Luis')).not.toBeInTheDocument();
+  });
+
+  it('handles filtering by district, group and predefined date periods', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValue(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValue(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValue(mockHierarchy);
@@ -306,24 +442,14 @@ describe('BatchList component', () => {
       expect(screen.getByText(/Grupo: Grupo San Luis/i)).toBeInTheDocument();
     });
 
-    // 3. Add Recognition filter
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'recognition' } });
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'sct-go-solar' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Reconocimiento: Go Solar/i)).toBeInTheDocument();
-    });
-
-    // 4. Add Date filter (Todo el histórico)
+    // 3. Add Predefined Date filter (Últimos 30 días)
     fireEvent.click(screen.getByText(/Añadir Filtro/i));
     fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'date' } });
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'Todo el histórico' } });
+    fireEvent.change(screen.getByLabelText(/Período/i), { target: { value: 'Últimos 30 días' } });
     fireEvent.click(screen.getByText('Aplicar Filtro'));
 
     await waitFor(() => {
-      expect(screen.getByText(/Fecha: Todo el histórico/i)).toBeInTheDocument();
+      expect(screen.getByText(/Fecha: Últimos 30 días/i)).toBeInTheDocument();
     });
   });
 
@@ -334,7 +460,7 @@ describe('BatchList component', () => {
       region_id: 1,
       district_id: 10,
       group_id: 100,
-      recognition_type: 'Go Solar',
+      recognition_type: 'sct-go-solar',
       created_at: '2026-08-20T10:00:00.000Z'
     }));
 
@@ -385,19 +511,21 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Descargar PDF del lote 101/i)).toBeInTheDocument();
+      expect(screen.getByLabelText('Acciones del lote 101')).toBeInTheDocument();
     });
 
-    // Test download PDF error
-    const downloadBtn = screen.getByLabelText(/Descargar PDF del lote 101/i);
+    // Test download PDF error via 3-dots dropdown
+    fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
+    const downloadBtn = screen.getByRole('button', { name: /^Descargar diplomas \(PDF\)$/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith('Error al generar los diplomas en PDF.');
     });
 
-    // Test delete error
-    const deleteBtn = screen.getByLabelText(/Eliminar lote 101/i);
+    // Test delete error via 3-dots dropdown
+    fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
+    const deleteBtn = screen.getByRole('button', { name: /^Eliminar lote$/i });
     fireEvent.click(deleteBtn);
 
     const confirmBtn = screen.getByRole('button', { name: /^Eliminar Lote$/i });
