@@ -107,10 +107,6 @@ describe('BatchDetail component', () => {
       'Diplomas_Lote_101_servicio_prolongado.pdf'
     );
 
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce(
-      'Diplomas_Lote_101_servicio_prolongado.pdf'
-    );
-
     render(
       <MemoryRouter initialEntries={['/lotes/101']}>
         <Routes>
@@ -140,10 +136,12 @@ describe('BatchDetail component', () => {
     // Check Member List PDF Export button
     const listBtn = screen.getByRole('button', { name: /Descargar lista/i });
     fireEvent.click(listBtn);
+
     await waitFor(() => {
       expect(api.generateBatchReport).toHaveBeenCalled();
       expect(screen.getByText(/Lista de miembros \(PDF\) generada exitosamente\./i)).toBeInTheDocument();
     });
+
     // Trigger batch PDF download
     const downloadBtn = screen.getByRole('button', { name: /Descargar todos \(PDF\)/i });
     fireEvent.click(downloadBtn);

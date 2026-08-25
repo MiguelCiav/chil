@@ -3,6 +3,7 @@ import { MainLayout } from './layouts/MainLayout';
 import { NewBatchWizard, BatchDetail, BatchList, SuccessPage } from './features/batches';
 import { RecognitionCatalog, CertificateDesigner } from './features/recognitions';
 import { SummaryView } from './features/summary';
+import { StatisticsDashboard } from './features/statistics';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/lotes/:id" element={<BatchDetail />} />
           <Route path="/lotes/exito" element={<SuccessPage />} />
           <Route path="/resumen" element={<SummaryView />} />
+          <Route path="/estadisticas" element={<StatisticsDashboard />} />
           <Route path="/reconocimientos" element={<RecognitionCatalog />} />
           <Route path="/reconocimientos/:id/plantilla" element={<CertificateDesigner />} />
           <Route path="*" element={<Navigate to="/lotes/nuevo" replace />} />
