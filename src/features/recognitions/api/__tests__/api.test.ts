@@ -23,12 +23,19 @@ vi.mock('firebase/firestore', async (importOriginal) => {
     getDoc: vi.fn(),
     setDoc: vi.fn(),
     deleteDoc: vi.fn(),
+    query: vi.fn(),
+    where: vi.fn(),
     writeBatch: vi.fn(() => ({
       set: vi.fn(),
       commit: vi.fn()
     }))
   };
 });
+
+vi.mock('../../../../lib/firebase', () => ({
+  auth: { currentUser: { uid: 'test-user-uid' } },
+  db: {}
+}));
 
 describe('Recognition Types API Layer', () => {
   beforeEach(() => {
@@ -46,13 +53,18 @@ describe('Recognition Types API Layer', () => {
   });
 
   describe('getAllRecognitionTypes', () => {
+    it('returns empty array when user is not authenticated/empty', async () => {
+      const result = await getAllRecognitionTypes('');
+      expect(result).toEqual([]);
+    });
+
     it('returns empty array when Firestore collection is empty', async () => {
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
         empty: true,
         docs: []
       } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
-      const result = await getAllRecognitionTypes();
+      const result = await getAllRecognitionTypes('test-user-uid');
 
       expect(firestore.getDocs).toHaveBeenCalled();
       expect(result).toEqual([]);

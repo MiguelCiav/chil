@@ -7,6 +7,7 @@ export interface Batch {
   recognition_type?: string;
   recognition_duration?: string;
   created_at: string;
+  user_id?: string;
 }
 
 export type MemberStatus = 'active' | 'pending' | 'exceptional';
@@ -24,6 +25,7 @@ export interface ScoutMember {
   status: MemberStatus;   // "active" (Registro válido), "pending" (No registrado), or "exceptional" (Emisión excepcional)
   batch_id?: number;
   recognition_code?: string;
+  user_id?: string;
 }
 
 export interface Region {
@@ -64,6 +66,7 @@ export interface BatchCreationParams {
   group_id: number;
   recognition_type: string;
   recognition_duration?: string;
+  user_id?: string;
 }
 
 export interface ActiveFilterChip {

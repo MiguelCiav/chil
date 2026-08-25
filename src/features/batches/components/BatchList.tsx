@@ -49,6 +49,7 @@ import {
   ScoutGroup,
   ActiveFilterChip
 } from '../types';
+import { useAuth } from '../../auth';
 
 interface BatchRowData {
   id: number;
@@ -237,6 +238,7 @@ function renderBatchTableRows(
 
 export const BatchList: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [members, setMembers] = useState<ScoutMember[]>([]);
@@ -276,10 +278,10 @@ export const BatchList: React.FC = () => {
 
   useEffect(() => {
     Promise.all([
-      getAllBatches(),
-      getAllMembers(),
+      getAllBatches(user?.uid),
+      getAllMembers(user?.uid),
       getHierarchyData(),
-      getAllRecognitionTypes()
+      getAllRecognitionTypes(user?.uid)
     ])
       .then(([bList, mList, hierarchy, recTypes]) => {
         setBatches(bList);
@@ -295,7 +297,7 @@ export const BatchList: React.FC = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [user?.uid]);
 
   const resolveRecognitionName = useCallback((recType?: string) => {
     if (!recType) return '-';

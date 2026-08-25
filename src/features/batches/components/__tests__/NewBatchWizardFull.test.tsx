@@ -25,6 +25,17 @@ vi.mock('../../../recognitions', () => ({
   getAllRecognitionTypes: vi.fn().mockResolvedValue([])
 }));
 
+vi.mock('../../../auth', () => ({
+  useAuth: vi.fn(() => ({
+    user: { uid: 'test-user-id', email: 'test@scouts.org.ve', displayName: 'Test User' },
+    loading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    resetPassword: vi.fn()
+  }))
+}));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>();

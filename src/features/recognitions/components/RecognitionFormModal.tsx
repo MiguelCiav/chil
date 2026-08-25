@@ -10,6 +10,7 @@ import {
   recognitionFormSchema
 } from '../types';
 import { createRecognitionType, updateRecognitionType } from '../api';
+import { useAuth } from '../../auth';
 
 interface RecognitionFormModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
   recognition,
   onSuccess
 }) => {
+  const { user } = useAuth();
   const isEdit = Boolean(recognition);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -66,14 +68,21 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
     setErrorMsg(null);
     try {
       if (isEdit && recognition) {
-        const updated = await updateRecognitionType(recognition.id, {
-          name: data.name
-        });
+        const updated = await updateRecognitionType(
+          recognition.id,
+          {
+            name: data.name
+          },
+          user?.uid
+        );
         onSuccess(updated, true);
       } else {
-        const created = await createRecognitionType({
-          name: data.name
-        });
+        const created = await createRecognitionType(
+          {
+            name: data.name
+          },
+          user?.uid
+        );
         onSuccess(created, false);
       }
       onClose();
@@ -87,7 +96,7 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} className="max-w-lg">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col flex-1 overflow-hidden min-h-0">
         <ModalHeader onClose={handleClose}>
           {isEdit ? 'Editar Tipo de Reconocimiento' : 'Nuevo Tipo de Reconocimiento'}
         </ModalHeader>

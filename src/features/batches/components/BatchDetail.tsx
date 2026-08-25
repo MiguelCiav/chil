@@ -45,10 +45,12 @@ import {
   getAllRecognitionTypes,
   RecognitionType
 } from '../../recognitions';
+import { useAuth } from '../../auth';
 
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const batchId = Number(id);
 
   const [batch, setBatch] = useState<Batch | null>(null);
@@ -91,7 +93,7 @@ export const BatchDetail: React.FC = () => {
       getBatchById(batchId),
       getMembersByBatchId(batchId),
       getHierarchyData(),
-      getAllRecognitionTypes()
+      getAllRecognitionTypes(user?.uid)
     ])
       .then(([b, m, hierarchy, recTypes]) => {
         setBatch(b);
@@ -112,7 +114,7 @@ export const BatchDetail: React.FC = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, [batchId]);
+  }, [batchId, user?.uid]);
 
   const handleDownloadPDF = async () => {
     if (!batch) return;

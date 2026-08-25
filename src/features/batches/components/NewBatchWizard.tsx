@@ -38,6 +38,7 @@ import {
   MemberVerificationResult
 } from '../types';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
+import { useAuth } from '../../auth';
 
 import { Step1Org } from './wizard/Step1Org';
 import { Step2Verification } from './wizard/Step2Verification';
@@ -127,6 +128,8 @@ export const NewBatchWizard: React.FC = () => {
   // Step 3 State
   const [savedMembers, setSavedMembers] = useState<ScoutMember[]>([]);
 
+  const { user } = useAuth();
+
   // --- Initialize Form (Step 1) ---
   const {
     register,
@@ -153,7 +156,7 @@ export const NewBatchWizard: React.FC = () => {
   useEffect(() => {
     Promise.all([
       getHierarchyData(),
-      getAllRecognitionTypes()
+      getAllRecognitionTypes(user?.uid)
     ])
       .then(([hierarchy, recTypes]) => {
         setRegions(hierarchy.regions);
@@ -167,7 +170,7 @@ export const NewBatchWizard: React.FC = () => {
       .finally(() => {
         setLoadingHierarchy(false);
       });
-  }, []);
+  }, [user?.uid]);
 
   // Cascading Drops Logic: Reset dependent dropdowns when parent changes
   useEffect(() => {
@@ -188,13 +191,14 @@ export const NewBatchWizard: React.FC = () => {
         region_id: Number(data.regionId),
         district_id: Number(data.districtId),
         group_id: Number(data.groupId),
-        recognition_type: data.recognitionType
+        recognition_type: data.recognitionType,
+        user_id: user?.uid
       };
 
       if (batchId) {
-        created = await updateBatch(batchId, params);
+        created = await updateBatch(batchId, params, user?.uid);
       } else {
-        created = await createBatch(params);
+        created = await createBatch(params, user?.uid);
       }
 
       setBatchId(created.id);
@@ -251,15 +255,19 @@ export const NewBatchWizard: React.FC = () => {
       // If unregistered, save as pending in Firestore
       if (isUnregistered && batchId) {
         try {
-          await createMember({
-            identity: cedula,
-            first_names: 'Usuario',
-            last_names: 'No Registrado',
-            birth_date: '1990-01-01',
-            member_type: type,
-            status: 'pending',
-            batch_id: batchId
-          });
+          await createMember(
+            {
+              identity: cedula,
+              first_names: 'Usuario',
+              last_names: 'No Registrado',
+              birth_date: '1990-01-01',
+              member_type: type,
+              status: 'pending',
+              batch_id: batchId,
+              user_id: user?.uid
+            },
+            user?.uid
+          );
         } catch (dbErr) {
           console.error("Database save failed for unregistered member:", dbErr);
         }
@@ -290,17 +298,21 @@ export const NewBatchWizard: React.FC = () => {
       if (batchId) {
         try {
           const { first_names, last_names } = splitFullName(res.nombre_completo);
-          await createMember({
-            identity: cedula,
-            first_names,
-            last_names,
-            birth_date: res.fecha_nacimiento || '1990-01-01',
-            email: res.correo_electronico,
-            phone: res.telefono,
-            member_type: type,
-            status: isScrapedActive ? 'active' : 'pending',
-            batch_id: batchId
-          });
+          await createMember(
+            {
+              identity: cedula,
+              first_names,
+              last_names,
+              birth_date: res.fecha_nacimiento || '1990-01-01',
+              email: res.correo_electronico,
+              phone: res.telefono,
+              member_type: type,
+              status: isScrapedActive ? 'active' : 'pending',
+              batch_id: batchId,
+              user_id: user?.uid
+            },
+            user?.uid
+          );
         } catch (dbErr) {
           console.error("Database save failed for active/inactive member:", dbErr);
         }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ColumnDef,
@@ -27,9 +27,11 @@ import { RecognitionType } from '../types';
 import { getAllRecognitionTypes } from '../api';
 import { RecognitionFormModal } from './RecognitionFormModal';
 import { RecognitionDeleteModal } from './RecognitionDeleteModal';
+import { useAuth } from '../../auth';
 
 export const RecognitionCatalog: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [recognitions, setRecognitions] = useState<RecognitionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -52,21 +54,21 @@ export const RecognitionCatalog: React.FC = () => {
     }, 4000);
   };
 
-  const fetchRecognitions = async () => {
+  const fetchRecognitions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getAllRecognitionTypes();
+      const data = await getAllRecognitionTypes(user?.uid);
       setRecognitions(data);
     } catch (err) {
       console.error('Error fetching recognitions:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.uid]);
 
   useEffect(() => {
     fetchRecognitions();
-  }, []);
+  }, [fetchRecognitions]);
 
   const handleOpenCreate = () => {
     setEditingRecognition(null);

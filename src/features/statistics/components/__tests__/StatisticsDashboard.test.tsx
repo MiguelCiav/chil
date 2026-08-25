@@ -28,6 +28,17 @@ vi.mock('../../utils/statsPdfExport', () => ({
   exportStatisticsPdf: vi.fn(() => 'Reporte_Estadistico_Chil_20260824.pdf')
 }));
 
+vi.mock('../../../auth', () => ({
+  useAuth: vi.fn(() => ({
+    user: { uid: 'test-user-id', email: 'test@scouts.org.ve', displayName: 'Test User' },
+    loading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    resetPassword: vi.fn()
+  }))
+}));
+
 describe('StatisticsDashboard Component', () => {
   const mockBatches: Batch[] = [
     {

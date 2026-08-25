@@ -38,6 +38,7 @@ import {
 } from '../../batches/types';
 import { SummaryRowData } from '../types';
 import { exportToExcel } from '../utils/excelExport';
+import { useAuth } from '../../auth';
 
 function formatBatchDate(dateStr?: string): string {
   if (!dateStr) return 'Fecha no disponible';
@@ -152,6 +153,7 @@ function renderSummaryTableRows(
 }
 
 export const SummaryView: React.FC = () => {
+  const { user } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [members, setMembers] = useState<ScoutMember[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -179,10 +181,10 @@ export const SummaryView: React.FC = () => {
 
   useEffect(() => {
     Promise.all([
-      getAllBatches(),
-      getAllMembers(),
+      getAllBatches(user?.uid),
+      getAllMembers(user?.uid),
       getHierarchyData(),
-      getAllRecognitionTypes()
+      getAllRecognitionTypes(user?.uid)
     ])
       .then(([batchList, memberList, hierarchy, recTypes]) => {
         setBatches(batchList || []);
@@ -198,7 +200,7 @@ export const SummaryView: React.FC = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [user?.uid]);
 
   const resolveRecognitionName = useCallback((recType?: string) => {
     if (!recType) return '-';

@@ -4,9 +4,11 @@ import {
   getDocs,
   getDoc,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  query,
+  where
 } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
+import { db, auth } from '../../../lib/firebase';
 import {
   RecognitionType,
   CreateRecognitionTypeParams,
@@ -25,9 +27,15 @@ export function generateRecognitionId(name: string): string {
   return `sct-${normalized || 'custom'}`;
 }
 
-export async function getAllRecognitionTypes(): Promise<RecognitionType[]> {
+export async function getAllRecognitionTypes(userId?: string): Promise<RecognitionType[]> {
   try {
-    const snap = await getDocs(collection(db, 'recognition_types'));
+    const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid || '');
+    if (!targetUserId) {
+      return [];
+    }
+
+    const q = query(collection(db, 'recognition_types'), where('user_id', '==', targetUserId));
+    const snap = await getDocs(q);
     if (snap.empty || snap.docs.length === 0) {
       return [];
     }
@@ -38,6 +46,7 @@ export async function getAllRecognitionTypes(): Promise<RecognitionType[]> {
         id: d.id,
         name: data.name || d.id,
         created_at: data.created_at || new Date().toISOString(),
+        ...(data.user_id ? { user_id: data.user_id } : {}),
         ...(data.template ? { template: data.template } : {})
       };
     });
@@ -62,6 +71,7 @@ export async function getRecognitionTypeById(id: string): Promise<RecognitionTyp
       id: snap.id,
       name: data.name || snap.id,
       created_at: data.created_at || new Date().toISOString(),
+      ...(data.user_id ? { user_id: data.user_id } : {}),
       ...(data.template ? { template: data.template } : {})
     };
   } catch (error) {
@@ -70,24 +80,35 @@ export async function getRecognitionTypeById(id: string): Promise<RecognitionTyp
   }
 }
 
-export async function createRecognitionType(data: CreateRecognitionTypeParams): Promise<RecognitionType> {
+export async function createRecognitionType(
+  data: CreateRecognitionTypeParams,
+  userId?: string
+): Promise<RecognitionType> {
   const id = generateRecognitionId(data.name);
+  const targetUserId = data.user_id || (userId !== undefined ? userId : (auth.currentUser?.uid || ''));
   const newRecognition: RecognitionType = {
     id,
     name: data.name.trim(),
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    ...(targetUserId ? { user_id: targetUserId } : {})
   };
 
   await setDoc(doc(db, 'recognition_types', id), newRecognition);
   return newRecognition;
 }
 
-export async function updateRecognitionType(id: string, data: UpdateRecognitionTypeParams): Promise<RecognitionType> {
+export async function updateRecognitionType(
+  id: string,
+  data: UpdateRecognitionTypeParams,
+  userId?: string
+): Promise<RecognitionType> {
   const existing = await getRecognitionTypeById(id);
+  const targetUserId = (userId !== undefined ? userId : (existing?.user_id || auth.currentUser?.uid || ''));
   const updated: RecognitionType = {
     id,
     name: data.name.trim(),
     created_at: existing?.created_at || new Date().toISOString(),
+    ...(targetUserId ? { user_id: targetUserId } : {}),
     ...(existing?.template ? { template: existing.template } : {})
   };
 
