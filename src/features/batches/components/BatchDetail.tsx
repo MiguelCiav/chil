@@ -127,18 +127,18 @@ export const BatchDetail: React.FC = () => {
         recognition,
         hierarchy: { regions, districts, groups }
       });
-      setToastMessage(`¡Diplomas descargados exitosamente en ${fileName}!`);
+      setToastMessage(`¡Reconocimientos descargados exitosamente en ${fileName}!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error("Error generating PDF:", err);
-      alert("Error al generar los diplomas en PDF.");
+      alert("Error al generar los reconocimientos en PDF.");
     } finally {
       setDownloading(false);
     }
   };
 
-  const handleDownloadSingleDiploma = useCallback(async (member: ScoutMember) => {
+  const handleDownloadSingleRecognition = useCallback(async (member: ScoutMember) => {
     setActiveMenuMemberId(null);
     if (!batch) return;
     try {
@@ -148,12 +148,12 @@ export const BatchDetail: React.FC = () => {
         recognition,
         hierarchy: { regions, districts, groups }
       });
-      setToastMessage(`¡Diploma descargado: ${fileName}!`);
+      setToastMessage(`¡Reconocimiento descargado: ${fileName}!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      console.error("Error generating single diploma:", err);
-      alert("Error al descargar el diploma.");
+      console.error("Error generating single recognition:", err);
+      alert("Error al descargar el reconocimiento.");
     }
   }, [batch, recognition, regions, districts, groups]);
 
@@ -398,11 +398,11 @@ export const BatchDetail: React.FC = () => {
                   {(rowData.status === 'active' || rowData.status === 'exceptional') && (
                     <button
                       type="button"
-                      onClick={() => handleDownloadSingleDiploma(rowData)}
+                      onClick={() => handleDownloadSingleRecognition(rowData)}
                       className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
                     >
                       <Award className="w-3.5 h-3.5 text-primary" />
-                      Descargar Diploma (PDF)
+                      Descargar Reconocimiento (PDF)
                     </button>
                   )}
                 </div>
@@ -412,7 +412,7 @@ export const BatchDetail: React.FC = () => {
         );
       }
     }
-  ], [activeMenuMemberId, handleEditClick, handleDownloadSingleDiploma]);
+  ], [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition]);
 
   const table = useReactTable({
     data: filteredMembers,
@@ -504,11 +504,11 @@ export const BatchDetail: React.FC = () => {
             variant="primary"
             onClick={handleDownloadPDF}
             disabled={downloading || totals.eligible === 0}
-            title={totals.eligible === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas" : undefined}
+            title={totals.eligible === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos" : undefined}
             icon={<FileText size={16} />}
             className="bg-[#5c371d] hover:bg-[#4b2c17] text-white font-semibold text-xs sm:text-sm"
           >
-            {downloading ? 'Generando PDF...' : 'Descargar todos (PDF)'}
+            {downloading ? 'Generando PDF...' : 'Descargar Reconocimientos (PDF)'}
           </Button>
         </div>
       </div>
@@ -838,11 +838,11 @@ export const BatchDetail: React.FC = () => {
                         }}
                         className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
                       />
-                      <span>Autorizar emisión de diploma (Caso Excepcional)</span>
+                      <span>Autorizar emisión de reconocimiento (Caso Excepcional)</span>
                     </label>
                   </div>
                   <p className="text-xs text-purple-700">
-                    Permite emitir el diploma oficial para este miembro aunque no figure en el registro nacional validado.
+                    Permite emitir el reconocimiento oficial para este miembro aunque no figure en el registro nacional validado.
                   </p>
                   {editingMember.status === 'exceptional' && (
                     <div className="space-y-1.5 pt-1">

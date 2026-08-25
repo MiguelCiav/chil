@@ -122,12 +122,12 @@ export const SuccessPage: React.FC = () => {
         recognition: recType,
         hierarchy
       });
-      setToastMessage(`¡Diplomas descargados exitosamente en ${path}!`);
+      setToastMessage(`¡Reconocimientos descargados exitosamente en ${path}!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error(err);
-      alert("Error al generar los diplomas en PDF.");
+      alert("Error al generar los reconocimientos en PDF.");
     } finally {
       setDownloading(false);
     }
@@ -285,7 +285,7 @@ export const SuccessPage: React.FC = () => {
             variant="primary"
             onClick={handleDownloadPDF}
             disabled={downloading || eligibleCount === 0}
-            title={eligibleCount === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas" : undefined}
+            title={eligibleCount === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos" : undefined}
             icon={<Download size={18} />}
           >
             {downloading ? 'Generando PDF...' : 'Descargar PDF del Reporte'}

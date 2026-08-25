@@ -10,3 +10,6 @@ export * from './components/charts/RecognitionRankingChart';
 export * from './components/charts/DemographicsDonut';
 export * from './components/charts/GeographicBarChart';
 export * from './components/charts/StatusBreakdownCard';
+export * from './components/charts/RegionSummaryTable';
+export * from './components/charts/DistrictSummaryTable';
+export * from './components/charts/UnitDistributionCard';

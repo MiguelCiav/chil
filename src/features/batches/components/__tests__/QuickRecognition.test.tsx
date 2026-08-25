@@ -87,7 +87,7 @@ describe('QuickRecognition Component', () => {
     );
 
     expect(screen.getByText('Emisión Rápida de Reconocimiento')).toBeInTheDocument();
-    expect(screen.getByText('Emite y descarga un diploma individual de forma inmediata en un solo paso.')).toBeInTheDocument();
+    expect(screen.getByText('Emite y descarga un reconocimiento individual de forma inmediata en un solo paso.')).toBeInTheDocument();
 
     // Wait for hierarchy to load
     await waitFor(() => {
@@ -126,7 +126,7 @@ describe('QuickRecognition Component', () => {
       expect(screen.getByRole('option', { name: 'Región Capital' })).toBeInTheDocument();
     });
 
-    const submitBtn = screen.getByRole('button', { name: /Emitir y Descargar Diploma/i });
+    const submitBtn = screen.getByRole('button', { name: /Emitir y Descargar Reconocimiento/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -232,7 +232,7 @@ describe('QuickRecognition Component', () => {
       user_id: 'user-quick-123'
     });
 
-    vi.mocked(recognitionsApi.downloadSingleCertificatePdf).mockResolvedValue('Diploma_V-11223344_Lote_501.pdf');
+    vi.mocked(recognitionsApi.downloadSingleCertificatePdf).mockResolvedValue('Reconocimiento_V-11223344_Lote_501.pdf');
 
     render(
       <MemoryRouter>
@@ -263,7 +263,7 @@ describe('QuickRecognition Component', () => {
     fireEvent.change(screen.getByLabelText('Comentario / Motivo (Opcional)'), { target: { value: 'Reconocimiento Especial' } });
 
     // Submit
-    const submitBtn = screen.getByRole('button', { name: /Emitir y Descargar Diploma/i });
+    const submitBtn = screen.getByRole('button', { name: /Emitir y Descargar Reconocimiento/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -354,7 +354,7 @@ describe('QuickRecognition Component', () => {
     fireEvent.change(screen.getByLabelText(/Nombres/i), { target: { value: 'Carlos' } });
     fireEvent.change(screen.getByLabelText(/Apellidos/i), { target: { value: 'Mendoza' } });
 
-    const submitBtn = screen.getByRole('button', { name: /Emitir y Descargar Diploma/i });
+    const submitBtn = screen.getByRole('button', { name: /Emitir y Descargar Reconocimiento/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -419,7 +419,7 @@ describe('QuickRecognition Component', () => {
       recognition_code: 'REC-123456'
     });
 
-    vi.mocked(recognitionsApi.downloadSingleCertificatePdf).mockResolvedValue('Diploma.pdf');
+    vi.mocked(recognitionsApi.downloadSingleCertificatePdf).mockResolvedValue('Reconocimiento.pdf');
 
     render(
       <MemoryRouter>
@@ -444,7 +444,7 @@ describe('QuickRecognition Component', () => {
       expect(screen.getByText(/✓ Miembro encontrado: Pedro Páramo/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar Diploma/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar Reconocimiento/i }));
 
     await waitFor(() => {
       expect(screen.getByText('¡Reconocimiento Emitido con Éxito!')).toBeInTheDocument();
@@ -494,7 +494,7 @@ describe('QuickRecognition Component', () => {
       recognition_code: 'REC-123456'
     });
 
-    vi.mocked(recognitionsApi.downloadSingleCertificatePdf).mockResolvedValue('Diploma.pdf');
+    vi.mocked(recognitionsApi.downloadSingleCertificatePdf).mockResolvedValue('Reconocimiento.pdf');
 
     render(
       <MemoryRouter>
@@ -518,7 +518,7 @@ describe('QuickRecognition Component', () => {
       expect(screen.getByText(/✓ Miembro encontrado: Ana Rojas/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar Diploma/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar Reconocimiento/i }));
 
     await waitFor(() => {
       expect(screen.getByText('¡Reconocimiento Emitido con Éxito!')).toBeInTheDocument();

@@ -23,7 +23,8 @@ const MONTH_LABELS_ES = [
  */
 export function calculateKpiMetrics(
   members: ScoutMember[],
-  batches: Batch[]
+  batches: Batch[],
+  recognitionTypes: RecognitionTypeInfo[] = []
 ): KpiMetrics {
   const totalMembers = members.length;
   const totalBatches = batches.length;
@@ -42,6 +43,8 @@ export function calculateKpiMetrics(
   const batchMap = new Map<number, Batch>();
   batches.forEach(b => batchMap.set(b.id, b));
 
+  const countsByRec = new Map<string, number>();
+
   members.forEach(m => {
     if (m.status === 'active') activeCount++;
     else if (m.status === 'exceptional') exceptionalCount++;
@@ -50,12 +53,15 @@ export function calculateKpiMetrics(
     if (m.member_type === 'young') youngCount++;
     else if (m.member_type === 'adult') adultCount++;
 
+    let recType = 'general';
     if (m.batch_id && batchMap.has(m.batch_id)) {
       const b = batchMap.get(m.batch_id)!;
       if (b.region_id) activeRegionIds.add(b.region_id);
       if (b.district_id) activeDistrictIds.add(b.district_id);
       if (b.group_id) activeGroupIds.add(b.group_id);
+      if (b.recognition_type) recType = b.recognition_type;
     }
+    countsByRec.set(recType, (countsByRec.get(recType) || 0) + 1);
   });
 
   // Also include batch IDs from batches list directly if not covered
@@ -64,6 +70,23 @@ export function calculateKpiMetrics(
     if (b.district_id) activeDistrictIds.add(b.district_id);
     if (b.group_id) activeGroupIds.add(b.group_id);
   });
+
+  let topRecId = '';
+  let topRecCount = 0;
+  countsByRec.forEach((count, recId) => {
+    if (count > topRecCount) {
+      topRecCount = count;
+      topRecId = recId;
+    }
+  });
+
+  let topRecognitionName = '-';
+  if (topRecId) {
+    const matchedType = recognitionTypes.find(
+      r => r.id === topRecId || r.name.toLowerCase() === topRecId.toLowerCase()
+    );
+    topRecognitionName = matchedType ? matchedType.name : getRecognitionName(topRecId);
+  }
 
   const totalDiplomas = activeCount + exceptionalCount;
   const youngPercentage = totalMembers > 0 ? Number(((youngCount / totalMembers) * 100).toFixed(1)) : 0;
@@ -84,6 +107,8 @@ export function calculateKpiMetrics(
     activeRegionsCount: activeRegionIds.size,
     activeDistrictsCount: activeDistrictIds.size,
     activeGroupsCount: activeGroupIds.size,
+    topRecognitionName,
+    topRecognitionCount: topRecCount,
     validationRate,
     exceptionalRate,
     pendingRate,
@@ -386,7 +411,7 @@ export function buildStatisticsDataset(
   recognitionTypes: RecognitionTypeInfo[] = []
 ): StatisticsDataset {
   return {
-    kpis: calculateKpiMetrics(members, batches),
+    kpis: calculateKpiMetrics(members, batches, recognitionTypes),
     monthlyTrends: calculateMonthlyTrends(members, batches),
     recognitionRankings: calculateRecognitionRankings(members, batches, recognitionTypes),
     demographics: calculateDemographics(members),

@@ -3,12 +3,11 @@ import { BarChart3, AlertCircle, RefreshCw } from 'lucide-react';
 import { useStatisticsData } from '../hooks/useStatisticsData';
 import { StatKpiGrid } from './StatKpiGrid';
 import { FilterBar } from './FilterBar';
-import { MonthlyTrendChart } from './charts/MonthlyTrendChart';
-import { RecognitionRankingChart } from './charts/RecognitionRankingChart';
-import { DemographicsDonut } from './charts/DemographicsDonut';
-import { GeographicBarChart } from './charts/GeographicBarChart';
-import { StatusBreakdownCard } from './charts/StatusBreakdownCard';
+import { RegionSummaryTable } from './charts/RegionSummaryTable';
+import { DistrictSummaryTable } from './charts/DistrictSummaryTable';
 import { UnitDistributionCard } from './charts/UnitDistributionCard';
+import { DemographicsDonut } from './charts/DemographicsDonut';
+import { MonthlyTrendChart } from './charts/MonthlyTrendChart';
 import { Button } from '../../../components/Button';
 
 export const StatisticsDashboard: React.FC = () => {
@@ -46,10 +45,10 @@ export const StatisticsDashboard: React.FC = () => {
           ))}
         </div>
 
-        {/* Charts Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 h-72 bg-gray-100 animate-pulse rounded-2xl border border-gray-200" />
-          <div className="lg:col-span-4 h-72 bg-gray-100 animate-pulse rounded-2xl border border-gray-200" />
+        {/* Tables Skeleton */}
+        <div className="space-y-6">
+          <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-gray-200" />
+          <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-gray-200" />
         </div>
       </div>
     );
@@ -83,7 +82,7 @@ export const StatisticsDashboard: React.FC = () => {
                 Estadísticas y Análisis
               </h1>
               <p className="text-xs sm:text-sm text-neutral/70 mt-0.5">
-                Métricas consolidadas, tendencias temporales y cobertura de diplomas emitidos.
+                Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
               </p>
             </div>
           </div>
@@ -106,34 +105,29 @@ export const StatisticsDashboard: React.FC = () => {
       {/* Top 5 KPI Metrics Grid */}
       <StatKpiGrid metrics={stats.kpis} />
 
-      {/* Main Charts Row 1: Monthly Trends (8 cols) & Demographics Donut (4 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8">
-          <MonthlyTrendChart data={stats.monthlyTrends} />
-        </div>
-        <div className="lg:col-span-4">
-          <DemographicsDonut data={stats.demographics} />
-        </div>
+      {/* Section 1: Tabla de reconocimientos entregados por Región */}
+      <div>
+        <RegionSummaryTable regions={stats.geographic.regions} />
       </div>
 
-      {/* Main Charts Row 2: Recognition Rankings (6 cols) & Geographic Distribution (6 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-6">
-          <RecognitionRankingChart data={stats.recognitionRankings} />
-        </div>
-        <div className="lg:col-span-6">
-          <GeographicBarChart data={stats.geographic} />
-        </div>
+      {/* Section 2: Tabla de reconocimientos entregados por Distrito */}
+      <div>
+        <DistrictSummaryTable districts={stats.geographic.districts} />
       </div>
 
-      {/* Row 3: Scout Unit Distribution Card (12 cols) */}
+      {/* Section 3: Tabla de reconocimientos entregados por Unidad */}
       <div>
         <UnitDistributionCard data={stats.unitDistribution} />
       </div>
 
-      {/* Bottom Row: Status and Data Quality Breakdown (12 cols) */}
+      {/* Section 4: Resumen de reconocimientos entregados a Jóvenes y Adultos */}
       <div>
-        <StatusBreakdownCard data={stats.statusBreakdown} />
+        <DemographicsDonut data={stats.demographics} />
+      </div>
+
+      {/* Section 5: Tabla de resumen mensual de los reconocimientos, con su gráfico debajo */}
+      <div>
+        <MonthlyTrendChart data={stats.monthlyTrends} />
       </div>
     </div>
   );

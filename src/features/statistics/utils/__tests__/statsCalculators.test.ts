@@ -100,12 +100,14 @@ describe('statsCalculators', () => {
 
   describe('calculateKpiMetrics', () => {
     it('calculates accurate KPI metrics from dataset', () => {
-      const kpis = calculateKpiMetrics(mockMembers, mockBatches);
+      const kpis = calculateKpiMetrics(mockMembers, mockBatches, mockRecTypes);
 
       expect(kpis.totalMembers).toBe(4);
       expect(kpis.totalBatches).toBe(3);
       expect(kpis.totalDiplomas).toBe(3); // 2 active + 1 exceptional
       expect(kpis.avgMembersPerBatch).toBe(1.3); // 4 / 3 = 1.333 -> 1.3
+      expect(kpis.topRecognitionName).toBe('Insignia de Madera');
+      expect(kpis.topRecognitionCount).toBe(3);
       expect(kpis.youngCount).toBe(3);
       expect(kpis.adultCount).toBe(1);
       expect(kpis.youngPercentage).toBe(75);

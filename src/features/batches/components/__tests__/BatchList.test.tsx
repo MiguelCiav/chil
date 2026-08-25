@@ -170,7 +170,7 @@ describe('BatchList component', () => {
 
     // Verify actions inside dropdown
     expect(screen.getByRole('button', { name: /Ver detalle/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Descargar diplomas \(PDF\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Descargar reconocimientos \(PDF\)/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Eliminar lote/i })).toBeInTheDocument();
   });
 
@@ -254,7 +254,7 @@ describe('BatchList component', () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Diplomas_Lote_101_go_solar.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Reconocimientos_Lote_101_go_solar.pdf');
 
     render(
       <MemoryRouter>
@@ -274,7 +274,7 @@ describe('BatchList component', () => {
 
     // 2. Test Download PDF from dropdown
     fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
-    const downloadBtn = screen.getByRole('button', { name: /^Descargar diplomas \(PDF\)$/i });
+    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(PDF\)$/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
@@ -284,7 +284,7 @@ describe('BatchList component', () => {
           members: expect.any(Array)
         })
       );
-      expect(screen.getByText(/Diplomas descargados: Diplomas_Lote_101_go_solar\.pdf/i)).toBeInTheDocument();
+      expect(screen.getByText(/Reconocimientos descargados: Reconocimientos_Lote_101_go_solar\.pdf/i)).toBeInTheDocument();
     });
   });
 
@@ -527,11 +527,11 @@ describe('BatchList component', () => {
 
     // Test download PDF error via 3-dots dropdown
     fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
-    const downloadBtn = screen.getByRole('button', { name: /^Descargar diplomas \(PDF\)$/i });
+    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(PDF\)$/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Error al generar los diplomas en PDF.');
+      expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en PDF.');
     });
 
     // Test delete error via 3-dots dropdown

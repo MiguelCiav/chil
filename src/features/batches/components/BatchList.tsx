@@ -330,12 +330,12 @@ export const BatchList: React.FC = () => {
         recognition: recType,
         hierarchy: { regions, districts, groups }
       });
-      setToastMessage(`Diplomas descargados: ${fileName}`);
+      setToastMessage(`Reconocimientos descargados: ${fileName}`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error("Error downloading PDF:", err);
-      alert("Error al generar los diplomas en PDF.");
+      alert("Error al generar los reconocimientos en PDF.");
     } finally {
       setDownloadingId(null);
     }
@@ -532,7 +532,7 @@ export const BatchList: React.FC = () => {
                   className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5 text-primary" />
-                  {downloadingId === rowData.id ? 'Descargando...' : 'Descargar diplomas (PDF)'}
+                  {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (PDF)'}
                 </button>
                 <div className="border-t border-gray-100 my-1" />
                 <button

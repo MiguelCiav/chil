@@ -1,0 +1,103 @@
+import React, { useState } from 'react';
+import { MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { GeographicItem } from '../../types';
+
+interface RegionSummaryTableProps {
+  regions: GeographicItem[];
+}
+
+export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions }) => {
+  const [showAll, setShowAll] = useState(false);
+  const displayed = showAll ? regions : regions.slice(0, 5);
+  const maxCount = regions.length > 0 ? Math.max(...regions.map(r => r.count), 1) : 1;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl">
+            <MapPin className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-neutral text-base tracking-tight">
+              Reconocimientos entregados por Región
+            </h3>
+            <p className="text-xs text-neutral/60">
+              Distribución territorial consolidada por región scout
+            </p>
+          </div>
+        </div>
+        <span className="text-xs font-semibold text-neutral/50 bg-gray-100 px-2.5 py-1 rounded-full">
+          {regions.length} {regions.length === 1 ? 'región' : 'regiones'}
+        </span>
+      </div>
+
+      {/* Table */}
+      {regions.length === 0 ? (
+        <div className="py-8 text-center text-neutral/50 text-xs">
+          No hay registros disponibles por región para los filtros seleccionados.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse font-sans text-xs">
+            <thead>
+              <tr className="border-b border-gray-200 bg-[#faf8f5]">
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Región</th>
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {displayed.map((r, idx) => (
+                <tr key={r.id || r.name} className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-4 py-2.5 font-semibold text-neutral flex items-center gap-2">
+                    <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
+                    <span>{r.name}</span>
+                  </td>
+                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                    {r.count}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                    <div className="flex items-center justify-end gap-2">
+                      <span>{r.percentage}%</span>
+                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                        <div
+                          className="bg-emerald-600 h-full rounded-full"
+                          style={{ width: `${(r.count / maxCount) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Show more toggle */}
+      {regions.length > 5 && (
+        <div className="pt-2 border-t border-gray-100 text-center">
+          <button
+            type="button"
+            onClick={() => setShowAll(!showAll)}
+            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 transition-colors"
+          >
+            {showAll ? (
+              <>
+                <ChevronUp className="w-3.5 h-3.5" />
+                Mostrar menos
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-3.5 h-3.5" />
+                Ver todas ({regions.length})
+              </>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};

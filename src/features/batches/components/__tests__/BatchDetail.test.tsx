@@ -116,7 +116,7 @@ describe('BatchDetail component', () => {
     vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_101.pdf');
 
     vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce(
-      'Diplomas_Lote_101_servicio_prolongado.pdf'
+      'Reconocimientos_Lote_101_servicio_prolongado.pdf'
     );
 
     render(
@@ -156,7 +156,7 @@ describe('BatchDetail component', () => {
     });
 
     // Trigger batch PDF download
-    const downloadBtn = screen.getByRole('button', { name: /Descargar todos \(PDF\)/i });
+    const downloadBtn = screen.getByRole('button', { name: /Descargar (todos|reconocimientos) \(PDF\)/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
@@ -167,12 +167,12 @@ describe('BatchDetail component', () => {
         })
       );
       expect(
-        screen.getByText(/¡Diplomas descargados exitosamente en Diplomas_Lote_101_servicio_prolongado\.pdf!/i)
+        screen.getByText(/¡Reconocimientos descargados exitosamente en Reconocimientos_Lote_101_servicio_prolongado\.pdf!/i)
       ).toBeInTheDocument();
     });
   });
 
-  it('downloads single member diploma when clicking option in member dropdown menu', async () => {
+  it('downloads single member recognition when clicking option in member dropdown menu', async () => {
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 101,
       comment: 'Lote Conmemorativo',
@@ -203,7 +203,7 @@ describe('BatchDetail component', () => {
     });
 
     vi.mocked(recognitions.downloadSingleCertificatePdf).mockResolvedValueOnce(
-      'Diploma_V-11111111_Lote_101_insignia_de_madera.pdf'
+      'Reconocimiento_V-11111111_Lote_101_insignia_de_madera.pdf'
     );
 
     render(
@@ -222,8 +222,8 @@ describe('BatchDetail component', () => {
     const menuBtn = screen.getByLabelText(/Opciones de Ana Perez/i);
     fireEvent.click(menuBtn);
 
-    // Click Descargar Diploma (PDF)
-    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar Diploma \(PDF\)/i });
+    // Click Descargar Reconocimiento (PDF)
+    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar Reconocimiento \(PDF\)/i });
     fireEvent.click(downloadDiplomaBtn);
 
     await waitFor(() => {
@@ -233,7 +233,7 @@ describe('BatchDetail component', () => {
           batch: expect.objectContaining({ id: 101 })
         })
       );
-      expect(screen.getByText(/¡Diploma descargado: Diploma_V-11111111_Lote_101_insignia_de_madera\.pdf!/i)).toBeInTheDocument();
+      expect(screen.getByText(/¡Reconocimiento descargado: Reconocimiento_V-11111111_Lote_101_insignia_de_madera\.pdf!/i)).toBeInTheDocument();
     });
   });
   it('opens delete confirmation modal, confirms deletion, calls deleteBatch API and navigates back to /lotes', async () => {
@@ -639,12 +639,12 @@ describe('BatchDetail component', () => {
       expect(screen.getByText('Ana Perez')).toBeInTheDocument();
     });
 
-    // Trigger Single diploma error
+    // Trigger Single recognition error
     fireEvent.click(screen.getByLabelText(/Opciones de Ana Perez/i));
-    fireEvent.click(screen.getByRole('button', { name: /Descargar Diploma \(PDF\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Descargar Reconocimiento \(PDF\)/i }));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Error al descargar el diploma.');
+      expect(alertSpy).toHaveBeenCalledWith('Error al descargar el reconocimiento.');
     });
 
     // Trigger member list PDF export error
@@ -1002,10 +1002,10 @@ describe('BatchDetail component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Editar Datos de Miembro')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i)).toBeInTheDocument();
     });
 
-    const toggle = screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i);
+    const toggle = screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i);
     expect(toggle).not.toBeChecked();
 
     // Toggle ON
@@ -1030,7 +1030,7 @@ describe('BatchDetail component', () => {
     });
   });
 
-  it('enables single diploma download for exceptional members in actions dropdown', async () => {
+  it('enables single recognition download for exceptional members in actions dropdown', async () => {
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 101,
       comment: '',
@@ -1060,7 +1060,7 @@ describe('BatchDetail component', () => {
     });
 
     vi.mocked(recognitions.downloadSingleCertificatePdf).mockResolvedValueOnce(
-      'Diploma_V-55555555_Lote_101_insignia_de_madera.pdf'
+      'Reconocimiento_V-55555555_Lote_101_insignia_de_madera.pdf'
     );
 
     render(
@@ -1078,8 +1078,8 @@ describe('BatchDetail component', () => {
     // Open row menu
     fireEvent.click(screen.getByLabelText(/Opciones de Rosa Morales/i));
 
-    // Descargar Diploma (PDF) should be present and clickable for exceptional member
-    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar Diploma \(PDF\)/i });
+    // Descargar Reconocimiento (PDF) should be present and clickable for exceptional member
+    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar Reconocimiento \(PDF\)/i });
     expect(downloadDiplomaBtn).toBeInTheDocument();
     fireEvent.click(downloadDiplomaBtn);
 
@@ -1308,7 +1308,7 @@ describe('BatchDetail component', () => {
 
     // Exceptional toggle is now visible because status is pending
     await waitFor(() => {
-      expect(screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i)).toBeInTheDocument();
     });
 
     vi.mocked(api.updateMember).mockResolvedValueOnce({

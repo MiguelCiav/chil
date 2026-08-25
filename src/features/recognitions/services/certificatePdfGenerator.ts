@@ -327,7 +327,7 @@ export async function downloadSingleCertificatePdf(
 
   const sanitizedIdentity = params.member.identity.replace(/[^a-zA-Z0-9_-]+/g, '_');
   const slug = slugify(params.recognition?.name || params.batch.recognition_type || 'Reconocimiento');
-  const fileName = `Diploma_${sanitizedIdentity}_Lote_${params.batch.id}_${slug}.pdf`;
+  const fileName = `Reconocimiento_${sanitizedIdentity}_Lote_${params.batch.id}_${slug}.pdf`;
 
   doc.save(fileName);
   return fileName;
@@ -343,7 +343,7 @@ export async function generateBatchCertificatesPdf(
 
   const eligibleMembers = members.filter(m => m.status === 'active' || m.status === 'exceptional');
   if (eligibleMembers.length === 0) {
-    throw new Error('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas');
+    throw new Error('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos');
   }
 
   const resolvedHierarchy = hierarchy || (await getHierarchyData());
@@ -377,7 +377,7 @@ export async function generateBatchCertificatesPdf(
   });
 
   const slug = slugify(resolvedRecognition?.name || batch.recognition_type || 'Reconocimientos');
-  const fileName = `Diplomas_Lote_${batch.id}_${slug}.pdf`;
+  const fileName = `Reconocimientos_Lote_${batch.id}_${slug}.pdf`;
 
   doc.save(fileName);
   return fileName;

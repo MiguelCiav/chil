@@ -271,7 +271,7 @@ export const QuickRecognition: React.FC = () => {
         recognitionName: resolvedRec.name
       });
 
-      triggerToast('¡Diploma generado y descargado exitosamente!', 'success');
+      triggerToast('¡Reconocimiento emitido y descargado exitosamente!', 'success');
     } catch (err) {
       console.error('Error in quick recognition emission:', err);
       triggerToast('Ocurrió un error al emitir el reconocimiento.', 'error');
@@ -327,7 +327,7 @@ export const QuickRecognition: React.FC = () => {
               ¡Reconocimiento Emitido con Éxito!
             </h2>
             <p className="text-neutral/60 text-sm mt-2 max-w-md mx-auto">
-              El diploma individual ha sido generado y descargado automáticamente en su dispositivo.
+              El reconocimiento individual ha sido generado y descargado automáticamente en su dispositivo.
             </p>
           </div>
 
@@ -413,7 +413,7 @@ export const QuickRecognition: React.FC = () => {
                 Emisión Rápida de Reconocimiento
               </h1>
               <p className="text-sm text-neutral/60 mt-0.5">
-                Emite y descarga un diploma individual de forma inmediata en un solo paso.
+                Emite y descarga un reconocimiento individual de forma inmediata en un solo paso.
               </p>
             </div>
           </div>
@@ -758,7 +758,7 @@ export const QuickRecognition: React.FC = () => {
                       <p className="text-xs text-red-600 font-medium mt-1">{errors.recognitionCode}</p>
                     )}
                     <p className="text-xs text-neutral/40 mt-1">
-                      Código único auto-generado para verificación y diploma. Puede editarse manualmente si es necesario.
+                      Código único auto-generado para verificación y reconocimiento. Puede editarse manualmente si es necesario.
                     </p>
                   </div>
                 </div>
@@ -775,7 +775,7 @@ export const QuickRecognition: React.FC = () => {
                 icon={<Zap className="w-5 h-5 fill-current" />}
                 className="w-full sm:w-auto shadow-md"
               >
-                {isSubmitting ? 'Emitiendo y Generando Diploma...' : 'Emitir y Descargar Diploma'}
+                {isSubmitting ? 'Emitiendo y Generando Reconocimiento...' : 'Emitir y Descargar Reconocimiento'}
               </Button>
             </div>
           </form>

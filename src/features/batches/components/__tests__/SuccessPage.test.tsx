@@ -69,7 +69,7 @@ describe('SuccessPage component', () => {
       }
     ]);
 
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Diplomas_Lote_555_go_solar.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Reconocimientos_Lote_555_go_solar.pdf');
 
     render(
       <MemoryRouter initialEntries={[{ pathname: '/lotes/exito', state: { batchId: 555, name: 'Lote San Luis' } }]}>
@@ -108,7 +108,7 @@ describe('SuccessPage component', () => {
           members: expect.any(Array)
         })
       );
-      expect(screen.getByText(/¡Diplomas descargados exitosamente en Diplomas_Lote_555_go_solar\.pdf!/i)).toBeInTheDocument();
+      expect(screen.getByText(/¡Reconocimientos descargados exitosamente en Reconocimientos_Lote_555_go_solar\.pdf!/i)).toBeInTheDocument();
     });
   });
 
@@ -152,7 +152,7 @@ describe('SuccessPage component', () => {
     fireEvent.click(screen.getByText(/Descargar PDF del Reporte/i));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Error al generar los diplomas en PDF.');
+      expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en PDF.');
     });
 
     alertSpy.mockRestore();

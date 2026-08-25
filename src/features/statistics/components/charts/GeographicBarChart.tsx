@@ -28,7 +28,7 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
                 Distribución Geográfica
               </h3>
               <p className="text-xs text-neutral/60">
-                Diplomas por región y distrito scout
+                Reconocimientos por región y distrito scout
               </p>
             </div>
           </div>

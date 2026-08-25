@@ -298,7 +298,7 @@ describe('Step3Review component', () => {
     fireEvent.click(screen.getByLabelText(/Editar información de Daniel Suarez/i));
 
     expect(screen.getByText('Editar Información de Miembro')).toBeInTheDocument();
-    const toggle = screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i);
+    const toggle = screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i);
     expect(toggle).not.toBeChecked();
 
     fireEvent.click(toggle);
@@ -422,7 +422,7 @@ describe('Step3Review component', () => {
 
     // Status becomes pending, rendering the exceptional toggle
     await waitFor(() => {
-      expect(screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByText('Guardar Cambios'));

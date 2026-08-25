@@ -26,7 +26,7 @@ export const RecognitionRankingChart: React.FC<RecognitionRankingChartProps> = (
                 Ranking de Reconocimientos
               </h3>
               <p className="text-xs text-neutral/60">
-                Tipos de diplomas más emitidos
+                Tipos de reconocimientos más emitidos
               </p>
             </div>
           </div>

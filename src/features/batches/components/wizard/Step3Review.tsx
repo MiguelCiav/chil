@@ -163,7 +163,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <h3 className="text-sm font-bold text-neutral">Códigos de Reconocimiento</h3>
-                <p className="text-xs text-neutral/50">Seleccione la estrategia de asignación de códigos para los diplomas.</p>
+                <p className="text-xs text-neutral/50">Seleccione la estrategia de asignación de códigos para los reconocimientos.</p>
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -479,11 +479,11 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                         }}
                         className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
                       />
-                      <span>Autorizar emisión de diploma (Caso Excepcional)</span>
+                      <span>Autorizar emisión de reconocimiento (Caso Excepcional)</span>
                     </label>
                   </div>
                   <p className="text-xs text-purple-700">
-                    Permite emitir el diploma oficial para este miembro aunque no figure en el registro nacional validado.
+                    Permite emitir el reconocimiento oficial para este miembro aunque no figure en el registro nacional validado.
                   </p>
                   {editingMember.status === 'exceptional' && (
                     <div className="space-y-1.5 pt-1">

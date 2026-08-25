@@ -22,9 +22,11 @@ export interface KpiMetrics {
   activeRegionsCount: number;
   activeDistrictsCount: number;
   activeGroupsCount: number;
-  validationRate: number;
-  exceptionalRate: number;
-  pendingRate: number;
+  topRecognitionName?: string;
+  topRecognitionCount?: number;
+  validationRate?: number;
+  exceptionalRate?: number;
+  pendingRate?: number;
   activeCount: number;
   exceptionalCount: number;
   pendingCount: number;
