@@ -12,8 +12,8 @@ export interface SummaryRowData {
   fullName: string;
   memberType: 'young' | 'adult';
   memberTypeLabel: 'Joven' | 'Adulto';
-  status: 'active' | 'pending';
-  statusLabel: 'Registro Válido' | 'Registro Inválido';
+  status: 'active' | 'pending' | 'exceptional';
+  statusLabel: 'Registro Válido' | 'Registro Inválido' | 'Emisión Excepcional';
   recognitionCode: string;
   regionName: string;
   districtName: string;
@@ -27,7 +27,7 @@ export interface SummaryFilterState {
   districtId: string;
   groupId: string;
   memberType: 'all' | 'young' | 'adult';
-  status: 'all' | 'active' | 'pending';
+  status: 'all' | 'active' | 'pending' | 'exceptional';
   datePeriod: 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';
   startDate: string;
   endDate: string;

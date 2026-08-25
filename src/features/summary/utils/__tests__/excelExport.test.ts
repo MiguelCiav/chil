@@ -59,8 +59,8 @@ describe('excelExport utility', () => {
   beforeEach(() => {
     createObjectURLMock = vi.fn(() => 'blob:mock-url');
     revokeObjectURLMock = vi.fn();
-    global.URL.createObjectURL = createObjectURLMock;
-    global.URL.revokeObjectURL = revokeObjectURLMock;
+    global.URL.createObjectURL = createObjectURLMock as unknown as typeof URL.createObjectURL;
+    global.URL.revokeObjectURL = revokeObjectURLMock as unknown as typeof URL.revokeObjectURL;
   });
 
   afterEach(() => {
@@ -221,5 +221,35 @@ describe('excelExport utility', () => {
 
     exportToExcel(sampleData, 'Reporte_Personalizado.xlsx');
     expect(capturedFilename).toBe('Reporte_Personalizado.xlsx');
+  });
+
+  it('correctly exports row with exceptional recognition status label', () => {
+    const exceptionalRow: SummaryRowData = {
+      id: 'V-99887766-103',
+      issueDate: '22 ago. 2026',
+      rawDate: '2026-08-22T12:00:00.000Z',
+      batchId: 103,
+      batchCode: 'LT-2026-103',
+      recognitionId: 'sct-earth-tribe',
+      recognitionName: 'Tribu de la Tierra',
+      identity: 'V-99887766',
+      firstName: 'Lucia',
+      lastName: 'Mendez',
+      fullName: 'Lucia Mendez',
+      memberType: 'young',
+      memberTypeLabel: 'Joven',
+      status: 'exceptional',
+      statusLabel: 'Emisión Excepcional',
+      recognitionCode: 'TT-001',
+      regionName: 'Región Capital',
+      districtName: 'Distrito Sucre',
+      groupName: 'Grupo San Luis'
+    };
+
+    const formatted = formatSummaryRowForExport(exceptionalRow);
+    expect(formatted[7]).toBe('Emisión Excepcional');
+
+    const csv = generateSummaryCsv([exceptionalRow]);
+    expect(csv).toContain('"Emisión Excepcional"');
   });
 });

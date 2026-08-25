@@ -229,5 +229,92 @@ describe('Step3Review component', () => {
     fireEvent.click(backBtn);
     expect(defaultProps.onBack).toHaveBeenCalled();
   });
+
+  it('displays exceptional members in valid tab with Excepcional badge and code editing', () => {
+    const membersWithExceptional: ScoutMember[] = [
+      {
+        identity: 'V-33333333',
+        first_names: 'Luis',
+        last_names: 'Exceptional',
+        birth_date: '2004-03-01',
+        member_type: 'young',
+        status: 'exceptional',
+        batch_id: 123,
+        recognition_code: 'REC-EXC-33'
+      }
+    ];
+
+    render(
+      <Step3Review
+        {...defaultProps}
+        savedMembers={membersWithExceptional}
+      />
+    );
+
+    // Active tab includes exceptional members
+    expect(screen.getByText('Luis Exceptional')).toBeInTheDocument();
+    expect(screen.getByText('Excepcional')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Código de reconocimiento de Luis Exceptional/i)).toHaveValue('REC-EXC-33');
+  });
+
+  it('allows authorizing exceptional recognition for pending member in Step3Review modal', async () => {
+    const pendingMember: ScoutMember = {
+      identity: 'V-44444444',
+      first_names: 'Daniel',
+      last_names: 'Suarez',
+      birth_date: '1995-10-10',
+      member_type: 'adult',
+      status: 'pending',
+      batch_id: 123
+    };
+
+    vi.mocked(api.updateMember).mockResolvedValueOnce({
+      ...pendingMember,
+      status: 'exceptional',
+      recognition_code: 'REC-4444'
+    });
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        ...pendingMember,
+        status: 'exceptional',
+        recognition_code: 'REC-4444'
+      }
+    ]);
+
+    render(
+      <Step3Review
+        {...defaultProps}
+        savedMembers={[pendingMember]}
+      />
+    );
+
+    // Switch to Pending tab
+    fireEvent.click(screen.getByText('Registros Pendientes'));
+
+    expect(screen.getByText('Daniel Suarez')).toBeInTheDocument();
+    expect(screen.getByText('Pendiente')).toBeInTheDocument();
+
+    // Click edit
+    fireEvent.click(screen.getByLabelText(/Editar información de Daniel Suarez/i));
+
+    expect(screen.getByText('Editar Información de Miembro')).toBeInTheDocument();
+    const toggle = screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i);
+    expect(toggle).not.toBeChecked();
+
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-44444444',
+          status: 'exceptional',
+          recognition_code: expect.stringMatching(/^REC-/)
+        })
+      );
+    });
+  });
 });
 

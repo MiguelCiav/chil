@@ -62,8 +62,22 @@ describe('codeGenerator utility', () => {
       }
     ];
 
-    it('auto mode assigns unique codes to active members and empty to pending members', () => {
-      const result = assignBatchRecognitionCodes(mockMembers, 'auto');
+    it('auto mode assigns unique codes to active and exceptional members and empty to pending members', () => {
+      const mixedMembers: ScoutMember[] = [
+        mockMembers[0], // active
+        {
+          identity: 'V-44444444',
+          first_names: 'Elena',
+          last_names: 'Excepcional',
+          birth_date: '2003-01-01',
+          member_type: 'young',
+          status: 'exceptional',
+          batch_id: 101
+        },
+        mockMembers[2] // pending
+      ];
+
+      const result = assignBatchRecognitionCodes(mixedMembers, 'auto');
       expect(result).toHaveLength(3);
 
       expect(result[0].recognition_code).toMatch(/^REC-[A-Z2-9]{6}$/);

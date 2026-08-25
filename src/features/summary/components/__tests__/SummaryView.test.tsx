@@ -78,6 +78,16 @@ describe('SummaryView component', () => {
       recognition_code: 'SOL-002'
     },
     {
+      identity: 'V-1003',
+      status: 'exceptional',
+      batch_id: 101,
+      first_names: 'Diana',
+      last_names: 'Excepcional',
+      birth_date: '2007-06-15',
+      member_type: 'young',
+      recognition_code: 'SOL-003'
+    },
+    {
       identity: 'V-2001',
       status: 'active',
       batch_id: 102,
@@ -160,16 +170,21 @@ describe('SummaryView component', () => {
     expect(screen.getByText('Beatriz')).toBeInTheDocument();
     expect(screen.getByText('López Díaz')).toBeInTheDocument();
 
+    expect(screen.getByText('V-1003')).toBeInTheDocument();
+    expect(screen.getByText('Diana')).toBeInTheDocument();
+    expect(screen.getByText('Excepcional')).toBeInTheDocument();
+
     expect(screen.getByText('V-2001')).toBeInTheDocument();
     expect(screen.getByText('Carlos')).toBeInTheDocument();
     expect(screen.getByText('Rodríguez')).toBeInTheDocument();
 
     // Verify status badges
     expect(screen.getAllByText(/● Registro Válido/i).length).toBe(2);
+    expect(screen.getByText(/● Emisión Excepcional/i)).toBeInTheDocument();
     expect(screen.getByText(/● Registro Inválido/i)).toBeInTheDocument();
 
     // Verify summary counter
-    expect(screen.getByText(/Mostrando 3 de 3 registros totales/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mostrando 4 de 4 registros totales/i)).toBeInTheDocument();
   });
 
   it('filters data instantaneously using the global search bar across name, cédula, and recognition code', async () => {
@@ -312,7 +327,7 @@ describe('SummaryView component', () => {
     expect(screen.queryByText('V-2001')).not.toBeInTheDocument();
   });
 
-  it('filters by status (active / pending)', async () => {
+  it('filters by status (active / exceptional / pending)', async () => {
     render(
       <MemoryRouter>
         <SummaryView />
@@ -332,6 +347,16 @@ describe('SummaryView component', () => {
     expect(screen.getByText('V-1001')).toBeInTheDocument();
     expect(screen.getByText('V-2001')).toBeInTheDocument();
     expect(screen.queryByText('V-1002')).not.toBeInTheDocument();
+    expect(screen.queryByText('V-1003')).not.toBeInTheDocument();
+
+    // Select Emisión Excepcional (exceptional)
+    act(() => {
+      fireEvent.change(statusSelect, { target: { value: 'exceptional' } });
+    });
+    expect(screen.getByText('V-1003')).toBeInTheDocument();
+    expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
+    expect(screen.queryByText('V-1002')).not.toBeInTheDocument();
+    expect(screen.queryByText('V-2001')).not.toBeInTheDocument();
 
     // Select Registro Inválido (pending)
     act(() => {
@@ -339,6 +364,7 @@ describe('SummaryView component', () => {
     });
     expect(screen.getByText('V-1002')).toBeInTheDocument();
     expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
+    expect(screen.queryByText('V-1003')).not.toBeInTheDocument();
     expect(screen.queryByText('V-2001')).not.toBeInTheDocument();
   });
 

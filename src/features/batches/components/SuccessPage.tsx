@@ -196,13 +196,24 @@ export const SuccessPage: React.FC = () => {
       accessorKey: 'status',
       header: 'ESTATUS',
       cell: (info) => {
-        const val = info.getValue() as 'active' | 'pending';
-        return val === 'active' ? (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
-            Registro Válido
-          </span>
-        ) : (
+        const val = info.getValue() as 'active' | 'pending' | 'exceptional';
+        if (val === 'active') {
+          return (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
+              Registro Válido
+            </span>
+          );
+        }
+        if (val === 'exceptional') {
+          return (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
+              Emisión Excepcional
+            </span>
+          );
+        }
+        return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
             Registro Inválido
@@ -215,7 +226,7 @@ export const SuccessPage: React.FC = () => {
       header: 'CÓDIGO REC.',
       cell: (info) => {
         const rowData = info.row.original;
-        const code = rowData.recognition_code || (rowData.status === 'active' ? '-' : '-');
+        const code = rowData.recognition_code || ((rowData.status === 'active' || rowData.status === 'exceptional') ? '-' : '-');
         return (
           <span className="font-mono text-xs sm:text-sm font-semibold text-primary">
             {code || '-'}
@@ -242,6 +253,8 @@ export const SuccessPage: React.FC = () => {
       }
     }
   ];
+
+  const eligibleCount = members.filter(m => m.status === 'active' || m.status === 'exceptional').length;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 font-sans relative">
@@ -271,8 +284,8 @@ export const SuccessPage: React.FC = () => {
           <Button
             variant="primary"
             onClick={handleDownloadPDF}
-            disabled={downloading || members.filter(m => m.status === 'active').length === 0}
-            title={members.filter(m => m.status === 'active').length === 0 ? "No hay miembros activos en este lote para generar un reporte" : undefined}
+            disabled={downloading || eligibleCount === 0}
+            title={eligibleCount === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas" : undefined}
             icon={<Download size={18} />}
           >
             {downloading ? 'Generando PDF...' : 'Descargar PDF del Reporte'}
