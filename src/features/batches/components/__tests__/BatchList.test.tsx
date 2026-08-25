@@ -96,7 +96,7 @@ describe('BatchList component', () => {
     vi.mocked(recognitions.getAllRecognitionTypes).mockResolvedValue(mockRecTypes);
   });
 
-  it('renders KPI cards and table with batches data, and verifies storage path is not rendered', async () => {
+  it('renders table with batches data, and verifies storage path is not rendered', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -108,12 +108,8 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Total Generado')).toBeInTheDocument();
+      expect(screen.getByText('FECHA DE EMISIÓN')).toBeInTheDocument();
     });
-
-    // Check KPI metrics
-    expect(screen.getByText('Reconocimiento más común')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument(); // 3 active certificates
 
     // Verify storage path banner is no longer rendered
     expect(screen.queryByText('RUTA DE GUARDADO LOCAL')).not.toBeInTheDocument();
