@@ -24,6 +24,12 @@ import {
 
 import { Button } from '../../../components/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
+import {
+  useWalkthrough,
+  WalkthroughOverlay,
+  WalkthroughHelpButton,
+  WalkthroughStep
+} from '../../../components/walkthrough';
 
 import {
   getAllBatches,
@@ -64,6 +70,37 @@ interface BatchRowData {
   recognitionType: string;
   memberCount: number;
 }
+
+const BATCH_LIST_TOUR_STEPS: WalkthroughStep[] = [
+  {
+    id: 'batch-list-header',
+    targetSelector: '[data-walkthrough="batch-list-header"]',
+    title: 'Bienvenido al Listado de Lotes',
+    content: 'Aquí puedes consultar todos los lotes de reconocimientos emitidos y su estado.',
+    placement: 'bottom'
+  },
+  {
+    id: 'batch-list-actions',
+    targetSelector: '[data-walkthrough="batch-list-actions"]',
+    title: 'Crear Nuevos Lotes',
+    content: "Usa '+ Nuevo Lote' para procesar listas masivas con el asistente de 3 pasos, o '⚡ Emisión Rápida' para galardonar a una persona individual al instante.",
+    placement: 'bottom'
+  },
+  {
+    id: 'batch-list-filters',
+    targetSelector: '[data-walkthrough="batch-list-filters"]',
+    title: 'Búsqueda y Filtros Avanzados',
+    content: 'Filtra tus lotes por fecha, rango de días, región geográfica o tipo de reconocimiento.',
+    placement: 'bottom'
+  },
+  {
+    id: 'batch-list-table',
+    targetSelector: '[data-walkthrough="batch-list-table"]',
+    title: 'Gestión de Lotes',
+    content: 'Haz clic en cualquier lote para ver sus miembros, descargar los reconocimientos oficiales en PDF o administrar los registros.',
+    placement: 'top'
+  }
+];
 
 function formatBatchDate(dateStr: string): string {
   const dateObj = new Date(dateStr);
@@ -240,6 +277,22 @@ function renderBatchTableRows(
 export const BatchList: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const {
+    isOpen: isTourOpen,
+    currentStep,
+    currentStepIndex,
+    totalSteps,
+    targetRect,
+    startTour,
+    nextStep,
+    prevStep,
+    skipTour
+  } = useWalkthrough({
+    tourId: 'batch-list-tour',
+    steps: BATCH_LIST_TOUR_STEPS,
+    userId: user?.uid
+  });
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [members, setMembers] = useState<ScoutMember[]>([]);
@@ -578,16 +631,19 @@ export const BatchList: React.FC = () => {
 
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
-            Listado de Lotes
-          </h1>
+        <div data-walkthrough="batch-list-header">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
+              Listado de Lotes
+            </h1>
+            <WalkthroughHelpButton onClick={() => startTour()} />
+          </div>
           <p className="text-sm text-neutral/60 mt-1">
             Gestione y descargue los lotes de reconocimientos emitidos.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div data-walkthrough="batch-list-actions" className="flex items-center gap-3">
           <Button
             type="button"
             variant="outline"
@@ -610,7 +666,7 @@ export const BatchList: React.FC = () => {
       </div>
 
       {/* Filtros Activos Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+      <div data-walkthrough="batch-list-filters" className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-bold text-neutral mr-2">Filtros activos</span>
           {activeFilters.map(chip => (
@@ -654,7 +710,7 @@ export const BatchList: React.FC = () => {
       </div>
 
       {/* Batches Data Table */}
-      <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <div data-walkthrough="batch-list-table" className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto min-h-[260px] pb-12">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
@@ -944,6 +1000,19 @@ export const BatchList: React.FC = () => {
           </ModalFooter>
         </form>
       </Modal>
+
+      {/* Walkthrough Interactive Guide Overlay */}
+      <WalkthroughOverlay
+        isOpen={isTourOpen}
+        currentStep={currentStep}
+        currentStepIndex={currentStepIndex}
+        totalSteps={totalSteps}
+        targetRect={targetRect}
+        onNext={nextStep}
+        onPrev={prevStep}
+        onSkip={skipTour}
+        onClose={skipTour}
+      />
     </div>
   );
 };

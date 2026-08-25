@@ -104,6 +104,8 @@ describe('BatchList component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('chil_tour_batch-list-tour_test-user-id', 'true');
     vi.mocked(recognitions.getAllRecognitionTypes).mockResolvedValue(mockRecTypes);
   });
 
@@ -591,6 +593,93 @@ describe('BatchList component', () => {
 
     fireEvent.click(nuevoBtn);
     expect(mockNavigate).toHaveBeenCalledWith('/lotes/nuevo');
+  });
+
+  it('renders interactive walkthrough attributes and WalkthroughHelpButton', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    const { container } = render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Listado de Lotes')).toBeInTheDocument();
+    });
+
+    // Check data-walkthrough attributes on DOM elements
+    expect(container.querySelector('[data-walkthrough="batch-list-header"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-walkthrough="batch-list-actions"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-walkthrough="batch-list-filters"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-walkthrough="batch-list-table"]')).toBeInTheDocument();
+
+    // Check WalkthroughHelpButton is rendered
+    const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+    expect(helpBtn).toBeInTheDocument();
+  });
+
+  it('starts and steps through the 4-step walkthrough tour upon clicking the help button', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Listado de Lotes')).toBeInTheDocument();
+    });
+
+    const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+    fireEvent.click(helpBtn);
+
+    // Step 1: Bienvenido al Listado de Lotes
+    await waitFor(() => {
+      expect(screen.getByText('Bienvenido al Listado de Lotes')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
+    expect(screen.getByText('Aquí puedes consultar todos los lotes de reconocimientos emitidos y su estado.')).toBeInTheDocument();
+
+    // Click Siguiente -> Step 2
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+    // Step 2: Crear Nuevos Lotes
+    expect(screen.getByText('Crear Nuevos Lotes')).toBeInTheDocument();
+    expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
+    expect(screen.getByText(/Usa '\+ Nuevo Lote' para procesar listas masivas/i)).toBeInTheDocument();
+
+    // Click Siguiente -> Step 3
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+    // Step 3: Búsqueda y Filtros Avanzados
+    expect(screen.getByText('Búsqueda y Filtros Avanzados')).toBeInTheDocument();
+    expect(screen.getByText('Paso 3 de 4')).toBeInTheDocument();
+    expect(screen.getByText(/Filtra tus lotes por fecha, rango de días/i)).toBeInTheDocument();
+
+    // Click Siguiente -> Step 4
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+    // Step 4: Gestión de Lotes
+    expect(screen.getByText('Gestión de Lotes')).toBeInTheDocument();
+    expect(screen.getByText('Paso 4 de 4')).toBeInTheDocument();
+    expect(screen.getByText(/Haz clic en cualquier lote para ver sus miembros/i)).toBeInTheDocument();
+
+    // Last step button is "¡Entendido! 🎉"
+    const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+    expect(finishBtn).toBeInTheDocument();
+
+    // Finish tour
+    fireEvent.click(finishBtn);
+
+    // Overlay is closed
+    expect(screen.queryByText('Gestión de Lotes')).not.toBeInTheDocument();
+    expect(localStorage.getItem('chil_tour_batch-list-tour_test-user-id')).toBe('true');
   });
 });
 
