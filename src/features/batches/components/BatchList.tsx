@@ -595,7 +595,7 @@ export const BatchList: React.FC = () => {
             icon={<Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" />}
             className="shadow-sm flex-shrink-0"
           >
-            ⚡ Emisión Rápida
+            Emisión Rápida
           </Button>
           <Button
             type="button"
@@ -604,7 +604,7 @@ export const BatchList: React.FC = () => {
             icon={<Plus size={18} />}
             className="shadow-sm flex-shrink-0"
           >
-            + Nuevo Lote
+            Nuevo Lote
           </Button>
         </div>
       </div>

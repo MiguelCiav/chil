@@ -9,7 +9,7 @@ Implement Scout Units and "No Scout" Direct Recognition Emission:
   - Added `SCOUT_UNITS` metadata mapping labels, descriptions, and color-coded badges (`manada` amber, `tropa` emerald, `caminantes` blue, `clan` red, `institucional` purple, `no_scout` slate).
   - Added helper functions `getUnitLabel` and `getUnitBadge` for consistent unit representation across the entire application.
 - **"No Scout" Direct Recognition Emission**:
-  - Bypasses SERSIN scraper query entirely when a member's unit is `no_scout`.
+  - Bypasses Sistema de Registro scraper query entirely when a member's unit is `no_scout`.
   - Sets member status directly to `Registro válido` (`active`) and immediately marks them as eligible for certificate generation.
   - Skips scraper credential verification when creating batches scoped to `no_scout`.
 - **New Batch Wizard Integration**:

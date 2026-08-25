@@ -763,7 +763,7 @@ export const BatchDetail: React.FC = () => {
                   <option value="caminantes">Caminantes</option>
                   <option value="clan">Clan</option>
                   <option value="institucional">Institucional</option>
-                  <option value="no_scout">No Scout</option>
+                  <option value="no_scout">No scout</option>
                 </select>
               </div>
               {editingMember.status !== 'active' && (

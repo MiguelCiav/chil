@@ -357,7 +357,7 @@ describe('certificatePdfGenerator service', () => {
         expect.any(Object)
       );
       expect(mockDocInstance.text).toHaveBeenCalledWith(
-        'No Scout',
+        'No scout',
         expect.any(Number),
         expect.any(Number),
         { align: 'left', baseline: 'middle' }

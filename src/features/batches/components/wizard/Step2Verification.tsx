@@ -5,7 +5,7 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Field } from '../../../../components/Field';
 import { Table } from '../../../../components/Table';
-import { MemberVerificationResult, ScoutUnit, BatchUnitScope, getUnitBadge } from '../../types';
+import { MemberVerificationResult, ScoutUnit, BatchUnitScope } from '../../types';
 
 interface Step2VerificationProps {
   readonly batchName: string;
@@ -128,19 +128,6 @@ const createStep2Columns = (
     accessorKey: 'name',
     header: 'Nombre Completo',
     cell: (info) => <NameCell value={info.getValue() as string} />
-  },
-  {
-    accessorKey: 'unit',
-    header: 'Unidad',
-    cell: (info) => {
-      const unit = info.getValue() as ScoutUnit | undefined;
-      const badge = getUnitBadge(unit);
-      return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}>
-          {badge.label}
-        </span>
-      );
-    }
   },
   {
     accessorKey: 'status',

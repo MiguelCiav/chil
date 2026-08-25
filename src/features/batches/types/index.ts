@@ -23,7 +23,7 @@ export const SCOUT_UNITS: Record<ScoutUnit, { label: string; badgeClass: string 
     badgeClass: 'bg-purple-50 text-purple-700 border-purple-200'
   },
   no_scout: {
-    label: 'No Scout',
+    label: 'No scout',
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-300'
   }
 };

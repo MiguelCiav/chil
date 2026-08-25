@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Region, District, ScoutGroup } from '../../types';
-import { RECOGNITION_TYPES } from '../../api';
 import { Field } from '../../../../components/Field';
 import { SearchSelectorModal } from '../../../../components/SearchSelectorModal';
 
@@ -80,6 +80,24 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Empty Recognition Types Alert Card */}
+      {!loadingHierarchy && recognitionTypes.length === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm font-medium text-amber-900">
+              No tienes tipos de reconocimientos registrados. Debes crear al menos un tipo de reconocimiento en el Catálogo antes de crear un nuevo lote.
+            </p>
+          </div>
+          <Link
+            to="/reconocimientos"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors flex-shrink-0 shadow-xs"
+          >
+            Ir al Catálogo de Reconocimientos
+          </Link>
+        </div>
+      )}
+
       {/* Hidden inputs for RHF validation */}
       <input type="hidden" {...register('regionId')} />
       <input type="hidden" {...register('districtId')} />
@@ -172,13 +190,13 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
               disabled={loadingHierarchy}
               {...register('unitScope')}
             >
-              <option value="mixed">🌐 Mixto (Permite cualquier unidad)</option>
-              <option value="manada">🟡 Manada (Lobatos/Lobeznas)</option>
-              <option value="tropa">🟢 Tropa (Scouts)</option>
-              <option value="caminantes">🔵 Caminantes</option>
-              <option value="clan">🔴 Clan (Rovers)</option>
-              <option value="institucional">🟣 Institucional (Adultos / Dirigentes)</option>
-              <option value="no_scout">⚪ No Scout (Colaboradores / Externos)</option>
+              <option value="mixed">Mixto (Todas las unidades)</option>
+              <option value="manada">Manada</option>
+              <option value="tropa">Tropa</option>
+              <option value="caminantes">Caminantes</option>
+              <option value="clan">Clan</option>
+              <option value="institucional">Institucional</option>
+              <option value="no_scout">No scout</option>
             </select>
           </div>
 
@@ -192,11 +210,11 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
               className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:text-neutral/30 disabled:border-gray-200 disabled:cursor-not-allowed text-sm h-[46px] ${
                 errors.recognitionType ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
               }`}
-              disabled={loadingHierarchy}
+              disabled={loadingHierarchy || recognitionTypes.length === 0}
               {...register('recognitionType')}
             >
               <option value="">Seleccione un reconocimiento</option>
-              {(recognitionTypes && recognitionTypes.length > 0 ? recognitionTypes : RECOGNITION_TYPES).map(t => (
+              {recognitionTypes.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>

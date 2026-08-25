@@ -21,8 +21,12 @@ vi.mock('../../api', async (importOriginal) => {
   };
 });
 
+import * as recognitionsModule from '../../../recognitions';
+
 vi.mock('../../../recognitions', () => ({
-  getAllRecognitionTypes: vi.fn().mockResolvedValue([])
+  getAllRecognitionTypes: vi.fn().mockResolvedValue([
+    { id: 'sct-wood-badge', name: 'Insignia de Madera', created_at: '2026-01-01' }
+  ])
 }));
 
 vi.mock('../../../auth', () => ({
@@ -39,6 +43,9 @@ vi.mock('../../../auth', () => ({
 describe('NewBatchWizard error cases & edge branches', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(recognitionsModule.getAllRecognitionTypes).mockResolvedValue([
+      { id: 'sct-wood-badge', name: 'Insignia de Madera', created_at: '2026-01-01' }
+    ]);
     vi.mocked(api.getHierarchyData).mockResolvedValue({
       regions: [{ id: 1, name: 'Región Capital' }],
       districts: [{ id: 10, name: 'Distrito Sucre', region_id: 1 }],
@@ -130,7 +137,7 @@ describe('NewBatchWizard error cases & edge branches', () => {
     await setupStep2();
 
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
-    vi.mocked(api.loginScraper).mockRejectedValue(new Error('Credenciales inválidas en SERSIN'));
+    vi.mocked(api.loginScraper).mockRejectedValue(new Error('Credenciales inválidas en Sistema de Registro'));
 
     const youngInput = screen.getByLabelText(/Cédulas de Jóvenes/i);
     fireEvent.change(youngInput, { target: { value: '29111222' } });
@@ -140,7 +147,7 @@ describe('NewBatchWizard error cases & edge branches', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Error de Autenticación')).toBeInTheDocument();
-      expect(screen.getByText('Credenciales inválidas en SERSIN')).toBeInTheDocument();
+      expect(screen.getByText('Credenciales inválidas en Sistema de Registro')).toBeInTheDocument();
     });
   });
 
@@ -170,5 +177,28 @@ describe('NewBatchWizard error cases & edge branches', () => {
       expect(screen.getByText('No registrado')).toBeInTheDocument();
       expect(screen.getByText('Usuario No Registrado')).toBeInTheDocument();
     });
+  });
+
+  it('renders warning card and disables next button when recognitionTypes is empty in Step 1', async () => {
+    vi.mocked(recognitionsModule.getAllRecognitionTypes).mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <NewBatchWizard />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No tienes tipos de reconocimientos registrados. Debes crear al menos un tipo de reconocimiento en el Catálogo antes de crear un nuevo lote./i)
+      ).toBeInTheDocument();
+    });
+
+    const catLink = screen.getByRole('link', { name: /Ir al Catálogo de Reconocimientos/i });
+    expect(catLink).toBeInTheDocument();
+    expect(catLink).toHaveAttribute('href', '/reconocimientos');
+
+    const nextBtn = screen.getByRole('button', { name: /Siguiente paso/i });
+    expect(nextBtn).toBeDisabled();
   });
 });

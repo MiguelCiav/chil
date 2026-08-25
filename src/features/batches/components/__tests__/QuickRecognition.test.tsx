@@ -142,7 +142,7 @@ describe('QuickRecognition Component', () => {
     expect(recognitionsApi.downloadSingleCertificatePdf).not.toHaveBeenCalled();
   });
 
-  it('allows querying SERSIN for scout units and auto-populates names', async () => {
+  it('allows querying Sistema de Registro for scout units and auto-populates names', async () => {
     vi.mocked(batchesApi.getMemberStatus).mockResolvedValue({
       nombre_completo: 'Carlos Eduardo Mendoza Silva',
       status: 'Activo',
@@ -165,8 +165,8 @@ describe('QuickRecognition Component', () => {
     const cedulaInput = screen.getByLabelText('Cédula de Identidad');
     fireEvent.change(cedulaInput, { target: { value: 'V-25123456' } });
 
-    // Click Consultar SERSIN
-    const searchBtn = screen.getByRole('button', { name: /Consultar SERSIN/i });
+    // Click Consultar Sistema de Registro
+    const searchBtn = screen.getByRole('button', { name: /Consultar/i });
     fireEvent.click(searchBtn);
 
     await waitFor(() => {
@@ -182,7 +182,7 @@ describe('QuickRecognition Component', () => {
     expect(screen.getByText(/✓ Miembro encontrado: Carlos Eduardo Mendoza Silva/i)).toBeInTheDocument();
   });
 
-  it('handles SERSIN not found error gracefully', async () => {
+  it('handles Sistema de Registro not found error gracefully', async () => {
     vi.mocked(batchesApi.getMemberStatus).mockRejectedValue(new Error('No registrado'));
 
     render(
@@ -198,15 +198,15 @@ describe('QuickRecognition Component', () => {
     const cedulaInput = screen.getByLabelText('Cédula de Identidad');
     fireEvent.change(cedulaInput, { target: { value: 'V-99999999' } });
 
-    const searchBtn = screen.getByRole('button', { name: /Consultar SERSIN/i });
+    const searchBtn = screen.getByRole('button', { name: /Consultar/i });
     fireEvent.click(searchBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Usuario no registrado en SERSIN.')).toBeInTheDocument();
+      expect(screen.getByText('Usuario no registrado en Sistema de Registro.')).toBeInTheDocument();
     });
   });
 
-  it('supports No Scout unit emission without SERSIN lookup', async () => {
+  it('supports No Scout unit emission without Sistema de Registro lookup', async () => {
     vi.mocked(batchesApi.createBatch).mockResolvedValue({
       id: 501,
       comment: 'Reconocimiento Especial',
@@ -248,9 +248,9 @@ describe('QuickRecognition Component', () => {
     const unitSelect = screen.getByLabelText('Unidad / Categoría');
     fireEvent.change(unitSelect, { target: { value: 'no_scout' } });
 
-    // Verify SERSIN button is hidden and note is displayed
-    expect(screen.queryByRole('button', { name: /Consultar SERSIN/i })).not.toBeInTheDocument();
-    expect(screen.getByText('(No requiere verificación SERSIN)')).toBeInTheDocument();
+    // Verify Sistema de Registro button is hidden and note is displayed
+    expect(screen.queryByRole('button', { name: /Consultar/i })).not.toBeInTheDocument();
+    expect(screen.getByText('(No requiere verificación Sistema de Registro)')).toBeInTheDocument();
 
     // Fill form fields
     fireEvent.change(screen.getByLabelText('Tipo de Reconocimiento'), { target: { value: 'sct-wood-badge' } });

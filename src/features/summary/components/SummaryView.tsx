@@ -570,7 +570,7 @@ export const SummaryView: React.FC = () => {
             aria-label="Descargar Excel"
           >
             <Download className="w-4 h-4" />
-            <span>📥 Descargar Excel</span>
+            <span>Descargar Excel</span>
           </Button>
         </div>
       </div>
@@ -703,7 +703,7 @@ export const SummaryView: React.FC = () => {
               <option value="caminantes">Caminantes</option>
               <option value="clan">Clan</option>
               <option value="institucional">Institucional</option>
-              <option value="no_scout">No Scout</option>
+              <option value="no_scout">No scout</option>
             </select>
           </div>
 

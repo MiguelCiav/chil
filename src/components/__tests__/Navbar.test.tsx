@@ -43,7 +43,7 @@ describe('Navbar component', () => {
     );
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
-    expect(screen.getByText('⚡ Emisión Rápida')).toBeInTheDocument();
+    expect(screen.getByText('Emisión Rápida')).toBeInTheDocument();
     expect(screen.getByText('Nuevo lote')).toBeInTheDocument();
     expect(screen.getByText('Listado de lotes')).toBeInTheDocument();
     expect(screen.getByText('Resumen')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('Navbar component', () => {
     expect(screen.getByText('Chil')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registrarse/i })).toBeInTheDocument();
-    expect(screen.queryByText('⚡ Emisión Rápida')).not.toBeInTheDocument();
+    expect(screen.queryByText('Emisión Rápida')).not.toBeInTheDocument();
     expect(screen.queryByText('Nuevo lote')).not.toBeInTheDocument();
     expect(screen.queryByTestId('user-profile-menu')).not.toBeInTheDocument();
   });
@@ -226,7 +226,7 @@ describe('Navbar component', () => {
     expect(resumenLink).toHaveClass('border-transparent');
   });
 
-  it('highlights only "⚡ Emisión Rápida" when path is /lotes/rapido', () => {
+  it('highlights only "Emisión Rápida" when path is /lotes/rapido', () => {
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
 
     render(
@@ -235,14 +235,28 @@ describe('Navbar component', () => {
       </MemoryRouter>
     );
 
-    const rapidoLink = screen.getByRole('link', { name: '⚡ Emisión Rápida' });
+    const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
 
-    expect(rapidoLink).toHaveClass('border-primary');
-    expect(rapidoLink).toHaveClass('text-primary');
+    expect(rapidoLink).toHaveClass('bg-amber-200/90');
+    expect(rapidoLink).toHaveClass('text-amber-950');
     expect(nuevoLoteLink).toHaveClass('border-transparent');
     expect(listadoLotesLink).toHaveClass('border-transparent');
+  });
+
+  it('applies amber-100 shading to "Emisión Rápida" when path is not /lotes/rapido', () => {
+    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
+
+    render(
+      <MemoryRouter initialEntries={['/lotes']}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
+    expect(rapidoLink).toHaveClass('bg-amber-100/70');
+    expect(rapidoLink).toHaveClass('text-amber-900');
   });
 });
 

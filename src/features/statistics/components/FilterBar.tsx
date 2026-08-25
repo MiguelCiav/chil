@@ -53,7 +53,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           aria-label="Exportar Reporte Ejecutivo PDF"
         >
           <Download className="w-4 h-4" />
-          <span>📄 Exportar Reporte Ejecutivo (PDF)</span>
+          <span>Exportar Reporte Ejecutivo (PDF)</span>
         </Button>
       </div>
 

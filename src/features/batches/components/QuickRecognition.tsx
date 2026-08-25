@@ -122,8 +122,8 @@ export const QuickRecognition: React.FC = () => {
 
   const availableRecognitionTypes = recognitionTypes.length > 0 ? recognitionTypes : RECOGNITION_TYPES;
 
-  // SERSIN Scraper Lookup
-  const handleConsultSersin = async () => {
+  // Scraper Lookup
+  const handleConsult = async () => {
     const cleanCedula = identity.trim();
     if (!cleanCedula) {
       setErrors(prev => ({ ...prev, identity: 'Ingrese una cédula para consultar' }));
@@ -153,18 +153,18 @@ export const QuickRecognition: React.FC = () => {
           delete next.lastNames;
           return next;
         });
-        triggerToast('Datos obtenidos de SERSIN exitosamente', 'success');
+        triggerToast('Datos obtenidos de Sistema de Registro exitosamente', 'success');
       } else {
         setScraperStatus('error');
-        setScraperMsg('No se encontraron datos en SERSIN.');
+        setScraperMsg('No se encontraron datos en Sistema de Registro.');
       }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       setScraperStatus('error');
       if (errorMsg.includes('No registrado')) {
-        setScraperMsg('Usuario no registrado en SERSIN.');
+        setScraperMsg('Usuario no registrado en Sistema de Registro.');
       } else {
-        setScraperMsg('Error al consultar SERSIN.');
+        setScraperMsg('Error al consultar Sistema de Registro.');
       }
     } finally {
       setIsSearchingScraper(false);
@@ -276,11 +276,10 @@ export const QuickRecognition: React.FC = () => {
       {showToast && (
         <div
           role="alert"
-          className={`fixed top-6 right-6 z-50 flex items-center gap-3 text-white px-5 py-3 rounded-2xl shadow-xl border animate-fade-in ${
-            toastType === 'success'
-              ? 'bg-neutral border-primary/30'
-              : 'bg-red-700 border-red-500/30'
-          }`}
+          className={`fixed top-6 right-6 z-50 flex items-center gap-3 text-white px-5 py-3 rounded-2xl shadow-xl border animate-fade-in ${toastType === 'success'
+            ? 'bg-neutral border-primary/30'
+            : 'bg-red-700 border-red-500/30'
+            }`}
         >
           {toastType === 'success' ? (
             <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
@@ -293,15 +292,15 @@ export const QuickRecognition: React.FC = () => {
 
       {/* Success View */}
       {successData ? (
-        <Card className="shadow-lg border-primary/20 overflow-hidden">
-          <div className="bg-gradient-to-r from-primary to-[#2a9d4f] p-8 text-white text-center">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 border border-white/30">
-              <CheckCircle2 className="w-10 h-10 text-white" />
+        <Card className="shadow-sm border border-gray-200 overflow-hidden bg-white">
+          <div className="bg-primary/5 border-b border-primary/10 p-8 text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
+              <CheckCircle2 className="w-10 h-10 text-primary" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral">
               ¡Reconocimiento Emitido con Éxito!
             </h2>
-            <p className="text-white/90 text-sm mt-2 max-w-md mx-auto">
+            <p className="text-neutral/60 text-sm mt-2 max-w-md mx-auto">
               El diploma individual ha sido generado y descargado automáticamente en su dispositivo.
             </p>
           </div>
@@ -352,7 +351,7 @@ export const QuickRecognition: React.FC = () => {
                 icon={<Zap className="w-4 h-4" />}
                 className="w-full sm:w-auto shadow-sm"
               >
-                ⚡ Emitir otro reconocimiento rápido
+                Emitir otro reconocimiento rápido
               </Button>
               <Button
                 type="button"
@@ -417,9 +416,8 @@ export const QuickRecognition: React.FC = () => {
                           setErrors(prev => ({ ...prev, recognitionType: '' }));
                         }
                       }}
-                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                        errors.recognitionType ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
-                      }`}
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${errors.recognitionType ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                        }`}
                       disabled={loadingHierarchy}
                     >
                       <option value="">Seleccione un tipo de reconocimiento</option>
@@ -449,9 +447,8 @@ export const QuickRecognition: React.FC = () => {
                           setErrors(prev => ({ ...prev, regionId: '', districtId: '', groupId: '' }));
                         }
                       }}
-                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                        errors.regionId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
-                      }`}
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${errors.regionId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                        }`}
                       disabled={loadingHierarchy}
                     >
                       <option value="">Seleccione una región</option>
@@ -481,11 +478,10 @@ export const QuickRecognition: React.FC = () => {
                         }
                       }}
                       disabled={!regionId || loadingHierarchy}
-                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                        !regionId ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200' : (
-                          errors.districtId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
-                        )
-                      }`}
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${!regionId ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200' : (
+                        errors.districtId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                      )
+                        }`}
                     >
                       <option value="">Seleccione un distrito</option>
                       {filteredDistricts.map(d => (
@@ -513,11 +509,10 @@ export const QuickRecognition: React.FC = () => {
                         }
                       }}
                       disabled={!districtId || loadingHierarchy}
-                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                        !districtId ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200' : (
-                          errors.groupId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
-                        )
-                      }`}
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${!districtId ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200' : (
+                        errors.groupId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                      )
+                        }`}
                     >
                       <option value="">Seleccione un grupo scout</option>
                       {filteredGroups.map(g => (
@@ -573,16 +568,16 @@ export const QuickRecognition: React.FC = () => {
                       }}
                       className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
                     >
-                      <option value="manada">🟡 Manada (Lobatos/Lobeznas)</option>
-                      <option value="tropa">🟢 Tropa (Scouts)</option>
-                      <option value="caminantes">🔵 Caminantes</option>
-                      <option value="clan">🔴 Clan (Rovers)</option>
-                      <option value="institucional">🟣 Institucional (Adultos / Dirigentes)</option>
-                      <option value="no_scout">⚪ No Scout (Colaboradores / Externos)</option>
+                      <option value="manada">Manada</option>
+                      <option value="tropa">Tropa</option>
+                      <option value="caminantes">Caminantes</option>
+                      <option value="clan">Clan</option>
+                      <option value="institucional">Institucional</option>
+                      <option value="no_scout">No scout</option>
                     </select>
                   </div>
 
-                  {/* Cédula + SERSIN Query */}
+                  {/* Cédula + Sistema de Registro Query */}
                   <div className="space-y-1">
                     <label htmlFor="quick-identity" className="block uppercase text-xs font-bold tracking-wide text-neutral">
                       Cédula de Identidad *
@@ -600,20 +595,19 @@ export const QuickRecognition: React.FC = () => {
                             setErrors(prev => ({ ...prev, identity: '' }));
                           }
                         }}
-                        className={`flex-1 rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                          errors.identity ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
-                        }`}
+                        className={`flex-1 rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${errors.identity ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                          }`}
                       />
                       {unit !== 'no_scout' && (
                         <Button
                           type="button"
                           variant="outline"
                           disabled={isSearchingScraper || !identity.trim()}
-                          onClick={handleConsultSersin}
+                          onClick={handleConsult}
                           icon={<Search className="w-4 h-4" />}
                           className="flex-shrink-0 h-[46px]"
                         >
-                          {isSearchingScraper ? 'Consultando...' : 'Consultar SERSIN'}
+                          {isSearchingScraper ? 'Consultando...' : 'Consultar'}
                         </Button>
                       )}
                     </div>
@@ -621,7 +615,7 @@ export const QuickRecognition: React.FC = () => {
                       <p className="text-xs text-red-600 font-medium mt-1">{errors.identity}</p>
                     )}
                     {unit === 'no_scout' && (
-                      <p className="text-xs text-neutral/50 italic mt-1">(No requiere verificación SERSIN)</p>
+                      <p className="text-xs text-neutral/50 italic mt-1">(No requiere verificación Sistema de Registro)</p>
                     )}
                     {scraperMsg && (
                       <p className={`text-xs font-medium mt-1 ${scraperStatus === 'success' ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -647,9 +641,8 @@ export const QuickRecognition: React.FC = () => {
                           setErrors(prev => ({ ...prev, firstNames: '' }));
                         }
                       }}
-                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                        errors.firstNames ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
-                      }`}
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${errors.firstNames ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                        }`}
                     />
                     {errors.firstNames && (
                       <p className="text-xs text-red-600 font-medium mt-1">{errors.firstNames}</p>
@@ -673,9 +666,8 @@ export const QuickRecognition: React.FC = () => {
                           setErrors(prev => ({ ...prev, lastNames: '' }));
                         }
                       }}
-                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                        errors.lastNames ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
-                      }`}
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${errors.lastNames ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                        }`}
                     />
                     {errors.lastNames && (
                       <p className="text-xs text-red-600 font-medium mt-1">{errors.lastNames}</p>
@@ -700,9 +692,8 @@ export const QuickRecognition: React.FC = () => {
                             setErrors(prev => ({ ...prev, recognitionCode: '' }));
                           }
                         }}
-                        className={`flex-1 rounded-field px-4 font-mono font-bold transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                          errors.recognitionCode ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
-                        }`}
+                        className={`flex-1 rounded-field px-4 font-mono font-bold transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${errors.recognitionCode ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
+                          }`}
                       />
                       <Button
                         type="button"
@@ -740,12 +731,13 @@ export const QuickRecognition: React.FC = () => {
                 icon={<Zap className="w-5 h-5 fill-current" />}
                 className="w-full sm:w-auto shadow-md"
               >
-                {isSubmitting ? 'Emitiendo y Generando Diploma...' : '⚡ Emitir y Descargar Diploma'}
+                {isSubmitting ? 'Emitiendo y Generando Diploma...' : 'Emitir y Descargar Diploma'}
               </Button>
             </div>
           </form>
         </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 };

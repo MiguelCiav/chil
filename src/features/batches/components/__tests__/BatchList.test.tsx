@@ -580,8 +580,8 @@ describe('BatchList component', () => {
       expect(screen.getByText('No se encontraron lotes registrados.')).toBeInTheDocument();
     });
 
-    const rapidoBtn = screen.getByRole('button', { name: /⚡ Emisión Rápida/i });
-    const nuevoBtn = screen.getByRole('button', { name: /\+ Nuevo Lote/i });
+    const rapidoBtn = screen.getByRole('button', { name: /Emisión Rápida/i });
+    const nuevoBtn = screen.getByRole('button', { name: /Nuevo Lote/i });
 
     expect(rapidoBtn).toBeInTheDocument();
     expect(nuevoBtn).toBeInTheDocument();

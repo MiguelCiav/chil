@@ -120,7 +120,7 @@ describe('Step2Verification component', () => {
     expect(defaultProps.onBack).toHaveBeenCalled();
   });
 
-  it('renders UNIDAD badges in verification results table', () => {
+  it('does not render UNIDAD column in verification results table', () => {
     const list: MemberVerificationResult[] = [
       {
         cedula: '29111222',
@@ -146,8 +146,8 @@ describe('Step2Verification component', () => {
       />
     );
 
-    expect(screen.getByText('Unidad')).toBeInTheDocument();
-    expect(screen.getByText('Caminantes')).toBeInTheDocument();
-    expect(screen.getByText('No Scout')).toBeInTheDocument();
+    expect(screen.queryByText('Unidad')).not.toBeInTheDocument();
+    expect(screen.queryByText('Caminantes')).not.toBeInTheDocument();
+    expect(screen.queryByText('No scout')).not.toBeInTheDocument();
   });
 });

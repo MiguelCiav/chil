@@ -71,13 +71,13 @@ export const Navbar: React.FC = () => {
               to="/lotes/rapido"
               end
               className={({ isActive }) =>
-                `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${isActive
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-neutral hover:text-primary'
+                `flex items-center my-auto px-3 py-1.5 rounded-lg font-bold transition-all shadow-xs ${isActive
+                  ? 'bg-amber-200/90 text-amber-950 border border-amber-400/90'
+                  : 'bg-amber-100/70 hover:bg-amber-200/80 text-amber-900 border border-amber-300/80'
                 }`
               }
             >
-              ⚡ Emisión Rápida
+              Emisión Rápida
             </NavLink>
             <NavLink
               to="/lotes/nuevo"
@@ -193,7 +193,7 @@ export const Navbar: React.FC = () => {
           </ModalHeader>
           <ModalBody className="space-y-4">
             <p className="text-sm text-neutral/70">
-              Ingrese sus credenciales del sistema SERSIN para permitir la consulta y verificación automatizada de miembros.
+              Ingrese sus credenciales del Sistema de Registro para permitir la consulta y verificación automatizada de miembros.
             </p>
             {hasCredentials && (
               <p className="text-xs text-green-600 font-semibold bg-green-50 p-2.5 rounded-lg border border-green-200">

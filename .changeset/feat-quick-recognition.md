@@ -2,24 +2,21 @@
 "chil": minor
 ---
 
-Implement Quick Recognition Emission (Emisión Rápida de Reconocimiento):
-- **Quick Recognition Dedicated Component (`QuickRecognition.tsx`)**:
-  - Implemented single-screen instant emission workflow allowing recognition and single diploma creation in one unified step.
-  - Section 1 (Datos del Reconocimiento): Dynamic recognition type selector (loading from Firestore with system fallback), cascading geographic hierarchy (Región, Distrito, Grupo), and optional comment/motive input.
-  - Section 2 (Datos del Homenajeado): Scout Unit selector with 6 units (`manada`, `tropa`, `caminantes`, `clan`, `institucional`, `no_scout`), national identity (Cédula), automated SERSIN scraper query for scout units, automatic name splitting, auto-generated recognition codes with one-click regeneration and inline manual editing.
-  - No Scout support: Automatically skips SERSIN scraper validation with helpful visual hint.
-  - Actions: "⚡ Emitir y Descargar Diploma" validates inputs, creates a 1-member batch, creates the active member, and automatically downloads the PDF certificate diploma.
-  - Success State: Shows comprehensive emission details and offers quick actions to emit another recognition, view the created batch (`/lotes/:id`), or return to batch list (`/lotes`).
-- **Routing and Navigation Updates**:
-  - Added protected routes `/lotes/rapido` and `/emision-rapida` in `App.tsx`.
-  - Added quick access NavLink `⚡ Emisión Rápida` inside the authenticated navigation in `Navbar.tsx`.
-  - Added secondary button `⚡ Emisión Rápida` in the header of `BatchList.tsx`.
-  - Added tip banner in Step 1 of `NewBatchWizard.tsx` linking to `/lotes/rapido`.
-  - Exported `QuickRecognition` from batches feature module (`src/features/batches/index.ts`).
-- **Utilities & Helpers**:
-  - Created `nameHelper.ts` with `splitFullName` utility for consistent name separation across scraper queries.
-- **Testing & Quality Assurance**:
-  - Added comprehensive test suite `QuickRecognition.test.tsx` (12 tests covering rendering, cascading selectors, SERSIN lookup, No Scout emission, code regeneration, form submission, PDF download, success view, and name splitting).
-  - Updated `Navbar.test.tsx` and `BatchList.test.tsx` for new navigation links and header buttons.
-  - Verified 100% test passing across 45 test suites (356 tests).
-  - Verified 0 ESLint errors/warnings and 0 TypeScript errors.
+Implement Quick Recognition Emission, Age-Based Unit Inference, and UI Polish:
+- **Navbar "Emisión Rápida" Shading**:
+  - Applied warm amber styling to the "Emisión Rápida" NavLink (`bg-amber-100/70` inactive with hover effects, `bg-amber-200/90` active).
+- **Empty Recognition Types Handling in New Batch Wizard**:
+  - In `Step1Org.tsx`: Added warning card when no recognition types exist (*"No tienes tipos de reconocimientos registrados. Debes crear al menos un tipo de reconocimiento en el Catálogo antes de crear un nuevo lote."*) with a direct action button to `/reconocimientos`.
+  - In `NewBatchWizard.tsx`: Disabled "Siguiente paso" button when recognition types are empty.
+- **Emoji Removal & Consistent Scout Unit Labels**:
+  - Cleaned all emojis across `SCOUT_UNITS`, selectors, badges, and navigation headers.
+  - Standardized unit labels: `Manada`, `Tropa`, `Caminantes`, `Clan`, `Institucional`, `No scout`, and `Mixto (Todas las unidades)`.
+- **Step 2 & Step 3 Unit Handling & Age-Based Inference**:
+  - In `Step2Verification.tsx`: Removed `UNIDAD` column from the verification table to keep verification focused on cédulas, names, and status.
+  - Created `unitInference.ts` with `calculateAge`, `inferYouthUnitByAge`, and `inferBatchMemberUnits` to automatically deduce units by birth date (<11 -> Manada, 11-15 -> Tropa, 16-18 -> Caminantes, 19-21 -> Clan, >21 / adults -> mode of batch youth units or Institucional).
+  - Applied inferred units upon transition from Step 2 to Step 3 and enabled manual unit overriding in Step 3 review modal.
+- **Quick Recognition Success Screen UI**:
+  - Replaced gradient headers with a clean, solid background aesthetic (`bg-primary/5` with subtle borders and neutral typography).
+- **Quality Gate & Testing**:
+  - Added unit test suite `unitInference.test.ts` and updated all existing test suites.
+  - 100% test pass rate across 46 test suites (369 tests), 0 ESLint warnings/errors, and 0 TypeScript build errors.

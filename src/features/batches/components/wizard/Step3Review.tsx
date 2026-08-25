@@ -440,7 +440,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                     <option value="caminantes">Caminantes</option>
                     <option value="clan">Clan</option>
                     <option value="institucional">Institucional</option>
-                    <option value="no_scout">No Scout</option>
+                    <option value="no_scout">No scout</option>
                   </select>
                 </div>
               </div>

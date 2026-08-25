@@ -603,7 +603,7 @@ describe('SummaryView component', () => {
       expect(screen.getByText('UNIDAD')).toBeInTheDocument();
       expect(screen.getByText('Manada')).toBeInTheDocument();
       expect(screen.getByText('Tropa')).toBeInTheDocument();
-      expect(screen.getByText('No Scout')).toBeInTheDocument();
+      expect(screen.getByText('No scout')).toBeInTheDocument();
     });
 
     // Filter by Manada

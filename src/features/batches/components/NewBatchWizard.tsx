@@ -39,6 +39,7 @@ import {
   BatchUnitScope,
   ScoutUnit
 } from '../types';
+import { inferBatchMemberUnits } from '../utils/unitInference';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { useAuth } from '../../auth';
 
@@ -223,7 +224,7 @@ export const NewBatchWizard: React.FC = () => {
   const verifyCedula = async (cedula: string, type: 'young' | 'adult', explicitUnit?: ScoutUnit) => {
     const memberUnit: ScoutUnit = explicitUnit || (batchUnitScope !== 'mixed' ? (batchUnitScope as ScoutUnit) : (type === 'young' ? 'tropa' : 'institucional'));
 
-    // If member is 'no_scout', completely bypass SERSIN scraper query and mark as active
+    // If member is 'no_scout', completely bypass Sistema de Registro scraper query and mark as active
     if (memberUnit === 'no_scout') {
       setVerificationList(prev => {
         const idx = prev.findIndex(item => item.cedula === cedula);
@@ -487,16 +488,12 @@ export const NewBatchWizard: React.FC = () => {
 
       await Promise.all(deletePromises);
 
-      // 4. Reload the updated members list and ensure unit is populated
+      // 4. Reload the updated members list and infer age-based units
       const members = await getMembersByBatchId(batchId);
-      const normalizedMembers = members.map(m => {
-        const unit = m.unit || (batchUnitScope !== 'mixed' ? (batchUnitScope as ScoutUnit) : (m.member_type === 'young' ? 'tropa' : 'institucional'));
-        return {
-          ...m,
-          unit,
-          status: unit === 'no_scout' ? ('active' as const) : m.status
-        };
-      });
+      const normalizedMembers = inferBatchMemberUnits(members, batchUnitScope);
+      await Promise.all(
+        normalizedMembers.map(m => updateMember(m))
+      );
       const membersWithCodes = assignBatchRecognitionCodes(normalizedMembers, 'auto');
       setSavedMembers(membersWithCodes);
       setCurrentStep(3);
@@ -600,7 +597,7 @@ export const NewBatchWizard: React.FC = () => {
                   <Button
                     type="submit"
                     variant="primary"
-                    disabled={!isValid || loadingHierarchy}
+                    disabled={!isValid || loadingHierarchy || recognitionTypes.length === 0}
                     icon={<ArrowRight size={18} />}
                     iconPosition="right"
                   >
