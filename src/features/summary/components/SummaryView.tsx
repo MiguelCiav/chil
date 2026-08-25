@@ -167,7 +167,7 @@ export const SummaryView: React.FC = () => {
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedMemberType, setSelectedMemberType] = useState<'all' | 'young' | 'adult'>('all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'pending'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'pending' | 'exceptional'>('all');
   const [selectedDatePeriod, setSelectedDatePeriod] = useState<
     'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom'
   >('all');
@@ -222,7 +222,7 @@ export const SummaryView: React.FC = () => {
       const issueDate = batch?.created_at ? formatBatchDate(batch.created_at) : '-';
       const batchCode = batch ? formatBatchCode(batch.id, batch.created_at) : '#000';
       const memberTypeLabel = m.member_type === 'young' ? 'Joven' : 'Adulto';
-      const statusLabel = m.status === 'active' ? 'Registro Válido' : 'Registro Inválido';
+      const statusLabel = m.status === 'active' ? 'Registro Válido' : m.status === 'exceptional' ? 'Emisión Excepcional' : 'Registro Inválido';
 
       return {
         id: `${m.identity}-${batch?.id ?? '0'}`,
@@ -448,13 +448,23 @@ export const SummaryView: React.FC = () => {
       accessorKey: 'status',
       header: 'ESTATUS',
       cell: ({ row }) => {
-        const isActive = row.original.status === 'active';
-        return isActive ? (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            ● Registro Válido
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+        const status = row.original.status;
+        if (status === 'active') {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+              ● Registro Válido
+            </span>
+          );
+        }
+        if (status === 'exceptional') {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
+              ● Emisión Excepcional
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
             ● Registro Inválido
           </span>
         );
@@ -671,11 +681,12 @@ export const SummaryView: React.FC = () => {
               id="summary-filter-status"
               aria-label="Filtrar por estatus"
               value={selectedStatus}
-              onChange={e => setSelectedStatus(e.target.value as 'all' | 'active' | 'pending')}
+              onChange={e => setSelectedStatus(e.target.value as 'all' | 'active' | 'pending' | 'exceptional')}
               className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
             >
               <option value="all">Todos los estatus</option>
               <option value="active">Registro Válido</option>
+              <option value="exceptional">Emisión Excepcional</option>
               <option value="pending">Registro Inválido</option>
             </select>
           </div>

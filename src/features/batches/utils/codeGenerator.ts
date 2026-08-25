@@ -28,7 +28,7 @@ export function assignBatchRecognitionCodes(
 
   return members.map((member) => {
     if (mode === 'auto') {
-      if (member.status === 'active') {
+      if (member.status === 'active' || member.status === 'exceptional') {
         let code = generateRecognitionCode(customPrefix);
         while (generatedCodes.has(code)) {
           code = generateRecognitionCode(customPrefix);

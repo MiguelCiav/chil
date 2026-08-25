@@ -38,10 +38,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
 
-  // Auto-assign codes on mount if auto mode and any active member has no code assigned
+  // Auto-assign codes on mount if auto mode and any active or exceptional member has no code assigned
   useEffect(() => {
     const hasUnassignedActive = savedMembers.some(
-      m => m.status === 'active' && (!m.recognition_code || m.recognition_code.trim() === '')
+      m => (m.status === 'active' || m.status === 'exceptional') && (!m.recognition_code || m.recognition_code.trim() === '')
     );
     if (hasUnassignedActive && codeMode === 'auto' && savedMembers.length > 0) {
       const updated = assignBatchRecognitionCodes(savedMembers, 'auto');
@@ -74,7 +74,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
     onMembersUpdated(updated);
   };
 
-  const validMembers = savedMembers.filter(m => m.status === 'active');
+  const validMembers = savedMembers.filter(m => m.status === 'active' || m.status === 'exceptional');
   const pendingMembers = savedMembers.filter(m => m.status === 'pending');
 
   const currentTabMembers = activeTab === 'valid' ? validMembers : pendingMembers;
@@ -301,7 +301,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
-                    {member.status === 'active' ? (
+                    {member.status === 'active' || member.status === 'exceptional' ? (
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-bold text-neutral/60 tracking-wider uppercase whitespace-nowrap">
                           CÓDIGO:
@@ -321,11 +321,15 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                     )}
 
                     {member.status === 'active' ? (
-                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 rounded-full">
+                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0] rounded-full">
                         Válido
                       </span>
+                    ) : member.status === 'exceptional' ? (
+                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff] rounded-full">
+                        Excepcional
+                      </span>
                     ) : (
-                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-200 rounded-full">
+                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca] rounded-full">
                         Pendiente
                       </span>
                     )}
@@ -403,6 +407,34 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   <option value="adult">Adulto</option>
                 </select>
               </div>
+              {editingMember.status !== 'active' && (
+                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="step3-exceptional-toggle" className="flex items-center gap-2.5 cursor-pointer font-bold text-xs sm:text-sm text-purple-900">
+                      <input
+                        id="step3-exceptional-toggle"
+                        type="checkbox"
+                        checked={editingMember.status === 'exceptional'}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          setEditingMember({
+                            ...editingMember,
+                            status: isChecked ? 'exceptional' : 'pending',
+                            recognition_code: isChecked
+                              ? (editingMember.recognition_code || `REC-${editingMember.identity.slice(-4) || 'EXC'}`)
+                              : editingMember.recognition_code
+                          });
+                        }}
+                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
+                      />
+                      <span>Autorizar emisión de diploma (Caso Excepcional)</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-purple-700">
+                    Permite emitir el diploma oficial para este miembro aunque no figure en el registro nacional validado.
+                  </p>
+                </div>
+              )}
               <Field
                 label="Código de Reconocimiento"
                 value={editingMember.recognition_code || ''}
