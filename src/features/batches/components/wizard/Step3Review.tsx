@@ -13,7 +13,7 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Field } from '../../../../components/Field';
-import { ScoutMember } from '../../types';
+import { ScoutMember, ScoutUnit, getUnitBadge } from '../../types';
 import { updateMember, getMembersByBatchId, assignBatchRecognitionCodes } from '../../api';
 
 interface Step3ReviewProps {
@@ -320,6 +320,15 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                       <span className="text-xs font-mono text-neutral/40 italic px-2">Sin código</span>
                     )}
 
+                    {(() => {
+                      const unitBadge = getUnitBadge(member.unit);
+                      return (
+                        <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border ${unitBadge.badgeClass}`}>
+                          {unitBadge.label}
+                        </span>
+                      );
+                    })()}
+
                     {member.status === 'active' ? (
                       <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0] rounded-full">
                         Válido
@@ -392,20 +401,48 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   required
                 />
               </div>
-              <div className="w-full">
-                <label htmlFor="edit-member-type-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
-                  Tipo de Miembro *
-                </label>
-                <select
-                  id="edit-member-type-select"
-                  className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
-                  value={editingMember.member_type}
-                  onChange={e => setEditingMember({ ...editingMember, member_type: e.target.value as 'young' | 'adult' })}
-                  required
-                >
-                  <option value="young">Joven</option>
-                  <option value="adult">Adulto</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="w-full">
+                  <label htmlFor="edit-member-type-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                    Tipo de Miembro *
+                  </label>
+                  <select
+                    id="edit-member-type-select"
+                    className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                    value={editingMember.member_type}
+                    onChange={e => setEditingMember({ ...editingMember, member_type: e.target.value as 'young' | 'adult' })}
+                    required
+                  >
+                    <option value="young">Joven</option>
+                    <option value="adult">Adulto</option>
+                  </select>
+                </div>
+                <div className="w-full">
+                  <label htmlFor="edit-member-unit-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                    Unidad Scout *
+                  </label>
+                  <select
+                    id="edit-member-unit-select"
+                    className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                    value={editingMember.unit || (editingMember.member_type === 'young' ? 'tropa' : 'institucional')}
+                    onChange={e => {
+                      const newUnit = e.target.value as ScoutUnit;
+                      setEditingMember({
+                        ...editingMember,
+                        unit: newUnit,
+                        ...(newUnit === 'no_scout' ? { status: 'active' } : {})
+                      });
+                    }}
+                    required
+                  >
+                    <option value="manada">Manada</option>
+                    <option value="tropa">Tropa</option>
+                    <option value="caminantes">Caminantes</option>
+                    <option value="clan">Clan</option>
+                    <option value="institucional">Institucional</option>
+                    <option value="no_scout">No Scout</option>
+                  </select>
+                </div>
               </div>
               {editingMember.status !== 'active' && (
                 <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-2">

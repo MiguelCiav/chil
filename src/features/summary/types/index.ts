@@ -1,3 +1,5 @@
+import { ScoutUnit } from '../../batches/types';
+
 export interface SummaryRowData {
   id: string; // member identity + batch id
   issueDate: string; // Formatted date
@@ -10,6 +12,8 @@ export interface SummaryRowData {
   firstName: string;
   lastName: string;
   fullName: string;
+  unit?: ScoutUnit;
+  unitLabel: string;
   memberType: 'young' | 'adult';
   memberTypeLabel: 'Joven' | 'Adulto';
   status: 'active' | 'pending' | 'exceptional';
@@ -26,6 +30,7 @@ export interface SummaryFilterState {
   regionId: string;
   districtId: string;
   groupId: string;
+  unit?: string;
   memberType: 'all' | 'young' | 'adult';
   status: 'all' | 'active' | 'pending' | 'exceptional';
   datePeriod: 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';

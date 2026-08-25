@@ -1,4 +1,4 @@
-import { Batch, ScoutMember, Region, District } from '../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutUnit, SCOUT_UNITS } from '../../batches/types';
 import { getRecognitionBadgeStyle, getRecognitionName, RecognitionTypeInfo } from '../../batches/api';
 import {
   KpiMetrics,
@@ -8,6 +8,8 @@ import {
   GeographicBreakdownData,
   GeographicItem,
   StatusBreakdownData,
+  UnitDistributionData,
+  UnitDistributionItem,
   StatisticsDataset
 } from '../types';
 
@@ -340,6 +342,40 @@ export function calculateStatusBreakdown(members: ScoutMember[]): StatusBreakdow
 }
 
 /**
+ * Calculates member distribution across Scout Units
+ */
+export function calculateUnitDistribution(members: ScoutMember[]): UnitDistributionData {
+  const totalCount = members.length;
+  const unitOrder: ScoutUnit[] = ['manada', 'tropa', 'caminantes', 'clan', 'institucional', 'no_scout'];
+  const counts = new Map<ScoutUnit, number>();
+  unitOrder.forEach(u => counts.set(u, 0));
+
+  members.forEach(m => {
+    const u: ScoutUnit = m.unit || (m.member_type === 'young' ? 'tropa' : 'institucional');
+    counts.set(u, (counts.get(u) || 0) + 1);
+  });
+
+  const items: UnitDistributionItem[] = unitOrder.map(u => {
+    const count = counts.get(u) || 0;
+    const percentage = totalCount > 0 ? Number(((count / totalCount) * 100).toFixed(1)) : 0;
+    return {
+      unit: u,
+      label: SCOUT_UNITS[u].label,
+      count,
+      percentage,
+      badgeClass: SCOUT_UNITS[u].badgeClass
+    };
+  });
+
+  return {
+    items,
+    totalCount
+  };
+}
+
+export const getUnitDistribution = calculateUnitDistribution;
+
+/**
  * Consolidates all metrics calculations into a complete dataset
  */
 export function buildStatisticsDataset(
@@ -356,6 +392,7 @@ export function buildStatisticsDataset(
     demographics: calculateDemographics(members),
     geographic: calculateGeographicBreakdown(batches, members, regions, districts),
     statusBreakdown: calculateStatusBreakdown(members),
+    unitDistribution: calculateUnitDistribution(members),
     filteredMembersCount: members.length,
     filteredBatchesCount: batches.length
   };

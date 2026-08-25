@@ -216,6 +216,7 @@ describe('certificatePdfGenerator service', () => {
     last_names: 'Mendoza',
     birth_date: '1995-03-20',
     member_type: 'adult',
+    unit: 'tropa',
     status: 'active',
     batch_id: 45,
     recognition_code: 'REC-45-001'
@@ -316,10 +317,50 @@ describe('certificatePdfGenerator service', () => {
         { align: 'center', baseline: 'middle' }
       );
       expect(mockDocInstance.text).toHaveBeenCalledWith(
+        'Tropa',
+        expect.any(Number),
+        expect.any(Number),
+        { align: 'left', baseline: 'middle' }
+      );
+      expect(mockDocInstance.text).toHaveBeenCalledWith(
         'REC-45-001',
         expect.any(Number),
         expect.any(Number),
         { align: 'center', baseline: 'middle' }
+      );
+    });
+
+    it('generates certificate for no_scout direct emission member with No Scout label', async () => {
+      const noScoutMember: ScoutMember = {
+        identity: 'V-99.888.777',
+        first_names: 'Colaborador',
+        last_names: 'Externo',
+        birth_date: '1990-01-01',
+        member_type: 'adult',
+        unit: 'no_scout',
+        status: 'active',
+        batch_id: 45,
+        recognition_code: 'REC-45-NOSCOUT'
+      };
+
+      await generateSingleCertificatePdf({
+        member: noScoutMember,
+        batch: mockBatch,
+        recognition: mockRecognition,
+        hierarchy: mockHierarchy
+      });
+
+      expect(mockDocInstance.text).toHaveBeenCalledWith(
+        'Colaborador Externo',
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Object)
+      );
+      expect(mockDocInstance.text).toHaveBeenCalledWith(
+        'No Scout',
+        expect.any(Number),
+        expect.any(Number),
+        { align: 'left', baseline: 'middle' }
       );
     });
 

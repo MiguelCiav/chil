@@ -185,4 +185,135 @@ describe('NewBatchWizard full flow', () => {
       });
     });
   });
+
+  it('handles No Scout direct emission: selects No Scout unit scope, bypasses SERSIN scraper, and saves active member', async () => {
+    vi.mocked(api.createBatch).mockResolvedValue({
+      id: 888,
+      comment: 'Lote Directo No Scout',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      unit_scope: 'no_scout',
+      created_at: '2026-08-21T12:00:00.000Z'
+    });
+
+    vi.mocked(api.createMember).mockResolvedValue({
+      identity: '30999888',
+      first_names: '30999888',
+      last_names: '',
+      birth_date: '2000-01-01',
+      member_type: 'adult',
+      unit: 'no_scout',
+      status: 'active',
+      batch_id: 888
+    });
+    vi.mocked(api.getMembersByBatchId).mockResolvedValue([
+      {
+        identity: '30999888',
+        first_names: '30999888',
+        last_names: '',
+        birth_date: '2000-01-01',
+        member_type: 'adult',
+        unit: 'no_scout',
+        status: 'active',
+        batch_id: 888
+      }
+    ]);
+
+    render(
+      <MemoryRouter>
+        <NewBatchWizard />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
+    });
+
+    // 1. Select Region
+    const regionBtn = screen.getByLabelText(/Región Scout/i);
+    fireEvent.click(regionBtn);
+    const regionOpt = await screen.findByText('Región Capital');
+    fireEvent.click(regionOpt);
+
+    await waitFor(() => {
+      expect(screen.getByText('Región Capital')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Distrito Scout/i)).not.toBeDisabled();
+    });
+
+    // 2. Select District
+    const districtBtn = screen.getByLabelText(/Distrito Scout/i);
+    fireEvent.click(districtBtn);
+    const districtOpt = await screen.findByText('Distrito Sucre');
+    fireEvent.click(districtOpt);
+
+    await waitFor(() => {
+      expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Grupo Scout/i)).not.toBeDisabled();
+    });
+
+    // 3. Select Group
+    const groupBtn = screen.getByLabelText(/Grupo Scout/i);
+    fireEvent.click(groupBtn);
+    const groupOpt = await screen.findByText('Grupo San Luis');
+    fireEvent.click(groupOpt);
+
+    await waitFor(() => {
+      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+    });
+
+    // 4. Select Alcance de Unidad -> No Scout
+    const unitScopeSelect = screen.getByLabelText(/Alcance de Unidad/i);
+    fireEvent.change(unitScopeSelect, { target: { value: 'no_scout' } });
+    expect(unitScopeSelect).toHaveValue('no_scout');
+
+    // 5. Select Recognition Type
+    const recSelect = screen.getByLabelText(/Tipo de Reconocimiento/i);
+    fireEvent.change(recSelect, {
+      target: { value: 'sct-wood-badge' }
+    });
+
+    // Submit Step 1
+    const nextBtn = screen.getByText('Siguiente paso');
+    await waitFor(() => {
+      expect(nextBtn).not.toBeDisabled();
+    });
+    fireEvent.click(nextBtn);
+
+    // Verify batch was created with unit_scope: 'no_scout'
+    await waitFor(() => {
+      expect(api.createBatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          unit_scope: 'no_scout'
+        }),
+        'test-user-id'
+      );
+      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
+    });
+
+    // Step 2: Fill adult cedulas
+    const adultInput = screen.getByLabelText(/Cédulas de Adultos/i);
+    fireEvent.change(adultInput, { target: { value: '30999888' } });
+
+    const verifyBtn = screen.getByText('Iniciar Verificación');
+    fireEvent.click(verifyBtn);
+
+    await waitFor(() => {
+      // Scraper is bypassed, so getMemberStatus should NOT be called
+      expect(api.getMemberStatus).not.toHaveBeenCalled();
+      // Should show valid status and No Scout badge
+      expect(screen.getByText('Registro válido')).toBeInTheDocument();
+      expect(screen.getByText('No Scout')).toBeInTheDocument();
+    });
+
+    // Continue to Step 3
+    const continueBtn = screen.getByText('Validar y Continuar');
+    fireEvent.click(continueBtn);
+
+    // Step 3: Review & Finalize
+    await waitFor(() => {
+      expect(screen.getByText('Revisión Final del Lote')).toBeInTheDocument();
+      expect(screen.getByText('No Scout')).toBeInTheDocument();
+    });
+  });
 });

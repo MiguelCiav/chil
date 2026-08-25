@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup, getUnitLabel } from '../../batches/types';
 import { getHierarchyData } from '../../batches/api';
 import { getRecognitionTypeById } from '../api';
 import {
@@ -220,6 +220,7 @@ export function renderCertificatePage(
     region: regionName,
     district: districtName,
     group: groupName,
+    unit: getUnitLabel(member.unit),
     issue_date: issueDate,
     recognition_code: recognitionCode
   };

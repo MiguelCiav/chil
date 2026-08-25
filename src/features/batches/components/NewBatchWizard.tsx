@@ -35,7 +35,9 @@ import {
   District,
   ScoutGroup,
   ScoutMember,
-  MemberVerificationResult
+  MemberVerificationResult,
+  BatchUnitScope,
+  ScoutUnit
 } from '../types';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { useAuth } from '../../auth';
@@ -51,6 +53,7 @@ const step1Schema = z.object({
   districtId: z.string().min(1, "Debe seleccionar un distrito"),
   groupId: z.string().min(1, "Debe seleccionar un grupo scout"),
   recognitionType: z.string().min(1, "Debe seleccionar un tipo de reconocimiento"),
+  unitScope: z.string().optional()
 });
 
 type Step1FormData = z.infer<typeof step1Schema>;
@@ -106,6 +109,7 @@ export const NewBatchWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [batchId, setBatchId] = useState<number | null>(null);
   const [batchName, setBatchName] = useState<string>('');
+  const [batchUnitScope, setBatchUnitScope] = useState<BatchUnitScope>('mixed');
 
   // Hierarchy State
   const [regions, setRegions] = useState<Region[]>([]);
@@ -145,7 +149,8 @@ export const NewBatchWizard: React.FC = () => {
       regionId: '',
       districtId: '',
       groupId: '',
-      recognitionType: ''
+      recognitionType: '',
+      unitScope: 'mixed'
     }
   });
 
@@ -186,11 +191,15 @@ export const NewBatchWizard: React.FC = () => {
   const onSubmitStep1 = async (data: Step1FormData) => {
     try {
       let created;
+      const unit_scope: BatchUnitScope = (data.unitScope as BatchUnitScope) || 'mixed';
+      setBatchUnitScope(unit_scope);
+
       const params = {
         comment: data.comment || '',
         region_id: Number(data.regionId),
         district_id: Number(data.districtId),
         group_id: Number(data.groupId),
+        unit_scope,
         recognition_type: data.recognitionType,
         user_id: user?.uid
       };
@@ -211,14 +220,62 @@ export const NewBatchWizard: React.FC = () => {
   };
 
   // --- Step 2 verification logic ---
-  const verifyCedula = async (cedula: string, type: 'young' | 'adult') => {
+  const verifyCedula = async (cedula: string, type: 'young' | 'adult', explicitUnit?: ScoutUnit) => {
+    const memberUnit: ScoutUnit = explicitUnit || (batchUnitScope !== 'mixed' ? (batchUnitScope as ScoutUnit) : (type === 'young' ? 'tropa' : 'institucional'));
+
+    // If member is 'no_scout', completely bypass SERSIN scraper query and mark as active
+    if (memberUnit === 'no_scout') {
+      setVerificationList(prev => {
+        const idx = prev.findIndex(item => item.cedula === cedula);
+        const newItem: MemberVerificationResult = {
+          cedula,
+          name: 'Colaborador No Scout',
+          status: 'Registro válido',
+          type,
+          unit: 'no_scout'
+        };
+        if (idx > -1) {
+          const copy = [...prev];
+          copy[idx] = newItem;
+          return copy;
+        } else {
+          return [...prev, newItem];
+        }
+      });
+
+      if (batchId) {
+        try {
+          await createMember(
+            {
+              identity: cedula,
+              first_names: 'Colaborador',
+              last_names: 'No Scout',
+              birth_date: '1990-01-01',
+              member_type: type,
+              unit: 'no_scout',
+              status: 'active',
+              batch_id: batchId,
+              user_id: user?.uid
+            },
+            user?.uid
+          );
+        } catch (dbErr) {
+          console.error("Database save failed for no_scout member:", dbErr);
+        }
+      }
+
+      setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      return;
+    }
+
     // 1. Set to Consultando status
     setVerificationList(prev => {
       const idx = prev.findIndex(item => item.cedula === cedula);
       const newItem: MemberVerificationResult = {
         cedula,
         status: 'Consultando...',
-        type
+        type,
+        unit: memberUnit
       };
       if (idx > -1) {
         const copy = [...prev];
@@ -247,7 +304,8 @@ export const NewBatchWizard: React.FC = () => {
             cedula,
             name,
             status,
-            type
+            type,
+            unit: memberUnit
           }
           : item
       ));
@@ -262,6 +320,7 @@ export const NewBatchWizard: React.FC = () => {
               last_names: 'No Registrado',
               birth_date: '1990-01-01',
               member_type: type,
+              unit: memberUnit,
               status: 'pending',
               batch_id: batchId,
               user_id: user?.uid
@@ -289,6 +348,7 @@ export const NewBatchWizard: React.FC = () => {
             name: res.nombre_completo,
             status: rowStatus,
             type,
+            unit: memberUnit,
             details: res
           }
           : item
@@ -307,6 +367,7 @@ export const NewBatchWizard: React.FC = () => {
               email: res.correo_electronico,
               phone: res.telefono,
               member_type: type,
+              unit: memberUnit,
               status: isScrapedActive ? 'active' : 'pending',
               batch_id: batchId,
               user_id: user?.uid
@@ -339,22 +400,26 @@ export const NewBatchWizard: React.FC = () => {
     setAuthError(null);
 
     try {
-      // 1. Check if the credentials are saved
-      const hasCreds = await hasScraperCredentials();
-      if (!hasCreds) {
-        setIsVerifying(false);
-        setShowAuthAlert(true);
-        return;
-      }
+      const isAllNoScout = batchUnitScope === 'no_scout';
 
-      // 2. If saved, invoke the scraper login command first to authenticate
-      try {
-        await loginScraper();
-      } catch (loginErr) {
-        setIsVerifying(false);
-        const errStr = loginErr instanceof Error ? loginErr.message : String(loginErr);
-        setAuthError(errStr);
-        return;
+      if (!isAllNoScout) {
+        // 1. Check if the credentials are saved
+        const hasCreds = await hasScraperCredentials();
+        if (!hasCreds) {
+          setIsVerifying(false);
+          setShowAuthAlert(true);
+          return;
+        }
+
+        // 2. If saved, invoke the scraper login command first to authenticate
+        try {
+          await loginScraper();
+        } catch (loginErr) {
+          setIsVerifying(false);
+          const errStr = loginErr instanceof Error ? loginErr.message : String(loginErr);
+          setAuthError(errStr);
+          return;
+        }
       }
 
       // 3. Initiate the parallel verification requests
@@ -422,9 +487,17 @@ export const NewBatchWizard: React.FC = () => {
 
       await Promise.all(deletePromises);
 
-      // 4. Reload the updated members list
+      // 4. Reload the updated members list and ensure unit is populated
       const members = await getMembersByBatchId(batchId);
-      const membersWithCodes = assignBatchRecognitionCodes(members, 'auto');
+      const normalizedMembers = members.map(m => {
+        const unit = m.unit || (batchUnitScope !== 'mixed' ? (batchUnitScope as ScoutUnit) : (m.member_type === 'young' ? 'tropa' : 'institucional'));
+        return {
+          ...m,
+          unit,
+          status: unit === 'no_scout' ? ('active' as const) : m.status
+        };
+      });
+      const membersWithCodes = assignBatchRecognitionCodes(normalizedMembers, 'auto');
       setSavedMembers(membersWithCodes);
       setCurrentStep(3);
     }
@@ -530,6 +603,7 @@ export const NewBatchWizard: React.FC = () => {
       {currentStep === 2 && (
         <Step2Verification
           batchName={batchName}
+          unitScope={batchUnitScope}
           youngCedulas={youngCedulas}
           setYoungCedulas={setYoungCedulas}
           adultCedulas={adultCedulas}

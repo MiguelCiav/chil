@@ -5,10 +5,11 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Field } from '../../../../components/Field';
 import { Table } from '../../../../components/Table';
-import { MemberVerificationResult } from '../../types';
+import { MemberVerificationResult, ScoutUnit, BatchUnitScope, getUnitBadge } from '../../types';
 
 interface Step2VerificationProps {
   readonly batchName: string;
+  readonly unitScope?: BatchUnitScope;
   readonly youngCedulas: string;
   readonly setYoungCedulas: (val: string) => void;
   readonly adultCedulas: string;
@@ -17,8 +18,9 @@ interface Step2VerificationProps {
   readonly verifyProgress: { readonly current: number; readonly total: number };
   readonly verificationList: readonly MemberVerificationResult[];
   readonly handleVerify: () => void;
-  readonly verifyCedula: (cedula: string, type: 'young' | 'adult') => void;
+  readonly verifyCedula: (cedula: string, type: 'young' | 'adult', unit?: ScoutUnit) => void;
   readonly handleToggleMemberType: (cedula: string) => void;
+  readonly handleUpdateMemberUnit?: (cedula: string, unit: ScoutUnit) => void;
   readonly handleStep2Continue: () => void;
   readonly onBack: () => void;
 }
@@ -114,7 +116,7 @@ const NameCell: React.FC<{ readonly value: string }> = ({ value }) => (
 );
 
 const createStep2Columns = (
-  verifyCedula: (cedula: string, type: 'young' | 'adult') => void,
+  verifyCedula: (cedula: string, type: 'young' | 'adult', unit?: ScoutUnit) => void,
   handleToggleMemberType: (cedula: string) => void
 ): ColumnDef<MemberVerificationResult>[] => [
   {
@@ -128,12 +130,31 @@ const createStep2Columns = (
     cell: (info) => <NameCell value={info.getValue() as string} />
   },
   {
+    accessorKey: 'unit',
+    header: 'Unidad',
+    cell: (info) => {
+      const unit = info.getValue() as ScoutUnit | undefined;
+      const badge = getUnitBadge(unit);
+      return (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}>
+          {badge.label}
+        </span>
+      );
+    }
+  },
+  {
     accessorKey: 'status',
     header: 'Estatus',
     cell: (info) => (
       <StatusBadge
         status={info.getValue() as string}
-        onRetry={() => verifyCedula(info.row.original.cedula, info.row.original.type)}
+        onRetry={() => {
+          if (info.row.original.unit) {
+            verifyCedula(info.row.original.cedula, info.row.original.type, info.row.original.unit);
+          } else {
+            verifyCedula(info.row.original.cedula, info.row.original.type);
+          }
+        }}
       />
     )
   },

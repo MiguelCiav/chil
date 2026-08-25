@@ -34,7 +34,9 @@ import {
   ScoutMember,
   Region,
   District,
-  ScoutGroup
+  ScoutGroup,
+  getUnitBadge,
+  getUnitLabel
 } from '../../batches/types';
 import { SummaryRowData } from '../types';
 import { exportToExcel } from '../utils/excelExport';
@@ -168,6 +170,7 @@ export const SummaryView: React.FC = () => {
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState('');
   const [selectedMemberType, setSelectedMemberType] = useState<'all' | 'young' | 'adult'>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'pending' | 'exceptional'>('all');
   const [selectedDatePeriod, setSelectedDatePeriod] = useState<
@@ -223,6 +226,7 @@ export const SummaryView: React.FC = () => {
 
       const issueDate = batch?.created_at ? formatBatchDate(batch.created_at) : '-';
       const batchCode = batch ? formatBatchCode(batch.id, batch.created_at) : '#000';
+      const unitLabel = getUnitLabel(m.unit);
       const memberTypeLabel = m.member_type === 'young' ? 'Joven' : 'Adulto';
       const statusLabel = m.status === 'active' ? 'Registro Válido' : m.status === 'exceptional' ? 'Emisión Excepcional' : 'Registro Inválido';
 
@@ -238,6 +242,8 @@ export const SummaryView: React.FC = () => {
         firstName: m.first_names || '',
         lastName: m.last_names || '',
         fullName: `${m.first_names || ''} ${m.last_names || ''}`.trim() || '-',
+        unit: m.unit,
+        unitLabel,
         memberType: m.member_type,
         memberTypeLabel,
         status: m.status,
@@ -284,6 +290,7 @@ export const SummaryView: React.FC = () => {
           row.regionName.toLowerCase().includes(term) ||
           row.districtName.toLowerCase().includes(term) ||
           row.groupName.toLowerCase().includes(term) ||
+          row.unitLabel.toLowerCase().includes(term) ||
           row.memberTypeLabel.toLowerCase().includes(term) ||
           row.statusLabel.toLowerCase().includes(term);
 
@@ -314,17 +321,22 @@ export const SummaryView: React.FC = () => {
         if (groupObj && row.groupName !== groupObj.name) return false;
       }
 
-      // 4. Member Type filter
+      // 4. Unit filter
+      if (selectedUnit && row.unit !== selectedUnit) {
+        return false;
+      }
+
+      // 5. Member Type filter
       if (selectedMemberType !== 'all' && row.memberType !== selectedMemberType) {
         return false;
       }
 
-      // 5. Status filter
+      // 6. Status filter
       if (selectedStatus !== 'all' && row.status !== selectedStatus) {
         return false;
       }
 
-      // 6. Date Range filter
+      // 7. Date Range filter
       if (selectedDatePeriod !== 'all') {
         if (!matchesDateRange(row.rawDate, selectedDatePeriod, customStartDate, customEndDate)) {
           return false;
@@ -340,6 +352,7 @@ export const SummaryView: React.FC = () => {
     selectedRegion,
     selectedDistrict,
     selectedGroup,
+    selectedUnit,
     selectedMemberType,
     selectedStatus,
     selectedDatePeriod,
@@ -357,6 +370,7 @@ export const SummaryView: React.FC = () => {
       selectedRegion !== '' ||
       selectedDistrict !== '' ||
       selectedGroup !== '' ||
+      selectedUnit !== '' ||
       selectedMemberType !== 'all' ||
       selectedStatus !== 'all' ||
       selectedDatePeriod !== 'all' ||
@@ -369,6 +383,7 @@ export const SummaryView: React.FC = () => {
     selectedRegion,
     selectedDistrict,
     selectedGroup,
+    selectedUnit,
     selectedMemberType,
     selectedStatus,
     selectedDatePeriod,
@@ -382,6 +397,7 @@ export const SummaryView: React.FC = () => {
     setSelectedRegion('');
     setSelectedDistrict('');
     setSelectedGroup('');
+    setSelectedUnit('');
     setSelectedMemberType('all');
     setSelectedStatus('all');
     setSelectedDatePeriod('all');
@@ -438,6 +454,19 @@ export const SummaryView: React.FC = () => {
       accessorKey: 'lastName',
       header: 'APELLIDO',
       cell: info => <span className="text-neutral">{info.getValue() as string}</span>
+    },
+    {
+      accessorKey: 'unitLabel',
+      header: 'UNIDAD',
+      cell: ({ row }) => {
+        const unit = row.original.unit;
+        const badge = getUnitBadge(unit);
+        return (
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}>
+            {badge.label}
+          </span>
+        );
+      }
     },
     {
       accessorKey: 'memberTypeLabel',
@@ -653,6 +682,28 @@ export const SummaryView: React.FC = () => {
               {availableGroups.map(g => (
                 <option key={g.id} value={String(g.id)}>{g.name}</option>
               ))}
+            </select>
+          </div>
+
+          {/* Unit Filter */}
+          <div>
+            <label htmlFor="summary-filter-unit" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+              Unidad Scout
+            </label>
+            <select
+              id="summary-filter-unit"
+              aria-label="Filtrar por unidad"
+              value={selectedUnit}
+              onChange={e => setSelectedUnit(e.target.value)}
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+            >
+              <option value="">Todas las unidades</option>
+              <option value="manada">Manada</option>
+              <option value="tropa">Tropa</option>
+              <option value="caminantes">Caminantes</option>
+              <option value="clan">Clan</option>
+              <option value="institucional">Institucional</option>
+              <option value="no_scout">No Scout</option>
             </select>
           </div>
 

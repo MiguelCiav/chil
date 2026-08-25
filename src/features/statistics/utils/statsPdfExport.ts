@@ -223,6 +223,48 @@ export function exportStatisticsPdf(
 
   y += statBoxH + 8;
 
+  // Section: Distribución por Unidad Scout
+  if (stats.unitDistribution && stats.unitDistribution.items.length > 0) {
+    checkPageBreak(45);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Distribución por Unidad Scout', margin, y);
+    y += 4;
+
+    doc.setFillColor(240, 243, 246);
+    doc.rect(margin, y, contentWidth, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(70, 80, 95);
+    doc.text('UNIDAD SCOUT', margin + 4, y + 4.5);
+    doc.text('CANTIDAD', margin + 120, y + 4.5);
+    doc.text('% DEL TOTAL', margin + 155, y + 4.5);
+    y += 7;
+
+    stats.unitDistribution.items.forEach((item, idx) => {
+      checkPageBreak(8);
+      if (idx % 2 === 1) {
+        doc.setFillColor(250, 251, 252);
+        doc.rect(margin, y, contentWidth, 6, 'F');
+      }
+      doc.setDrawColor(240, 240, 240);
+      doc.line(margin, y + 6, margin + contentWidth, y + 6);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(30, 40, 50);
+      doc.text(item.label, margin + 4, y + 4.2);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(item.count), margin + 120, y + 4.2);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${item.percentage}%`, margin + 155, y + 4.2);
+      y += 6;
+    });
+
+    y += 6;
+  }
+
   // Section: Ranking de Reconocimientos
   checkPageBreak(50);
   doc.setFont('helvetica', 'bold');

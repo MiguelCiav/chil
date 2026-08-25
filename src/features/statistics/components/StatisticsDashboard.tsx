@@ -8,6 +8,7 @@ import { RecognitionRankingChart } from './charts/RecognitionRankingChart';
 import { DemographicsDonut } from './charts/DemographicsDonut';
 import { GeographicBarChart } from './charts/GeographicBarChart';
 import { StatusBreakdownCard } from './charts/StatusBreakdownCard';
+import { UnitDistributionCard } from './charts/UnitDistributionCard';
 import { Button } from '../../../components/Button';
 
 export const StatisticsDashboard: React.FC = () => {
@@ -123,6 +124,11 @@ export const StatisticsDashboard: React.FC = () => {
         <div className="lg:col-span-6">
           <GeographicBarChart data={stats.geographic} />
         </div>
+      </div>
+
+      {/* Row 3: Scout Unit Distribution Card (12 cols) */}
+      <div>
+        <UnitDistributionCard data={stats.unitDistribution} />
       </div>
 
       {/* Bottom Row: Status and Data Quality Breakdown (12 cols) */}

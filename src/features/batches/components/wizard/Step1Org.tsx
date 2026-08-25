@@ -12,6 +12,7 @@ export interface Step1FormData {
   districtId: string;
   groupId: string;
   recognitionType: string;
+  unitScope?: string;
 }
 
 interface Step1OrgProps {
@@ -160,6 +161,27 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
         </div>
 
         <div className="space-y-6">
+          {/* Unit Scope Selector */}
+          <div className="w-full">
+            <label htmlFor="unit-scope-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+              Alcance de Unidad *
+            </label>
+            <select
+              id="unit-scope-select"
+              className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+              disabled={loadingHierarchy}
+              {...register('unitScope')}
+            >
+              <option value="mixed">🌐 Mixto (Permite cualquier unidad)</option>
+              <option value="manada">🟡 Manada (Lobatos/Lobeznas)</option>
+              <option value="tropa">🟢 Tropa (Scouts)</option>
+              <option value="caminantes">🔵 Caminantes</option>
+              <option value="clan">🔴 Clan (Rovers)</option>
+              <option value="institucional">🟣 Institucional (Adultos / Dirigentes)</option>
+              <option value="no_scout">⚪ No Scout (Colaboradores / Externos)</option>
+            </select>
+          </div>
+
           {/* Recognition Type Select */}
           <div className="w-full">
             <label htmlFor="recognition-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">

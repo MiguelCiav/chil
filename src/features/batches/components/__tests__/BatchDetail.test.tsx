@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BatchDetail } from '../BatchDetail';
+import { ScoutMember } from '../../types';
 import * as api from '../../api';
 import * as recognitions from '../../../recognitions';
 
@@ -1082,6 +1083,126 @@ describe('BatchDetail component', () => {
         expect.objectContaining({
           member: exceptionalMember,
           batch: expect.objectContaining({ id: 101 })
+        })
+      );
+    });
+  });
+
+  it('renders Alcance de Unidad in details card and UNIDAD column with badges', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: 'Lote Manada Especial',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      unit_scope: 'manada',
+      recognition_type: 'Servicio Prolongado',
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    const member: ScoutMember = {
+      identity: 'V-66666666',
+      first_names: 'Lucas',
+      last_names: 'Lobato',
+      birth_date: '2016-01-01',
+      member_type: 'young',
+      unit: 'manada',
+      status: 'active',
+      batch_id: 101,
+      recognition_code: 'REC-6666'
+    };
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([member]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [{ id: 1, name: 'Región Capital' }],
+      districts: [{ id: 10, name: 'Distrito Metropolitano', region_id: 1 }],
+      groups: [{ id: 100, name: 'Grupo San Jorge', district_id: 10 }]
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Alcance de Unidad')).toBeInTheDocument();
+      // "Manada" label in card and table badge
+      expect(screen.getAllByText('Manada').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('UNIDAD')).toBeInTheDocument();
+    });
+  });
+
+  it('allows updating member unit in BatchDetail edit modal and displays in quick view', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: 'Lote Mixto',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      unit_scope: 'mixed',
+      recognition_type: 'Servicio Prolongado',
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    const member: ScoutMember = {
+      identity: 'V-77777777',
+      first_names: 'Sofia',
+      last_names: 'Rovers',
+      birth_date: '2004-01-01',
+      member_type: 'young',
+      unit: 'clan',
+      status: 'active',
+      batch_id: 101,
+      recognition_code: 'REC-7777'
+    };
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([member]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Sofia Rovers')).toBeInTheDocument();
+    });
+
+    // Open row menu and click edit
+    fireEvent.click(screen.getByLabelText(/Opciones de Sofia Rovers/i));
+    fireEvent.click(screen.getByText('Editar'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Editar Datos de Miembro')).toBeInTheDocument();
+    });
+    const unitSelect = screen.getByLabelText(/Unidad Scout \*/i);
+    expect(unitSelect).toHaveValue('clan');
+
+    fireEvent.change(unitSelect, { target: { value: 'caminantes' } });
+    expect(unitSelect).toHaveValue('caminantes');
+
+    vi.mocked(api.updateMember).mockResolvedValueOnce({
+      ...member,
+      unit: 'caminantes'
+    });
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-77777777',
+          unit: 'caminantes'
         })
       );
     });

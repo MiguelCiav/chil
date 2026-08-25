@@ -6,6 +6,7 @@ import {
   calculateDemographics,
   calculateGeographicBreakdown,
   calculateStatusBreakdown,
+  calculateUnitDistribution,
   buildStatisticsDataset
 } from '../statsCalculators';
 import { Batch, ScoutMember, Region, District } from '../../../batches/types';
@@ -276,6 +277,48 @@ describe('statsCalculators', () => {
     });
   });
 
+  describe('calculateUnitDistribution', () => {
+    it('calculates unit distribution including fallback and explicit units', () => {
+      const unitMembers: ScoutMember[] = [
+        { identity: '1', first_names: 'A', last_names: 'B', birth_date: '2010-01-01', member_type: 'young', unit: 'manada', status: 'active' },
+        { identity: '2', first_names: 'C', last_names: 'D', birth_date: '2010-01-01', member_type: 'young', unit: 'tropa', status: 'active' },
+        { identity: '3', first_names: 'E', last_names: 'F', birth_date: '2010-01-01', member_type: 'young', unit: 'caminantes', status: 'active' },
+        { identity: '4', first_names: 'G', last_names: 'H', birth_date: '2010-01-01', member_type: 'young', unit: 'clan', status: 'active' },
+        { identity: '5', first_names: 'I', last_names: 'J', birth_date: '1980-01-01', member_type: 'adult', unit: 'institucional', status: 'active' },
+        { identity: '6', first_names: 'K', last_names: 'L', birth_date: '1985-01-01', member_type: 'adult', unit: 'no_scout', status: 'active' }
+      ];
+
+      const dist = calculateUnitDistribution(unitMembers);
+      expect(dist.totalCount).toBe(6);
+      expect(dist.items).toHaveLength(6);
+      expect(dist.items.find(i => i.unit === 'manada')?.count).toBe(1);
+      expect(dist.items.find(i => i.unit === 'no_scout')?.count).toBe(1);
+      expect(dist.items.find(i => i.unit === 'no_scout')?.percentage).toBe(16.7);
+    });
+
+    it('falls back to tropa for young and institucional for adult when unit is missing', () => {
+      const mixedMembers: ScoutMember[] = [
+        { identity: '1', first_names: 'A', last_names: 'B', birth_date: '2010-01-01', member_type: 'young', status: 'active' },
+        { identity: '2', first_names: 'C', last_names: 'D', birth_date: '1980-01-01', member_type: 'adult', status: 'active' }
+      ];
+
+      const dist = calculateUnitDistribution(mixedMembers);
+      expect(dist.totalCount).toBe(2);
+      expect(dist.items.find(i => i.unit === 'tropa')?.count).toBe(1);
+      expect(dist.items.find(i => i.unit === 'institucional')?.count).toBe(1);
+    });
+
+    it('handles empty members list safely', () => {
+      const dist = calculateUnitDistribution([]);
+      expect(dist.totalCount).toBe(0);
+      expect(dist.items).toHaveLength(6);
+      dist.items.forEach(item => {
+        expect(item.count).toBe(0);
+        expect(item.percentage).toBe(0);
+      });
+    });
+  });
+
   describe('buildStatisticsDataset', () => {
     it('builds a consolidated statistics dataset object', () => {
       const dataset = buildStatisticsDataset(
@@ -292,6 +335,7 @@ describe('statsCalculators', () => {
       expect(dataset.demographics.youngCount).toBe(3);
       expect(dataset.geographic.regions).toHaveLength(2);
       expect(dataset.statusBreakdown.activeCount).toBe(2);
+      expect(dataset.unitDistribution.items).toHaveLength(6);
       expect(dataset.filteredMembersCount).toBe(4);
       expect(dataset.filteredBatchesCount).toBe(3);
     });

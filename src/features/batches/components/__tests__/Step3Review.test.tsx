@@ -316,5 +316,60 @@ describe('Step3Review component', () => {
       );
     });
   });
+
+  it('displays unit badge on member row and allows changing unit in edit modal', async () => {
+    const memberWithUnit: ScoutMember = {
+      identity: 'V-55555555',
+      first_names: 'Valeria',
+      last_names: 'Lobezna',
+      birth_date: '2015-06-01',
+      member_type: 'young',
+      unit: 'manada',
+      status: 'active',
+      batch_id: 123,
+      recognition_code: 'REC-MAN-01'
+    };
+
+    vi.mocked(api.updateMember).mockResolvedValueOnce({
+      ...memberWithUnit,
+      unit: 'tropa'
+    });
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        ...memberWithUnit,
+        unit: 'tropa'
+      }
+    ]);
+
+    render(
+      <Step3Review
+        {...defaultProps}
+        savedMembers={[memberWithUnit]}
+      />
+    );
+
+    expect(screen.getByText('Valeria Lobezna')).toBeInTheDocument();
+    expect(screen.getByText('Manada')).toBeInTheDocument();
+
+    // Open edit modal
+    fireEvent.click(screen.getByLabelText(/Editar información de Valeria Lobezna/i));
+
+    const unitSelect = screen.getByLabelText(/Unidad Scout \*/i);
+    expect(unitSelect).toHaveValue('manada');
+
+    fireEvent.change(unitSelect, { target: { value: 'tropa' } });
+    expect(unitSelect).toHaveValue('tropa');
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-55555555',
+          unit: 'tropa'
+        })
+      );
+    });
+  });
 });
 

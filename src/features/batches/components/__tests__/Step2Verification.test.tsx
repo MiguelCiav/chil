@@ -119,4 +119,35 @@ describe('Step2Verification component', () => {
     fireEvent.click(backBtn);
     expect(defaultProps.onBack).toHaveBeenCalled();
   });
+
+  it('renders UNIDAD badges in verification results table', () => {
+    const list: MemberVerificationResult[] = [
+      {
+        cedula: '29111222',
+        name: 'Ana Perez',
+        status: 'Registro válido',
+        type: 'young',
+        unit: 'caminantes'
+      },
+      {
+        cedula: '12333444',
+        name: 'Colaborador Juan',
+        status: 'Registro válido',
+        type: 'adult',
+        unit: 'no_scout'
+      }
+    ];
+
+    render(
+      <Step2Verification
+        {...defaultProps}
+        unitScope="mixed"
+        verificationList={list}
+      />
+    );
+
+    expect(screen.getByText('Unidad')).toBeInTheDocument();
+    expect(screen.getByText('Caminantes')).toBeInTheDocument();
+    expect(screen.getByText('No Scout')).toBeInTheDocument();
+  });
 });

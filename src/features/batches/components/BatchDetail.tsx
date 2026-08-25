@@ -38,7 +38,7 @@ import {
   generateBatchReport,
   getRecognitionName
 } from '../api';
-import { Batch, ScoutMember, Region, District, ScoutGroup, MemberStatus } from '../types';
+import { Batch, ScoutMember, Region, District, ScoutGroup, MemberStatus, ScoutUnit, getUnitBadge, getUnitLabel } from '../types';
 import {
   generateBatchCertificatesPdf,
   downloadSingleCertificatePdf,
@@ -254,6 +254,19 @@ export const BatchDetail: React.FC = () => {
         const rowData = info.row.original;
         return (
           <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>
+        );
+      }
+    },
+    {
+      accessorKey: 'unit',
+      header: 'UNIDAD',
+      cell: (info) => {
+        const unit = info.getValue() as ScoutUnit | undefined;
+        const badge = getUnitBadge(unit);
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}>
+            {badge.label}
+          </span>
         );
       }
     },
@@ -492,6 +505,14 @@ export const BatchDetail: React.FC = () => {
 
             <div className="space-y-2 text-xs sm:text-sm my-auto">
               <div className="flex justify-between items-center text-neutral/60">
+                <span>Alcance de Unidad</span>
+                <span className="font-semibold text-neutral">
+                  {batch.unit_scope === 'mixed' || !batch.unit_scope
+                    ? 'Mixto (Todas las unidades)'
+                    : getUnitLabel(batch.unit_scope as ScoutUnit)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-neutral/60">
                 <span>Región</span>
                 <span className="font-semibold text-neutral">{getRegionName(batch.region_id)}</span>
               </div>
@@ -720,6 +741,31 @@ export const BatchDetail: React.FC = () => {
                   </select>
                 </div>
               </div>
+              <div className="w-full">
+                <label htmlFor="member-unit-select" className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral">
+                  Unidad Scout *
+                </label>
+                <select
+                  id="member-unit-select"
+                  value={editingMember.unit || (editingMember.member_type === 'young' ? 'tropa' : 'institucional')}
+                  onChange={e => {
+                    const newUnit = e.target.value as ScoutUnit;
+                    setEditingMember({
+                      ...editingMember,
+                      unit: newUnit,
+                      ...(newUnit === 'no_scout' ? { status: 'active' } : {})
+                    });
+                  }}
+                  className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="manada">Manada</option>
+                  <option value="tropa">Tropa</option>
+                  <option value="caminantes">Caminantes</option>
+                  <option value="clan">Clan</option>
+                  <option value="institucional">Institucional</option>
+                  <option value="no_scout">No Scout</option>
+                </select>
+              </div>
               {editingMember.status !== 'active' && (
                 <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -797,6 +843,10 @@ export const BatchDetail: React.FC = () => {
               <div className="flex justify-between border-b border-gray-200 pb-2">
                 <span className="text-neutral/50 font-semibold">Tipo</span>
                 <span className="font-semibold text-neutral">{viewingMember.member_type === 'young' ? 'Joven' : 'Adulto'}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Unidad</span>
+                <span className="font-semibold text-neutral">{getUnitLabel(viewingMember.unit)}</span>
               </div>
               <div className="flex justify-between border-b border-gray-200 pb-2">
                 <span className="text-neutral/50 font-semibold">Estatus</span>

@@ -551,4 +551,78 @@ describe('SummaryView component', () => {
     expect(screen.getByText('Página 1 de 3')).toBeInTheDocument();
     expect(screen.getByText('Persona 1')).toBeInTheDocument();
   });
+
+  it('renders UNIDAD column with badges and filters members by Scout Unit', async () => {
+    const unitMembers: ScoutMember[] = [
+      {
+        identity: 'V-1001',
+        status: 'active',
+        batch_id: 101,
+        first_names: 'Ana María',
+        last_names: 'Pérez Gómez',
+        birth_date: '2008-05-10',
+        member_type: 'young',
+        unit: 'manada',
+        recognition_code: 'SOL-001'
+      },
+      {
+        identity: 'V-2001',
+        status: 'active',
+        batch_id: 102,
+        first_names: 'Carlos',
+        last_names: 'Rodríguez',
+        birth_date: '2009-11-20',
+        member_type: 'young',
+        unit: 'tropa',
+        recognition_code: 'WB-050'
+      },
+      {
+        identity: 'V-3001',
+        status: 'active',
+        batch_id: 101,
+        first_names: 'Pedro',
+        last_names: 'Externo',
+        birth_date: '1980-01-01',
+        member_type: 'adult',
+        unit: 'no_scout',
+        recognition_code: 'EXT-001'
+      }
+    ];
+
+    vi.mocked(batchApi.getAllMembers).mockResolvedValueOnce(unitMembers);
+    vi.mocked(batchApi.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(batchApi.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    render(
+      <MemoryRouter>
+        <SummaryView />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('UNIDAD')).toBeInTheDocument();
+      expect(screen.getByText('Manada')).toBeInTheDocument();
+      expect(screen.getByText('Tropa')).toBeInTheDocument();
+      expect(screen.getByText('No Scout')).toBeInTheDocument();
+    });
+
+    // Filter by Manada
+    const unitFilter = screen.getByLabelText(/Filtrar por unidad/i);
+    act(() => {
+      fireEvent.change(unitFilter, { target: { value: 'manada' } });
+    });
+
+    expect(screen.getByText('Ana María')).toBeInTheDocument();
+    expect(screen.queryByText('Carlos')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pedro')).not.toBeInTheDocument();
+
+    // Filter by No Scout
+    act(() => {
+      fireEvent.change(unitFilter, { target: { value: 'no_scout' } });
+    });
+
+    expect(screen.getByText('Pedro')).toBeInTheDocument();
+    expect(screen.queryByText('Ana María')).not.toBeInTheDocument();
+    expect(screen.queryByText('Carlos')).not.toBeInTheDocument();
+  });
 });
