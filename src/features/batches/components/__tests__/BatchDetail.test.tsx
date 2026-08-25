@@ -101,7 +101,9 @@ describe('BatchDetail component', () => {
       groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
     });
 
-    vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_101.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce(
+      'Diplomas_Lote_101_servicio_prolongado.pdf'
+    );
 
     vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce(
       'Diplomas_Lote_101_servicio_prolongado.pdf'
@@ -139,7 +141,6 @@ describe('BatchDetail component', () => {
       expect(api.generateBatchReport).toHaveBeenCalled();
       expect(screen.getByText(/Lista de miembros \(PDF\) generada exitosamente\./i)).toBeInTheDocument();
     });
-
     // Trigger batch PDF download
     const downloadBtn = screen.getByRole('button', { name: /Descargar todos \(PDF\)/i });
     fireEvent.click(downloadBtn);
