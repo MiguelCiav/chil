@@ -13,6 +13,7 @@ import { Button } from '../../../components/Button';
 export const StatisticsDashboard: React.FC = () => {
   const {
     stats,
+    yoyComparison,
     filters,
     setFilter,
     resetFilters,
@@ -103,32 +104,33 @@ export const StatisticsDashboard: React.FC = () => {
       />
 
       {/* Top 5 KPI Metrics Grid */}
-      <StatKpiGrid metrics={stats.kpis} />
+      <StatKpiGrid metrics={stats.kpis} yoy={yoyComparison} />
 
       {/* Section 1: Tabla de reconocimientos entregados por Región */}
       <div>
-        <RegionSummaryTable regions={stats.geographic.regions} />
+        <RegionSummaryTable regions={stats.geographic.regions} yoy={yoyComparison} />
       </div>
 
       {/* Section 2: Tabla de reconocimientos entregados por Distrito */}
       <div>
-        <DistrictSummaryTable districts={stats.geographic.districts} />
+        <DistrictSummaryTable districts={stats.geographic.districts} yoy={yoyComparison} />
       </div>
 
       {/* Section 3: Tabla de reconocimientos entregados por Unidad */}
       <div>
-        <UnitDistributionCard data={stats.unitDistribution} />
+        <UnitDistributionCard data={stats.unitDistribution} yoy={yoyComparison} />
       </div>
 
       {/* Section 4: Resumen de reconocimientos entregados a Jóvenes y Adultos */}
       <div>
-        <DemographicsDonut data={stats.demographics} />
+        <DemographicsDonut data={stats.demographics} yoy={yoyComparison} />
       </div>
 
       {/* Section 5: Tabla de resumen mensual de los reconocimientos, con su gráfico debajo */}
       <div>
-        <MonthlyTrendChart data={stats.monthlyTrends} />
+        <MonthlyTrendChart data={stats.monthlyTrends} yoy={yoyComparison} />
       </div>
     </div>
   );
 };
+

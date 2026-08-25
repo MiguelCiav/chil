@@ -131,7 +131,12 @@ describe('useStatisticsData hook', () => {
     expect(result.current.stats.kpis.totalDiplomas).toBe(3);
     expect(result.current.hasActiveFilters).toBe(false);
     expect(result.current.regions).toHaveLength(2);
+    expect(result.current.yoyComparison).toBeDefined();
+    expect(result.current.hasPreviousYearData).toBe(true);
+    expect(result.current.yoyComparison?.currentYear).toBe(2026);
+    expect(result.current.yoyComparison?.previousYear).toBe(2025);
   });
+
 
   it('filters data reactively by recognition type', async () => {
     const { result } = renderHook(() => useStatisticsData());

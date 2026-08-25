@@ -257,4 +257,56 @@ describe('statsPdfExport', () => {
       expect.any(Number)
     );
   });
+
+  it('generates comparative PDF report when yoyComparison hasPreviousYearData is true', () => {
+    const yoyStats: StatisticsDataset = {
+      ...mockStats,
+      yoyComparison: {
+        currentYear: 2025,
+        previousYear: 2024,
+        hasPreviousYearData: true,
+        totalDiplomas: { current: 15, previous: 10, diff: 5, percentChange: 50 },
+        totalBatches: { current: 5, previous: 4, diff: 1, percentChange: 25 },
+        totalMembers: { current: 15, previous: 10, diff: 5, percentChange: 50 },
+        demographics: {
+          young: { current: 12, previous: 8, diff: 4, percentChange: 50, currentPercentage: 80, previousPercentage: 80 },
+          adult: { current: 3, previous: 2, diff: 1, percentChange: 50, currentPercentage: 20, previousPercentage: 20 },
+          total: { current: 15, previous: 10, diff: 5, percentChange: 50 }
+        },
+        regions: [
+          { id: 1, name: 'Región Capital', currentCount: 12, previousCount: 8, diff: 4, percentChange: 50, currentPercentage: 80, previousPercentage: 80 }
+        ],
+        districts: [
+          { id: 10, name: 'Distrito Sucre', parentName: 'Región Capital', currentCount: 8, previousCount: 5, diff: 3, percentChange: 60, currentPercentage: 53.3, previousPercentage: 50 }
+        ],
+        units: [
+          { unit: 'manada', label: 'Manada', currentCount: 4, previousCount: 2, diff: 2, percentChange: 100, currentPercentage: 26.7, previousPercentage: 20, badgeClass: '' }
+        ],
+        monthly: [
+          { monthIndex: 0, label: 'Ene', currentCount: 5, previousCount: 3, diff: 2, percentChange: 66.7 },
+          { monthIndex: 1, label: 'Feb', currentCount: 10, previousCount: 7, diff: 3, percentChange: 42.9 }
+        ]
+      }
+    };
+
+    const filename = exportStatisticsPdf(yoyStats);
+
+    expect(filename).toBeDefined();
+    expect(mockDocInstance.save).toHaveBeenCalled();
+
+    // Check comparative subtitle in header
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      'Reporte Comparativo Anual (2024 vs 2025)',
+      expect.any(Number),
+      expect.any(Number)
+    );
+
+    // Check comparative chart title
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      'Gráfico de Tendencia Mensual y Comparativa:',
+      expect.any(Number),
+      expect.any(Number)
+    );
+  });
 });
+

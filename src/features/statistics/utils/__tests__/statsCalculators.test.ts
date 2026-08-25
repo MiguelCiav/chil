@@ -7,6 +7,9 @@ import {
   calculateGeographicBreakdown,
   calculateStatusBreakdown,
   calculateUnitDistribution,
+  calculatePercentChange,
+  partitionDataByYear,
+  calculateYoYComparison,
   buildStatisticsDataset
 } from '../statsCalculators';
 import { Batch, ScoutMember, Region, District } from '../../../batches/types';
@@ -321,8 +324,144 @@ describe('statsCalculators', () => {
     });
   });
 
+  describe('calculatePercentChange', () => {
+    it('returns 0 when both current and previous are 0', () => {
+      expect(calculatePercentChange(0, 0)).toBe(0);
+    });
+
+    it('returns null when previous is 0 and current > 0', () => {
+      expect(calculatePercentChange(10, 0)).toBeNull();
+    });
+
+    it('calculates positive percent change correctly', () => {
+      expect(calculatePercentChange(150, 100)).toBe(50);
+      expect(calculatePercentChange(20, 10)).toBe(100);
+    });
+
+    it('calculates negative percent change correctly', () => {
+      expect(calculatePercentChange(50, 100)).toBe(-50);
+      expect(calculatePercentChange(0, 50)).toBe(-100);
+    });
+  });
+
+  describe('partitionDataByYear', () => {
+    it('filters batches and members belonging to target year', () => {
+      const { currentBatches, currentMembers } = partitionDataByYear(mockMembers, mockBatches, 2026);
+
+      expect(currentBatches).toHaveLength(3);
+      expect(currentBatches.map(b => b.id)).toEqual([1, 2, 3]);
+      expect(currentMembers).toHaveLength(4);
+    });
+
+    it('returns empty lists if no batches match target year', () => {
+      const { currentBatches, currentMembers } = partitionDataByYear(mockMembers, mockBatches, 2020);
+
+      expect(currentBatches).toHaveLength(0);
+      expect(currentMembers).toHaveLength(0);
+    });
+  });
+
+
+
+  describe('calculateYoYComparison', () => {
+    const currentBatches: Batch[] = [
+      { id: 101, region_id: 10, district_id: 101, group_id: 1000, created_at: '2025-02-10T10:00:00Z' },
+      { id: 102, region_id: 20, district_id: 201, group_id: 2000, created_at: '2025-03-15T10:00:00Z' }
+    ];
+
+    const previousBatches: Batch[] = [
+      { id: 201, region_id: 10, district_id: 101, group_id: 1000, created_at: '2024-02-10T10:00:00Z' }
+    ];
+
+
+
+    const currentMembers: ScoutMember[] = [
+      { identity: 'C1', batch_id: 101, member_type: 'young', unit: 'manada', status: 'active', birth_date: '2012-01-01', first_names: 'A', last_names: 'B' },
+      { identity: 'C2', batch_id: 101, member_type: 'young', unit: 'tropa', status: 'active', birth_date: '2010-01-01', first_names: 'C', last_names: 'D' },
+      { identity: 'C3', batch_id: 102, member_type: 'adult', unit: 'institucional', status: 'active', birth_date: '1985-01-01', first_names: 'E', last_names: 'F' }
+    ];
+
+    const previousMembers: ScoutMember[] = [
+      { identity: 'P1', batch_id: 201, member_type: 'young', unit: 'manada', status: 'active', birth_date: '2012-01-01', first_names: 'G', last_names: 'H' },
+      { identity: 'P2', batch_id: 201, member_type: 'adult', unit: 'institucional', status: 'active', birth_date: '1980-01-01', first_names: 'I', last_names: 'J' }
+    ];
+
+    it('calculates YoY comparison metrics accurately when previous year data exists', () => {
+      const yoy = calculateYoYComparison(
+        currentMembers,
+        previousMembers,
+        currentBatches,
+        previousBatches,
+        mockRegions,
+        mockDistricts,
+        2025,
+        2024
+      );
+
+      expect(yoy.hasPreviousYearData).toBe(true);
+      expect(yoy.currentYear).toBe(2025);
+      expect(yoy.previousYear).toBe(2024);
+
+      // Diplomas
+      expect(yoy.totalDiplomas.current).toBe(3);
+      expect(yoy.totalDiplomas.previous).toBe(2);
+      expect(yoy.totalDiplomas.diff).toBe(1);
+      expect(yoy.totalDiplomas.percentChange).toBe(50);
+
+      // Batches
+      expect(yoy.totalBatches.current).toBe(2);
+      expect(yoy.totalBatches.previous).toBe(1);
+      expect(yoy.totalBatches.diff).toBe(1);
+      expect(yoy.totalBatches.percentChange).toBe(100);
+
+      // Demographics
+      expect(yoy.demographics.young.current).toBe(2);
+      expect(yoy.demographics.young.previous).toBe(1);
+      expect(yoy.demographics.young.diff).toBe(1);
+      expect(yoy.demographics.adult.current).toBe(1);
+      expect(yoy.demographics.adult.previous).toBe(1);
+      expect(yoy.demographics.adult.diff).toBe(0);
+
+      // Regions
+      expect(yoy.regions.length).toBeGreaterThan(0);
+      const regCapital = yoy.regions.find(r => r.name === 'Región Capital');
+      expect(regCapital?.currentCount).toBe(2);
+      expect(regCapital?.previousCount).toBe(2);
+      expect(regCapital?.diff).toBe(0);
+
+      // Units
+      const manada = yoy.units.find(u => u.unit === 'manada');
+      expect(manada?.currentCount).toBe(1);
+      expect(manada?.previousCount).toBe(1);
+
+      // Monthly
+      expect(yoy.monthly).toHaveLength(12);
+      const feb = yoy.monthly.find(m => m.monthIndex === 1);
+      expect(feb?.currentCount).toBe(2);
+      expect(feb?.previousCount).toBe(2);
+    });
+
+
+    it('sets hasPreviousYearData to false when previous year members is empty', () => {
+      const yoy = calculateYoYComparison(
+        currentMembers,
+        [],
+        currentBatches,
+        [],
+        mockRegions,
+        mockDistricts,
+        2025,
+        2024
+      );
+
+      expect(yoy.hasPreviousYearData).toBe(false);
+      expect(yoy.totalDiplomas.previous).toBe(0);
+      expect(yoy.totalDiplomas.diff).toBe(3);
+    });
+  });
+
   describe('buildStatisticsDataset', () => {
-    it('builds a consolidated statistics dataset object', () => {
+    it('builds a consolidated statistics dataset object with optional YoY comparison', () => {
       const dataset = buildStatisticsDataset(
         mockMembers,
         mockBatches,
@@ -340,6 +479,8 @@ describe('statsCalculators', () => {
       expect(dataset.unitDistribution.items).toHaveLength(6);
       expect(dataset.filteredMembersCount).toBe(4);
       expect(dataset.filteredBatchesCount).toBe(3);
+      expect(dataset.yoyComparison).toBeUndefined();
     });
   });
 });
+
