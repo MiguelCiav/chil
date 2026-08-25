@@ -10,8 +10,6 @@ import {
 import {
   Download,
   Search,
-  Users,
-  MapPin,
   Award,
   AlertCircle,
   Edit2,
@@ -21,15 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  Trash2,
-  MessageSquare
+  Trash2
 } from 'lucide-react';
 
-import { Card, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
-import { Field } from '../../../components/Field';
-
 import {
   getBatchById,
   getMembersByBatchId,
@@ -39,7 +32,16 @@ import {
   generateBatchReport,
   getRecognitionName
 } from '../api';
-import { Batch, ScoutMember, Region, District, ScoutGroup, MemberStatus, ScoutUnit, getUnitBadge, getUnitLabel } from '../types';
+import {
+  Batch,
+  ScoutMember,
+  Region,
+  District,
+  ScoutGroup,
+  MemberStatus,
+  ScoutUnit,
+  getUnitBadge
+} from '../types';
 import {
   generateBatchCertificatesPdf,
   downloadSingleCertificatePdf,
@@ -47,6 +49,11 @@ import {
   RecognitionType
 } from '../../recognitions';
 import { useAuth } from '../../auth';
+
+import { BatchSummaryCards } from './detail/BatchSummaryCards';
+import { EditMemberModal } from './detail/EditMemberModal';
+import { MemberQuickViewModal } from './detail/MemberQuickViewModal';
+import { DeleteBatchModal } from './detail/DeleteBatchModal';
 
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -104,13 +111,15 @@ export const BatchDetail: React.FC = () => {
         setGroups(hierarchy.groups);
         if (b?.recognition_type) {
           const found = recTypes.find(
-            r => r.id === b.recognition_type || r.name.toLowerCase() === b.recognition_type?.toLowerCase()
+            (r) =>
+              r.id === b.recognition_type ||
+              r.name.toLowerCase() === b.recognition_type?.toLowerCase()
           );
           setRecognition(found || null);
         }
       })
       .catch((err) => {
-        console.error("Error loading batch details:", err);
+        console.error('Error loading batch details:', err);
       })
       .finally(() => {
         setLoading(false);
@@ -131,31 +140,34 @@ export const BatchDetail: React.FC = () => {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
-      console.error("Error generating PDF:", err);
-      alert("Error al generar los reconocimientos en PDF.");
+      console.error('Error generating PDF:', err);
+      alert('Error al generar los reconocimientos en PDF.');
     } finally {
       setDownloading(false);
     }
   };
 
-  const handleDownloadSingleRecognition = useCallback(async (member: ScoutMember) => {
-    setActiveMenuMemberId(null);
-    if (!batch) return;
-    try {
-      const fileName = await downloadSingleCertificatePdf({
-        member,
-        batch,
-        recognition,
-        hierarchy: { regions, districts, groups }
-      });
-      setToastMessage(`¡Reconocimiento descargado: ${fileName}!`);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-    } catch (err) {
-      console.error("Error generating single recognition:", err);
-      alert("Error al descargar el reconocimiento.");
-    }
-  }, [batch, recognition, regions, districts, groups]);
+  const handleDownloadSingleRecognition = useCallback(
+    async (member: ScoutMember) => {
+      setActiveMenuMemberId(null);
+      if (!batch) return;
+      try {
+        const fileName = await downloadSingleCertificatePdf({
+          member,
+          batch,
+          recognition,
+          hierarchy: { regions, districts, groups }
+        });
+        setToastMessage(`¡Reconocimiento descargado: ${fileName}!`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      } catch (err) {
+        console.error('Error generating single recognition:', err);
+        alert('Error al descargar el reconocimiento.');
+      }
+    },
+    [batch, recognition, regions, districts, groups]
+  );
 
   const handleDownloadMemberListPDF = async () => {
     if (!batch) return;
@@ -166,8 +178,8 @@ export const BatchDetail: React.FC = () => {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      console.error("Error generating member list PDF:", err);
-      alert("Error al generar la lista de miembros en PDF.");
+      console.error('Error generating member list PDF:', err);
+      alert('Error al generar la lista de miembros en PDF.');
     } finally {
       setDownloadingReport(false);
     }
@@ -179,17 +191,11 @@ export const BatchDetail: React.FC = () => {
     setIsEditModalOpen(true);
   }, []);
 
-  const handleSaveMemberEdit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingMember || !batch) return;
-
-    if (editingMember.status === 'exceptional' && (!editingMember.exceptional_reason || editingMember.exceptional_reason.trim() === '')) {
-      alert("Debe ingresar una justificación para la emisión excepcional.");
-      return;
-    }
+  const handleSaveMemberEdit = async (updatedMember: ScoutMember) => {
+    if (!batch) return;
 
     try {
-      await updateMember(editingMember);
+      await updateMember(updatedMember);
       const updated = await getMembersByBatchId(batch.id);
       setMembers(updated);
       setIsEditModalOpen(false);
@@ -198,8 +204,8 @@ export const BatchDetail: React.FC = () => {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      console.error("Error saving member edit:", err);
-      alert("Error al actualizar la información del miembro.");
+      console.error('Error saving member edit:', err);
+      alert('Error al actualizar la información del miembro.');
     }
   };
 
@@ -210,38 +216,22 @@ export const BatchDetail: React.FC = () => {
       await deleteBatch(batch.id);
       navigate('/lotes');
     } catch (err) {
-      console.error("Error deleting batch:", err);
-      alert("Error al eliminar el lote.");
+      console.error('Error deleting batch:', err);
+      alert('Error al eliminar el lote.');
       setDeleting(false);
     }
-  };
-
-  const getRegionName = (regId: number) => {
-    if (!regId || regId === 0) return 'No aplica';
-    const found = regions.find(r => r.id === regId);
-    return found?.name || `Región ${regId}`;
-  };
-  const getDistrictName = (distId: number) => {
-    if (!distId || distId === 0) return 'No aplica';
-    const found = districts.find(d => d.id === distId);
-    return found?.name || `Distrito ${distId}`;
-  };
-  const getGroupName = (grpId: number) => {
-    if (!grpId || grpId === 0) return 'No aplica';
-    const found = groups.find(g => g.id === grpId);
-    return found?.name || `Grupo ${grpId}`;
   };
 
   // Totals calculations
   const totals = useMemo(() => {
     return {
       total: members.length,
-      young: members.filter(m => m.member_type === 'young').length,
-      adult: members.filter(m => m.member_type === 'adult').length,
-      valid: members.filter(m => m.status === 'active').length,
-      exceptional: members.filter(m => m.status === 'exceptional').length,
-      eligible: members.filter(m => m.status === 'active' || m.status === 'exceptional').length,
-      pending: members.filter(m => m.status === 'pending').length
+      young: members.filter((m) => m.member_type === 'young').length,
+      adult: members.filter((m) => m.member_type === 'adult').length,
+      valid: members.filter((m) => m.status === 'active').length,
+      exceptional: members.filter((m) => m.status === 'exceptional').length,
+      eligible: members.filter((m) => m.status === 'active' || m.status === 'exceptional').length,
+      pending: members.filter((m) => m.status === 'pending').length
     };
   }, [members]);
 
@@ -249,7 +239,7 @@ export const BatchDetail: React.FC = () => {
   const filteredMembers = useMemo(() => {
     if (!searchQuery.trim()) return members;
     const term = searchQuery.toLowerCase().trim();
-    return members.filter(m => {
+    return members.filter((m) => {
       const fullName = `${m.first_names} ${m.last_names}`.toLowerCase();
       const code = (m.recognition_code || '').toLowerCase();
       return fullName.includes(term) || m.identity.includes(term) || code.includes(term);
@@ -257,162 +247,176 @@ export const BatchDetail: React.FC = () => {
   }, [members, searchQuery]);
 
   // TanStack Table columns
-  const columns = useMemo<ColumnDef<ScoutMember>[]>(() => [
-    {
-      accessorKey: 'identity',
-      header: 'CÉDULA',
-      cell: (info) => (
-        <span className="font-mono text-xs sm:text-sm text-neutral/80">{info.getValue() as string}</span>
-      )
-    },
-    {
-      accessorKey: 'name',
-      header: 'NOMBRE',
-      cell: (info) => {
-        const rowData = info.row.original;
-        return (
-          <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>
-        );
-      }
-    },
-    {
-      accessorKey: 'unit',
-      header: 'UNIDAD',
-      cell: (info) => {
-        const unit = info.getValue() as ScoutUnit | undefined;
-        const badge = getUnitBadge(unit);
-        return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}>
-            {badge.label}
+  const columns = useMemo<ColumnDef<ScoutMember>[]>(
+    () => [
+      {
+        accessorKey: 'identity',
+        header: 'CÉDULA',
+        cell: (info) => (
+          <span className="font-mono text-xs sm:text-sm text-neutral/80">
+            {info.getValue() as string}
           </span>
-        );
-      }
-    },
-    {
-      accessorKey: 'member_type',
-      header: 'TIPO',
-      cell: (info) => {
-        const val = info.getValue() as 'young' | 'adult';
-        return (
-          <span className="text-neutral/70 font-medium text-sm">
-            {val === 'young' ? 'Joven' : 'Adulto'}
-          </span>
-        );
-      }
-    },
-    {
-      accessorKey: 'status',
-      header: 'ESTATUS',
-      cell: (info) => {
-        const val = info.getValue() as MemberStatus;
-        if (val === 'active') {
+        )
+      },
+      {
+        accessorKey: 'name',
+        header: 'NOMBRE',
+        cell: (info) => {
+          const rowData = info.row.original;
           return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
-              Registro Válido
+            <span className="font-bold text-neutral">
+              {rowData.first_names} {rowData.last_names}
             </span>
           );
         }
-        if (val === 'exceptional') {
+      },
+      {
+        accessorKey: 'unit',
+        header: 'UNIDAD',
+        cell: (info) => {
+          const unit = info.getValue() as ScoutUnit | undefined;
+          const badge = getUnitBadge(unit);
           return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
-              Emisión Excepcional
-            </span>
-          );
-        }
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
-            Registro Inválido
-          </span>
-        );
-      }
-    },
-    {
-      accessorKey: 'recognition_code',
-      header: 'CÓDIGO REC.',
-      cell: (info) => {
-        const rowData = info.row.original;
-        const code = (info.getValue() as string) || ((rowData.status === 'active' || rowData.status === 'exceptional') ? `REC-${rowData.identity.slice(-4)}` : '-');
-        return (
-          <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>
-        );
-      }
-    },
-    {
-      id: 'actions',
-      header: 'ACCIONES',
-      cell: ({ row, table }) => {
-        const rowData = row.original;
-        const isMenuOpen = activeMenuMemberId === rowData.identity;
-        const totalRows = table.getRowModel().rows.length;
-        const isNearBottom = (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
-        const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
-
-        return (
-          <div className="flex items-center gap-2 relative">
-            {/* Quick View Eye Icon Button */}
-            <button
-              type="button"
-              onClick={() => setViewingMember(rowData)}
-              className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-              title="Ver detalle del miembro"
-              aria-label={`Ver detalle de ${rowData.first_names} ${rowData.last_names}`}
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}
             >
-              <Eye className="w-4 h-4" />
-            </button>
+              {badge.label}
+            </span>
+          );
+        }
+      },
+      {
+        accessorKey: 'member_type',
+        header: 'TIPO',
+        cell: (info) => {
+          const val = info.getValue() as 'young' | 'adult';
+          return (
+            <span className="text-neutral/70 font-medium text-sm">
+              {val === 'young' ? 'Joven' : 'Adulto'}
+            </span>
+          );
+        }
+      },
+      {
+        accessorKey: 'status',
+        header: 'ESTATUS',
+        cell: (info) => {
+          const val = info.getValue() as MemberStatus;
+          if (val === 'active') {
+            return (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
+                Registro Válido
+              </span>
+            );
+          }
+          if (val === 'exceptional') {
+            return (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
+                Emisión Excepcional
+              </span>
+            );
+          }
+          return (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
+              Registro Inválido
+            </span>
+          );
+        }
+      },
+      {
+        accessorKey: 'recognition_code',
+        header: 'CÓDIGO REC.',
+        cell: (info) => {
+          const rowData = info.row.original;
+          const code =
+            (info.getValue() as string) ||
+            (rowData.status === 'active' || rowData.status === 'exceptional'
+              ? `REC-${rowData.identity.slice(-4)}`
+              : '-');
+          return <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>;
+        }
+      },
+      {
+        id: 'actions',
+        header: 'ACCIONES',
+        cell: ({ row, table }) => {
+          const rowData = row.original;
+          const isMenuOpen = activeMenuMemberId === rowData.identity;
+          const totalRows = table.getRowModel().rows.length;
+          const isNearBottom =
+            (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
+          const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
 
-            {/* Actions 3-Dots Menu */}
-            <div className="relative inline-block">
+          return (
+            <div className="flex items-center gap-2 relative">
+              {/* Quick View Eye Icon Button */}
               <button
                 type="button"
-                onClick={() => setActiveMenuMemberId(isMenuOpen ? null : rowData.identity)}
-                className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
-                aria-label={`Opciones de ${rowData.first_names} ${rowData.last_names}`}
+                onClick={() => setViewingMember(rowData)}
+                className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                title="Ver detalle del miembro"
+                aria-label={`Ver detalle de ${rowData.first_names} ${rowData.last_names}`}
               >
-                <MoreVertical className="w-4 h-4" />
+                <Eye className="w-4 h-4" />
               </button>
 
-              {isMenuOpen && (
-                <div className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
-                  <button
-                    type="button"
-                    onClick={() => handleEditClick(rowData)}
-                    className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+              {/* Actions 3-Dots Menu */}
+              <div className="relative inline-block">
+                <button
+                  type="button"
+                  onClick={() => setActiveMenuMemberId(isMenuOpen ? null : rowData.identity)}
+                  className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
+                  aria-label={`Opciones de ${rowData.first_names} ${rowData.last_names}`}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+
+                {isMenuOpen && (
+                  <div
+                    className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}
                   >
-                    <Edit2 className="w-3.5 h-3.5 text-primary" />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveMenuMemberId(null);
-                      setViewingMember(rowData);
-                    }}
-                    className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-primary" />
-                    Ver Ficha
-                  </button>
-                  {(rowData.status === 'active' || rowData.status === 'exceptional') && (
                     <button
                       type="button"
-                      onClick={() => handleDownloadSingleRecognition(rowData)}
+                      onClick={() => handleEditClick(rowData)}
                       className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
                     >
-                      <Award className="w-3.5 h-3.5 text-primary" />
-                      Descargar Reconocimiento (PDF)
+                      <Edit2 className="w-3.5 h-3.5 text-primary" />
+                      Editar
                     </button>
-                  )}
-                </div>
-              )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveMenuMemberId(null);
+                        setViewingMember(rowData);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-primary" />
+                      Ver Ficha
+                    </button>
+                    {(rowData.status === 'active' || rowData.status === 'exceptional') && (
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadSingleRecognition(rowData)}
+                        className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+                      >
+                        <Award className="w-3.5 h-3.5 text-primary" />
+                        Descargar Reconocimiento (PDF)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        );
+          );
+        }
       }
-    }
-  ], [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition]);
+    ],
+    [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition]
+  );
 
   const table = useReactTable({
     data: filteredMembers,
@@ -504,7 +508,11 @@ export const BatchDetail: React.FC = () => {
             variant="primary"
             onClick={handleDownloadPDF}
             disabled={downloading || totals.eligible === 0}
-            title={totals.eligible === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos" : undefined}
+            title={
+              totals.eligible === 0
+                ? 'No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos'
+                : undefined
+            }
             icon={<FileText size={16} />}
             className="bg-[#5c371d] hover:bg-[#4b2c17] text-white font-semibold text-xs sm:text-sm"
           >
@@ -514,127 +522,20 @@ export const BatchDetail: React.FC = () => {
       </div>
 
       {/* Top 4 Information Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Detalles del Lote */}
-        <Card className="shadow-sm border-gray-200">
-          <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <h2 className="font-bold text-neutral text-base">Detalles del Lote</h2>
-            </div>
-
-            <div className="space-y-2 text-xs sm:text-sm my-auto">
-              <div className="flex justify-between items-center text-neutral/60">
-                <span>Alcance de Unidad</span>
-                <span className="font-semibold text-neutral">
-                  {batch.unit_scope === 'mixed' || !batch.unit_scope
-                    ? 'Mixto (Todas las unidades)'
-                    : getUnitLabel(batch.unit_scope as ScoutUnit)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-neutral/60">
-                <span>Región</span>
-                <span className="font-semibold text-neutral">{getRegionName(batch.region_id)}</span>
-              </div>
-              <div className="flex justify-between items-center text-neutral/60">
-                <span>Distrito</span>
-                <span className="font-semibold text-neutral">{getDistrictName(batch.district_id)}</span>
-              </div>
-              <div className="flex justify-between items-center text-neutral/60">
-                <span>Grupo</span>
-                <span className="font-semibold text-neutral">{getGroupName(batch.group_id)}</span>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Card 2: Tipo de Reconocimiento */}
-        <Card className="shadow-sm border-gray-200">
-          <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
-                <Award className="w-5 h-5" />
-              </div>
-              <h2 className="font-bold text-neutral text-base">Tipo de Reconocimiento</h2>
-            </div>
-
-            <div className="text-center my-auto py-2">
-              <div className="text-xl sm:text-2xl font-extrabold text-[#743e1d]">
-                {recognitionTitle}
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Card 3: Resumen de Miembros */}
-        <Card className="shadow-sm border-gray-200">
-          <CardBody className="p-6 flex flex-col justify-between h-full space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#e6f0fa] text-[#0284c7] flex items-center justify-center flex-shrink-0">
-                <Users className="w-5 h-5" />
-              </div>
-              <h2 className="font-bold text-neutral text-base">Resumen de Miembros</h2>
-            </div>
-
-            <div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-2xl sm:text-3xl font-black text-neutral">
-                  {totals.total}
-                </span>
-                <span className="text-xs sm:text-sm font-semibold text-neutral/50">Total</span>
-              </div>
-
-              {/* Sub-grid Adultos & Jóvenes */}
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <div className="bg-[#f5f5f4] rounded-xl p-2 px-3">
-                  <div className="text-[10px] font-bold text-neutral/50 uppercase">Adultos</div>
-                  <div className="text-sm font-extrabold text-neutral">{totals.adult}</div>
-                </div>
-                <div className="bg-[#f5f5f4] rounded-xl p-2 px-3">
-                  <div className="text-[10px] font-bold text-neutral/50 uppercase">Jóvenes</div>
-                  <div className="text-sm font-extrabold text-neutral">{totals.young}</div>
-                </div>
-              </div>
-
-              {/* Sin registrar alert box */}
-              <div className="bg-[#feeae8] border border-[#fccfca] rounded-xl px-3 py-1.5 flex justify-between items-center text-xs font-bold text-[#c92a2a]">
-                <span>Sin registrar</span>
-                <span className="text-sm font-black">{totals.pending}</span>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Card 4: Comentarios / Observaciones */}
-        <Card className="shadow-sm border-gray-200">
-          <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <h2 className="font-bold text-neutral text-base">Comentarios / Observaciones</h2>
-            </div>
-
-            <div className="my-auto text-xs sm:text-sm text-neutral/80 break-words">
-              {batch.comment && batch.comment.trim().length > 0 ? (
-                <p className="whitespace-pre-wrap font-medium">{batch.comment}</p>
-              ) : (
-                <p className="italic text-neutral/40">Sin observaciones registradas</p>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-      </div>
+      <BatchSummaryCards
+        batch={batch}
+        totals={totals}
+        recognitionTitle={recognitionTitle}
+        regions={regions}
+        districts={districts}
+        groups={groups}
+      />
 
       {/* Members Table Container ("Miembros del Lote") */}
       <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
         {/* Table Header with Search Input */}
         <div className="p-4 sm:p-5 border-b border-gray-200 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-base sm:text-lg font-bold text-neutral">
-            Miembros del Lote
-          </h2>
+          <h2 className="text-base sm:text-lg font-bold text-neutral">Miembros del Lote</h2>
 
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
@@ -642,7 +543,7 @@ export const BatchDetail: React.FC = () => {
               type="text"
               placeholder="Buscar miembro..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-[#faf8f5] text-neutral text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-neutral/40"
             />
           </div>
@@ -653,8 +554,8 @@ export const BatchDetail: React.FC = () => {
           <table className="w-full text-left border-collapse font-sans">
             <thead>
               <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                {table.getHeaderGroups().map(headerGroup => (
-                  headerGroup.headers.map(header => (
+                {table.getHeaderGroups().map((headerGroup) =>
+                  headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
                       className="px-6 py-4 text-xs font-extrabold text-neutral/70 uppercase tracking-wider"
@@ -662,7 +563,7 @@ export const BatchDetail: React.FC = () => {
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))
-                ))}
+                )}
               </tr>
             </thead>
             <tbody>
@@ -672,10 +573,15 @@ export const BatchDetail: React.FC = () => {
                   return (
                     <tr
                       key={row.id}
-                      className={`hover:bg-[#faf8f5] transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}
+                      className={`hover:bg-[#faf8f5] transition-colors ${
+                        !isLast ? 'border-b border-gray-100' : ''
+                      }`}
                     >
-                      {row.getVisibleCells().map(cell => (
-                        <td key={cell.id} className="px-6 py-4 text-sm whitespace-nowrap text-neutral">
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className="px-6 py-4 text-sm whitespace-nowrap text-neutral"
+                        >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
@@ -696,7 +602,14 @@ export const BatchDetail: React.FC = () => {
         {/* Footer with Numbered Pagination Controls */}
         <div className="px-6 py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-neutral/60">
           <div>
-            Mostrando {currentPageRows.length > 0 ? `${pageIndex * 10 + 1}-${Math.min((pageIndex + 1) * 10, filteredMembers.length)}` : 0} de {filteredMembers.length} miembros
+            Mostrando{' '}
+            {currentPageRows.length > 0
+              ? `${pageIndex * 10 + 1}-${Math.min(
+                  (pageIndex + 1) * 10,
+                  filteredMembers.length
+                )}`
+              : 0}{' '}
+            de {filteredMembers.length} miembros
           </div>
 
           <div className="flex items-center gap-1">
@@ -710,20 +623,22 @@ export const BatchDetail: React.FC = () => {
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            {Array.from({ length: pageCount }, (_, i) => i).slice(0, 5).map(idx => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => table.setPageIndex(idx)}
-                className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                  pageIndex === idx
-                    ? 'bg-[#743e1d] text-white'
-                    : 'text-neutral/70 hover:bg-gray-100'
-                }`}
-              >
-                {idx + 1}
-              </button>
-            ))}
+            {Array.from({ length: pageCount }, (_, i) => i)
+              .slice(0, 5)
+              .map((idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => table.setPageIndex(idx)}
+                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                    pageIndex === idx
+                      ? 'bg-[#743e1d] text-white'
+                      : 'text-neutral/70 hover:bg-gray-100'
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
 
             {pageCount > 5 && <span className="px-1 text-neutral/40">...</span>}
 
@@ -741,267 +656,28 @@ export const BatchDetail: React.FC = () => {
       </div>
 
       {/* Manual Member Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} className="max-w-xl">
-        <ModalHeader onClose={() => setIsEditModalOpen(false)}>Editar Datos de Miembro</ModalHeader>
-        {editingMember && (
-          <form onSubmit={handleSaveMemberEdit} className="flex flex-col flex-1 overflow-hidden min-h-0">
-            <ModalBody className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Field
-                  label="Nombres *"
-                  value={editingMember.first_names}
-                  onChange={e => setEditingMember({ ...editingMember, first_names: e.target.value })}
-                  required
-                />
-                <Field
-                  label="Apellidos *"
-                  value={editingMember.last_names}
-                  onChange={e => setEditingMember({ ...editingMember, last_names: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Field
-                  label="Fecha de Nacimiento *"
-                  type="date"
-                  value={editingMember.birth_date}
-                  onChange={e => setEditingMember({ ...editingMember, birth_date: e.target.value })}
-                  required
-                />
-                <div>
-                  <label htmlFor="member-type-select" className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral">
-                    Tipo de Miembro *
-                  </label>
-                  <select
-                    id="member-type-select"
-                    value={editingMember.member_type}
-                    onChange={e => setEditingMember({ ...editingMember, member_type: e.target.value as 'young' | 'adult' })}
-                    className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                  >
-                    <option value="young">Joven</option>
-                    <option value="adult">Adulto</option>
-                  </select>
-                </div>
-              </div>
-              <div className="w-full">
-                <label htmlFor="member-unit-select" className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral">
-                  Unidad Scout *
-                </label>
-                <select
-                  id="member-unit-select"
-                  value={editingMember.unit || (editingMember.member_type === 'young' ? 'tropa' : 'institucional')}
-                  onChange={e => {
-                    const newUnit = e.target.value as ScoutUnit;
-                    const wasUnverified = editingMember.verified_in_registry === false || (!editingMember.verified_in_registry && editingMember.unit === 'no_scout');
-                    const isChangingToScout = newUnit !== 'no_scout';
-                    let nextStatus = editingMember.status;
-                    if (newUnit === 'no_scout') {
-                      nextStatus = 'active';
-                    } else if (wasUnverified && isChangingToScout && editingMember.status === 'active') {
-                      nextStatus = 'pending';
-                    }
-
-                    setEditingMember({
-                      ...editingMember,
-                      unit: newUnit,
-                      status: nextStatus
-                    });
-                  }}
-                  className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                >
-                  <option value="manada">Manada</option>
-                  <option value="tropa">Tropa</option>
-                  <option value="caminantes">Caminantes</option>
-                  <option value="clan">Clan</option>
-                  <option value="institucional">Institucional</option>
-                  <option value="no_scout">No scout</option>
-                </select>
-              </div>
-              {editingMember.status !== 'active' && (
-                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="exceptional-toggle" className="flex items-center gap-2.5 cursor-pointer font-bold text-xs sm:text-sm text-purple-900">
-                      <input
-                        id="exceptional-toggle"
-                        type="checkbox"
-                        checked={editingMember.status === 'exceptional'}
-                        onChange={(e) => {
-                          const isChecked = e.target.checked;
-                          setEditingMember({
-                            ...editingMember,
-                            status: isChecked ? 'exceptional' : 'pending',
-                            recognition_code: isChecked
-                              ? (editingMember.recognition_code || `REC-${editingMember.identity.slice(-4) || 'EXC'}`)
-                              : editingMember.recognition_code,
-                            exceptional_reason: isChecked ? (editingMember.exceptional_reason || '') : undefined
-                          });
-                        }}
-                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
-                      />
-                      <span>Autorizar emisión de reconocimiento (Caso Excepcional)</span>
-                    </label>
-                  </div>
-                  <p className="text-xs text-purple-700">
-                    Permite emitir el reconocimiento oficial para este miembro aunque no figure en el registro nacional validado.
-                  </p>
-                  {editingMember.status === 'exceptional' && (
-                    <div className="space-y-1.5 pt-1">
-                      <label htmlFor="detail-exceptional-reason" className="block uppercase text-xs font-bold tracking-wide text-purple-900">
-                        Justificación de la emisión excepcional *
-                      </label>
-                      <textarea
-                        id="detail-exceptional-reason"
-                        aria-label="Justificación de la emisión excepcional"
-                        rows={3}
-                        required
-                        placeholder="Indique el motivo por el cual se autoriza la emisión sin registro activo en el sistema..."
-                        value={editingMember.exceptional_reason || ''}
-                        onChange={(e) => setEditingMember({ ...editingMember, exceptional_reason: e.target.value })}
-                        className="w-full rounded-xl px-3.5 py-2.5 bg-white border border-purple-300 text-neutral focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm placeholder:text-neutral/40 transition-all"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-              <Field
-                label="Correo Electrónico"
-                type="email"
-                value={editingMember.email || ''}
-                onChange={e => setEditingMember({ ...editingMember, email: e.target.value })}
-              />
-              <Field
-                label="Teléfono de Contacto"
-                value={editingMember.phone || ''}
-                onChange={e => setEditingMember({ ...editingMember, phone: e.target.value })}
-              />
-              <Field
-                label="Código de Reconocimiento"
-                value={editingMember.recognition_code || ''}
-                onChange={e => setEditingMember({ ...editingMember, recognition_code: e.target.value })}
-                placeholder="Ej. SP-5Y-001"
-              />
-            </ModalBody>
-            <ModalFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" variant="primary">
-                Guardar Cambios
-              </Button>
-            </ModalFooter>
-          </form>
-        )}
-      </Modal>
+      <EditMemberModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        member={editingMember}
+        onSave={handleSaveMemberEdit}
+      />
 
       {/* Member Quick View Details Modal */}
-      <Modal isOpen={viewingMember !== null} onClose={() => setViewingMember(null)} className="max-w-md">
-        <ModalHeader onClose={() => setViewingMember(null)}>
-          Ficha del Miembro Scout
-        </ModalHeader>
-        {viewingMember && (
-          <ModalBody className="space-y-4 font-sans text-neutral">
-            <div className="bg-[#faf8f5] p-4 rounded-xl border border-gray-200 space-y-2.5 text-xs sm:text-sm">
-              <div className="flex justify-between border-b border-gray-200 pb-2">
-                <span className="text-neutral/50 font-semibold">Cédula de Identidad</span>
-                <span className="font-mono font-bold text-neutral">{viewingMember.identity}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 pb-2">
-                <span className="text-neutral/50 font-semibold">Nombre Completo</span>
-                <span className="font-bold text-neutral">{viewingMember.first_names} {viewingMember.last_names}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 pb-2">
-                <span className="text-neutral/50 font-semibold">Tipo</span>
-                <span className="font-semibold text-neutral">{viewingMember.member_type === 'young' ? 'Joven' : 'Adulto'}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 pb-2">
-                <span className="text-neutral/50 font-semibold">Unidad</span>
-                <span className="font-semibold text-neutral">{getUnitLabel(viewingMember.unit)}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 pb-2">
-                <span className="text-neutral/50 font-semibold">Estatus</span>
-                <span className={`font-bold ${
-                  viewingMember.status === 'active'
-                    ? 'text-green-700'
-                    : viewingMember.status === 'exceptional'
-                    ? 'text-purple-700'
-                    : 'text-red-700'
-                }`}>
-                  {viewingMember.status === 'active'
-                    ? '● Registro Válido'
-                    : viewingMember.status === 'exceptional'
-                    ? '● Emisión Excepcional'
-                    : '● Registro Inválido'}
-                </span>
-              </div>
-              {viewingMember.status === 'exceptional' && (
-                <div className="flex flex-col border-b border-gray-200 pb-2 space-y-1 bg-purple-50/50 p-2.5 rounded-lg border border-purple-200/60">
-                  <span className="text-purple-900 font-bold text-xs">Justificación Excepcional</span>
-                  <span className="text-neutral text-xs italic break-words">
-                    {viewingMember.exceptional_reason || 'Sin justificación especificada'}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between border-b border-gray-200 pb-2">
-                <span className="text-neutral/50 font-semibold">Código de Reconocimiento</span>
-                <span className="font-mono font-bold text-neutral">{viewingMember.recognition_code || '-'}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 pb-2">
-                <span className="text-neutral/50 font-semibold">Fecha Nacimiento</span>
-                <span className="font-semibold text-neutral">{viewingMember.birth_date || '-'}</span>
-              </div>
-              <div className="flex justify-between border-b border-gray-200 pb-2">
-                <span className="text-neutral/50 font-semibold">Correo Electrónico</span>
-                <span className="font-semibold text-neutral">{viewingMember.email || '-'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-neutral/50 font-semibold">Teléfono</span>
-                <span className="font-semibold text-neutral">{viewingMember.phone || '-'}</span>
-              </div>
-            </div>
-          </ModalBody>
-        )}
-        <ModalFooter>
-          <Button variant="primary" onClick={() => setViewingMember(null)}>
-            Cerrar
-          </Button>
-        </ModalFooter>
-      </Modal>
+      <MemberQuickViewModal
+        member={viewingMember}
+        onClose={() => setViewingMember(null)}
+      />
 
       {/* Modal: Confirmar Eliminación de Lote */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => !deleting && setIsDeleteModalOpen(false)} className="max-w-md">
-        <ModalHeader onClose={() => !deleting && setIsDeleteModalOpen(false)}>
-          Eliminar Lote
-        </ModalHeader>
-        <ModalBody className="space-y-3">
-          <p className="text-sm text-neutral">
-            ¿Está seguro de que desea eliminar el lote{' '}
-            <span className="font-bold">#{batch.id}</span>
-            {batch.comment ? ` (${batch.comment})` : ''} y todos sus miembros asociados?
-          </p>
-          <p className="text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200">
-            Esta acción no se puede deshacer y eliminará permanentemente los datos del lote y sus registros de miembros asociados.
-          </p>
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsDeleteModalOpen(false)}
-            disabled={deleting}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            onClick={handleConfirmDelete}
-            disabled={deleting}
-            className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
-          >
-            {deleting ? 'Eliminando...' : 'Eliminar Lote'}
-          </Button>
-        </ModalFooter>
-      </Modal>
-
+      <DeleteBatchModal
+        isOpen={isDeleteModalOpen}
+        batchId={batch.id}
+        batchComment={batch.comment}
+        deleting={deleting}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };
