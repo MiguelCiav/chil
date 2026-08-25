@@ -9,8 +9,6 @@ import {
   Row
 } from '@tanstack/react-table';
 import {
-  Award,
-  Star,
   X,
   Plus,
   FileText,
@@ -23,7 +21,6 @@ import {
   MoreVertical
 } from 'lucide-react';
 
-import { Card, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
 
@@ -411,24 +408,6 @@ export const BatchList: React.FC = () => {
     setDateSpecificValue('');
   };
 
-  // Compute top KPI metrics
-  const totalCertificates = useMemo(() => {
-    return members.filter(m => m.status === 'active').length || members.length;
-  }, [members]);
-
-  const mostCommonRecognition = useMemo(() => {
-    if (batches.length === 0) return 'Go Solar';
-    const counts: Record<string, number> = {};
-    for (const b of batches) {
-      const rec = resolveRecognitionName(b.recognition_type);
-      if (rec && rec !== '-') {
-        counts[rec] = (counts[rec] || 0) + 1;
-      }
-    }
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    return sorted.length > 0 ? sorted[0][0] : 'Go Solar';
-  }, [batches, resolveRecognitionName]);
-
   // Format table rows
   const tableData = useMemo<BatchRowData[]>(() => {
     return batches.map(batch => {
@@ -593,42 +572,6 @@ export const BatchList: React.FC = () => {
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
-
-      {/* Top 2 KPI Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card 1: Total Generado */}
-        <Card className="shadow-sm border-gray-200">
-          <CardBody className="p-6 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
-              <Award className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-neutral/60 mb-0.5">Total Generado</div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-neutral tracking-tight">
-                  {totalCertificates.toLocaleString('es-ES')}
-                </span>
-                <span className="text-base font-normal text-neutral/70">Certificados</span>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        {/* Card 2: Reconocimiento más común */}
-        <Card className="shadow-sm border-gray-200">
-          <CardBody className="p-6 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#fdeee7] text-[#c2410c] flex items-center justify-center flex-shrink-0">
-              <Star className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-neutral/60 mb-0.5">Reconocimiento más común</div>
-              <div className="text-2xl font-extrabold text-neutral tracking-tight">
-                {mostCommonRecognition}
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
 
       {/* Filtros Activos Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
