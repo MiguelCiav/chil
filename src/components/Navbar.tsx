@@ -101,6 +101,18 @@ export const Navbar: React.FC = () => {
             Resumen
           </NavLink>
           <NavLink
+            to="/estadisticas"
+            end
+            className={({ isActive }) =>
+              `flex items-center h-full px-1 border-b-2 transition-all font-semibold ${isActive
+                ? 'border-primary text-primary'
+                : 'border-transparent text-neutral hover:text-primary'
+              }`
+            }
+          >
+            Estadísticas
+          </NavLink>
+          <NavLink
             to="/reconocimientos"
             end
             className={({ isActive }) =>
