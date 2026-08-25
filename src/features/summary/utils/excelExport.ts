@@ -1,0 +1,68 @@
+import { SummaryRowData } from '../types';
+
+export const SUMMARY_EXCEL_HEADERS = [
+  'Fecha de Emisión',
+  'Lote',
+  'Reconocimiento',
+  'Cédula',
+  'Nombres',
+  'Apellidos',
+  'Tipo',
+  'Estatus',
+  'Código de Reconocimiento',
+  'Región',
+  'Distrito',
+  'Grupo'
+];
+
+export function formatSummaryRowForExport(row: SummaryRowData): string[] {
+  return [
+    row.issueDate || '',
+    row.batchCode || '',
+    row.recognitionName || '',
+    row.identity || '',
+    row.firstName || '',
+    row.lastName || '',
+    row.memberTypeLabel || '',
+    row.statusLabel || '',
+    row.recognitionCode || '',
+    row.regionName || '',
+    row.districtName || '',
+    row.groupName || ''
+  ];
+}
+
+function escapeCsvField(val: unknown): string {
+  const str = val === null || val === undefined ? '' : String(val);
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+export function generateSummaryCsv(data: SummaryRowData[]): string {
+  const headerRow = SUMMARY_EXCEL_HEADERS.map(escapeCsvField).join(',');
+  const dataRows = data.map(row => formatSummaryRowForExport(row).map(escapeCsvField).join(','));
+  return '\uFEFF' + [headerRow, ...dataRows].join('\r\n');
+}
+
+export function exportToExcel(data: SummaryRowData[], filename?: string): void {
+  const defaultFilename = `Resumen_Reconocimientos_${new Date().toISOString().split('T')[0]}.csv`;
+  let targetFilename = filename?.trim() || defaultFilename;
+
+  // Ensure appropriate extension
+  if (!targetFilename.toLowerCase().endsWith('.csv') && !targetFilename.toLowerCase().endsWith('.xlsx')) {
+    targetFilename = `${targetFilename}.csv`;
+  }
+
+  const csvContent = generateSummaryCsv(data);
+
+  if (typeof document !== 'undefined') {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', targetFilename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+}

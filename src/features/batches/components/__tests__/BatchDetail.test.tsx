@@ -101,6 +101,8 @@ describe('BatchDetail component', () => {
       groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
     });
 
+    vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_101.pdf');
+
     vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce(
       'Diplomas_Lote_101_servicio_prolongado.pdf'
     );
@@ -127,6 +129,8 @@ describe('BatchDetail component', () => {
     expect(screen.getByText(/Grupo San Luis/i)).toBeInTheDocument();
     expect(screen.getByText(/Detalles del Lote/i)).toBeInTheDocument();
     expect(screen.getByText(/Tipo de Reconocimiento/i)).toBeInTheDocument();
+    expect(screen.getByText('Servicio Prolongado')).toBeInTheDocument();
+    expect(screen.queryByText('5 años')).not.toBeInTheDocument();
     expect(screen.getByText(/Resumen de Miembros/i)).toBeInTheDocument();
 
     // Check table rows
@@ -136,7 +140,6 @@ describe('BatchDetail component', () => {
     // Check Member List PDF Export button
     const listBtn = screen.getByRole('button', { name: /Descargar lista/i });
     fireEvent.click(listBtn);
-
     await waitFor(() => {
       expect(api.generateBatchReport).toHaveBeenCalled();
       expect(screen.getByText(/Lista de miembros \(PDF\) generada exitosamente\./i)).toBeInTheDocument();
@@ -391,7 +394,8 @@ describe('BatchDetail component', () => {
         phone: '04141234567',
         member_type: 'young',
         status: 'active',
-        batch_id: 101
+        batch_id: 101,
+        recognition_code: 'REC-ANA01'
       }
     ]);
 
@@ -419,6 +423,7 @@ describe('BatchDetail component', () => {
     await waitFor(() => {
       expect(screen.getByText('Ficha del Miembro Scout')).toBeInTheDocument();
       expect(screen.getByText('ana@scouts.org')).toBeInTheDocument();
+      expect(screen.getAllByText('REC-ANA01')).toHaveLength(2);
     });
   });
 
@@ -858,5 +863,218 @@ describe('BatchDetail component', () => {
     });
 
     alertSpy.mockRestore();
+  });
+
+  it('renders semantic badges for active, exceptional, and pending members in table and quick view modal', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: 'Lote Mixto',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      recognition_type: 'Go Solar',
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        identity: 'V-1001',
+        first_names: 'Maria',
+        last_names: 'Activa',
+        birth_date: '2000-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 101
+      },
+      {
+        identity: 'V-1002',
+        first_names: 'Laura',
+        last_names: 'Excepcional',
+        birth_date: '2000-02-02',
+        member_type: 'young',
+        status: 'exceptional',
+        batch_id: 101,
+        recognition_code: 'REC-EXC-02'
+      },
+      {
+        identity: 'V-1003',
+        first_names: 'Pedro',
+        last_names: 'Pendiente',
+        birth_date: '2000-03-03',
+        member_type: 'adult',
+        status: 'pending',
+        batch_id: 101
+      }
+    ]);
+
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Maria Activa')).toBeInTheDocument();
+    });
+
+    // Check badges in table
+    expect(screen.getByText('Registro Válido')).toBeInTheDocument();
+    expect(screen.getByText('Emisión Excepcional')).toBeInTheDocument();
+    expect(screen.getByText('Registro Inválido')).toBeInTheDocument();
+
+    // Open Quick View for exceptional member
+    const viewBtn = screen.getByLabelText(/Ver detalle de Laura Excepcional/i);
+    fireEvent.click(viewBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Ficha del Miembro Scout')).toBeInTheDocument();
+      expect(screen.getByText('● Emisión Excepcional')).toBeInTheDocument();
+    });
+  });
+
+  it('allows authorizing exceptional recognition emission in member edit modal', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: '',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    const pendingMember = {
+      identity: 'V-99999999',
+      first_names: 'Juan',
+      last_names: 'Perez',
+      birth_date: '2000-01-01',
+      member_type: 'young' as const,
+      status: 'pending' as const,
+      batch_id: 101
+    };
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValue([pendingMember]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    vi.mocked(api.updateMember).mockResolvedValueOnce({
+      ...pendingMember,
+      status: 'exceptional',
+      recognition_code: 'REC-9999'
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Juan Perez')).toBeInTheDocument();
+    });
+
+    // Open row menu and click Editar
+    fireEvent.click(screen.getByLabelText(/Opciones de Juan Perez/i));
+    fireEvent.click(screen.getByText('Editar'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Editar Datos de Miembro')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i)).toBeInTheDocument();
+    });
+
+    const toggle = screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i);
+    expect(toggle).not.toBeChecked();
+
+    // Toggle ON
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
+
+    // Save Changes
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-99999999',
+          status: 'exceptional',
+          recognition_code: expect.stringMatching(/^REC-/)
+        })
+      );
+    });
+  });
+
+  it('enables single diploma download for exceptional members in actions dropdown', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 101,
+      comment: '',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      recognition_type: 'Insignia de Madera',
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    const exceptionalMember = {
+      identity: 'V-55555555',
+      first_names: 'Rosa',
+      last_names: 'Morales',
+      birth_date: '2002-05-10',
+      member_type: 'young' as const,
+      status: 'exceptional' as const,
+      batch_id: 101,
+      recognition_code: 'REC-5555'
+    };
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([exceptionalMember]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [],
+      districts: [],
+      groups: []
+    });
+
+    vi.mocked(recognitions.downloadSingleCertificatePdf).mockResolvedValueOnce(
+      'Diploma_V-55555555_Lote_101_insignia_de_madera.pdf'
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/101']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Rosa Morales')).toBeInTheDocument();
+    });
+
+    // Open row menu
+    fireEvent.click(screen.getByLabelText(/Opciones de Rosa Morales/i));
+
+    // Descargar Diploma (PDF) should be present and clickable for exceptional member
+    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar Diploma \(PDF\)/i });
+    expect(downloadDiplomaBtn).toBeInTheDocument();
+    fireEvent.click(downloadDiplomaBtn);
+
+    await waitFor(() => {
+      expect(recognitions.downloadSingleCertificatePdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          member: exceptionalMember,
+          batch: expect.objectContaining({ id: 101 })
+        })
+      );
+    });
   });
 });

@@ -26,12 +26,6 @@ import {
   RecognitionType
 } from '../../recognitions';
 
-function getSCTCode(member: ScoutMember): string {
-  if (member.status === 'pending') return 'SCT-PENDIENTE';
-  const suffix = member.identity.slice(-4).padStart(4, '0');
-  return `SCT-2026-${suffix}`;
-}
-
 interface StatSummaryCardProps {
   readonly title: string;
   readonly value: number;
@@ -171,56 +165,78 @@ export const SuccessPage: React.FC = () => {
   const columns: ColumnDef<ScoutMember>[] = [
     {
       accessorKey: 'identity',
-      header: 'Código SCT',
-      cell: (info) => {
-        const rowData = info.row.original;
-        const code = getSCTCode(rowData);
-        return (
-          <span className={`font-semibold ${rowData.status === 'pending' ? 'text-red-500' : 'text-primary'}`}>
-            {code}
-          </span>
-        );
-      }
+      header: 'CÉDULA',
+      cell: (info) => (
+        <span className="font-mono text-xs sm:text-sm text-neutral/80">{info.getValue() as string}</span>
+      )
     },
     {
       accessorKey: 'name',
-      header: 'Nombre Completo',
+      header: 'NOMBRE COMPLETO',
       cell: (info) => {
         const rowData = info.row.original;
         return (
-          <span className="font-semibold text-neutral">{rowData.first_names} {rowData.last_names}</span>
-        );
-      }
-    },
-    {
-      accessorKey: 'status',
-      header: 'Estatus',
-      cell: (info) => {
-        const val = info.getValue() as 'active' | 'pending';
-        return val === 'active' ? (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-            Registro válido
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-            No registrado
-          </span>
+          <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>
         );
       }
     },
     {
       accessorKey: 'member_type',
-      header: 'Tipo',
+      header: 'TIPO',
       cell: (info) => {
         const val = info.getValue() as 'young' | 'adult';
         return (
-          <span className="text-neutral/70 font-medium">{val === 'young' ? 'Joven' : 'Adulto'}</span>
+          <span className="text-neutral/70 font-medium text-sm">
+            {val === 'young' ? 'Joven' : 'Adulto'}
+          </span>
+        );
+      }
+    },
+    {
+      accessorKey: 'status',
+      header: 'ESTATUS',
+      cell: (info) => {
+        const val = info.getValue() as 'active' | 'pending' | 'exceptional';
+        if (val === 'active') {
+          return (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
+              Registro Válido
+            </span>
+          );
+        }
+        if (val === 'exceptional') {
+          return (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
+              Emisión Excepcional
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
+            Registro Inválido
+          </span>
+        );
+      }
+    },
+    {
+      accessorKey: 'recognition_code',
+      header: 'CÓDIGO REC.',
+      cell: (info) => {
+        const rowData = info.row.original;
+        const code = rowData.recognition_code || ((rowData.status === 'active' || rowData.status === 'exceptional') ? '-' : '-');
+        return (
+          <span className="font-mono text-xs sm:text-sm font-semibold text-primary">
+            {code || '-'}
+          </span>
         );
       }
     },
     {
       id: 'actions',
-      header: 'Acciones',
+      header: 'ACCIONES',
       cell: () => {
         return (
           <div className="flex gap-2">
@@ -237,6 +253,8 @@ export const SuccessPage: React.FC = () => {
       }
     }
   ];
+
+  const eligibleCount = members.filter(m => m.status === 'active' || m.status === 'exceptional').length;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 font-sans relative">
@@ -266,8 +284,8 @@ export const SuccessPage: React.FC = () => {
           <Button
             variant="primary"
             onClick={handleDownloadPDF}
-            disabled={downloading || members.filter(m => m.status === 'active').length === 0}
-            title={members.filter(m => m.status === 'active').length === 0 ? "No hay miembros activos en este lote para generar un reporte" : undefined}
+            disabled={downloading || eligibleCount === 0}
+            title={eligibleCount === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas" : undefined}
             icon={<Download size={18} />}
           >
             {downloading ? 'Generando PDF...' : 'Descargar PDF del Reporte'}

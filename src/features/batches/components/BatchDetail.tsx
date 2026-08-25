@@ -38,7 +38,7 @@ import {
   generateBatchReport,
   getRecognitionName
 } from '../api';
-import { Batch, ScoutMember, Region, District, ScoutGroup } from '../types';
+import { Batch, ScoutMember, Region, District, ScoutGroup, MemberStatus } from '../types';
 import {
   generateBatchCertificatesPdf,
   downloadSingleCertificatePdf,
@@ -219,6 +219,8 @@ export const BatchDetail: React.FC = () => {
       young: members.filter(m => m.member_type === 'young').length,
       adult: members.filter(m => m.member_type === 'adult').length,
       valid: members.filter(m => m.status === 'active').length,
+      exceptional: members.filter(m => m.status === 'exceptional').length,
+      eligible: members.filter(m => m.status === 'active' || m.status === 'exceptional').length,
       pending: members.filter(m => m.status === 'pending').length
     };
   }, [members]);
@@ -269,13 +271,24 @@ export const BatchDetail: React.FC = () => {
       accessorKey: 'status',
       header: 'ESTATUS',
       cell: (info) => {
-        const val = info.getValue() as 'active' | 'pending';
-        return val === 'active' ? (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
-            Registro Válido
-          </span>
-        ) : (
+        const val = info.getValue() as MemberStatus;
+        if (val === 'active') {
+          return (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
+              Registro Válido
+            </span>
+          );
+        }
+        if (val === 'exceptional') {
+          return (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
+              Emisión Excepcional
+            </span>
+          );
+        }
+        return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
             Registro Inválido
@@ -288,7 +301,7 @@ export const BatchDetail: React.FC = () => {
       header: 'CÓDIGO REC.',
       cell: (info) => {
         const rowData = info.row.original;
-        const code = (info.getValue() as string) || (rowData.status === 'active' ? `REC-${rowData.identity.slice(-4)}` : '-');
+        const code = (info.getValue() as string) || ((rowData.status === 'active' || rowData.status === 'exceptional') ? `REC-${rowData.identity.slice(-4)}` : '-');
         return (
           <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>
         );
@@ -349,7 +362,7 @@ export const BatchDetail: React.FC = () => {
                     <Eye className="w-3.5 h-3.5 text-primary" />
                     Ver Ficha
                   </button>
-                  {rowData.status === 'active' && (
+                  {(rowData.status === 'active' || rowData.status === 'exceptional') && (
                     <button
                       type="button"
                       onClick={() => handleDownloadSingleDiploma(rowData)}
@@ -407,7 +420,6 @@ export const BatchDetail: React.FC = () => {
   const recognitionTitle = batch.recognition_type
     ? getRecognitionName(batch.recognition_type)
     : 'Servicio Prolongado';
-  const recognitionSub = batch.recognition_duration || '5 años';
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-sans py-2 relative">
@@ -454,8 +466,8 @@ export const BatchDetail: React.FC = () => {
           <Button
             variant="primary"
             onClick={handleDownloadPDF}
-            disabled={downloading || totals.valid === 0}
-            title={totals.valid === 0 ? "No hay miembros válidos en este lote para generar reporte" : undefined}
+            disabled={downloading || totals.eligible === 0}
+            title={totals.eligible === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas" : undefined}
             icon={<FileText size={16} />}
             className="bg-[#5c371d] hover:bg-[#4b2c17] text-white font-semibold text-xs sm:text-sm"
           >
@@ -506,9 +518,6 @@ export const BatchDetail: React.FC = () => {
             <div className="text-center my-auto py-2">
               <div className="text-xl sm:text-2xl font-extrabold text-[#743e1d]">
                 {recognitionTitle}
-              </div>
-              <div className="text-xs sm:text-sm text-neutral/60 font-semibold mt-1">
-                {recognitionSub}
               </div>
             </div>
           </CardBody>
@@ -709,6 +718,34 @@ export const BatchDetail: React.FC = () => {
                   </select>
                 </div>
               </div>
+              {editingMember.status !== 'active' && (
+                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="exceptional-toggle" className="flex items-center gap-2.5 cursor-pointer font-bold text-xs sm:text-sm text-purple-900">
+                      <input
+                        id="exceptional-toggle"
+                        type="checkbox"
+                        checked={editingMember.status === 'exceptional'}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          setEditingMember({
+                            ...editingMember,
+                            status: isChecked ? 'exceptional' : 'pending',
+                            recognition_code: isChecked
+                              ? (editingMember.recognition_code || `REC-${editingMember.identity.slice(-4) || 'EXC'}`)
+                              : editingMember.recognition_code
+                          });
+                        }}
+                        className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
+                      />
+                      <span>Autorizar emisión de diploma (Caso Excepcional)</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-purple-700">
+                    Permite emitir el diploma oficial para este miembro aunque no figure en el registro nacional validado.
+                  </p>
+                </div>
+              )}
               <Field
                 label="Correo Electrónico"
                 type="email"
@@ -761,9 +798,23 @@ export const BatchDetail: React.FC = () => {
               </div>
               <div className="flex justify-between border-b border-gray-200 pb-2">
                 <span className="text-neutral/50 font-semibold">Estatus</span>
-                <span className={`font-bold ${viewingMember.status === 'active' ? 'text-green-700' : 'text-red-700'}`}>
-                  {viewingMember.status === 'active' ? '● Registro Válido' : '● Registro Inválido'}
+                <span className={`font-bold ${
+                  viewingMember.status === 'active'
+                    ? 'text-green-700'
+                    : viewingMember.status === 'exceptional'
+                    ? 'text-purple-700'
+                    : 'text-red-700'
+                }`}>
+                  {viewingMember.status === 'active'
+                    ? '● Registro Válido'
+                    : viewingMember.status === 'exceptional'
+                    ? '● Emisión Excepcional'
+                    : '● Registro Inválido'}
                 </span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Código de Reconocimiento</span>
+                <span className="font-mono font-bold text-neutral">{viewingMember.recognition_code || '-'}</span>
               </div>
               <div className="flex justify-between border-b border-gray-200 pb-2">
                 <span className="text-neutral/50 font-semibold">Fecha Nacimiento</span>

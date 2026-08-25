@@ -375,7 +375,7 @@ export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
     `"${m.first_names || ''}"`,
     `"${m.last_names || ''}"`,
     `"${m.member_type === 'young' ? 'Joven' : 'Adulto'}"`,
-    `"${m.status === 'active' ? 'Registro Válido' : 'No registrado'}"`,
+    `"${m.status === 'active' ? 'Registro Válido' : m.status === 'exceptional' ? 'Emisión Excepcional' : 'No registrado'}"`,
     `"${m.recognition_code || '-'}"`,
     `"${m.birth_date || '-'}"`,
     `"${m.email || ''}"`,
@@ -498,7 +498,8 @@ export async function generateBatchReport(
     const fullName = `${m.first_names} ${m.last_names}`;
     const typeStr = m.member_type === 'young' ? 'Joven' : 'Adulto';
     const isActive = m.status === 'active';
-    const statusStr = isActive ? 'Registro Válido' : 'No registrado';
+    const isExceptional = m.status === 'exceptional';
+    const statusStr = isActive ? 'Registro Válido' : isExceptional ? 'Emisión Excepcional' : 'No registrado';
     
     // Draw row separator
     docPdf.setDrawColor(245, 245, 245);
@@ -510,6 +511,8 @@ export async function generateBatchReport(
     
     if (isActive) {
       docPdf.setTextColor(40, 167, 69); // Green
+    } else if (isExceptional) {
+      docPdf.setTextColor(126, 34, 206); // Purple #7e22ce
     } else {
       docPdf.setTextColor(220, 53, 69); // Red
     }
@@ -523,3 +526,6 @@ export async function generateBatchReport(
   docPdf.save(fileName);
   return fileName;
 }
+
+export * from '../utils/codeGenerator';
+

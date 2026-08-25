@@ -328,16 +328,16 @@ export async function downloadSingleCertificatePdf(
 }
 
 /**
- * Generates and downloads a multi-page certificate PDF containing all active members of a batch.
+ * Generates and downloads a multi-page certificate PDF containing all active and exceptional members of a batch.
  */
 export async function generateBatchCertificatesPdf(
   params: BatchCertificatesParams
 ): Promise<string> {
   const { batch, members, recognition, hierarchy } = params;
 
-  const activeMembers = members.filter(m => m.status === 'active');
-  if (activeMembers.length === 0) {
-    throw new Error('No hay miembros activos en este lote para generar diplomas');
+  const eligibleMembers = members.filter(m => m.status === 'active' || m.status === 'exceptional');
+  if (eligibleMembers.length === 0) {
+    throw new Error('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas');
   }
 
   const resolvedHierarchy = hierarchy || (await getHierarchyData());
@@ -355,7 +355,7 @@ export async function generateBatchCertificatesPdf(
     format: [width, height]
   });
 
-  activeMembers.forEach((member, index) => {
+  eligibleMembers.forEach((member, index) => {
     if (index > 0) {
       doc.addPage([width, height], orientation);
     }
