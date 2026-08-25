@@ -4,25 +4,103 @@ import { NewBatchWizard, BatchDetail, BatchList, SuccessPage } from './features/
 import { RecognitionCatalog, CertificateDesigner } from './features/recognitions';
 import { SummaryView } from './features/summary';
 import { StatisticsDashboard } from './features/statistics';
+import {
+  AuthProvider,
+  LoginPage,
+  RegisterPage,
+  ProtectedRoute
+} from './features/auth';
 
 function App() {
   return (
-    <HashRouter>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/lotes/nuevo" replace />} />
-          <Route path="/lotes/nuevo" element={<NewBatchWizard />} />
-          <Route path="/lotes" element={<BatchList />} />
-          <Route path="/lotes/:id" element={<BatchDetail />} />
-          <Route path="/lotes/exito" element={<SuccessPage />} />
-          <Route path="/resumen" element={<SummaryView />} />
-          <Route path="/estadisticas" element={<StatisticsDashboard />} />
-          <Route path="/reconocimientos" element={<RecognitionCatalog />} />
-          <Route path="/reconocimientos/:id/plantilla" element={<CertificateDesigner />} />
-          <Route path="*" element={<Navigate to="/lotes/nuevo" replace />} />
-        </Routes>
-      </MainLayout>
-    </HashRouter>
+    <AuthProvider>
+      <HashRouter>
+        <MainLayout>
+          <Routes>
+            {/* Public Auth Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/registro" element={<RegisterPage />} />
+
+            {/* Protected Routes */}
+            <Route
+              path="/lotes/nuevo"
+              element={
+                <ProtectedRoute>
+                  <NewBatchWizard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lotes"
+              element={
+                <ProtectedRoute>
+                  <BatchList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lotes/:id"
+              element={
+                <ProtectedRoute>
+                  <BatchDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lotes/exito"
+              element={
+                <ProtectedRoute>
+                  <SuccessPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reconocimientos"
+              element={
+                <ProtectedRoute>
+                  <RecognitionCatalog />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reconocimientos/:id/plantilla"
+              element={
+                <ProtectedRoute>
+                  <CertificateDesigner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resumen"
+              element={
+                <ProtectedRoute>
+                  <SummaryView />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/estadisticas"
+              element={
+                <ProtectedRoute>
+                  <StatisticsDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Root & Catch-all Redirects */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/lotes" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/lotes" replace />} />
+          </Routes>
+        </MainLayout>
+      </HashRouter>
+    </AuthProvider>
   );
 }
 

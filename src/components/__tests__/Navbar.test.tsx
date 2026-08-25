@@ -3,18 +3,37 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { Navbar } from '../Navbar';
 import * as api from '../../features/batches/api';
+import * as authFeature from '../../features/auth';
 
 vi.mock('../../features/batches/api', () => ({
   hasScraperCredentials: vi.fn(),
   saveScraperCredentials: vi.fn()
 }));
 
+vi.mock('../../features/auth', () => ({
+  useAuth: vi.fn(),
+  UserProfileMenu: () => <div data-testid="user-profile-menu">User Profile Menu</div>
+}));
+
 describe('Navbar component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(authFeature.useAuth).mockReturnValue({
+      user: {
+        uid: 'user-123',
+        email: 'scout@test.com',
+        displayName: 'Scout User',
+        photoURL: null
+      },
+      loading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      resetPassword: vi.fn()
+    });
   });
 
-  it('renders logo, brand name, and navigation links', () => {
+  it('renders logo, brand name, navigation links, and UserProfileMenu when authenticated', () => {
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
 
     render(
@@ -29,6 +48,30 @@ describe('Navbar component', () => {
     expect(screen.getByText('Resumen')).toBeInTheDocument();
     expect(screen.getByText('Estadísticas')).toBeInTheDocument();
     expect(screen.getByText('Reconocimientos')).toBeInTheDocument();
+    expect(screen.getByTestId('user-profile-menu')).toBeInTheDocument();
+  });
+
+  it('renders login and register buttons when unauthenticated', () => {
+    vi.mocked(authFeature.useAuth).mockReturnValue({
+      user: null,
+      loading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      resetPassword: vi.fn()
+    });
+
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Chil')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Registrarse/i })).toBeInTheDocument();
+    expect(screen.queryByText('Nuevo lote')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('user-profile-menu')).not.toBeInTheDocument();
   });
 
   it('opens scraper settings modal, enters credentials and saves', async () => {

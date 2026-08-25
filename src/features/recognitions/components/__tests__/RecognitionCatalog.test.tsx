@@ -17,6 +17,17 @@ vi.mock('../../api', () => ({
   deleteRecognitionType: vi.fn()
 }));
 
+vi.mock('../../../auth', () => ({
+  useAuth: vi.fn(() => ({
+    user: { uid: 'test-user-id', email: 'test@scouts.org.ve', displayName: 'Test User' },
+    loading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    resetPassword: vi.fn()
+  }))
+}));
+
 const mockRecognitions: RecognitionType[] = [
   {
     id: 'sct-wood-badge',
@@ -113,7 +124,7 @@ describe('RecognitionCatalog component', () => {
     await waitFor(() => {
       expect(api.createRecognitionType).toHaveBeenCalledWith({
         name: 'Medalla al Valor'
-      });
+      }, 'test-user-id');
       expect(screen.getByText('Medalla al Valor')).toBeInTheDocument();
       expect(screen.getByText(/creado exitosamente/i)).toBeInTheDocument();
     });
@@ -148,7 +159,7 @@ describe('RecognitionCatalog component', () => {
     await waitFor(() => {
       expect(api.updateRecognitionType).toHaveBeenCalledWith('sct-wood-badge', {
         name: 'Insignia de Madera (Avanzada)'
-      });
+      }, 'test-user-id');
       expect(screen.getByText('Insignia de Madera (Avanzada)')).toBeInTheDocument();
       expect(screen.getByText(/actualizado exitosamente/i)).toBeInTheDocument();
     });

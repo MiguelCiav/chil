@@ -36,6 +36,7 @@ export interface RecognitionType {
   id: string;
   name: string;
   created_at: string;
+  user_id?: string;
   template?: CertificateTemplate;
 }
 
@@ -173,6 +174,7 @@ export const DEFAULT_CERTIFICATE_TEMPLATE: CertificateTemplate = {
 
 export interface CreateRecognitionTypeParams {
   name: string;
+  user_id?: string;
 }
 
 export interface UpdateRecognitionTypeParams {

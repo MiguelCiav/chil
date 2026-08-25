@@ -9,6 +9,17 @@ vi.mock('../../api', () => ({
   updateRecognitionType: vi.fn()
 }));
 
+vi.mock('../../../auth', () => ({
+  useAuth: vi.fn(() => ({
+    user: { uid: 'test-user-id', email: 'test@scouts.org.ve', displayName: 'Test User' },
+    loading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    resetPassword: vi.fn()
+  }))
+}));
+
 describe('RecognitionFormModal Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -74,7 +85,7 @@ describe('RecognitionFormModal Component', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(api.createRecognitionType).toHaveBeenCalledWith({ name: 'Orden del Sol' });
+      expect(api.createRecognitionType).toHaveBeenCalledWith({ name: 'Orden del Sol' }, 'test-user-id');
       expect(handleSuccess).toHaveBeenCalledWith(createdResult, false);
       expect(handleClose).toHaveBeenCalled();
     });
@@ -108,7 +119,7 @@ describe('RecognitionFormModal Component', () => {
     await waitFor(() => {
       expect(api.updateRecognitionType).toHaveBeenCalledWith('sct-wood-badge', {
         name: 'Insignia de Madera 4 Maderos'
-      });
+      }, 'test-user-id');
       expect(handleSuccess).toHaveBeenCalledWith(updatedResult, true);
       expect(handleClose).toHaveBeenCalled();
     });
@@ -134,7 +145,7 @@ describe('RecognitionFormModal Component', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(api.createRecognitionType).toHaveBeenCalledWith({ name: 'Insignia Fallida' });
+      expect(api.createRecognitionType).toHaveBeenCalledWith({ name: 'Insignia Fallida' }, 'test-user-id');
       expect(screen.getByText(/Ocurrió un error al guardar el reconocimiento/i)).toBeInTheDocument();
       expect(handleSuccess).not.toHaveBeenCalled();
       expect(handleClose).not.toHaveBeenCalled();

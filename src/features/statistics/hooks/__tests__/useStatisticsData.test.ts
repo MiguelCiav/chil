@@ -23,6 +23,16 @@ vi.mock('../../../recognitions/api', () => ({
   getAllRecognitionTypes: vi.fn()
 }));
 
+vi.mock('../../../auth', () => ({
+  useAuth: vi.fn(() => ({
+    user: { uid: 'test-user-123', email: 'test@scouts.org.ve', displayName: 'Test User' },
+    loading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    resetPassword: vi.fn()
+  }))
+}));
 describe('useStatisticsData hook', () => {
   const mockBatches: Batch[] = [
     {

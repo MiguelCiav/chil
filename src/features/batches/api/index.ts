@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { jsPDF } from 'jspdf';
-import { db, functions } from '../../../lib/firebase';
+import { db, functions, auth } from '../../../lib/firebase';
 import hierarchyData from './hierarchy.json';
 import {
   Batch,
@@ -220,8 +220,9 @@ function generateSecureBatchId(): number {
   return (Date.now() % 1_000_000) + 1;
 }
 
-export async function createBatch(params: BatchCreationParams): Promise<Batch> {
+export async function createBatch(params: BatchCreationParams, userId?: string): Promise<Batch> {
   const numericId = generateSecureBatchId();
+  const targetUserId = params.user_id || (userId !== undefined ? userId : (auth.currentUser?.uid || ''));
   const newBatch: Batch = {
     id: numericId,
     comment: params.comment || '',
@@ -230,7 +231,8 @@ export async function createBatch(params: BatchCreationParams): Promise<Batch> {
     group_id: params.group_id,
     recognition_type: params.recognition_type,
     recognition_duration: params.recognition_duration || '',
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    ...(targetUserId ? { user_id: targetUserId } : {})
   };
 
   // Add the batch to Firestore using its numeric ID as the document name
@@ -238,10 +240,12 @@ export async function createBatch(params: BatchCreationParams): Promise<Batch> {
   return newBatch;
 }
 
-export async function updateBatch(id: number, params: BatchCreationParams): Promise<Batch> {
+export async function updateBatch(id: number, params: BatchCreationParams, userId?: string): Promise<Batch> {
   const batchRef = doc(db, "batches", String(id));
   const docSnap = await getDoc(batchRef);
-  
+  const existingData = docSnap.exists() ? (docSnap.data() as Batch) : null;
+  const targetUserId = params.user_id || (userId !== undefined ? userId : (existingData?.user_id || auth.currentUser?.uid || ''));
+
   const updatedBatch: Batch = {
     id,
     comment: params.comment || '',
@@ -250,7 +254,8 @@ export async function updateBatch(id: number, params: BatchCreationParams): Prom
     group_id: params.group_id,
     recognition_type: params.recognition_type,
     recognition_duration: params.recognition_duration || '',
-    created_at: docSnap.exists() ? (docSnap.data() as Batch).created_at : new Date().toISOString()
+    created_at: existingData ? existingData.created_at : new Date().toISOString(),
+    ...(targetUserId ? { user_id: targetUserId } : {})
   };
 
   await setDoc(batchRef, updatedBatch);
@@ -288,15 +293,25 @@ export async function getMemberStatus(cedula: string): Promise<ScraperMemberDeta
   }
 }
 
-export async function createMember(member: ScoutMember): Promise<ScoutMember> {
+export async function createMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
+  const targetUserId = member.user_id || (userId !== undefined ? userId : (auth.currentUser?.uid || ''));
+  const newMember: ScoutMember = {
+    ...member,
+    ...(targetUserId ? { user_id: targetUserId } : {})
+  };
   // Use member.identity (the unique national ID/cédula) as the document key to perform safe upserts
-  await setDoc(doc(db, "scout_members", member.identity), member);
-  return member;
+  await setDoc(doc(db, "scout_members", member.identity), newMember);
+  return newMember;
 }
 
-export async function updateMember(member: ScoutMember): Promise<ScoutMember> {
-  await setDoc(doc(db, "scout_members", member.identity), member);
-  return member;
+export async function updateMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
+  const targetUserId = member.user_id || (userId !== undefined ? userId : (auth.currentUser?.uid || ''));
+  const updatedMember: ScoutMember = {
+    ...member,
+    ...(targetUserId ? { user_id: targetUserId } : {})
+  };
+  await setDoc(doc(db, "scout_members", member.identity), updatedMember);
+  return updatedMember;
 }
 
 export async function deleteMember(identity: string): Promise<void> {
@@ -313,16 +328,37 @@ export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[
   return members;
 }
 
-export async function getAllMembers(): Promise<ScoutMember[]> {
-  const querySnapshot = await getDocs(collection(db, "scout_members"));
-  const members: ScoutMember[] = [];
-  querySnapshot.forEach((docSnapshot) => {
-    members.push(docSnapshot.data() as ScoutMember);
+export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
+  const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid || '');
+  if (!targetUserId) {
+    return [];
+  }
+  const userBatches = await getAllBatches(targetUserId);
+  if (userBatches.length === 0) {
+    return [];
+  }
+  const batchIds = userBatches.map(b => b.id);
+  // Chunk batchIds in slices of 30 because Firestore 'in' operator supports max 30 items
+  const chunks: number[][] = [];
+  for (let i = 0; i < batchIds.length; i += 30) {
+    chunks.push(batchIds.slice(i, i + 30));
+  }
+  const memberPromises = chunks.map(async (chunk) => {
+    const q = query(collection(db, "scout_members"), where("batch_id", "in", chunk));
+    const snap = await getDocs(q);
+    return snap.docs.map(docSnapshot => docSnapshot.data() as ScoutMember);
   });
-  return members;
+  const results = await Promise.all(memberPromises);
+  return results.flat();
 }
-export async function getAllBatches(): Promise<Batch[]> {
-  const querySnapshot = await getDocs(collection(db, "batches"));
+
+export async function getAllBatches(userId?: string): Promise<Batch[]> {
+  const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid || '');
+  if (!targetUserId) {
+    return [];
+  }
+  const q = query(collection(db, "batches"), where("user_id", "==", targetUserId));
+  const querySnapshot = await getDocs(q);
   const batches: Batch[] = [];
   querySnapshot.forEach((docSnapshot) => {
     batches.push(docSnapshot.data() as Batch);

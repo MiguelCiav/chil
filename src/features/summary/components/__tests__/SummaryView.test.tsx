@@ -34,6 +34,17 @@ vi.mock('../../utils/excelExport', () => ({
   exportToExcel: vi.fn()
 }));
 
+vi.mock('../../../auth', () => ({
+  useAuth: vi.fn(() => ({
+    user: { uid: 'test-user-id', email: 'test@scouts.org.ve', displayName: 'Test User' },
+    loading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    resetPassword: vi.fn()
+  }))
+}));
+
 describe('SummaryView component', () => {
   const mockBatches: Batch[] = [
     {

@@ -74,6 +74,12 @@ vi.mock('firebase/functions', async (importOriginal) => {
   };
 });
 
+vi.mock('../../../../lib/firebase', () => ({
+  auth: { currentUser: { uid: 'test-user-uid' } },
+  db: {},
+  functions: {}
+}));
+
 describe('Batches API Layer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -277,15 +283,33 @@ describe('Batches API Layer', () => {
       expect(list[0].identity).toBe('V-12345678');
     });
     it('gets all members across batches', async () => {
+      // 1st getDocs: batches query
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
         forEach: (cb: (doc: { data: () => unknown }) => void) => {
-          cb({ data: () => mockMember });
+          cb({ data: () => ({ id: 100, created_at: '2026-01-01T00:00:00.000Z' }) });
         }
       } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
-      const list = await getAllMembers();
+      // 2nd getDocs: members in batch 100
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [{ data: () => mockMember }]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const list = await getAllMembers('test-user-uid');
       expect(list).toHaveLength(1);
       expect(list[0].identity).toBe('V-12345678');
+    });
+
+    it('returns empty array when target user is empty or has no batches', async () => {
+      const listEmptyUser = await getAllMembers('');
+      expect(listEmptyUser).toEqual([]);
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        forEach: () => {}
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const listNoBatches = await getAllMembers('no-batch-user');
+      expect(listNoBatches).toEqual([]);
     });
   });
 

@@ -9,6 +9,7 @@ import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../batches/
 import { StatisticsFilterState } from '../types';
 import { buildStatisticsDataset } from '../utils/statsCalculators';
 import { FilterSummaryLabels } from '../utils/statsPdfExport';
+import { useAuth } from '../../auth';
 
 export const initialFilterState: StatisticsFilterState = {
   period: 'all',
@@ -72,6 +73,7 @@ function matchesDateRange(createdAt: string, period: string, startDate?: string,
 }
 
 export function useStatisticsData() {
+  const { user } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [members, setMembers] = useState<ScoutMember[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -88,10 +90,10 @@ export function useStatisticsData() {
   useEffect(() => {
     let isCancelled = false;
     Promise.all([
-      getAllBatches(),
-      getAllMembers(),
+      getAllBatches(user?.uid),
+      getAllMembers(user?.uid),
       getHierarchyData(),
-      getAllRecognitionTypes()
+      getAllRecognitionTypes(user?.uid)
     ])
       .then(([batchList, memberList, hierarchy, recTypes]) => {
         if (!isCancelled) {
@@ -120,7 +122,7 @@ export function useStatisticsData() {
     return () => {
       isCancelled = true;
     };
-  }, [reloadTrigger]);
+  }, [reloadTrigger, user?.uid]);
 
   const refresh = useCallback(() => {
     setLoading(true);
