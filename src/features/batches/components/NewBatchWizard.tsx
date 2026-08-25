@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   ArrowRight,
   ClipboardList,
@@ -563,40 +563,55 @@ export const NewBatchWizard: React.FC = () => {
 
       {/* STEP 1: CONFIGURATION OF METADATA */}
       {currentStep === 1 && (
-        <Card className="shadow-lg border-primary/10">
-          <CardHeader className="bg-primary/5 border-b border-primary/10 flex items-center gap-3">
-            Configuración del Lote
-          </CardHeader>
-          <CardBody>
-            <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-6">
+        <div className="space-y-4">
+          <div className="bg-amber-50/80 border border-amber-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-neutral/80 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2">
+              <span>💡</span>
+              <span>¿Solo vas a emitir un reconocimiento individual?</span>
+            </div>
+            <Link
+              to="/lotes/rapido"
+              className="font-bold text-primary hover:underline inline-flex items-center gap-1 flex-shrink-0"
+            >
+              Usa la Emisión Rápida ➔
+            </Link>
+          </div>
 
-              <Step1Org
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                regions={regions}
-                districts={districts}
-                groups={groups}
-                loadingHierarchy={loadingHierarchy}
-                recognitionTypes={recognitionTypes}
-              />
+          <Card className="shadow-lg border-primary/10">
+            <CardHeader className="bg-primary/5 border-b border-primary/10 flex items-center gap-3">
+              Configuración del Lote
+            </CardHeader>
+            <CardBody>
+              <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-6">
 
-              <div className="flex justify-end pt-4 border-t border-primary/10">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={!isValid || loadingHierarchy}
-                  icon={<ArrowRight size={18} />}
-                  iconPosition="right"
-                >
-                  Siguiente paso
-                </Button>
-              </div>
+                <Step1Org
+                  register={register}
+                  setValue={setValue}
+                  watch={watch}
+                  errors={errors}
+                  regions={regions}
+                  districts={districts}
+                  groups={groups}
+                  loadingHierarchy={loadingHierarchy}
+                  recognitionTypes={recognitionTypes}
+                />
 
-            </form>
-          </CardBody>
-        </Card>
+                <div className="flex justify-end pt-4 border-t border-primary/10">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={!isValid || loadingHierarchy}
+                    icon={<ArrowRight size={18} />}
+                    iconPosition="right"
+                  >
+                    Siguiente paso
+                  </Button>
+                </div>
+
+              </form>
+            </CardBody>
+          </Card>
+        </div>
       )}
 
       {/* STEP 2: LOAD & VERIFY MEMBERS */}

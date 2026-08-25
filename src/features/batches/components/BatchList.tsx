@@ -18,7 +18,8 @@ import {
   ChevronRight,
   CheckCircle2,
   AlertCircle,
-  MoreVertical
+  MoreVertical,
+  Zap
 } from 'lucide-react';
 
 import { Button } from '../../../components/Button';
@@ -574,6 +575,39 @@ export const BatchList: React.FC = () => {
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
+
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
+            Listado de Lotes
+          </h1>
+          <p className="text-sm text-neutral/60 mt-1">
+            Gestione y descargue los lotes de reconocimientos emitidos.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/lotes/rapido')}
+            icon={<Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" />}
+            className="shadow-sm flex-shrink-0"
+          >
+            ⚡ Emisión Rápida
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => navigate('/lotes/nuevo')}
+            icon={<Plus size={18} />}
+            className="shadow-sm flex-shrink-0"
+          >
+            + Nuevo Lote
+          </Button>
+        </div>
+      </div>
 
       {/* Filtros Activos Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">

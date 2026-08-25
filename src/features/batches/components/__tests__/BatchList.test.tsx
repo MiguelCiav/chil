@@ -564,4 +564,33 @@ describe('BatchList component', () => {
       expect(screen.getByText('No se encontraron lotes registrados.')).toBeInTheDocument();
     });
   });
+
+  it('renders header with Emisión Rápida and Nuevo Lote buttons and handles navigation', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce([]);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce([]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({ regions: [], districts: [], groups: [] });
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('No se encontraron lotes registrados.')).toBeInTheDocument();
+    });
+
+    const rapidoBtn = screen.getByRole('button', { name: /⚡ Emisión Rápida/i });
+    const nuevoBtn = screen.getByRole('button', { name: /\+ Nuevo Lote/i });
+
+    expect(rapidoBtn).toBeInTheDocument();
+    expect(nuevoBtn).toBeInTheDocument();
+
+    fireEvent.click(rapidoBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('/lotes/rapido');
+
+    fireEvent.click(nuevoBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('/lotes/nuevo');
+  });
 });
+
