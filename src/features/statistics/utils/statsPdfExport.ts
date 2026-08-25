@@ -38,14 +38,6 @@ export function exportStatisticsPdf(
 
   let y = 16;
 
-  const checkPageBreak = (requiredSpace: number) => {
-    if (y + requiredSpace > pageHeight - 18) {
-      doc.addPage();
-      y = 16;
-      drawHeaderSmall();
-    }
-  };
-
   const drawHeaderSmall = () => {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
@@ -54,6 +46,14 @@ export function exportStatisticsPdf(
     doc.setDrawColor(220, 220, 220);
     doc.line(margin, y + 2, margin + contentWidth, y + 2);
     y += 8;
+  };
+
+  const checkPageBreak = (requiredSpace: number) => {
+    if (y + requiredSpace > pageHeight - 18) {
+      doc.addPage();
+      y = 16;
+      drawHeaderSmall();
+    }
   };
 
   // Header Banner
@@ -100,185 +100,110 @@ export function exportStatisticsPdf(
     }
   }
 
-  // Executive KPI Summary Cards (4 boxes in 2x2 grid)
+  // Executive KPI Summary Cards (Top 5 Executive KPIs)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(30, 41, 59);
   doc.text('Indicadores Clave de Rendimiento (KPIs)', margin, y);
   y += 4;
 
-  const boxW = (contentWidth - 6) / 2; // ~88mm
+  const boxW3 = (contentWidth - 6) / 3; // ~58.6mm
+  const boxW2 = (contentWidth - 4) / 2; // ~89mm
   const boxH = 18;
 
-  // Card 1: Diplomas Emitidos
+  // Row 1: 3 cards (Total Reconocimientos, Total Lotes, Reconocimiento Más Entregado)
+  // Card 1: Total Reconocimientos
   doc.setFillColor(240, 248, 255);
   doc.setDrawColor(180, 215, 245);
-  doc.roundedRect(margin, y, boxW, boxH, 2, 2, 'FD');
+  doc.roundedRect(margin, y, boxW3, boxH, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(11, 79, 108);
-  doc.text('TOTAL DIPLOMAS EMITIDOS', margin + 4, y + 5);
-  doc.setFontSize(14);
-  doc.text(String(stats.kpis.totalDiplomas), margin + 4, y + 12);
+  doc.text('TOTAL RECONOCIMIENTOS', margin + 3, y + 5);
+  doc.setFontSize(13);
+  doc.text(String(stats.kpis.totalDiplomas), margin + 3, y + 11.5);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setTextColor(90, 105, 120);
-  doc.text(`${stats.kpis.totalMembers} miembros procesados en ${stats.kpis.totalBatches} lotes`, margin + 4, y + 16);
+  doc.text(`de ${stats.kpis.totalMembers} miembros`, margin + 3, y + 15.5);
 
-  // Card 2: Tasa de Registro Válido
-  const col2X = margin + boxW + 6;
-  doc.setFillColor(240, 253, 244);
-  doc.setDrawColor(187, 247, 208);
-  doc.roundedRect(col2X, y, boxW, boxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(22, 101, 52);
-  doc.text('TASA DE REGISTRO VÁLIDO', col2X + 4, y + 5);
-  doc.setFontSize(14);
-  doc.text(`${stats.kpis.validationRate}%`, col2X + 4, y + 12);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(70, 100, 80);
-  doc.text(`${stats.kpis.activeCount} válidos, ${stats.kpis.exceptionalCount} excepcionales, ${stats.kpis.pendingCount} pendientes`, col2X + 4, y + 16);
-
-  y += boxH + 4;
-
-  // Card 3: Demografía
+  // Card 2: Total Lotes
+  const col2X = margin + boxW3 + 3;
   doc.setFillColor(255, 251, 235);
   doc.setDrawColor(254, 240, 138);
-  doc.roundedRect(margin, y, boxW, boxH, 2, 2, 'FD');
+  doc.roundedRect(col2X, y, boxW3, boxH, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(146, 64, 14);
-  doc.text('DISTRIBUCIÓN DEMOGRÁFICA', margin + 4, y + 5);
-  doc.setFontSize(12);
-  doc.text(`${stats.demographics.youngPercentage}% Jóvenes  |  ${stats.demographics.adultPercentage}% Adultos`, margin + 4, y + 12);
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text('TOTAL LOTES', col2X + 3, y + 5);
+  doc.setFontSize(13);
+  doc.text(`${stats.kpis.totalBatches} Lotes`, col2X + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
   doc.setTextColor(120, 90, 40);
-  doc.text(`${stats.demographics.youngCount} jóvenes / ${stats.demographics.adultCount} adultos`, margin + 4, y + 16);
+  doc.text(`Promedio: ${stats.kpis.avgMembersPerBatch}/lote`, col2X + 3, y + 15.5);
 
+  // Card 3: Reconocimiento Más Entregado
+  const col3X = col2X + boxW3 + 3;
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(187, 247, 208);
+  doc.roundedRect(col3X, y, boxW3, boxH, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(22, 101, 52);
+  doc.text('MÁS ENTREGADO', col3X + 3, y + 5);
+  doc.setFontSize(9.5);
+  const topRecDisplay = (stats.kpis.topRecognitionName || '-').substring(0, 18);
+  doc.text(topRecDisplay, col3X + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(70, 100, 80);
+  doc.text(`${stats.kpis.topRecognitionCount || 0} emitidos`, col3X + 3, y + 15.5);
+
+  y += boxH + 3;
+
+  // Row 2: 2 cards (Regiones/Distritos Atendidos, Jóvenes vs Adultos)
   // Card 4: Cobertura Territorial
   doc.setFillColor(245, 243, 255);
   doc.setDrawColor(221, 214, 254);
-  doc.roundedRect(col2X, y, boxW, boxH, 2, 2, 'FD');
+  doc.roundedRect(margin, y, boxW2, boxH, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(107, 33, 168);
-  doc.text('COBERTURA TERRITORIAL', col2X + 4, y + 5);
-  doc.setFontSize(14);
-  doc.text(`${stats.kpis.activeRegionsCount} Regiones`, col2X + 4, y + 12);
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
+  doc.setTextColor(107, 33, 168);
+  doc.text('COBERTURA TERRITORIAL', margin + 3, y + 5);
+  doc.setFontSize(13);
+  doc.text(`${stats.kpis.activeRegionsCount} Regiones`, margin + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
   doc.setTextColor(100, 80, 130);
-  doc.text(`${stats.kpis.activeDistrictsCount} distritos y ${stats.kpis.activeGroupsCount} grupos scouts`, col2X + 4, y + 16);
+  doc.text(`en ${stats.kpis.activeDistrictsCount} distritos y ${stats.kpis.activeGroupsCount} grupos`, margin + 3, y + 15.5);
+
+  // Card 5: Demografía
+  const col5X = margin + boxW2 + 4;
+  doc.setFillColor(240, 249, 255);
+  doc.setDrawColor(186, 230, 253);
+  doc.roundedRect(col5X, y, boxW2, boxH, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(3, 105, 161);
+  doc.text('DISTRIBUCIÓN DEMOGRÁFICA', col5X + 3, y + 5);
+  doc.setFontSize(11);
+  doc.text(`${stats.demographics.youngPercentage}% Jóvenes | ${stats.demographics.adultPercentage}% Adultos`, col5X + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(60, 100, 130);
+  doc.text(`${stats.demographics.youngCount} jóvenes / ${stats.demographics.adultCount} adultos`, col5X + 3, y + 15.5);
 
   y += boxH + 8;
 
-  // Section: Calidad y Estatus de Emisiones
+  // --------------------------------------------------------------------------
+  // SECTION 1: Tabla de reconocimientos entregados por Región
+  // --------------------------------------------------------------------------
   checkPageBreak(35);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(30, 41, 59);
-  doc.text('Calidad y Estatus de los Registros', margin, y);
-  y += 4;
-
-  const statItemW = (contentWidth - 8) / 3;
-  const statBoxH = 12;
-
-  // Active status
-  doc.setFillColor(230, 247, 235);
-  doc.setDrawColor(195, 238, 208);
-  doc.roundedRect(margin, y, statItemW, statBoxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(27, 122, 55);
-  doc.text('● Registro Válido (Automático)', margin + 3, y + 4.5);
-  doc.setFontSize(9);
-  doc.text(`${stats.statusBreakdown.activeCount} (${stats.statusBreakdown.activePercentage}%)`, margin + 3, y + 9.5);
-
-  // Exceptional status
-  const statX2 = margin + statItemW + 4;
-  doc.setFillColor(243, 232, 255);
-  doc.setDrawColor(233, 213, 255);
-  doc.roundedRect(statX2, y, statItemW, statBoxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(126, 34, 206);
-  doc.text('● Emisión Excepcional', statX2 + 3, y + 4.5);
-  doc.setFontSize(9);
-  doc.text(`${stats.statusBreakdown.exceptionalCount} (${stats.statusBreakdown.exceptionalPercentage}%)`, statX2 + 3, y + 9.5);
-
-  // Pending status
-  const statX3 = statX2 + statItemW + 4;
-  doc.setFillColor(254, 234, 232);
-  doc.setDrawColor(252, 207, 202);
-  doc.roundedRect(statX3, y, statItemW, statBoxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(201, 42, 42);
-  doc.text('● Registro Inválido / Pendiente', statX3 + 3, y + 4.5);
-  doc.setFontSize(9);
-  doc.text(`${stats.statusBreakdown.pendingCount} (${stats.statusBreakdown.pendingPercentage}%)`, statX3 + 3, y + 9.5);
-
-  y += statBoxH + 8;
-
-  // Section: Ranking de Reconocimientos
-  checkPageBreak(50);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(30, 41, 59);
-  doc.text('Distribución por Tipo de Reconocimiento', margin, y);
-  y += 4;
-
-  // Table header
-  doc.setFillColor(240, 243, 246);
-  doc.rect(margin, y, contentWidth, 7, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(70, 80, 95);
-  doc.text('RECONOCIMIENTO', margin + 4, y + 4.5);
-  doc.text('CANTIDAD', margin + 120, y + 4.5);
-  doc.text('% DEL TOTAL', margin + 155, y + 4.5);
-  y += 7;
-
-  const topRecs = stats.recognitionRankings.slice(0, 8);
-  if (topRecs.length === 0) {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(8);
-    doc.setTextColor(140, 140, 140);
-    doc.text('No hay datos disponibles de reconocimientos para el período seleccionado.', margin + 4, y + 5);
-    y += 8;
-  } else {
-    topRecs.forEach((r, idx) => {
-      checkPageBreak(8);
-      if (idx % 2 === 1) {
-        doc.setFillColor(250, 251, 252);
-        doc.rect(margin, y, contentWidth, 6, 'F');
-      }
-      doc.setDrawColor(240, 240, 240);
-      doc.line(margin, y + 6, margin + contentWidth, y + 6);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(30, 40, 50);
-      doc.text(r.name.substring(0, 55), margin + 4, y + 4.2);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(r.count), margin + 120, y + 4.2);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${r.percentage}%`, margin + 155, y + 4.2);
-      y += 6;
-    });
-  }
-
-  y += 6;
-
-  // Section: Distribución Geográfica (Top Regiones)
-  checkPageBreak(50);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(30, 41, 59);
-  doc.text('Distribución Geográfica — Principales Regiones', margin, y);
+  doc.text('1. Reconocimientos Entregados por Región', margin, y);
   y += 4;
 
   doc.setFillColor(240, 243, 246);
@@ -287,20 +212,19 @@ export function exportStatisticsPdf(
   doc.setFontSize(7.5);
   doc.setTextColor(70, 80, 95);
   doc.text('REGIÓN', margin + 4, y + 4.5);
-  doc.text('DIPLOMAS', margin + 120, y + 4.5);
+  doc.text('TOTAL RECONOCIMIENTOS', margin + 110, y + 4.5);
   doc.text('% DEL TOTAL', margin + 155, y + 4.5);
   y += 7;
 
-  const topRegions = stats.geographic.regions.slice(0, 6);
-  if (topRegions.length === 0) {
+  if (stats.geographic.regions.length === 0) {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8);
     doc.setTextColor(140, 140, 140);
-    doc.text('No hay registros geográficos disponibles.', margin + 4, y + 5);
+    doc.text('No hay registros disponibles por región.', margin + 4, y + 5);
     y += 8;
   } else {
-    topRegions.forEach((reg, idx) => {
-      checkPageBreak(8);
+    stats.geographic.regions.forEach((reg, idx) => {
+      checkPageBreak(7);
       if (idx % 2 === 1) {
         doc.setFillColor(250, 251, 252);
         doc.rect(margin, y, contentWidth, 6, 'F');
@@ -311,9 +235,9 @@ export function exportStatisticsPdf(
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(30, 40, 50);
-      doc.text(reg.name.substring(0, 55), margin + 4, y + 4.2);
+      doc.text(`${idx + 1}. ${reg.name.substring(0, 55)}`, margin + 4, y + 4.2);
       doc.setFont('helvetica', 'bold');
-      doc.text(String(reg.count), margin + 120, y + 4.2);
+      doc.text(String(reg.count), margin + 110, y + 4.2);
       doc.setFont('helvetica', 'normal');
       doc.text(`${reg.percentage}%`, margin + 155, y + 4.2);
       y += 6;
@@ -322,12 +246,14 @@ export function exportStatisticsPdf(
 
   y += 6;
 
-  // Section: Actividad Mensual
-  checkPageBreak(50);
+  // --------------------------------------------------------------------------
+  // SECTION 2: Tabla de reconocimientos entregados por Distrito
+  // --------------------------------------------------------------------------
+  checkPageBreak(35);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(30, 41, 59);
-  doc.text('Actividad por Mes', margin, y);
+  doc.text('2. Reconocimientos Entregados por Distrito', margin, y);
   y += 4;
 
   doc.setFillColor(240, 243, 246);
@@ -335,15 +261,178 @@ export function exportStatisticsPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(70, 80, 95);
-  doc.text('MES', margin + 4, y + 4.5);
-  doc.text('TOTAL', margin + 50, y + 4.5);
-  doc.text('VÁLIDOS', margin + 85, y + 4.5);
-  doc.text('EXCEPCIONALES', margin + 120, y + 4.5);
-  doc.text('PENDIENTES', margin + 155, y + 4.5);
+  doc.text('REGIÓN', margin + 4, y + 4.5);
+  doc.text('DISTRITO', margin + 60, y + 4.5);
+  doc.text('TOTAL RECONOCIMIENTOS', margin + 120, y + 4.5);
+  doc.text('% DEL TOTAL', margin + 155, y + 4.5);
   y += 7;
 
+  if (stats.geographic.districts.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(140, 140, 140);
+    doc.text('No hay registros disponibles por distrito.', margin + 4, y + 5);
+    y += 8;
+  } else {
+    stats.geographic.districts.forEach((dist, idx) => {
+      checkPageBreak(7);
+      if (idx % 2 === 1) {
+        doc.setFillColor(250, 251, 252);
+        doc.rect(margin, y, contentWidth, 6, 'F');
+      }
+      doc.setDrawColor(240, 240, 240);
+      doc.line(margin, y + 6, margin + contentWidth, y + 6);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(70, 80, 95);
+      doc.text((dist.parentName || '-').substring(0, 30), margin + 4, y + 4.2);
+      doc.setTextColor(30, 40, 50);
+      doc.text(`${idx + 1}. ${dist.name.substring(0, 35)}`, margin + 60, y + 4.2);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(dist.count), margin + 120, y + 4.2);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${dist.percentage}%`, margin + 155, y + 4.2);
+      y += 6;
+    });
+  }
+
+  y += 6;
+
+  // --------------------------------------------------------------------------
+  // SECTION 3: Tabla de reconocimientos entregados por Unidad
+  // --------------------------------------------------------------------------
+  if (stats.unitDistribution && stats.unitDistribution.items.length > 0) {
+    checkPageBreak(45);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.text('3. Reconocimientos Entregados por Unidad Scout', margin, y);
+    y += 4;
+
+    doc.setFillColor(240, 243, 246);
+    doc.rect(margin, y, contentWidth, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(70, 80, 95);
+    doc.text('UNIDAD SCOUT', margin + 4, y + 4.5);
+    doc.text('TOTAL RECONOCIMIENTOS', margin + 110, y + 4.5);
+    doc.text('% DEL TOTAL', margin + 155, y + 4.5);
+    y += 7;
+
+    stats.unitDistribution.items.forEach((item, idx) => {
+      checkPageBreak(7);
+      if (idx % 2 === 1) {
+        doc.setFillColor(250, 251, 252);
+        doc.rect(margin, y, contentWidth, 6, 'F');
+      }
+      doc.setDrawColor(240, 240, 240);
+      doc.line(margin, y + 6, margin + contentWidth, y + 6);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(30, 40, 50);
+      const displayUnitLabel = item.unit === 'no_scout' ? 'No scout (Agradecimientos)' : item.label;
+      doc.text(displayUnitLabel, margin + 4, y + 4.2);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(item.count), margin + 110, y + 4.2);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${item.percentage}%`, margin + 155, y + 4.2);
+      y += 6;
+    });
+
+    // Footnote explaining No scout recognitions as Agradecimientos
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(110, 120, 130);
+    doc.text('* Nota: Los reconocimientos emitidos a miembros No scout corresponden a Agradecimientos institucionales.', margin + 4, y + 4.5);
+    y += 8;
+  }
+
+  // --------------------------------------------------------------------------
+  // SECTION 4: Resumen de reconocimientos entregados a Jóvenes y Adultos
+  // --------------------------------------------------------------------------
+  checkPageBreak(35);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(30, 41, 59);
+  doc.text('4. Resumen Demográfico (Jóvenes y Adultos)', margin, y);
+  y += 4;
+
+  doc.setFillColor(240, 243, 246);
+  doc.rect(margin, y, contentWidth, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(70, 80, 95);
+  doc.text('CATEGORÍA', margin + 4, y + 4.5);
+  doc.text('TOTAL RECONOCIMIENTOS', margin + 110, y + 4.5);
+  doc.text('% DEL TOTAL', margin + 155, y + 4.5);
+  y += 7;
+
+  // Row 1: Jóvenes
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 40, 50);
+  doc.text('Jóvenes', margin + 4, y + 4.2);
+  doc.setFont('helvetica', 'bold');
+  doc.text(String(stats.demographics.youngCount), margin + 110, y + 4.2);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${stats.demographics.youngPercentage}%`, margin + 155, y + 4.2);
+  doc.setDrawColor(240, 240, 240);
+  doc.line(margin, y + 6, margin + contentWidth, y + 6);
+  y += 6;
+
+  // Row 2: Adultos
+  doc.setFillColor(250, 251, 252);
+  doc.rect(margin, y, contentWidth, 6, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 40, 50);
+  doc.text('Adultos', margin + 4, y + 4.2);
+  doc.setFont('helvetica', 'bold');
+  doc.text(String(stats.demographics.adultCount), margin + 110, y + 4.2);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${stats.demographics.adultPercentage}%`, margin + 155, y + 4.2);
+  doc.setDrawColor(240, 240, 240);
+  doc.line(margin, y + 6, margin + contentWidth, y + 6);
+  y += 6;
+
+  // Row 3: Total
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(11, 79, 108);
+  doc.text('Total', margin + 4, y + 4.2);
+  doc.text(String(stats.demographics.totalCount), margin + 110, y + 4.2);
+  doc.text('100%', margin + 155, y + 4.2);
+  doc.setDrawColor(220, 220, 220);
+  doc.line(margin, y + 6, margin + contentWidth, y + 6);
+  y += 10;
+
+  // --------------------------------------------------------------------------
+  // SECTION 5: Tabla de resumen mensual de los reconocimientos, con su gráfico debajo
+  // --------------------------------------------------------------------------
+  checkPageBreak(75);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(30, 41, 59);
+  doc.text('5. Resumen Mensual de Reconocimientos', margin, y);
+  y += 4;
+
+  // Summary Table
+  doc.setFillColor(240, 243, 246);
+  doc.rect(margin, y, contentWidth, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(70, 80, 95);
+  doc.text('MES', margin + 4, y + 4.5);
+  doc.text('RECONOCIMIENTOS EMITIDOS', margin + 110, y + 4.5);
+  doc.text('% DEL TOTAL', margin + 155, y + 4.5);
+  y += 7;
+
+  const totalDiplomas = stats.kpis.totalDiplomas || 1;
+
   stats.monthlyTrends.forEach((m, idx) => {
-    checkPageBreak(8);
+    checkPageBreak(6);
     if (idx % 2 === 1) {
       doc.setFillColor(250, 251, 252);
       doc.rect(margin, y, contentWidth, 5.5, 'F');
@@ -351,18 +440,75 @@ export function exportStatisticsPdf(
     doc.setDrawColor(240, 240, 240);
     doc.line(margin, y + 5.5, margin + contentWidth, y + 5.5);
 
+    const pct = stats.kpis.totalDiplomas > 0
+      ? Number(((m.totalCount / totalDiplomas) * 100).toFixed(1))
+      : 0;
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(30, 40, 50);
     doc.text(m.label, margin + 4, y + 3.8);
     doc.setFont('helvetica', 'bold');
-    doc.text(String(m.totalCount), margin + 50, y + 3.8);
+    doc.text(String(m.totalCount), margin + 110, y + 3.8);
     doc.setFont('helvetica', 'normal');
-    doc.text(String(m.activeCount), margin + 85, y + 3.8);
-    doc.text(String(m.exceptionalCount), margin + 120, y + 3.8);
-    doc.text(String(m.pendingCount), margin + 155, y + 3.8);
+    doc.text(`${pct}%`, margin + 155, y + 3.8);
     y += 5.5;
   });
+
+  y += 6;
+
+  // Monthly Vector Histogram / Trend Chart Directly Below the Table
+  checkPageBreak(50);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(50, 70, 90);
+  doc.text('Gráfico de Tendencia Mensual de Reconocimientos:', margin, y);
+  y += 5;
+
+  const chartHeight = 32;
+  const chartWidth = contentWidth;
+  const chartBottomY = y + chartHeight;
+  const maxMonthlyVal = Math.max(...stats.monthlyTrends.map(m => m.totalCount), 5);
+
+  // Background chart container
+  doc.setFillColor(250, 252, 254);
+  doc.setDrawColor(225, 235, 245);
+  doc.roundedRect(margin, y, chartWidth, chartHeight + 10, 2, 2, 'FD');
+
+  // Baseline axis
+  doc.setDrawColor(200, 215, 230);
+  doc.line(margin + 6, chartBottomY, margin + chartWidth - 6, chartBottomY);
+
+  const slotW = (chartWidth - 16) / stats.monthlyTrends.length;
+  const barW = Math.max(slotW * 0.55, 4);
+
+  stats.monthlyTrends.forEach((item, idx) => {
+    const barHeight = maxMonthlyVal > 0 ? (item.totalCount / maxMonthlyVal) * (chartHeight - 8) : 0;
+    const xCenter = margin + 8 + idx * slotW + slotW / 2;
+    const xBar = xCenter - barW / 2;
+    const yBar = chartBottomY - barHeight;
+
+    // Draw Bar
+    if (barHeight > 0) {
+      doc.setFillColor(11, 79, 108); // Primary dark blue
+      doc.rect(xBar, yBar, barW, barHeight, 'F');
+
+      // Value label above bar
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(11, 79, 108);
+      doc.text(String(item.totalCount), xCenter, yBar - 1.5, { align: 'center' });
+    }
+
+    // Month label below baseline
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(100, 115, 130);
+    const shortLabel = item.label.substring(0, 3);
+    doc.text(shortLabel, xCenter, chartBottomY + 4, { align: 'center' });
+  });
+
+  y = chartBottomY + 14;
 
   // Stamp footer on all pages
   const totalPages = doc.getNumberOfPages();
@@ -381,3 +527,4 @@ export function exportStatisticsPdf(
   doc.save(fileName);
   return fileName;
 }
+

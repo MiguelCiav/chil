@@ -13,7 +13,7 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Field } from '../../../../components/Field';
-import { ScoutMember } from '../../types';
+import { ScoutMember, ScoutUnit, getUnitBadge } from '../../types';
 import { updateMember, getMembersByBatchId, assignBatchRecognitionCodes } from '../../api';
 
 interface Step3ReviewProps {
@@ -100,6 +100,11 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
     e.preventDefault();
     if (!editingMember || !batchId) return;
 
+    if (editingMember.status === 'exceptional' && (!editingMember.exceptional_reason || editingMember.exceptional_reason.trim() === '')) {
+      alert("Debe ingresar una justificación para la emisión excepcional.");
+      return;
+    }
+
     try {
       await updateMember(editingMember);
       const members = await getMembersByBatchId(batchId);
@@ -158,7 +163,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <h3 className="text-sm font-bold text-neutral">Códigos de Reconocimiento</h3>
-                <p className="text-xs text-neutral/50">Seleccione la estrategia de asignación de códigos para los diplomas.</p>
+                <p className="text-xs text-neutral/50">Seleccione la estrategia de asignación de códigos para los reconocimientos.</p>
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -320,6 +325,15 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                       <span className="text-xs font-mono text-neutral/40 italic px-2">Sin código</span>
                     )}
 
+                    {(() => {
+                      const unitBadge = getUnitBadge(member.unit);
+                      return (
+                        <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border ${unitBadge.badgeClass}`}>
+                          {unitBadge.label}
+                        </span>
+                      );
+                    })()}
+
                     {member.status === 'active' ? (
                       <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0] rounded-full">
                         Válido
@@ -392,23 +406,60 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   required
                 />
               </div>
-              <div className="w-full">
-                <label htmlFor="edit-member-type-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
-                  Tipo de Miembro *
-                </label>
-                <select
-                  id="edit-member-type-select"
-                  className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
-                  value={editingMember.member_type}
-                  onChange={e => setEditingMember({ ...editingMember, member_type: e.target.value as 'young' | 'adult' })}
-                  required
-                >
-                  <option value="young">Joven</option>
-                  <option value="adult">Adulto</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="w-full">
+                  <label htmlFor="edit-member-type-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                    Tipo de Miembro *
+                  </label>
+                  <select
+                    id="edit-member-type-select"
+                    className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                    value={editingMember.member_type}
+                    onChange={e => setEditingMember({ ...editingMember, member_type: e.target.value as 'young' | 'adult' })}
+                    required
+                  >
+                    <option value="young">Joven</option>
+                    <option value="adult">Adulto</option>
+                  </select>
+                </div>
+                <div className="w-full">
+                  <label htmlFor="edit-member-unit-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                    Unidad Scout *
+                  </label>
+                  <select
+                    id="edit-member-unit-select"
+                    className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                    value={editingMember.unit || (editingMember.member_type === 'young' ? 'tropa' : 'institucional')}
+                    onChange={e => {
+                      const newUnit = e.target.value as ScoutUnit;
+                      const wasUnverified = editingMember.verified_in_registry === false || (!editingMember.verified_in_registry && editingMember.unit === 'no_scout');
+                      const isChangingToScout = newUnit !== 'no_scout';
+                      let nextStatus = editingMember.status;
+                      if (newUnit === 'no_scout') {
+                        nextStatus = 'active';
+                      } else if (wasUnverified && isChangingToScout && editingMember.status === 'active') {
+                        nextStatus = 'pending';
+                      }
+
+                      setEditingMember({
+                        ...editingMember,
+                        unit: newUnit,
+                        status: nextStatus
+                      });
+                    }}
+                    required
+                  >
+                    <option value="manada">Manada</option>
+                    <option value="tropa">Tropa</option>
+                    <option value="caminantes">Caminantes</option>
+                    <option value="clan">Clan</option>
+                    <option value="institucional">Institucional</option>
+                    <option value="no_scout">No scout</option>
+                  </select>
+                </div>
               </div>
               {editingMember.status !== 'active' && (
-                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-2">
+                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <label htmlFor="step3-exceptional-toggle" className="flex items-center gap-2.5 cursor-pointer font-bold text-xs sm:text-sm text-purple-900">
                       <input
@@ -422,17 +473,35 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                             status: isChecked ? 'exceptional' : 'pending',
                             recognition_code: isChecked
                               ? (editingMember.recognition_code || `REC-${editingMember.identity.slice(-4) || 'EXC'}`)
-                              : editingMember.recognition_code
+                              : editingMember.recognition_code,
+                            exceptional_reason: isChecked ? (editingMember.exceptional_reason || '') : undefined
                           });
                         }}
                         className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
                       />
-                      <span>Autorizar emisión de diploma (Caso Excepcional)</span>
+                      <span>Autorizar emisión de reconocimiento (Caso Excepcional)</span>
                     </label>
                   </div>
                   <p className="text-xs text-purple-700">
-                    Permite emitir el diploma oficial para este miembro aunque no figure en el registro nacional validado.
+                    Permite emitir el reconocimiento oficial para este miembro aunque no figure en el registro nacional validado.
                   </p>
+                  {editingMember.status === 'exceptional' && (
+                    <div className="space-y-1.5 pt-1">
+                      <label htmlFor="step3-exceptional-reason" className="block uppercase text-xs font-bold tracking-wide text-purple-900">
+                        Justificación de la emisión excepcional *
+                      </label>
+                      <textarea
+                        id="step3-exceptional-reason"
+                        aria-label="Justificación de la emisión excepcional"
+                        rows={3}
+                        required
+                        placeholder="Indique el motivo por el cual se autoriza la emisión sin registro activo en el sistema..."
+                        value={editingMember.exceptional_reason || ''}
+                        onChange={(e) => setEditingMember({ ...editingMember, exceptional_reason: e.target.value })}
+                        className="w-full rounded-xl px-3.5 py-2.5 bg-white border border-purple-300 text-neutral focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm placeholder:text-neutral/40 transition-all"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               <Field

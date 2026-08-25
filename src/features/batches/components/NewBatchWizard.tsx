@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   ArrowRight,
   ClipboardList,
@@ -35,8 +35,11 @@ import {
   District,
   ScoutGroup,
   ScoutMember,
-  MemberVerificationResult
+  MemberVerificationResult,
+  BatchUnitScope,
+  ScoutUnit
 } from '../types';
+import { inferBatchMemberUnits } from '../utils/unitInference';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { useAuth } from '../../auth';
 
@@ -47,10 +50,36 @@ import { Step3Review } from './wizard/Step3Review';
 // Step 1 Validation Schema
 const step1Schema = z.object({
   comment: z.string().optional(),
-  regionId: z.string().min(1, "Debe seleccionar una región"),
-  districtId: z.string().min(1, "Debe seleccionar un distrito"),
-  groupId: z.string().min(1, "Debe seleccionar un grupo scout"),
+  regionId: z.string().optional(),
+  districtId: z.string().optional(),
+  groupId: z.string().optional(),
   recognitionType: z.string().min(1, "Debe seleccionar un tipo de reconocimiento"),
+  unitScope: z.string().optional()
+}).superRefine((data, ctx) => {
+  const isNoScout = data.unitScope === 'no_scout';
+  if (!isNoScout) {
+    if (!data.regionId || data.regionId.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['regionId'],
+        message: 'Debe seleccionar una región'
+      });
+    }
+    if (!data.districtId || data.districtId.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['districtId'],
+        message: 'Debe seleccionar un distrito'
+      });
+    }
+    if (!data.groupId || data.groupId.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['groupId'],
+        message: 'Debe seleccionar un grupo scout'
+      });
+    }
+  }
 });
 
 type Step1FormData = z.infer<typeof step1Schema>;
@@ -106,6 +135,7 @@ export const NewBatchWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [batchId, setBatchId] = useState<number | null>(null);
   const [batchName, setBatchName] = useState<string>('');
+  const [batchUnitScope, setBatchUnitScope] = useState<BatchUnitScope>('mixed');
 
   // Hierarchy State
   const [regions, setRegions] = useState<Region[]>([]);
@@ -145,7 +175,8 @@ export const NewBatchWizard: React.FC = () => {
       regionId: '',
       districtId: '',
       groupId: '',
-      recognitionType: ''
+      recognitionType: '',
+      unitScope: 'mixed'
     }
   });
 
@@ -174,23 +205,40 @@ export const NewBatchWizard: React.FC = () => {
 
   // Cascading Drops Logic: Reset dependent dropdowns when parent changes
   useEffect(() => {
-    setValue('districtId', '');
-    setValue('groupId', '');
+    if (selectedRegionId === '0') {
+      setValue('districtId', '0', { shouldValidate: true });
+      setValue('groupId', '0', { shouldValidate: true });
+    } else {
+      setValue('districtId', '');
+      setValue('groupId', '');
+    }
   }, [selectedRegionId, setValue]);
 
   useEffect(() => {
-    setValue('groupId', '');
-  }, [selectedDistrictId, setValue]);
+    if (selectedDistrictId === '0') {
+      setValue('groupId', '0', { shouldValidate: true });
+    } else if (selectedRegionId !== '0') {
+      setValue('groupId', '');
+    }
+  }, [selectedDistrictId, selectedRegionId, setValue]);
 
   // --- Step 1 Submit: Create or Update Batch ---
   const onSubmitStep1 = async (data: Step1FormData) => {
     try {
       let created;
+      const unit_scope: BatchUnitScope = (data.unitScope as BatchUnitScope) || 'mixed';
+      setBatchUnitScope(unit_scope);
+
+      const region_id = data.regionId ? Number(data.regionId) : 0;
+      const district_id = data.districtId ? Number(data.districtId) : 0;
+      const group_id = data.groupId ? Number(data.groupId) : 0;
+
       const params = {
         comment: data.comment || '',
-        region_id: Number(data.regionId),
-        district_id: Number(data.districtId),
-        group_id: Number(data.groupId),
+        region_id,
+        district_id,
+        group_id,
+        unit_scope,
         recognition_type: data.recognitionType,
         user_id: user?.uid
       };
@@ -211,14 +259,63 @@ export const NewBatchWizard: React.FC = () => {
   };
 
   // --- Step 2 verification logic ---
-  const verifyCedula = async (cedula: string, type: 'young' | 'adult') => {
+  const verifyCedula = async (cedula: string, type: 'young' | 'adult', explicitUnit?: ScoutUnit) => {
+    const memberUnit: ScoutUnit = explicitUnit || (batchUnitScope !== 'mixed' ? (batchUnitScope as ScoutUnit) : (type === 'young' ? 'tropa' : 'institucional'));
+
+    // If member is 'no_scout', completely bypass Sistema de Registro scraper query and mark as active
+    if (memberUnit === 'no_scout') {
+      setVerificationList(prev => {
+        const idx = prev.findIndex(item => item.cedula === cedula);
+        const newItem: MemberVerificationResult = {
+          cedula,
+          name: 'Colaborador No Scout',
+          status: 'Registro válido',
+          type,
+          unit: 'no_scout'
+        };
+        if (idx > -1) {
+          const copy = [...prev];
+          copy[idx] = newItem;
+          return copy;
+        } else {
+          return [...prev, newItem];
+        }
+      });
+
+      if (batchId) {
+        try {
+          await createMember(
+            {
+              identity: cedula,
+              first_names: 'Colaborador',
+              last_names: 'No Scout',
+              birth_date: '1990-01-01',
+              member_type: type,
+              unit: 'no_scout',
+              status: 'active',
+              verified_in_registry: false,
+              batch_id: batchId,
+              user_id: user?.uid
+            },
+            user?.uid
+          );
+        } catch (dbErr) {
+          console.error("Database save failed for no_scout member:", dbErr);
+        }
+      }
+
+      setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      return;
+    }
+
     // 1. Set to Consultando status
     setVerificationList(prev => {
       const idx = prev.findIndex(item => item.cedula === cedula);
       const newItem: MemberVerificationResult = {
         cedula,
         status: 'Consultando...',
-        type
+        type,
+        unit: memberUnit
       };
       if (idx > -1) {
         const copy = [...prev];
@@ -247,7 +344,8 @@ export const NewBatchWizard: React.FC = () => {
             cedula,
             name,
             status,
-            type
+            type,
+            unit: memberUnit
           }
           : item
       ));
@@ -262,7 +360,9 @@ export const NewBatchWizard: React.FC = () => {
               last_names: 'No Registrado',
               birth_date: '1990-01-01',
               member_type: type,
+              unit: memberUnit,
               status: 'pending',
+              verified_in_registry: true,
               batch_id: batchId,
               user_id: user?.uid
             },
@@ -289,6 +389,7 @@ export const NewBatchWizard: React.FC = () => {
             name: res.nombre_completo,
             status: rowStatus,
             type,
+            unit: memberUnit,
             details: res
           }
           : item
@@ -307,7 +408,9 @@ export const NewBatchWizard: React.FC = () => {
               email: res.correo_electronico,
               phone: res.telefono,
               member_type: type,
+              unit: memberUnit,
               status: isScrapedActive ? 'active' : 'pending',
+              verified_in_registry: true,
               batch_id: batchId,
               user_id: user?.uid
             },
@@ -339,22 +442,26 @@ export const NewBatchWizard: React.FC = () => {
     setAuthError(null);
 
     try {
-      // 1. Check if the credentials are saved
-      const hasCreds = await hasScraperCredentials();
-      if (!hasCreds) {
-        setIsVerifying(false);
-        setShowAuthAlert(true);
-        return;
-      }
+      const isAllNoScout = batchUnitScope === 'no_scout';
 
-      // 2. If saved, invoke the scraper login command first to authenticate
-      try {
-        await loginScraper();
-      } catch (loginErr) {
-        setIsVerifying(false);
-        const errStr = loginErr instanceof Error ? loginErr.message : String(loginErr);
-        setAuthError(errStr);
-        return;
+      if (!isAllNoScout) {
+        // 1. Check if the credentials are saved
+        const hasCreds = await hasScraperCredentials();
+        if (!hasCreds) {
+          setIsVerifying(false);
+          setShowAuthAlert(true);
+          return;
+        }
+
+        // 2. If saved, invoke the scraper login command first to authenticate
+        try {
+          await loginScraper();
+        } catch (loginErr) {
+          setIsVerifying(false);
+          const errStr = loginErr instanceof Error ? loginErr.message : String(loginErr);
+          setAuthError(errStr);
+          return;
+        }
       }
 
       // 3. Initiate the parallel verification requests
@@ -422,9 +529,13 @@ export const NewBatchWizard: React.FC = () => {
 
       await Promise.all(deletePromises);
 
-      // 4. Reload the updated members list
+      // 4. Reload the updated members list and infer age-based units
       const members = await getMembersByBatchId(batchId);
-      const membersWithCodes = assignBatchRecognitionCodes(members, 'auto');
+      const normalizedMembers = inferBatchMemberUnits(members, batchUnitScope);
+      await Promise.all(
+        normalizedMembers.map(m => updateMember(m))
+      );
+      const membersWithCodes = assignBatchRecognitionCodes(normalizedMembers, 'auto');
       setSavedMembers(membersWithCodes);
       setCurrentStep(3);
     }
@@ -490,46 +601,62 @@ export const NewBatchWizard: React.FC = () => {
 
       {/* STEP 1: CONFIGURATION OF METADATA */}
       {currentStep === 1 && (
-        <Card className="shadow-lg border-primary/10">
-          <CardHeader className="bg-primary/5 border-b border-primary/10 flex items-center gap-3">
-            Configuración del Lote
-          </CardHeader>
-          <CardBody>
-            <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-6">
+        <div className="space-y-4">
+          <div className="bg-amber-50/80 border border-amber-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-neutral/80 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2">
+              <span>💡</span>
+              <span>¿Solo vas a emitir un reconocimiento individual?</span>
+            </div>
+            <Link
+              to="/lotes/rapido"
+              className="font-bold text-primary hover:underline inline-flex items-center gap-1 flex-shrink-0"
+            >
+              Usa la Emisión Rápida ➔
+            </Link>
+          </div>
 
-              <Step1Org
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                regions={regions}
-                districts={districts}
-                groups={groups}
-                loadingHierarchy={loadingHierarchy}
-                recognitionTypes={recognitionTypes}
-              />
+          <Card className="shadow-lg border-primary/10">
+            <CardHeader className="bg-primary/5 border-b border-primary/10 flex items-center gap-3">
+              Configuración del Lote
+            </CardHeader>
+            <CardBody>
+              <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-6">
 
-              <div className="flex justify-end pt-4 border-t border-primary/10">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={!isValid || loadingHierarchy}
-                  icon={<ArrowRight size={18} />}
-                  iconPosition="right"
-                >
-                  Siguiente paso
-                </Button>
-              </div>
+                <Step1Org
+                  register={register}
+                  setValue={setValue}
+                  watch={watch}
+                  errors={errors}
+                  regions={regions}
+                  districts={districts}
+                  groups={groups}
+                  loadingHierarchy={loadingHierarchy}
+                  recognitionTypes={recognitionTypes}
+                />
 
-            </form>
-          </CardBody>
-        </Card>
+                <div className="flex justify-end pt-4 border-t border-primary/10">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={!isValid || loadingHierarchy || recognitionTypes.length === 0}
+                    icon={<ArrowRight size={18} />}
+                    iconPosition="right"
+                  >
+                    Siguiente paso
+                  </Button>
+                </div>
+
+              </form>
+            </CardBody>
+          </Card>
+        </div>
       )}
 
       {/* STEP 2: LOAD & VERIFY MEMBERS */}
       {currentStep === 2 && (
         <Step2Verification
           batchName={batchName}
+          unitScope={batchUnitScope}
           youngCedulas={youngCedulas}
           setYoungCedulas={setYoungCedulas}
           adultCedulas={adultCedulas}

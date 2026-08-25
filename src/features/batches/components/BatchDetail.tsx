@@ -21,7 +21,8 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  Trash2
+  Trash2,
+  MessageSquare
 } from 'lucide-react';
 
 import { Card, CardBody } from '../../../components/Card';
@@ -38,7 +39,7 @@ import {
   generateBatchReport,
   getRecognitionName
 } from '../api';
-import { Batch, ScoutMember, Region, District, ScoutGroup, MemberStatus } from '../types';
+import { Batch, ScoutMember, Region, District, ScoutGroup, MemberStatus, ScoutUnit, getUnitBadge, getUnitLabel } from '../types';
 import {
   generateBatchCertificatesPdf,
   downloadSingleCertificatePdf,
@@ -126,18 +127,18 @@ export const BatchDetail: React.FC = () => {
         recognition,
         hierarchy: { regions, districts, groups }
       });
-      setToastMessage(`¡Diplomas descargados exitosamente en ${fileName}!`);
+      setToastMessage(`¡Reconocimientos descargados exitosamente en ${fileName}!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error("Error generating PDF:", err);
-      alert("Error al generar los diplomas en PDF.");
+      alert("Error al generar los reconocimientos en PDF.");
     } finally {
       setDownloading(false);
     }
   };
 
-  const handleDownloadSingleDiploma = useCallback(async (member: ScoutMember) => {
+  const handleDownloadSingleRecognition = useCallback(async (member: ScoutMember) => {
     setActiveMenuMemberId(null);
     if (!batch) return;
     try {
@@ -147,12 +148,12 @@ export const BatchDetail: React.FC = () => {
         recognition,
         hierarchy: { regions, districts, groups }
       });
-      setToastMessage(`¡Diploma descargado: ${fileName}!`);
+      setToastMessage(`¡Reconocimiento descargado: ${fileName}!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
-      console.error("Error generating single diploma:", err);
-      alert("Error al descargar el diploma.");
+      console.error("Error generating single recognition:", err);
+      alert("Error al descargar el reconocimiento.");
     }
   }, [batch, recognition, regions, districts, groups]);
 
@@ -182,6 +183,11 @@ export const BatchDetail: React.FC = () => {
     e.preventDefault();
     if (!editingMember || !batch) return;
 
+    if (editingMember.status === 'exceptional' && (!editingMember.exceptional_reason || editingMember.exceptional_reason.trim() === '')) {
+      alert("Debe ingresar una justificación para la emisión excepcional.");
+      return;
+    }
+
     try {
       await updateMember(editingMember);
       const updated = await getMembersByBatchId(batch.id);
@@ -210,9 +216,21 @@ export const BatchDetail: React.FC = () => {
     }
   };
 
-  const getRegionName = (regId: number) => regions.find(r => r.id === regId)?.name || `Región ${regId}`;
-  const getDistrictName = (distId: number) => districts.find(d => d.id === distId)?.name || `Distrito ${distId}`;
-  const getGroupName = (grpId: number) => groups.find(g => g.id === grpId)?.name || `Grupo ${grpId}`;
+  const getRegionName = (regId: number) => {
+    if (!regId || regId === 0) return 'No aplica';
+    const found = regions.find(r => r.id === regId);
+    return found?.name || `Región ${regId}`;
+  };
+  const getDistrictName = (distId: number) => {
+    if (!distId || distId === 0) return 'No aplica';
+    const found = districts.find(d => d.id === distId);
+    return found?.name || `Distrito ${distId}`;
+  };
+  const getGroupName = (grpId: number) => {
+    if (!grpId || grpId === 0) return 'No aplica';
+    const found = groups.find(g => g.id === grpId);
+    return found?.name || `Grupo ${grpId}`;
+  };
 
   // Totals calculations
   const totals = useMemo(() => {
@@ -254,6 +272,19 @@ export const BatchDetail: React.FC = () => {
         const rowData = info.row.original;
         return (
           <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>
+        );
+      }
+    },
+    {
+      accessorKey: 'unit',
+      header: 'UNIDAD',
+      cell: (info) => {
+        const unit = info.getValue() as ScoutUnit | undefined;
+        const badge = getUnitBadge(unit);
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}>
+            {badge.label}
+          </span>
         );
       }
     },
@@ -367,11 +398,11 @@ export const BatchDetail: React.FC = () => {
                   {(rowData.status === 'active' || rowData.status === 'exceptional') && (
                     <button
                       type="button"
-                      onClick={() => handleDownloadSingleDiploma(rowData)}
+                      onClick={() => handleDownloadSingleRecognition(rowData)}
                       className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
                     >
                       <Award className="w-3.5 h-3.5 text-primary" />
-                      Descargar Diploma (PDF)
+                      Descargar Reconocimiento (PDF)
                     </button>
                   )}
                 </div>
@@ -381,7 +412,7 @@ export const BatchDetail: React.FC = () => {
         );
       }
     }
-  ], [activeMenuMemberId, handleEditClick, handleDownloadSingleDiploma]);
+  ], [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition]);
 
   const table = useReactTable({
     data: filteredMembers,
@@ -436,10 +467,14 @@ export const BatchDetail: React.FC = () => {
       {/* Header with Title and Action Buttons */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
-            Detalle de Lote #{batch.id ? `LT-${new Date(batch.created_at).getFullYear()}-${String(batch.id).padStart(3, '0')}` : 'LT-2024-089'}
-            {batch.comment ? ` (${batch.comment})` : ''}
-          </h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
+              Lote #{batch.id}
+            </h1>
+            <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
+              {`LT-${new Date(batch.created_at).getFullYear()}-${String(batch.id).padStart(3, '0')}`}
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-neutral/60 font-medium mt-1">
             Revisión y gestión de reconocimientos del lote actual.
           </p>
@@ -469,17 +504,17 @@ export const BatchDetail: React.FC = () => {
             variant="primary"
             onClick={handleDownloadPDF}
             disabled={downloading || totals.eligible === 0}
-            title={totals.eligible === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas" : undefined}
+            title={totals.eligible === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos" : undefined}
             icon={<FileText size={16} />}
             className="bg-[#5c371d] hover:bg-[#4b2c17] text-white font-semibold text-xs sm:text-sm"
           >
-            {downloading ? 'Generando PDF...' : 'Descargar todos (PDF)'}
+            {downloading ? 'Generando PDF...' : 'Descargar Reconocimientos (PDF)'}
           </Button>
         </div>
       </div>
 
-      {/* Top 3 Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Top 4 Information Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Card 1: Detalles del Lote */}
         <Card className="shadow-sm border-gray-200">
           <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
@@ -491,6 +526,14 @@ export const BatchDetail: React.FC = () => {
             </div>
 
             <div className="space-y-2 text-xs sm:text-sm my-auto">
+              <div className="flex justify-between items-center text-neutral/60">
+                <span>Alcance de Unidad</span>
+                <span className="font-semibold text-neutral">
+                  {batch.unit_scope === 'mixed' || !batch.unit_scope
+                    ? 'Mixto (Todas las unidades)'
+                    : getUnitLabel(batch.unit_scope as ScoutUnit)}
+                </span>
+              </div>
               <div className="flex justify-between items-center text-neutral/60">
                 <span>Región</span>
                 <span className="font-semibold text-neutral">{getRegionName(batch.region_id)}</span>
@@ -560,6 +603,26 @@ export const BatchDetail: React.FC = () => {
                 <span>Sin registrar</span>
                 <span className="text-sm font-black">{totals.pending}</span>
               </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Card 4: Comentarios / Observaciones */}
+        <Card className="shadow-sm border-gray-200">
+          <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <h2 className="font-bold text-neutral text-base">Comentarios / Observaciones</h2>
+            </div>
+
+            <div className="my-auto text-xs sm:text-sm text-neutral/80 break-words">
+              {batch.comment && batch.comment.trim().length > 0 ? (
+                <p className="whitespace-pre-wrap font-medium">{batch.comment}</p>
+              ) : (
+                <p className="italic text-neutral/40">Sin observaciones registradas</p>
+              )}
             </div>
           </CardBody>
         </Card>
@@ -720,8 +783,42 @@ export const BatchDetail: React.FC = () => {
                   </select>
                 </div>
               </div>
+              <div className="w-full">
+                <label htmlFor="member-unit-select" className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral">
+                  Unidad Scout *
+                </label>
+                <select
+                  id="member-unit-select"
+                  value={editingMember.unit || (editingMember.member_type === 'young' ? 'tropa' : 'institucional')}
+                  onChange={e => {
+                    const newUnit = e.target.value as ScoutUnit;
+                    const wasUnverified = editingMember.verified_in_registry === false || (!editingMember.verified_in_registry && editingMember.unit === 'no_scout');
+                    const isChangingToScout = newUnit !== 'no_scout';
+                    let nextStatus = editingMember.status;
+                    if (newUnit === 'no_scout') {
+                      nextStatus = 'active';
+                    } else if (wasUnverified && isChangingToScout && editingMember.status === 'active') {
+                      nextStatus = 'pending';
+                    }
+
+                    setEditingMember({
+                      ...editingMember,
+                      unit: newUnit,
+                      status: nextStatus
+                    });
+                  }}
+                  className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                >
+                  <option value="manada">Manada</option>
+                  <option value="tropa">Tropa</option>
+                  <option value="caminantes">Caminantes</option>
+                  <option value="clan">Clan</option>
+                  <option value="institucional">Institucional</option>
+                  <option value="no_scout">No scout</option>
+                </select>
+              </div>
               {editingMember.status !== 'active' && (
-                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-2">
+                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <label htmlFor="exceptional-toggle" className="flex items-center gap-2.5 cursor-pointer font-bold text-xs sm:text-sm text-purple-900">
                       <input
@@ -735,17 +832,35 @@ export const BatchDetail: React.FC = () => {
                             status: isChecked ? 'exceptional' : 'pending',
                             recognition_code: isChecked
                               ? (editingMember.recognition_code || `REC-${editingMember.identity.slice(-4) || 'EXC'}`)
-                              : editingMember.recognition_code
+                              : editingMember.recognition_code,
+                            exceptional_reason: isChecked ? (editingMember.exceptional_reason || '') : undefined
                           });
                         }}
                         className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"
                       />
-                      <span>Autorizar emisión de diploma (Caso Excepcional)</span>
+                      <span>Autorizar emisión de reconocimiento (Caso Excepcional)</span>
                     </label>
                   </div>
                   <p className="text-xs text-purple-700">
-                    Permite emitir el diploma oficial para este miembro aunque no figure en el registro nacional validado.
+                    Permite emitir el reconocimiento oficial para este miembro aunque no figure en el registro nacional validado.
                   </p>
+                  {editingMember.status === 'exceptional' && (
+                    <div className="space-y-1.5 pt-1">
+                      <label htmlFor="detail-exceptional-reason" className="block uppercase text-xs font-bold tracking-wide text-purple-900">
+                        Justificación de la emisión excepcional *
+                      </label>
+                      <textarea
+                        id="detail-exceptional-reason"
+                        aria-label="Justificación de la emisión excepcional"
+                        rows={3}
+                        required
+                        placeholder="Indique el motivo por el cual se autoriza la emisión sin registro activo en el sistema..."
+                        value={editingMember.exceptional_reason || ''}
+                        onChange={(e) => setEditingMember({ ...editingMember, exceptional_reason: e.target.value })}
+                        className="w-full rounded-xl px-3.5 py-2.5 bg-white border border-purple-300 text-neutral focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm placeholder:text-neutral/40 transition-all"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               <Field
@@ -799,6 +914,10 @@ export const BatchDetail: React.FC = () => {
                 <span className="font-semibold text-neutral">{viewingMember.member_type === 'young' ? 'Joven' : 'Adulto'}</span>
               </div>
               <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-neutral/50 font-semibold">Unidad</span>
+                <span className="font-semibold text-neutral">{getUnitLabel(viewingMember.unit)}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2">
                 <span className="text-neutral/50 font-semibold">Estatus</span>
                 <span className={`font-bold ${
                   viewingMember.status === 'active'
@@ -814,6 +933,14 @@ export const BatchDetail: React.FC = () => {
                     : '● Registro Inválido'}
                 </span>
               </div>
+              {viewingMember.status === 'exceptional' && (
+                <div className="flex flex-col border-b border-gray-200 pb-2 space-y-1 bg-purple-50/50 p-2.5 rounded-lg border border-purple-200/60">
+                  <span className="text-purple-900 font-bold text-xs">Justificación Excepcional</span>
+                  <span className="text-neutral text-xs italic break-words">
+                    {viewingMember.exceptional_reason || 'Sin justificación especificada'}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between border-b border-gray-200 pb-2">
                 <span className="text-neutral/50 font-semibold">Código de Reconocimiento</span>
                 <span className="font-mono font-bold text-neutral">{viewingMember.recognition_code || '-'}</span>

@@ -34,17 +34,17 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-full">
       {/* Card Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-primary/10 text-primary rounded-xl">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-neutral text-base tracking-tight">
-              Tendencia Mensual de Emisiones
+              Resumen Mensual de Reconocimientos
             </h3>
             <p className="text-xs text-neutral/60">
-              Distribución de diplomas otorgados a lo largo del año {displayYear}
+              Distribución de reconocimientos otorgados a lo largo del año {displayYear}
             </p>
           </div>
         </div>
@@ -57,7 +57,38 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
         </div>
       </div>
 
-      {/* Interactive SVG Chart */}
+      {/* Monthly Summary Table */}
+      <div className="overflow-x-auto mb-6">
+        <table className="w-full text-left border-collapse font-sans text-xs">
+          <thead>
+            <tr className="border-b border-gray-200 bg-[#faf8f5]">
+              <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
+              <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">Reconocimientos Emitidos</th>
+              <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {data.map((m) => {
+              const pct = totalPeriodDiplomas > 0 ? Number(((m.totalCount / totalPeriodDiplomas) * 100).toFixed(1)) : 0;
+              return (
+                <tr key={m.monthKey} className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-3 py-1.5 font-semibold text-neutral">
+                    {m.label}
+                  </td>
+                  <td className="px-3 py-1.5 font-bold text-neutral text-right">
+                    {m.totalCount}
+                  </td>
+                  <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
+                    {pct}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Interactive SVG Chart Directly Below */}
       <div className="relative w-full overflow-hidden">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
@@ -110,7 +141,7 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
                 className="cursor-pointer transition-all"
                 tabIndex={0}
                 role="graphics-symbol"
-                aria-label={`${item.label}: ${item.totalCount} diplomas`}
+                aria-label={`${item.label}: ${item.totalCount} reconocimientos`}
               >
                 {/* Background hover column highlight */}
                 <rect

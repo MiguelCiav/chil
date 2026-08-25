@@ -109,9 +109,15 @@ describe('Batches API Layer', () => {
         } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
       const data = await getHierarchyData();
-      expect(data.regions[0].id).toBe(1);
-      expect(data.districts[0].id).toBe(10);
-      expect(data.groups[0].id).toBe(100);
+      expect(data.regions[0].id).toBe(0);
+      expect(data.regions[0].name).toBe('No aplica');
+      expect(data.regions[1].id).toBe(1);
+      expect(data.districts[0].id).toBe(0);
+      expect(data.districts[0].name).toBe('No aplica');
+      expect(data.districts[1].id).toBe(10);
+      expect(data.groups[0].id).toBe(0);
+      expect(data.groups[0].name).toBe('No aplica');
+      expect(data.groups[1].id).toBe(100);
     });
 
     it('seeds Firestore collections when empty and returns fallback seeded data', async () => {

@@ -1,6 +1,10 @@
 {
   "regions": [
     {
+      "id": 0,
+      "name": "No aplica"
+    },
+    {
       "id": 3,
       "name": "ATENDIDOS POR LA OSN"
     },
@@ -38,6 +42,11 @@
     }
   ],
   "districts": [
+    {
+      "id": 0,
+      "name": "No aplica",
+      "region_id": 0
+    },
     {
       "id": 9,
       "name": "BOLIVAR",
@@ -250,6 +259,11 @@
     }
   ],
   "groups": [
+    {
+      "id": 0,
+      "name": "No aplica",
+      "district_id": 0
+    },
     {
       "id": 22,
       "name": "KENYA",

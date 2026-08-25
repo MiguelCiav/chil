@@ -21,6 +21,8 @@ describe('excelExport utility', () => {
       firstName: 'Ana María',
       lastName: 'Pérez Gómez',
       fullName: 'Ana María Pérez Gómez',
+      unit: 'tropa',
+      unitLabel: 'Tropa',
       memberType: 'young',
       memberTypeLabel: 'Joven',
       status: 'active',
@@ -42,6 +44,8 @@ describe('excelExport utility', () => {
       firstName: 'Carlos',
       lastName: 'Rodríguez',
       fullName: 'Carlos Rodríguez',
+      unit: 'institucional',
+      unitLabel: 'Institucional',
       memberType: 'adult',
       memberTypeLabel: 'Adulto',
       status: 'pending',
@@ -67,7 +71,7 @@ describe('excelExport utility', () => {
     vi.restoreAllMocks();
   });
 
-  it('includes all 12 required Spanish headers in the exact order', () => {
+  it('includes all 14 required Spanish headers in the exact order', () => {
     expect(SUMMARY_EXCEL_HEADERS).toEqual([
       'Fecha de Emisión',
       'Lote',
@@ -75,8 +79,10 @@ describe('excelExport utility', () => {
       'Cédula',
       'Nombres',
       'Apellidos',
+      'Unidad',
       'Tipo',
       'Estatus',
+      'Justificación Excepcional',
       'Código de Reconocimiento',
       'Región',
       'Distrito',
@@ -93,8 +99,10 @@ describe('excelExport utility', () => {
       'V-12345678',
       'Ana María',
       'Pérez Gómez',
+      'Tropa',
       'Joven',
       'Registro Válido',
+      '',
       'SOL-001',
       'Región Capital',
       'Distrito Sucre',
@@ -109,12 +117,12 @@ describe('excelExport utility', () => {
 
     // Includes header line
     expect(csv).toContain(
-      '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Tipo","Estatus","Código de Reconocimiento","Región","Distrito","Grupo"'
+      '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Unidad","Tipo","Estatus","Justificación Excepcional","Código de Reconocimiento","Región","Distrito","Grupo"'
     );
 
     // Contains first row data
     expect(csv).toContain(
-      '"20 ago. 2026","LT-2026-101","Go Solar","V-12345678","Ana María","Pérez Gómez","Joven","Registro Válido","SOL-001","Región Capital","Distrito Sucre","Grupo San Luis"'
+      '"20 ago. 2026","LT-2026-101","Go Solar","V-12345678","Ana María","Pérez Gómez","Tropa","Joven","Registro Válido","","SOL-001","Región Capital","Distrito Sucre","Grupo San Luis"'
     );
 
     // Properly escapes double quotes and commas
@@ -128,7 +136,7 @@ describe('excelExport utility', () => {
     const lines = csv.replace('\uFEFF', '').split('\r\n');
     expect(lines.length).toBe(1);
     expect(lines[0]).toBe(
-      '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Tipo","Estatus","Código de Reconocimiento","Región","Distrito","Grupo"'
+      '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Unidad","Tipo","Estatus","Justificación Excepcional","Código de Reconocimiento","Región","Distrito","Grupo"'
     );
   });
 
@@ -145,6 +153,7 @@ describe('excelExport utility', () => {
       firstName: '',
       lastName: '',
       fullName: '',
+      unitLabel: '',
       memberType: 'young',
       memberTypeLabel: 'Joven',
       status: 'active',
@@ -163,8 +172,10 @@ describe('excelExport utility', () => {
       'V-999',
       '',
       '',
+      '',
       'Joven',
       'Registro Válido',
+      '',
       '',
       '',
       '',
@@ -236,6 +247,8 @@ describe('excelExport utility', () => {
       firstName: 'Lucia',
       lastName: 'Mendez',
       fullName: 'Lucia Mendez',
+      unit: 'caminantes',
+      unitLabel: 'Caminantes',
       memberType: 'young',
       memberTypeLabel: 'Joven',
       status: 'exceptional',
@@ -247,7 +260,7 @@ describe('excelExport utility', () => {
     };
 
     const formatted = formatSummaryRowForExport(exceptionalRow);
-    expect(formatted[7]).toBe('Emisión Excepcional');
+    expect(formatted[8]).toBe('Emisión Excepcional');
 
     const csv = generateSummaryCsv([exceptionalRow]);
     expect(csv).toContain('"Emisión Excepcional"');

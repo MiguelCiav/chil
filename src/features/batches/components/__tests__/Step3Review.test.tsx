@@ -298,11 +298,14 @@ describe('Step3Review component', () => {
     fireEvent.click(screen.getByLabelText(/Editar información de Daniel Suarez/i));
 
     expect(screen.getByText('Editar Información de Miembro')).toBeInTheDocument();
-    const toggle = screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i);
+    const toggle = screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i);
     expect(toggle).not.toBeChecked();
 
     fireEvent.click(toggle);
     expect(toggle).toBeChecked();
+
+    const reasonInput = screen.getByLabelText(/Justificación de la emisión excepcional/i);
+    fireEvent.change(reasonInput, { target: { value: 'Comprobante presentado' } });
 
     fireEvent.click(screen.getByText('Guardar Cambios'));
 
@@ -311,7 +314,125 @@ describe('Step3Review component', () => {
         expect.objectContaining({
           identity: 'V-44444444',
           status: 'exceptional',
+          exceptional_reason: 'Comprobante presentado',
           recognition_code: expect.stringMatching(/^REC-/)
+        })
+      );
+    });
+  });
+
+  it('displays unit badge on member row and allows changing unit in edit modal', async () => {
+    const memberWithUnit: ScoutMember = {
+      identity: 'V-55555555',
+      first_names: 'Valeria',
+      last_names: 'Lobezna',
+      birth_date: '2015-06-01',
+      member_type: 'young',
+      unit: 'manada',
+      status: 'active',
+      batch_id: 123,
+      recognition_code: 'REC-MAN-01',
+      verified_in_registry: true
+    };
+
+    vi.mocked(api.updateMember).mockResolvedValueOnce({
+      ...memberWithUnit,
+      unit: 'tropa'
+    });
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        ...memberWithUnit,
+        unit: 'tropa'
+      }
+    ]);
+
+    render(
+      <Step3Review
+        {...defaultProps}
+        savedMembers={[memberWithUnit]}
+      />
+    );
+
+    expect(screen.getByText('Valeria Lobezna')).toBeInTheDocument();
+    expect(screen.getByText('Manada')).toBeInTheDocument();
+
+    // Open edit modal
+    fireEvent.click(screen.getByLabelText(/Editar información de Valeria Lobezna/i));
+
+    const unitSelect = screen.getByLabelText(/Unidad Scout \*/i);
+    expect(unitSelect).toHaveValue('manada');
+
+    fireEvent.change(unitSelect, { target: { value: 'tropa' } });
+    expect(unitSelect).toHaveValue('tropa');
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-55555555',
+          unit: 'tropa'
+        })
+      );
+    });
+  });
+
+  it('sets status to pending when changing unverified no_scout member to a scout unit in edit modal', async () => {
+    const unverifiedNoScout: ScoutMember = {
+      identity: 'V-77777777',
+      first_names: 'Colaborador',
+      last_names: 'Externo',
+      birth_date: '1985-01-01',
+      member_type: 'adult',
+      unit: 'no_scout',
+      status: 'active',
+      verified_in_registry: false,
+      batch_id: 123,
+      recognition_code: 'REC-EXT-01'
+    };
+
+    vi.mocked(api.updateMember).mockResolvedValueOnce({
+      ...unverifiedNoScout,
+      unit: 'clan',
+      status: 'pending'
+    });
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        ...unverifiedNoScout,
+        unit: 'clan',
+        status: 'pending'
+      }
+    ]);
+
+    render(
+      <Step3Review
+        {...defaultProps}
+        savedMembers={[unverifiedNoScout]}
+      />
+    );
+
+    // Open edit modal
+    fireEvent.click(screen.getByLabelText(/Editar información de Colaborador Externo/i));
+
+    const unitSelect = screen.getByLabelText(/Unidad Scout \*/i);
+    expect(unitSelect).toHaveValue('no_scout');
+
+    // Change to clan (scout unit)
+    fireEvent.change(unitSelect, { target: { value: 'clan' } });
+
+    // Status becomes pending, rendering the exceptional toggle
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-77777777',
+          unit: 'clan',
+          status: 'pending'
         })
       );
     });

@@ -7,7 +7,8 @@ import {
   Compass,
   Users,
   Calendar,
-  Hash
+  Hash,
+  Shield
 } from 'lucide-react';
 import {
   RecognitionFieldKey,
@@ -19,6 +20,7 @@ export const FIELD_ICONS: Record<RecognitionFieldKey, React.ReactNode> = {
   full_name: <User className="w-4 h-4" />,
   identity: <CreditCard className="w-4 h-4" />,
   recognition_name: <Award className="w-4 h-4" />,
+  unit: <Shield className="w-4 h-4" />,
   region: <MapPin className="w-4 h-4" />,
   district: <Compass className="w-4 h-4" />,
   group: <Users className="w-4 h-4" />,

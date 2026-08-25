@@ -129,18 +129,22 @@ describe('StatisticsDashboard Component', () => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    // Verify KPI Cards
-    expect(screen.getByText('Diplomas Emitidos')).toBeInTheDocument();
-    expect(screen.getAllByText('Registro Válido').length).toBeGreaterThanOrEqual(1);
+    // Verify Top 5 Executive KPI Cards
+    expect(screen.getAllByText('Total Reconocimientos').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Total Lotes')).toBeInTheDocument();
+    expect(screen.getByText('Más Entregado')).toBeInTheDocument();
+    expect(screen.getByText('Regiones y Distritos')).toBeInTheDocument();
     expect(screen.getAllByText('Demografía').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Cobertura')).toBeInTheDocument();
-    expect(screen.getByText('Lotes Registrados')).toBeInTheDocument();
 
-    // Verify Charts
-    expect(screen.getByText('Tendencia Mensual de Emisiones')).toBeInTheDocument();
-    expect(screen.getByText('Ranking de Reconocimientos')).toBeInTheDocument();
-    expect(screen.getByText('Distribución Geográfica')).toBeInTheDocument();
-    expect(screen.getByText('Calidad y Estatus de Validación')).toBeInTheDocument();
+    // Verify 5 Sections
+    expect(screen.getByText('Reconocimientos entregados por Región')).toBeInTheDocument();
+    expect(screen.getByText('Reconocimientos entregados por Distrito')).toBeInTheDocument();
+    expect(screen.getByText('Reconocimientos entregados por Unidad')).toBeInTheDocument();
+    expect(screen.getByText('Resumen de reconocimientos entregados a Jóvenes y Adultos')).toBeInTheDocument();
+    expect(screen.getByText('Resumen Mensual de Reconocimientos')).toBeInTheDocument();
+
+    // Verify validation status card is removed
+    expect(screen.queryByText('Calidad y Estatus de Validación')).not.toBeInTheDocument();
   });
 
   it('filters data when changing region and allows resetting filters', async () => {

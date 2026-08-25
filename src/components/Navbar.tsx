@@ -68,6 +68,18 @@ export const Navbar: React.FC = () => {
         {user && (
           <div className="flex h-full space-x-6">
             <NavLink
+              to="/lotes/rapido"
+              end
+              className={({ isActive }) =>
+                `flex items-center my-auto px-3 py-1.5 rounded-lg transition-all shadow-xs ${isActive
+                  ? 'bg-amber-300 text-neutral-950 border border-amber-400 font-bold'
+                  : 'bg-amber-100 hover:bg-amber-200 text-neutral-900 border border-amber-300 font-semibold'
+                }`
+              }
+            >
+              Emisión Rápida
+            </NavLink>
+            <NavLink
               to="/lotes/nuevo"
               end
               className={({ isActive }) =>
@@ -181,7 +193,7 @@ export const Navbar: React.FC = () => {
           </ModalHeader>
           <ModalBody className="space-y-4">
             <p className="text-sm text-neutral/70">
-              Ingrese sus credenciales del sistema SERSIN para permitir la consulta y verificación automatizada de miembros.
+              Ingrese sus credenciales del Sistema de Registro para permitir la consulta y verificación automatizada de miembros.
             </p>
             {hasCredentials && (
               <p className="text-xs text-green-600 font-semibold bg-green-50 p-2.5 rounded-lg border border-green-200">

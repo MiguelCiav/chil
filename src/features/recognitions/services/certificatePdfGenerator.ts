@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup, getUnitLabel } from '../../batches/types';
 import { getHierarchyData } from '../../batches/api';
 import { getRecognitionTypeById } from '../api';
 import {
@@ -200,9 +200,14 @@ export function renderCertificatePage(
   }
 
   // 2. Resolve variable values
-  const regionName = hierarchy?.regions.find(r => r.id === batch.region_id)?.name || '-';
-  const districtName = hierarchy?.districts.find(d => d.id === batch.district_id)?.name || '-';
-  const groupName = hierarchy?.groups.find(g => g.id === batch.group_id)?.name || '-';
+  const rawRegion = hierarchy?.regions.find(r => r.id === batch.region_id)?.name;
+  const regionName = (!batch.region_id || batch.region_id === 0 || rawRegion?.toLowerCase() === 'no aplica') ? '-' : (rawRegion || '-');
+
+  const rawDistrict = hierarchy?.districts.find(d => d.id === batch.district_id)?.name;
+  const districtName = (!batch.district_id || batch.district_id === 0 || rawDistrict?.toLowerCase() === 'no aplica') ? '-' : (rawDistrict || '-');
+
+  const rawGroup = hierarchy?.groups.find(g => g.id === batch.group_id)?.name;
+  const groupName = (!batch.group_id || batch.group_id === 0 || rawGroup?.toLowerCase() === 'no aplica') ? '-' : (rawGroup || '-');
   const recognitionName =
     recognition?.name ||
     batch.recognition_type ||
@@ -220,6 +225,7 @@ export function renderCertificatePage(
     region: regionName,
     district: districtName,
     group: groupName,
+    unit: getUnitLabel(member.unit),
     issue_date: issueDate,
     recognition_code: recognitionCode
   };
@@ -321,7 +327,7 @@ export async function downloadSingleCertificatePdf(
 
   const sanitizedIdentity = params.member.identity.replace(/[^a-zA-Z0-9_-]+/g, '_');
   const slug = slugify(params.recognition?.name || params.batch.recognition_type || 'Reconocimiento');
-  const fileName = `Diploma_${sanitizedIdentity}_Lote_${params.batch.id}_${slug}.pdf`;
+  const fileName = `Reconocimiento_${sanitizedIdentity}_Lote_${params.batch.id}_${slug}.pdf`;
 
   doc.save(fileName);
   return fileName;
@@ -337,7 +343,7 @@ export async function generateBatchCertificatesPdf(
 
   const eligibleMembers = members.filter(m => m.status === 'active' || m.status === 'exceptional');
   if (eligibleMembers.length === 0) {
-    throw new Error('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas');
+    throw new Error('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos');
   }
 
   const resolvedHierarchy = hierarchy || (await getHierarchyData());
@@ -371,7 +377,7 @@ export async function generateBatchCertificatesPdf(
   });
 
   const slug = slugify(resolvedRecognition?.name || batch.recognition_type || 'Reconocimientos');
-  const fileName = `Diplomas_Lote_${batch.id}_${slug}.pdf`;
+  const fileName = `Reconocimientos_Lote_${batch.id}_${slug}.pdf`;
 
   doc.save(fileName);
   return fileName;

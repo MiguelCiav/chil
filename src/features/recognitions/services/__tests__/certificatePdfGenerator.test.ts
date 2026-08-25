@@ -216,6 +216,7 @@ describe('certificatePdfGenerator service', () => {
     last_names: 'Mendoza',
     birth_date: '1995-03-20',
     member_type: 'adult',
+    unit: 'tropa',
     status: 'active',
     batch_id: 45,
     recognition_code: 'REC-45-001'
@@ -316,10 +317,50 @@ describe('certificatePdfGenerator service', () => {
         { align: 'center', baseline: 'middle' }
       );
       expect(mockDocInstance.text).toHaveBeenCalledWith(
+        'Tropa',
+        expect.any(Number),
+        expect.any(Number),
+        { align: 'left', baseline: 'middle' }
+      );
+      expect(mockDocInstance.text).toHaveBeenCalledWith(
         'REC-45-001',
         expect.any(Number),
         expect.any(Number),
         { align: 'center', baseline: 'middle' }
+      );
+    });
+
+    it('generates certificate for no_scout direct emission member with No Scout label', async () => {
+      const noScoutMember: ScoutMember = {
+        identity: 'V-99.888.777',
+        first_names: 'Colaborador',
+        last_names: 'Externo',
+        birth_date: '1990-01-01',
+        member_type: 'adult',
+        unit: 'no_scout',
+        status: 'active',
+        batch_id: 45,
+        recognition_code: 'REC-45-NOSCOUT'
+      };
+
+      await generateSingleCertificatePdf({
+        member: noScoutMember,
+        batch: mockBatch,
+        recognition: mockRecognition,
+        hierarchy: mockHierarchy
+      });
+
+      expect(mockDocInstance.text).toHaveBeenCalledWith(
+        'Colaborador Externo',
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Object)
+      );
+      expect(mockDocInstance.text).toHaveBeenCalledWith(
+        'No scout',
+        expect.any(Number),
+        expect.any(Number),
+        { align: 'left', baseline: 'middle' }
       );
     });
 
@@ -538,8 +579,8 @@ describe('certificatePdfGenerator service', () => {
         hierarchy: mockHierarchy
       });
 
-      expect(fileName).toBe('Diploma_V-18_234_567_Lote_45_insignia_de_madera.pdf');
-      expect(mockDocInstance.save).toHaveBeenCalledWith('Diploma_V-18_234_567_Lote_45_insignia_de_madera.pdf');
+      expect(fileName).toBe('Reconocimiento_V-18_234_567_Lote_45_insignia_de_madera.pdf');
+      expect(mockDocInstance.save).toHaveBeenCalledWith('Reconocimiento_V-18_234_567_Lote_45_insignia_de_madera.pdf');
     });
   });
 
@@ -562,8 +603,8 @@ describe('certificatePdfGenerator service', () => {
         hierarchy: mockHierarchy
       });
 
-      expect(fileName).toBe('Diploma_V-30_123_456_Lote_45_insignia_de_madera.pdf');
-      expect(mockDocInstance.save).toHaveBeenCalledWith('Diploma_V-30_123_456_Lote_45_insignia_de_madera.pdf');
+      expect(fileName).toBe('Reconocimiento_V-30_123_456_Lote_45_insignia_de_madera.pdf');
+      expect(mockDocInstance.save).toHaveBeenCalledWith('Reconocimiento_V-30_123_456_Lote_45_insignia_de_madera.pdf');
       expect(mockDocInstance.text).toHaveBeenCalledWith(
         'Elena Vasquez',
         expect.any(Number),
@@ -596,8 +637,8 @@ describe('certificatePdfGenerator service', () => {
         hierarchy: mockHierarchy
       });
 
-      expect(fileName).toBe('Diplomas_Lote_45_insignia_de_madera.pdf');
-      expect(mockDocInstance.save).toHaveBeenCalledWith('Diplomas_Lote_45_insignia_de_madera.pdf');
+      expect(fileName).toBe('Reconocimientos_Lote_45_insignia_de_madera.pdf');
+      expect(mockDocInstance.save).toHaveBeenCalledWith('Reconocimientos_Lote_45_insignia_de_madera.pdf');
 
       // 1 active + 1 exceptional member = 2 eligible -> 1 addPage call for the second member
       expect(mockDocInstance.addPage).toHaveBeenCalledTimes(1);
@@ -636,7 +677,7 @@ describe('certificatePdfGenerator service', () => {
           recognition: mockRecognition,
           hierarchy: mockHierarchy
         })
-      ).rejects.toThrow('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar diplomas');
+      ).rejects.toThrow('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos');
     });
   });
 

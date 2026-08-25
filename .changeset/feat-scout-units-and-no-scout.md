@@ -1,0 +1,36 @@
+---
+"chil": minor
+---
+
+Implement Scout Units and "No Scout" Direct Recognition Emission:
+- **Scout Units Model & Metadata (`ScoutUnit` & `BatchUnitScope`)**:
+  - Defined 6 official scout units: `manada` (Lobatos/Lobeznas), `tropa` (Scouts), `caminantes` (Caminantes), `clan` (Rovers), `institucional` (Adultos / Dirigentes), and `no_scout` (Colaboradores / Externos).
+  - Defined batch unit scopes: `mixed` (🌐 Mixto - Permite cualquier unidad) and specific scout units.
+  - Added `SCOUT_UNITS` metadata mapping labels, descriptions, and color-coded badges (`manada` amber, `tropa` emerald, `caminantes` blue, `clan` red, `institucional` purple, `no_scout` slate).
+  - Added helper functions `getUnitLabel` and `getUnitBadge` for consistent unit representation across the entire application.
+- **"No Scout" Direct Recognition Emission**:
+  - Bypasses Sistema de Registro scraper query entirely when a member's unit is `no_scout`.
+  - Sets member status directly to `Registro válido` (`active`) and immediately marks them as eligible for certificate generation.
+  - Skips scraper credential verification when creating batches scoped to `no_scout`.
+- **New Batch Wizard Integration**:
+  - Step 1 (Organización): Added "Alcance de Unidad" dropdown allowing creators to scope batches to a specific unit or mixed.
+  - Step 2 (Verificación): Added `UNIDAD` column displaying color-coded unit badges for each member, automatically defaulting units based on batch scope or young/adult member types.
+  - Step 3 (Revisión): Added unit badges to review cards and enabled Scout Unit editing in the member edit modal.
+- **Batch Details & Member Management**:
+  - Displayed `Alcance de Unidad` badge on batch summary cards.
+  - Added `UNIDAD` column with badges in members TanStack table.
+  - Enabled modifying member Scout Unit in the member edit modal and displayed Unit in the quick view modal.
+- **Dynamic Certificate Interpolation & Visual Designer**:
+  - Added `unit` (`[Unidad Scout]`) to available certificate template fields.
+  - Interpolated localized unit labels in PDF diploma generation (`certificatePdfGenerator.ts`).
+  - Added unit icon and mock preview support in Certificate Designer (`designerUtils.tsx`).
+- **Master Summary View & Excel Export**:
+  - Added `UNIDAD` column in Master Summary View table (13 columns total).
+  - Added `Unidad Scout` filter dropdown supporting filtering by any unit or No Scout.
+  - Updated Excel/CSV export to include `Unidad` column in matching order.
+- **Statistics Dashboard & PDF Reports**:
+  - Added `calculateUnitDistribution` (and `getUnitDistribution`) utility to aggregate member counts and percentages by Scout Unit.
+  - Created `UnitDistributionCard` dashboard widget displaying segmented bar chart and unit cards with progress indicators.
+  - Included Scout Unit breakdown section in executive PDF report export (`statsPdfExport.ts`).
+- **Testing & Quality Assurance**:
+  - Updated and added test suites for all modified components, utils, generators, and wizards (100% passing across 44 test suites and 342 unit tests).

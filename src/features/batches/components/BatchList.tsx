@@ -18,7 +18,8 @@ import {
   ChevronRight,
   CheckCircle2,
   AlertCircle,
-  MoreVertical
+  MoreVertical,
+  Zap
 } from 'lucide-react';
 
 import { Button } from '../../../components/Button';
@@ -329,12 +330,12 @@ export const BatchList: React.FC = () => {
         recognition: recType,
         hierarchy: { regions, districts, groups }
       });
-      setToastMessage(`Diplomas descargados: ${fileName}`);
+      setToastMessage(`Reconocimientos descargados: ${fileName}`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error("Error downloading PDF:", err);
-      alert("Error al generar los diplomas en PDF.");
+      alert("Error al generar los reconocimientos en PDF.");
     } finally {
       setDownloadingId(null);
     }
@@ -531,7 +532,7 @@ export const BatchList: React.FC = () => {
                   className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5 text-primary" />
-                  {downloadingId === rowData.id ? 'Descargando...' : 'Descargar diplomas (PDF)'}
+                  {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (PDF)'}
                 </button>
                 <div className="border-t border-gray-100 my-1" />
                 <button
@@ -574,6 +575,39 @@ export const BatchList: React.FC = () => {
           <span className="text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
+
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
+            Listado de Lotes
+          </h1>
+          <p className="text-sm text-neutral/60 mt-1">
+            Gestione y descargue los lotes de reconocimientos emitidos.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/lotes/rapido')}
+            icon={<Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" />}
+            className="shadow-sm flex-shrink-0"
+          >
+            Emisión Rápida
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => navigate('/lotes/nuevo')}
+            icon={<Plus size={18} />}
+            className="shadow-sm flex-shrink-0"
+          >
+            Nuevo Lote
+          </Button>
+        </div>
+      </div>
 
       {/* Filtros Activos Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">

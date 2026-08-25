@@ -1,4 +1,4 @@
-import { Batch, ScoutMember, Region, District } from '../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutUnit, SCOUT_UNITS } from '../../batches/types';
 import { getRecognitionBadgeStyle, getRecognitionName, RecognitionTypeInfo } from '../../batches/api';
 import {
   KpiMetrics,
@@ -8,6 +8,8 @@ import {
   GeographicBreakdownData,
   GeographicItem,
   StatusBreakdownData,
+  UnitDistributionData,
+  UnitDistributionItem,
   StatisticsDataset
 } from '../types';
 
@@ -21,7 +23,8 @@ const MONTH_LABELS_ES = [
  */
 export function calculateKpiMetrics(
   members: ScoutMember[],
-  batches: Batch[]
+  batches: Batch[],
+  recognitionTypes: RecognitionTypeInfo[] = []
 ): KpiMetrics {
   const totalMembers = members.length;
   const totalBatches = batches.length;
@@ -40,6 +43,8 @@ export function calculateKpiMetrics(
   const batchMap = new Map<number, Batch>();
   batches.forEach(b => batchMap.set(b.id, b));
 
+  const countsByRec = new Map<string, number>();
+
   members.forEach(m => {
     if (m.status === 'active') activeCount++;
     else if (m.status === 'exceptional') exceptionalCount++;
@@ -48,12 +53,15 @@ export function calculateKpiMetrics(
     if (m.member_type === 'young') youngCount++;
     else if (m.member_type === 'adult') adultCount++;
 
+    let recType = 'general';
     if (m.batch_id && batchMap.has(m.batch_id)) {
       const b = batchMap.get(m.batch_id)!;
       if (b.region_id) activeRegionIds.add(b.region_id);
       if (b.district_id) activeDistrictIds.add(b.district_id);
       if (b.group_id) activeGroupIds.add(b.group_id);
+      if (b.recognition_type) recType = b.recognition_type;
     }
+    countsByRec.set(recType, (countsByRec.get(recType) || 0) + 1);
   });
 
   // Also include batch IDs from batches list directly if not covered
@@ -62,6 +70,23 @@ export function calculateKpiMetrics(
     if (b.district_id) activeDistrictIds.add(b.district_id);
     if (b.group_id) activeGroupIds.add(b.group_id);
   });
+
+  let topRecId = '';
+  let topRecCount = 0;
+  countsByRec.forEach((count, recId) => {
+    if (count > topRecCount) {
+      topRecCount = count;
+      topRecId = recId;
+    }
+  });
+
+  let topRecognitionName = '-';
+  if (topRecId) {
+    const matchedType = recognitionTypes.find(
+      r => r.id === topRecId || r.name.toLowerCase() === topRecId.toLowerCase()
+    );
+    topRecognitionName = matchedType ? matchedType.name : getRecognitionName(topRecId);
+  }
 
   const totalDiplomas = activeCount + exceptionalCount;
   const youngPercentage = totalMembers > 0 ? Number(((youngCount / totalMembers) * 100).toFixed(1)) : 0;
@@ -82,6 +107,8 @@ export function calculateKpiMetrics(
     activeRegionsCount: activeRegionIds.size,
     activeDistrictsCount: activeDistrictIds.size,
     activeGroupsCount: activeGroupIds.size,
+    topRecognitionName,
+    topRecognitionCount: topRecCount,
     validationRate,
     exceptionalRate,
     pendingRate,
@@ -340,6 +367,40 @@ export function calculateStatusBreakdown(members: ScoutMember[]): StatusBreakdow
 }
 
 /**
+ * Calculates member distribution across Scout Units
+ */
+export function calculateUnitDistribution(members: ScoutMember[]): UnitDistributionData {
+  const totalCount = members.length;
+  const unitOrder: ScoutUnit[] = ['manada', 'tropa', 'caminantes', 'clan', 'institucional', 'no_scout'];
+  const counts = new Map<ScoutUnit, number>();
+  unitOrder.forEach(u => counts.set(u, 0));
+
+  members.forEach(m => {
+    const u: ScoutUnit = m.unit || (m.member_type === 'young' ? 'tropa' : 'institucional');
+    counts.set(u, (counts.get(u) || 0) + 1);
+  });
+
+  const items: UnitDistributionItem[] = unitOrder.map(u => {
+    const count = counts.get(u) || 0;
+    const percentage = totalCount > 0 ? Number(((count / totalCount) * 100).toFixed(1)) : 0;
+    return {
+      unit: u,
+      label: SCOUT_UNITS[u].label,
+      count,
+      percentage,
+      badgeClass: SCOUT_UNITS[u].badgeClass
+    };
+  });
+
+  return {
+    items,
+    totalCount
+  };
+}
+
+export const getUnitDistribution = calculateUnitDistribution;
+
+/**
  * Consolidates all metrics calculations into a complete dataset
  */
 export function buildStatisticsDataset(
@@ -350,12 +411,13 @@ export function buildStatisticsDataset(
   recognitionTypes: RecognitionTypeInfo[] = []
 ): StatisticsDataset {
   return {
-    kpis: calculateKpiMetrics(members, batches),
+    kpis: calculateKpiMetrics(members, batches, recognitionTypes),
     monthlyTrends: calculateMonthlyTrends(members, batches),
     recognitionRankings: calculateRecognitionRankings(members, batches, recognitionTypes),
     demographics: calculateDemographics(members),
     geographic: calculateGeographicBreakdown(batches, members, regions, districts),
     statusBreakdown: calculateStatusBreakdown(members),
+    unitDistribution: calculateUnitDistribution(members),
     filteredMembersCount: members.length,
     filteredBatchesCount: batches.length
   };

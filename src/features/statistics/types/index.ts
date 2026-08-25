@@ -1,3 +1,5 @@
+import { ScoutUnit } from '../../batches/types';
+
 export interface StatisticsFilterState {
   period: 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';
   startDate?: string;
@@ -20,9 +22,11 @@ export interface KpiMetrics {
   activeRegionsCount: number;
   activeDistrictsCount: number;
   activeGroupsCount: number;
-  validationRate: number;
-  exceptionalRate: number;
-  pendingRate: number;
+  topRecognitionName?: string;
+  topRecognitionCount?: number;
+  validationRate?: number;
+  exceptionalRate?: number;
+  pendingRate?: number;
   activeCount: number;
   exceptionalCount: number;
   pendingCount: number;
@@ -57,7 +61,9 @@ export interface DemographicsData {
   adultCount: number;
   totalCount: number;
   youngPercentage: number;
+  youngPercentageNumber?: number;
   adultPercentage: number;
+  adultPercentageNumber?: number;
   youngActive: number;
   youngExceptional: number;
   youngPending: number;
@@ -89,6 +95,19 @@ export interface StatusBreakdownData {
   pendingPercentage: number;
 }
 
+export interface UnitDistributionItem {
+  unit: ScoutUnit;
+  label: string;
+  count: number;
+  percentage: number;
+  badgeClass: string;
+}
+
+export interface UnitDistributionData {
+  items: UnitDistributionItem[];
+  totalCount: number;
+}
+
 export interface StatisticsDataset {
   kpis: KpiMetrics;
   monthlyTrends: MonthlyTrendData[];
@@ -96,6 +115,7 @@ export interface StatisticsDataset {
   demographics: DemographicsData;
   geographic: GeographicBreakdownData;
   statusBreakdown: StatusBreakdownData;
+  unitDistribution: UnitDistributionData;
   filteredMembersCount: number;
   filteredBatchesCount: number;
 }

@@ -6,6 +6,7 @@ export type RecognitionFieldKey =
   | 'region'
   | 'district'
   | 'group'
+  | 'unit'
   | 'issue_date'
   | 'recognition_code'
   | 'recognition_name';
@@ -127,6 +128,18 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     mock_value: 'Grupo Scouts 45 San Jorge'
   },
   {
+    field_key: 'unit',
+    label: 'Unidad Scout',
+    default_font_size: 12,
+    default_font_weight: 'normal',
+    default_font_family: 'helvetica',
+    default_color: '#444444',
+    default_align: 'left',
+    default_x: 20,
+    default_y: 86,
+    mock_value: 'Tropa'
+  },
+  {
     field_key: 'issue_date',
     label: 'Fecha de Emisión',
     default_font_size: 12,
@@ -159,6 +172,7 @@ export const MOCK_CERTIFICATE_DATA: Record<RecognitionFieldKey, string> = {
   region: 'Región Capital',
   district: 'Distrito Metropolitano',
   group: 'Grupo Scouts 45 San Jorge',
+  unit: 'Tropa',
   issue_date: '12 Oct 2026',
   recognition_code: 'REC-45-001'
 };

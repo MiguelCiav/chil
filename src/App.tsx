@@ -1,6 +1,6 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
-import { NewBatchWizard, BatchDetail, BatchList, SuccessPage } from './features/batches';
+import { NewBatchWizard, QuickRecognition, BatchDetail, BatchList, SuccessPage } from './features/batches';
 import { RecognitionCatalog, CertificateDesigner } from './features/recognitions';
 import { SummaryView } from './features/summary';
 import { StatisticsDashboard } from './features/statistics';
@@ -22,6 +22,22 @@ function App() {
             <Route path="/registro" element={<RegisterPage />} />
 
             {/* Protected Routes */}
+            <Route
+              path="/lotes/rapido"
+              element={
+                <ProtectedRoute>
+                  <QuickRecognition />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/emision-rapida"
+              element={
+                <ProtectedRoute>
+                  <QuickRecognition />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/lotes/nuevo"
               element={

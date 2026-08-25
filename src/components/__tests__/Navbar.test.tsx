@@ -43,6 +43,7 @@ describe('Navbar component', () => {
     );
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
+    expect(screen.getByText('Emisión Rápida')).toBeInTheDocument();
     expect(screen.getByText('Nuevo lote')).toBeInTheDocument();
     expect(screen.getByText('Listado de lotes')).toBeInTheDocument();
     expect(screen.getByText('Resumen')).toBeInTheDocument();
@@ -70,6 +71,7 @@ describe('Navbar component', () => {
     expect(screen.getByText('Chil')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registrarse/i })).toBeInTheDocument();
+    expect(screen.queryByText('Emisión Rápida')).not.toBeInTheDocument();
     expect(screen.queryByText('Nuevo lote')).not.toBeInTheDocument();
     expect(screen.queryByTestId('user-profile-menu')).not.toBeInTheDocument();
   });
@@ -223,4 +225,38 @@ describe('Navbar component', () => {
     expect(recognitionsLink).toHaveClass('border-transparent');
     expect(resumenLink).toHaveClass('border-transparent');
   });
+
+  it('highlights only "Emisión Rápida" when path is /lotes/rapido', () => {
+    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/rapido']}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
+    const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
+    const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
+
+    expect(rapidoLink).toHaveClass('bg-amber-300');
+    expect(rapidoLink).toHaveClass('text-neutral-950');
+    expect(nuevoLoteLink).toHaveClass('border-transparent');
+    expect(listadoLotesLink).toHaveClass('border-transparent');
+  });
+
+  it('applies amber-100 shading to "Emisión Rápida" when path is not /lotes/rapido', () => {
+    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
+
+    render(
+      <MemoryRouter initialEntries={['/lotes']}>
+        <Navbar />
+      </MemoryRouter>
+    );
+
+    const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
+    expect(rapidoLink).toHaveClass('bg-amber-100');
+    expect(rapidoLink).toHaveClass('text-neutral-900');
+  });
 });
+
