@@ -230,6 +230,15 @@ export const SummaryView: React.FC = () => {
       const memberTypeLabel = m.member_type === 'young' ? 'Joven' : 'Adulto';
       const statusLabel = m.status === 'active' ? 'Registro Válido' : m.status === 'exceptional' ? 'Emisión Excepcional' : 'Registro Inválido';
 
+      const rawRegionName = regionObj ? regionObj.name : '-';
+      const regionName = (!batch?.region_id || batch.region_id === 0 || rawRegionName.toLowerCase() === 'no aplica') ? '-' : rawRegionName;
+
+      const rawDistrictName = districtObj ? districtObj.name : '-';
+      const districtName = (!batch?.district_id || batch.district_id === 0 || rawDistrictName.toLowerCase() === 'no aplica') ? '-' : rawDistrictName;
+
+      const rawGroupName = groupObj ? groupObj.name : '-';
+      const groupName = (!batch?.group_id || batch.group_id === 0 || rawGroupName.toLowerCase() === 'no aplica') ? '-' : rawGroupName;
+
       return {
         id: `${m.identity}-${batch?.id ?? '0'}`,
         issueDate,
@@ -248,10 +257,11 @@ export const SummaryView: React.FC = () => {
         memberTypeLabel,
         status: m.status,
         statusLabel,
+        exceptionalReason: m.exceptional_reason || '',
         recognitionCode: m.recognition_code || '-',
-        regionName: regionObj ? regionObj.name : '-',
-        districtName: districtObj ? districtObj.name : '-',
-        groupName: groupObj ? groupObj.name : (batch?.comment || '-')
+        regionName,
+        districtName,
+        groupName
       };
     });
   }, [batches, members, regions, districts, groups, resolveRecognitionName]);

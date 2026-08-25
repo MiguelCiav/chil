@@ -71,7 +71,7 @@ describe('excelExport utility', () => {
     vi.restoreAllMocks();
   });
 
-  it('includes all 13 required Spanish headers in the exact order', () => {
+  it('includes all 14 required Spanish headers in the exact order', () => {
     expect(SUMMARY_EXCEL_HEADERS).toEqual([
       'Fecha de Emisión',
       'Lote',
@@ -82,6 +82,7 @@ describe('excelExport utility', () => {
       'Unidad',
       'Tipo',
       'Estatus',
+      'Justificación Excepcional',
       'Código de Reconocimiento',
       'Región',
       'Distrito',
@@ -101,6 +102,7 @@ describe('excelExport utility', () => {
       'Tropa',
       'Joven',
       'Registro Válido',
+      '',
       'SOL-001',
       'Región Capital',
       'Distrito Sucre',
@@ -115,12 +117,12 @@ describe('excelExport utility', () => {
 
     // Includes header line
     expect(csv).toContain(
-      '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Unidad","Tipo","Estatus","Código de Reconocimiento","Región","Distrito","Grupo"'
+      '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Unidad","Tipo","Estatus","Justificación Excepcional","Código de Reconocimiento","Región","Distrito","Grupo"'
     );
 
     // Contains first row data
     expect(csv).toContain(
-      '"20 ago. 2026","LT-2026-101","Go Solar","V-12345678","Ana María","Pérez Gómez","Tropa","Joven","Registro Válido","SOL-001","Región Capital","Distrito Sucre","Grupo San Luis"'
+      '"20 ago. 2026","LT-2026-101","Go Solar","V-12345678","Ana María","Pérez Gómez","Tropa","Joven","Registro Válido","","SOL-001","Región Capital","Distrito Sucre","Grupo San Luis"'
     );
 
     // Properly escapes double quotes and commas
@@ -134,7 +136,7 @@ describe('excelExport utility', () => {
     const lines = csv.replace('\uFEFF', '').split('\r\n');
     expect(lines.length).toBe(1);
     expect(lines[0]).toBe(
-      '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Unidad","Tipo","Estatus","Código de Reconocimiento","Región","Distrito","Grupo"'
+      '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Unidad","Tipo","Estatus","Justificación Excepcional","Código de Reconocimiento","Región","Distrito","Grupo"'
     );
   });
 
@@ -173,6 +175,7 @@ describe('excelExport utility', () => {
       '',
       'Joven',
       'Registro Válido',
+      '',
       '',
       '',
       '',

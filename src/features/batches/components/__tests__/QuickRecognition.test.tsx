@@ -335,7 +335,68 @@ describe('QuickRecognition Component', () => {
     expect(codeInput.value).toBe('REC-CUSTOM99');
   });
 
+  it('shows error when attempting to submit a scout unit without querying the registry', async () => {
+    render(
+      <MemoryRouter>
+        <QuickRecognition />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Región Capital' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), { target: { value: 'sct-wood-badge' } });
+    fireEvent.change(screen.getByLabelText(/Región Scout/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/Distrito Scout/i), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText(/Grupo Scout/i), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText(/Cédula de Identidad/i), { target: { value: 'V-12345678' } });
+    fireEvent.change(screen.getByLabelText(/Nombres/i), { target: { value: 'Carlos' } });
+    fireEvent.change(screen.getByLabelText(/Apellidos/i), { target: { value: 'Mendoza' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Emitir y Descargar Diploma/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Debe consultar el sistema de registro para verificar la cédula del scout antes de emitir el reconocimiento.')).toBeInTheDocument();
+    });
+
+    expect(batchesApi.createBatch).not.toHaveBeenCalled();
+  });
+
+  it('cascades "No aplica" region to disable district and group and set their values to "No aplica"', async () => {
+    render(
+      <MemoryRouter>
+        <QuickRecognition />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Región Capital' })).toBeInTheDocument();
+    });
+
+    const regionSelect = screen.getByLabelText(/Región Scout/i);
+    const districtSelect = screen.getByLabelText(/Distrito Scout/i);
+    const groupSelect = screen.getByLabelText(/Grupo Scout/i);
+
+    // Select "No aplica" (value "0")
+    fireEvent.change(regionSelect, { target: { value: '0' } });
+
+    expect((districtSelect as HTMLSelectElement).value).toBe('0');
+    expect((groupSelect as HTMLSelectElement).value).toBe('0');
+    expect(districtSelect).toBeDisabled();
+    expect(groupSelect).toBeDisabled();
+  });
+
   it('resets form when clicking "Emitir otro reconocimiento rápido" on success screen', async () => {
+    vi.mocked(batchesApi.getMemberStatus).mockResolvedValue({
+      nombre_completo: 'Pedro Páramo',
+      status: 'Activo',
+      fecha_nacimiento: '2000-01-01',
+      correo_electronico: 'pedro@example.com',
+      telefono: '04140000000'
+    });
+
     vi.mocked(batchesApi.createBatch).mockResolvedValue({
       id: 777,
       region_id: 1,
@@ -371,13 +432,17 @@ describe('QuickRecognition Component', () => {
     });
 
     // Fill and submit
-    fireEvent.change(screen.getByLabelText('Tipo de Reconocimiento'), { target: { value: 'sct-wood-badge' } });
-    fireEvent.change(screen.getByLabelText('Región Scout'), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText('Distrito Scout'), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Grupo Scout'), { target: { value: '100' } });
-    fireEvent.change(screen.getByLabelText('Cédula de Identidad'), { target: { value: 'V-98765432' } });
-    fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Pedro' } });
-    fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'Páramo' } });
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), { target: { value: 'sct-wood-badge' } });
+    fireEvent.change(screen.getByLabelText(/Región Scout/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/Distrito Scout/i), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText(/Grupo Scout/i), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText(/Cédula de Identidad/i), { target: { value: 'V-98765432' } });
+
+    // Consult scraper
+    fireEvent.click(screen.getByRole('button', { name: /Consultar/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/✓ Miembro encontrado: Pedro Páramo/i)).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar Diploma/i }));
 
@@ -394,11 +459,19 @@ describe('QuickRecognition Component', () => {
       expect(screen.getByText('1. Datos del Reconocimiento')).toBeInTheDocument();
     });
 
-    const cedulaInput = screen.getByLabelText('Cédula de Identidad') as HTMLInputElement;
+    const cedulaInput = screen.getByLabelText(/Cédula de Identidad/i) as HTMLInputElement;
     expect(cedulaInput.value).toBe('');
   });
 
   it('navigates to batch detail and batch list from success screen', async () => {
+    vi.mocked(batchesApi.getMemberStatus).mockResolvedValue({
+      nombre_completo: 'Ana Rojas',
+      status: 'Activo',
+      fecha_nacimiento: '2000-01-01',
+      correo_electronico: 'ana@example.com',
+      telefono: '04140000001'
+    });
+
     vi.mocked(batchesApi.createBatch).mockResolvedValue({
       id: 888,
       region_id: 1,
@@ -433,13 +506,17 @@ describe('QuickRecognition Component', () => {
       expect(screen.getByRole('option', { name: 'Región Capital' })).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText('Tipo de Reconocimiento'), { target: { value: 'sct-wood-badge' } });
-    fireEvent.change(screen.getByLabelText('Región Scout'), { target: { value: '1' } });
-    fireEvent.change(screen.getByLabelText('Distrito Scout'), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Grupo Scout'), { target: { value: '100' } });
-    fireEvent.change(screen.getByLabelText('Cédula de Identidad'), { target: { value: 'V-12345' } });
-    fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } });
-    fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'Rojas' } });
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), { target: { value: 'sct-wood-badge' } });
+    fireEvent.change(screen.getByLabelText(/Región Scout/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/Distrito Scout/i), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText(/Grupo Scout/i), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText(/Cédula de Identidad/i), { target: { value: 'V-12345' } });
+
+    // Consult scraper
+    fireEvent.click(screen.getByRole('button', { name: /Consultar/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/✓ Miembro encontrado: Ana Rojas/i)).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar Diploma/i }));
 

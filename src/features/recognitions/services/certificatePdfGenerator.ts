@@ -200,9 +200,14 @@ export function renderCertificatePage(
   }
 
   // 2. Resolve variable values
-  const regionName = hierarchy?.regions.find(r => r.id === batch.region_id)?.name || '-';
-  const districtName = hierarchy?.districts.find(d => d.id === batch.district_id)?.name || '-';
-  const groupName = hierarchy?.groups.find(g => g.id === batch.group_id)?.name || '-';
+  const rawRegion = hierarchy?.regions.find(r => r.id === batch.region_id)?.name;
+  const regionName = (!batch.region_id || batch.region_id === 0 || rawRegion?.toLowerCase() === 'no aplica') ? '-' : (rawRegion || '-');
+
+  const rawDistrict = hierarchy?.districts.find(d => d.id === batch.district_id)?.name;
+  const districtName = (!batch.district_id || batch.district_id === 0 || rawDistrict?.toLowerCase() === 'no aplica') ? '-' : (rawDistrict || '-');
+
+  const rawGroup = hierarchy?.groups.find(g => g.id === batch.group_id)?.name;
+  const groupName = (!batch.group_id || batch.group_id === 0 || rawGroup?.toLowerCase() === 'no aplica') ? '-' : (rawGroup || '-');
   const recognitionName =
     recognition?.name ||
     batch.recognition_type ||

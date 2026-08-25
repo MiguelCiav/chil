@@ -128,9 +128,10 @@ describe('BatchDetail component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Detalle de Lote/i)).toBeInTheDocument();
+      expect(screen.getByText('Lote #101')).toBeInTheDocument();
     });
 
+    expect(screen.getByText('Comentarios / Observaciones')).toBeInTheDocument();
     expect(screen.getByText(/Lote de Inspección/i)).toBeInTheDocument();
     expect(screen.getByText(/Región Capital/i)).toBeInTheDocument();
     expect(screen.getByText(/Distrito Sucre/i)).toBeInTheDocument();
@@ -1011,6 +1012,9 @@ describe('BatchDetail component', () => {
     fireEvent.click(toggle);
     expect(toggle).toBeChecked();
 
+    const reasonInput = screen.getByLabelText(/Justificación de la emisión excepcional/i);
+    fireEvent.change(reasonInput, { target: { value: 'Comprobante de inscripción presentado' } });
+
     // Save Changes
     fireEvent.click(screen.getByText('Guardar Cambios'));
 
@@ -1019,6 +1023,7 @@ describe('BatchDetail component', () => {
         expect.objectContaining({
           identity: 'V-99999999',
           status: 'exceptional',
+          exceptional_reason: 'Comprobante de inscripción presentado',
           recognition_code: expect.stringMatching(/^REC-/)
         })
       );
@@ -1203,6 +1208,123 @@ describe('BatchDetail component', () => {
         expect.objectContaining({
           identity: 'V-77777777',
           unit: 'caminantes'
+        })
+      );
+    });
+  });
+
+  it('renders "No aplica" for region, district, group and "Sin observaciones registradas" when comment is empty', async () => {
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 202,
+      comment: '',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      unit_scope: 'no_scout',
+      recognition_type: 'Insignia de Madera',
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [{ id: 0, name: 'No aplica' }],
+      districts: [{ id: 0, name: 'No aplica', region_id: 0 }],
+      groups: [{ id: 0, name: 'No aplica', district_id: 0 }]
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/202']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Lote #202')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Sin observaciones registradas')).toBeInTheDocument();
+    const noAplicaElements = screen.getAllByText('No aplica');
+    expect(noAplicaElements.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('changes status to pending when editing an unverified no_scout member to a scout unit in BatchDetail', async () => {
+    const unverifiedMember: ScoutMember = {
+      identity: 'V-88888888',
+      first_names: 'Externo',
+      last_names: 'Colaborador',
+      birth_date: '1990-01-01',
+      member_type: 'adult',
+      unit: 'no_scout',
+      status: 'active',
+      verified_in_registry: false,
+      batch_id: 303,
+      recognition_code: 'REC-EXT-02'
+    };
+
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 303,
+      comment: 'Lote Especial',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      unit_scope: 'mixed',
+      recognition_type: 'Insignia de Madera',
+      created_at: '2026-08-20T10:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([unverifiedMember]);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
+      regions: [{ id: 1, name: 'Región Capital' }],
+      districts: [{ id: 10, name: 'Distrito Sucre', region_id: 1 }],
+      groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/lotes/303']}>
+        <Routes>
+          <Route path="/lotes/:id" element={<BatchDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Externo Colaborador')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText(/Opciones de Externo Colaborador/i));
+    fireEvent.click(screen.getByText('Editar'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Editar Datos de Miembro')).toBeInTheDocument();
+    });
+
+    const unitSelect = screen.getByLabelText(/Unidad Scout \*/i);
+    expect(unitSelect).toHaveValue('no_scout');
+
+    // Change unit to troop (scout unit)
+    fireEvent.change(unitSelect, { target: { value: 'tropa' } });
+
+    // Exceptional toggle is now visible because status is pending
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Autorizar emisión de diploma \(Caso Excepcional\)/i)).toBeInTheDocument();
+    });
+
+    vi.mocked(api.updateMember).mockResolvedValueOnce({
+      ...unverifiedMember,
+      unit: 'tropa',
+      status: 'pending'
+    });
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-88888888',
+          unit: 'tropa',
+          status: 'pending'
         })
       );
     });

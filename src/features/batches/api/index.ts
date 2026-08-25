@@ -200,6 +200,16 @@ export async function getHierarchyData(): Promise<{ regions: Region[]; districts
       };
     }
 
+    if (!regions.some(r => r.id === 0)) {
+      regions.unshift({ id: 0, name: "No aplica" });
+    }
+    if (!districts.some(d => d.id === 0)) {
+      districts.unshift({ id: 0, name: "No aplica", region_id: 0 });
+    }
+    if (!groups.some(g => g.id === 0)) {
+      groups.unshift({ id: 0, name: "No aplica", district_id: 0 });
+    }
+
     regions.sort((a, b) => a.id - b.id);
     districts.sort((a, b) => a.id - b.id);
     groups.sort((a, b) => a.id - b.id);
@@ -446,9 +456,9 @@ export async function generateBatchReport(
   const members = membersParam || (await getMembersByBatchId(batch.id));
   const hierarchy = hierarchyParam || (await getHierarchyData());
   
-  const region = hierarchy.regions.find(r => r.id === batch.region_id)?.name || `Región ${batch.region_id}`;
-  const district = hierarchy.districts.find(d => d.id === batch.district_id)?.name || `Distrito ${batch.district_id}`;
-  const group = hierarchy.groups.find(g => g.id === batch.group_id)?.name || `Grupo ${batch.group_id}`;
+  const region = (!batch.region_id || batch.region_id === 0) ? 'No aplica' : (hierarchy.regions.find(r => r.id === batch.region_id)?.name || `Región ${batch.region_id}`);
+  const district = (!batch.district_id || batch.district_id === 0) ? 'No aplica' : (hierarchy.districts.find(d => d.id === batch.district_id)?.name || `Distrito ${batch.district_id}`);
+  const group = (!batch.group_id || batch.group_id === 0) ? 'No aplica' : (hierarchy.groups.find(g => g.id === batch.group_id)?.name || `Grupo ${batch.group_id}`);
 
   const docPdf = new jsPDF();
   

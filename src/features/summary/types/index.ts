@@ -18,6 +18,7 @@ export interface SummaryRowData {
   memberTypeLabel: 'Joven' | 'Adulto';
   status: 'active' | 'pending' | 'exceptional';
   statusLabel: 'Registro Válido' | 'Registro Inválido' | 'Emisión Excepcional';
+  exceptionalReason?: string;
   recognitionCode: string;
   regionName: string;
   districtName: string;

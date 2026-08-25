@@ -73,6 +73,8 @@ export interface ScoutMember {
   batch_id?: number;
   recognition_code?: string;
   user_id?: string;
+  exceptional_reason?: string;
+  verified_in_registry?: boolean;
 }
 
 export interface Region {

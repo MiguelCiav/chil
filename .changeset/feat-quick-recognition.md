@@ -2,21 +2,23 @@
 "chil": minor
 ---
 
-Implement Quick Recognition Emission, Age-Based Unit Inference, and UI Polish:
-- **Navbar "Emisión Rápida" Shading**:
-  - Applied warm amber styling to the "Emisión Rápida" NavLink (`bg-amber-100/70` inactive with hover effects, `bg-amber-200/90` active).
-- **Empty Recognition Types Handling in New Batch Wizard**:
-  - In `Step1Org.tsx`: Added warning card when no recognition types exist (*"No tienes tipos de reconocimientos registrados. Debes crear al menos un tipo de reconocimiento en el Catálogo antes de crear un nuevo lote."*) with a direct action button to `/reconocimientos`.
-  - In `NewBatchWizard.tsx`: Disabled "Siguiente paso" button when recognition types are empty.
-- **Emoji Removal & Consistent Scout Unit Labels**:
-  - Cleaned all emojis across `SCOUT_UNITS`, selectors, badges, and navigation headers.
-  - Standardized unit labels: `Manada`, `Tropa`, `Caminantes`, `Clan`, `Institucional`, `No scout`, and `Mixto (Todas las unidades)`.
-- **Step 2 & Step 3 Unit Handling & Age-Based Inference**:
-  - In `Step2Verification.tsx`: Removed `UNIDAD` column from the verification table to keep verification focused on cédulas, names, and status.
-  - Created `unitInference.ts` with `calculateAge`, `inferYouthUnitByAge`, and `inferBatchMemberUnits` to automatically deduce units by birth date (<11 -> Manada, 11-15 -> Tropa, 16-18 -> Caminantes, 19-21 -> Clan, >21 / adults -> mode of batch youth units or Institucional).
-  - Applied inferred units upon transition from Step 2 to Step 3 and enabled manual unit overriding in Step 3 review modal.
-- **Quick Recognition Success Screen UI**:
-  - Replaced gradient headers with a clean, solid background aesthetic (`bg-primary/5` with subtle borders and neutral typography).
-- **Quality Gate & Testing**:
-  - Added unit test suite `unitInference.test.ts` and updated all existing test suites.
-  - 100% test pass rate across 46 test suites (369 tests), 0 ESLint warnings/errors, and 0 TypeScript build errors.
+Implement Quick Recognition Emission, Hierarchy Flexibility, Registry Safeguards, and UI Polish:
+- **Navbar "Emisión Rápida" Button Contrast**:
+  - Enhanced contrast and crispness for the "Emisión Rápida" NavLink (`bg-amber-100 hover:bg-amber-200 text-neutral-900 border border-amber-300 font-semibold`, and `bg-amber-300 text-neutral-950 border-amber-400 font-bold` when active).
+- **"No aplica" Region and District Support**:
+  - Added support for "No aplica" (id: 0) in Region, District, and Group across hierarchy data and selectors.
+  - Selecting Region "No aplica" sets District and Group to "No aplica" / 0 and disables their dropdowns. Selecting District "No aplica" sets Group to "No aplica" / 0 and disables it.
+  - Resolved "No aplica" / 0 to "-" or "No aplica" across diplomas, PDF generators, summaries, and batch reports.
+- **Registry Consultation Enforcement in Quick Recognition**:
+  - Enforced registry verification for Scout units prior to issuing recognitions, with clear validation message: *"Debe consultar el sistema de registro para verificar la cédula del scout antes de emitir el reconocimiento."*
+- **Registry Safeguard on Unit Change in Step 3 & Batch Detail**:
+  - Tracked `verified_in_registry` flag across member lifecycles. If an unverified member created under "No scout" is changed to a Scout unit in edit modals, status automatically switches to `pending` unless authorized as exceptional with a justification.
+- **Optional Hierarchy for "No Scout" Batches & Quick Emissions**:
+  - Region, District, and Group are optional and default to "No aplica" (0) when `unit_scope === 'no_scout'` or `unit === 'no_scout'`.
+- **Dedicated Comments Card in Batch Detail**:
+  - Cleaned main batch header title (`Lote #{batch.id}`) and added a dedicated "Comentarios / Observaciones" card displaying comment text or *"Sin observaciones registradas"*.
+- **Justification for Exceptional Recognition Emission**:
+  - Added required `exceptional_reason` field when authorizing exceptional diploma emissions.
+  - Displayed exceptional justification in Quick View modals and included "Justificación Excepcional" column in Excel export.
+- **Testing & Quality Assurance**:
+  - 100% test pass rate across 46 test suites (375 tests), 0 ESLint errors/warnings, and 0 TypeScript build errors.

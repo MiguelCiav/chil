@@ -501,4 +501,57 @@ describe('NewBatchWizard full flow', () => {
       expect(tropaBadges.length).toBe(3);
     });
   });
+
+  it('allows creating a No Scout batch without selecting Region, District, or Group (optional hierarchy)', async () => {
+    vi.mocked(api.createBatch).mockResolvedValue({
+      id: 889,
+      comment: 'Lote No Scout Sin Jerarquia',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      unit_scope: 'no_scout',
+      created_at: '2026-08-21T12:00:00.000Z'
+    });
+
+    render(
+      <MemoryRouter>
+        <NewBatchWizard />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
+    });
+
+    // 1. Select Alcance de Unidad -> No Scout
+    const unitScopeSelect = screen.getByLabelText(/Alcance de Unidad/i);
+    fireEvent.change(unitScopeSelect, { target: { value: 'no_scout' } });
+
+    // 2. Select Recognition Type (without selecting region, district, or group)
+    const recSelect = screen.getByLabelText(/Tipo de Reconocimiento/i);
+    fireEvent.change(recSelect, {
+      target: { value: 'sct-wood-badge' }
+    });
+
+    // 3. Submit Step 1
+    const nextBtn = screen.getByText('Siguiente paso');
+    await waitFor(() => {
+      expect(nextBtn).not.toBeDisabled();
+    });
+    fireEvent.click(nextBtn);
+
+    // Verify batch was created with region_id: 0, district_id: 0, group_id: 0, unit_scope: 'no_scout'
+    await waitFor(() => {
+      expect(api.createBatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          region_id: 0,
+          district_id: 0,
+          group_id: 0,
+          unit_scope: 'no_scout'
+        }),
+        'test-user-id'
+      );
+      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
+    });
+  });
 });

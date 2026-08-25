@@ -71,9 +71,9 @@ export const Navbar: React.FC = () => {
               to="/lotes/rapido"
               end
               className={({ isActive }) =>
-                `flex items-center my-auto px-3 py-1.5 rounded-lg font-bold transition-all shadow-xs ${isActive
-                  ? 'bg-amber-200/90 text-amber-950 border border-amber-400/90'
-                  : 'bg-amber-100/70 hover:bg-amber-200/80 text-amber-900 border border-amber-300/80'
+                `flex items-center my-auto px-3 py-1.5 rounded-lg transition-all shadow-xs ${isActive
+                  ? 'bg-amber-300 text-neutral-950 border border-amber-400 font-bold'
+                  : 'bg-amber-100 hover:bg-amber-200 text-neutral-900 border border-amber-300 font-semibold'
                 }`
               }
             >

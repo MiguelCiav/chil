@@ -76,6 +76,7 @@ export const QuickRecognition: React.FC = () => {
   const [isSearchingScraper, setIsSearchingScraper] = useState<boolean>(false);
   const [scraperStatus, setScraperStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [scraperMsg, setScraperMsg] = useState<string>('');
+  const [verifiedCedula, setVerifiedCedula] = useState<string | null>(null);
 
   // Validation & Submission State
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -117,8 +118,17 @@ export const QuickRecognition: React.FC = () => {
   }, [user?.uid]);
 
   // Filtered dropdown lists
-  const filteredDistricts = districts.filter(d => d.region_id === Number(regionId));
-  const filteredGroups = groups.filter(g => g.district_id === Number(districtId));
+  const filteredDistricts = React.useMemo(() => {
+    if (!regionId || regionId === '0') return [];
+    const dists = districts.filter(d => d.id !== 0 && d.region_id === Number(regionId));
+    return [{ id: 0, name: 'No aplica', region_id: Number(regionId) }, ...dists];
+  }, [districts, regionId]);
+
+  const filteredGroups = React.useMemo(() => {
+    if (!districtId || districtId === '0') return [];
+    const grps = groups.filter(g => g.id !== 0 && g.district_id === Number(districtId));
+    return [{ id: 0, name: 'No aplica', district_id: Number(districtId) }, ...grps];
+  }, [groups, districtId]);
 
   const availableRecognitionTypes = recognitionTypes.length > 0 ? recognitionTypes : RECOGNITION_TYPES;
 
@@ -145,6 +155,7 @@ export const QuickRecognition: React.FC = () => {
         if (details.telefono) setPhone(details.telefono);
 
         setScraperStatus('success');
+        setVerifiedCedula(cleanCedula);
         setScraperMsg(`✓ Miembro encontrado: ${details.nombre_completo}`);
         setErrors(prev => {
           const next = { ...prev };
@@ -156,11 +167,13 @@ export const QuickRecognition: React.FC = () => {
         triggerToast('Datos obtenidos de Sistema de Registro exitosamente', 'success');
       } else {
         setScraperStatus('error');
+        setVerifiedCedula(null);
         setScraperMsg('No se encontraron datos en Sistema de Registro.');
       }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       setScraperStatus('error');
+      setVerifiedCedula(null);
       if (errorMsg.includes('No registrado')) {
         setScraperMsg('Usuario no registrado en Sistema de Registro.');
       } else {
@@ -173,12 +186,19 @@ export const QuickRecognition: React.FC = () => {
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const isNoScout = unit === 'no_scout';
 
     if (!recognitionType) newErrors.recognitionType = 'Debe seleccionar un tipo de reconocimiento';
-    if (!regionId) newErrors.regionId = 'Debe seleccionar una región';
-    if (!districtId) newErrors.districtId = 'Debe seleccionar un distrito';
-    if (!groupId) newErrors.groupId = 'Debe seleccionar un grupo scout';
-    if (!identity.trim()) newErrors.identity = 'Debe ingresar la cédula de identidad';
+    if (!isNoScout) {
+      if (!regionId && regionId !== '0') newErrors.regionId = 'Debe seleccionar una región';
+      if (!districtId && districtId !== '0') newErrors.districtId = 'Debe seleccionar un distrito';
+      if (!groupId && groupId !== '0') newErrors.groupId = 'Debe seleccionar un grupo scout';
+    }
+    if (!identity.trim()) {
+      newErrors.identity = 'Debe ingresar la cédula de identidad';
+    } else if (!isNoScout && (scraperStatus !== 'success' || verifiedCedula !== identity.trim())) {
+      newErrors.identity = 'Debe consultar el sistema de registro para verificar la cédula del scout antes de emitir el reconocimiento.';
+    }
     if (!firstNames.trim()) newErrors.firstNames = 'Debe ingresar el o los nombres';
     if (!lastNames.trim()) newErrors.lastNames = 'Debe ingresar el o los apellidos';
     if (!recognitionCode.trim()) newErrors.recognitionCode = 'Debe generar o ingresar un código de reconocimiento';
@@ -194,12 +214,16 @@ export const QuickRecognition: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      const finalRegionId = (unit === 'no_scout' && (!regionId || regionId === '')) ? 0 : Number(regionId);
+      const finalDistrictId = (unit === 'no_scout' && (!districtId || districtId === '')) ? 0 : Number(districtId);
+      const finalGroupId = (unit === 'no_scout' && (!groupId || groupId === '')) ? 0 : Number(groupId);
+
       // 1. Create single-member Batch
       const createdBatch = await createBatch({
         comment: comment.trim() || undefined,
-        region_id: Number(regionId),
-        district_id: Number(districtId),
-        group_id: Number(groupId),
+        region_id: finalRegionId,
+        district_id: finalDistrictId,
+        group_id: finalGroupId,
         unit_scope: unit,
         recognition_type: recognitionType,
         user_id: user?.uid
@@ -217,6 +241,7 @@ export const QuickRecognition: React.FC = () => {
         unit,
         member_type: memberType,
         status: 'active',
+        verified_in_registry: unit !== 'no_scout',
         batch_id: createdBatch.id,
         recognition_code: recognitionCode.trim(),
         user_id: user?.uid
@@ -268,6 +293,7 @@ export const QuickRecognition: React.FC = () => {
     setErrors({});
     setScraperStatus('idle');
     setScraperMsg('');
+    setVerifiedCedula(null);
   };
 
   return (
@@ -433,16 +459,22 @@ export const QuickRecognition: React.FC = () => {
                   {/* Region */}
                   <div className="space-y-1">
                     <label htmlFor="quick-region" className="block uppercase text-xs font-bold tracking-wide text-neutral">
-                      Región Scout *
+                      Región Scout {unit === 'no_scout' ? '(Opcional)' : '*'}
                     </label>
                     <select
                       id="quick-region"
                       aria-label="Región Scout"
                       value={regionId}
                       onChange={(e) => {
-                        setRegionId(e.target.value);
-                        setDistrictId('');
-                        setGroupId('');
+                        const val = e.target.value;
+                        setRegionId(val);
+                        if (val === '0') {
+                          setDistrictId('0');
+                          setGroupId('0');
+                        } else {
+                          setDistrictId('');
+                          setGroupId('');
+                        }
                         if (errors.regionId) {
                           setErrors(prev => ({ ...prev, regionId: '', districtId: '', groupId: '' }));
                         }
@@ -451,8 +483,9 @@ export const QuickRecognition: React.FC = () => {
                         }`}
                       disabled={loadingHierarchy}
                     >
-                      <option value="">Seleccione una región</option>
-                      {regions.map(r => (
+                      <option value="">{unit === 'no_scout' ? 'No aplica' : 'Seleccione una región'}</option>
+                      <option value="0">No aplica</option>
+                      {regions.filter(r => r.id !== 0).map(r => (
                         <option key={r.id} value={r.id}>{r.name}</option>
                       ))}
                     </select>
@@ -464,27 +497,33 @@ export const QuickRecognition: React.FC = () => {
                   {/* District */}
                   <div className="space-y-1">
                     <label htmlFor="quick-district" className="block uppercase text-xs font-bold tracking-wide text-neutral">
-                      Distrito Scout *
+                      Distrito Scout {unit === 'no_scout' ? '(Opcional)' : '*'}
                     </label>
                     <select
                       id="quick-district"
                       aria-label="Distrito Scout"
-                      value={districtId}
+                      value={regionId === '0' ? '0' : districtId}
                       onChange={(e) => {
-                        setDistrictId(e.target.value);
-                        setGroupId('');
+                        const val = e.target.value;
+                        setDistrictId(val);
+                        if (val === '0') {
+                          setGroupId('0');
+                        } else {
+                          setGroupId('');
+                        }
                         if (errors.districtId) {
                           setErrors(prev => ({ ...prev, districtId: '', groupId: '' }));
                         }
                       }}
-                      disabled={!regionId || loadingHierarchy}
-                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${!regionId ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200' : (
+                      disabled={!regionId || regionId === '0' || loadingHierarchy}
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${(!regionId || regionId === '0') ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200' : (
                         errors.districtId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
                       )
                         }`}
                     >
-                      <option value="">Seleccione un distrito</option>
-                      {filteredDistricts.map(d => (
+                      <option value="">{unit === 'no_scout' ? 'No aplica' : 'Seleccione un distrito'}</option>
+                      <option value="0">No aplica</option>
+                      {filteredDistricts.filter(d => d.id !== 0).map(d => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
@@ -496,26 +535,27 @@ export const QuickRecognition: React.FC = () => {
                   {/* Group */}
                   <div className="space-y-1">
                     <label htmlFor="quick-group" className="block uppercase text-xs font-bold tracking-wide text-neutral">
-                      Grupo Scout *
+                      Grupo Scout {unit === 'no_scout' ? '(Opcional)' : '*'}
                     </label>
                     <select
                       id="quick-group"
                       aria-label="Grupo Scout"
-                      value={groupId}
+                      value={(regionId === '0' || districtId === '0') ? '0' : groupId}
                       onChange={(e) => {
                         setGroupId(e.target.value);
                         if (errors.groupId) {
                           setErrors(prev => ({ ...prev, groupId: '' }));
                         }
                       }}
-                      disabled={!districtId || loadingHierarchy}
-                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${!districtId ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200' : (
+                      disabled={!districtId || districtId === '0' || regionId === '0' || loadingHierarchy}
+                      className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${(!districtId || districtId === '0' || regionId === '0') ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200' : (
                         errors.groupId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20'
                       )
                         }`}
                     >
-                      <option value="">Seleccione un grupo scout</option>
-                      {filteredGroups.map(g => (
+                      <option value="">{unit === 'no_scout' ? 'No aplica' : 'Seleccione un grupo scout'}</option>
+                      <option value="0">No aplica</option>
+                      {filteredGroups.filter(g => g.id !== 0).map(g => (
                         <option key={g.id} value={g.id}>{g.name}</option>
                       ))}
                     </select>
@@ -565,6 +605,7 @@ export const QuickRecognition: React.FC = () => {
                         setUnit(newUnit);
                         setScraperStatus('idle');
                         setScraperMsg('');
+                        setVerifiedCedula(null);
                       }}
                       className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
                     >
@@ -591,6 +632,9 @@ export const QuickRecognition: React.FC = () => {
                         value={identity}
                         onChange={(e) => {
                           setIdentity(e.target.value);
+                          setVerifiedCedula(null);
+                          setScraperStatus('idle');
+                          setScraperMsg('');
                           if (errors.identity) {
                             setErrors(prev => ({ ...prev, identity: '' }));
                           }

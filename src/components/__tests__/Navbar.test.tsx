@@ -239,8 +239,8 @@ describe('Navbar component', () => {
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
 
-    expect(rapidoLink).toHaveClass('bg-amber-200/90');
-    expect(rapidoLink).toHaveClass('text-amber-950');
+    expect(rapidoLink).toHaveClass('bg-amber-300');
+    expect(rapidoLink).toHaveClass('text-neutral-950');
     expect(nuevoLoteLink).toHaveClass('border-transparent');
     expect(listadoLotesLink).toHaveClass('border-transparent');
   });
@@ -255,8 +255,8 @@ describe('Navbar component', () => {
     );
 
     const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
-    expect(rapidoLink).toHaveClass('bg-amber-100/70');
-    expect(rapidoLink).toHaveClass('text-amber-900');
+    expect(rapidoLink).toHaveClass('bg-amber-100');
+    expect(rapidoLink).toHaveClass('text-neutral-900');
   });
 });
 

@@ -8,9 +8,9 @@ import { SearchSelectorModal } from '../../../../components/SearchSelectorModal'
 
 export interface Step1FormData {
   comment?: string;
-  regionId: string;
-  districtId: string;
-  groupId: string;
+  regionId?: string;
+  districtId?: string;
+  groupId?: string;
   recognitionType: string;
   unitScope?: string;
 }
@@ -45,22 +45,31 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
   const selectedRegionId = watch('regionId');
   const selectedDistrictId = watch('districtId');
   const selectedGroupId = watch('groupId');
+  const selectedUnitScope = watch('unitScope');
+  const isNoScout = selectedUnitScope === 'no_scout';
 
-  const filteredDistricts = districts.filter(
-    d => d.region_id === Number(selectedRegionId)
-  );
+  const filteredDistricts = React.useMemo(() => {
+    if (!selectedRegionId || selectedRegionId === '0') return [];
+    const dists = districts.filter(d => d.id !== 0 && d.region_id === Number(selectedRegionId));
+    return [{ id: 0, name: 'No aplica', region_id: Number(selectedRegionId) }, ...dists];
+  }, [districts, selectedRegionId]);
 
-  const filteredGroups = groups.filter(
-    g => g.district_id === Number(selectedDistrictId)
-  );
+  const filteredGroups = React.useMemo(() => {
+    if (!selectedDistrictId || selectedDistrictId === '0') return [];
+    const grps = groups.filter(g => g.id !== 0 && g.district_id === Number(selectedDistrictId));
+    return [{ id: 0, name: 'No aplica', district_id: Number(selectedDistrictId) }, ...grps];
+  }, [groups, selectedDistrictId]);
 
-  const selectedRegion = regions.find(r => r.id.toString() === selectedRegionId);
-  const selectedDistrict = districts.find(d => d.id.toString() === selectedDistrictId);
-  const selectedGroup = groups.find(g => g.id.toString() === selectedGroupId);
+  const selectedRegion = regions.find(r => r.id.toString() === selectedRegionId) || (selectedRegionId === '0' ? { id: 0, name: 'No aplica' } : undefined);
+  const selectedDistrict = districts.find(d => d.id.toString() === selectedDistrictId) || (selectedDistrictId === '0' ? { id: 0, name: 'No aplica', region_id: 0 } : undefined);
+  const selectedGroup = groups.find(g => g.id.toString() === selectedGroupId) || (selectedGroupId === '0' ? { id: 0, name: 'No aplica', district_id: 0 } : undefined);
+
+  const isDistrictDisabled = !selectedRegionId || selectedRegionId === '0' || loadingHierarchy;
+  const isGroupDisabled = !selectedDistrictId || selectedDistrictId === '0' || selectedRegionId === '0' || loadingHierarchy;
 
   const getDistrictButtonClass = () => {
-    if (!selectedRegionId || loadingHierarchy) {
-      return 'bg-gray-100 text-neutral/30 border-gray-200 cursor-not-allowed opacity-50';
+    if (isDistrictDisabled) {
+      return 'bg-gray-100 text-neutral/40 border-gray-200 cursor-not-allowed opacity-60';
     }
     if (errors.districtId) {
       return 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900';
@@ -69,8 +78,8 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
   };
 
   const getGroupButtonClass = () => {
-    if (!selectedDistrictId || loadingHierarchy) {
-      return 'bg-gray-100 text-neutral/30 border-gray-200 cursor-not-allowed opacity-50';
+    if (isGroupDisabled) {
+      return 'bg-gray-100 text-neutral/40 border-gray-200 cursor-not-allowed opacity-60';
     }
     if (errors.groupId) {
       return 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900';
@@ -108,7 +117,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
           {/* Region Selector */}
           <div className="w-full">
             <label htmlFor="region-selector" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
-              Región Scout *
+              Región Scout {isNoScout ? '(Opcional)' : '*'}
             </label>
             <button
               type="button"
@@ -121,7 +130,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
               }`}
               disabled={loadingHierarchy}
             >
-              <span className="truncate">{selectedRegion ? selectedRegion.name : 'Seleccione una región'}</span>
+              <span className="truncate">{selectedRegion ? selectedRegion.name : (isNoScout ? 'No aplica' : 'Seleccione una región')}</span>
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${loadingHierarchy ? 'text-neutral/20' : 'text-primary/70'}`} />
             </button>
             {errors.regionId && (
@@ -132,21 +141,23 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
           {/* District Selector */}
           <div className="w-full">
             <label htmlFor="district-selector" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
-              Distrito Scout *
+              Distrito Scout {isNoScout ? '(Opcional)' : '*'}
             </label>
             <button
               type="button"
               id="district-selector"
               onClick={() => {
-                if (selectedRegionId) {
+                if (!isDistrictDisabled) {
                   setIsDistrictModalOpen(true);
                 }
               }}
               className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${getDistrictButtonClass()}`}
-              disabled={!selectedRegionId || loadingHierarchy}
+              disabled={isDistrictDisabled}
             >
-              <span className="truncate">{selectedDistrict ? selectedDistrict.name : 'Seleccione un distrito'}</span>
-              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${!selectedRegionId || loadingHierarchy ? 'text-neutral/20' : 'text-primary/70'}`} />
+              <span className="truncate">
+                {selectedDistrict ? selectedDistrict.name : (selectedRegionId === '0' || isNoScout ? 'No aplica' : 'Seleccione un distrito')}
+              </span>
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isDistrictDisabled ? 'text-neutral/20' : 'text-primary/70'}`} />
             </button>
             {errors.districtId && (
               <p className="mt-1.5 text-sm text-red-500 font-medium">{errors.districtId.message as string}</p>
@@ -156,21 +167,23 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
           {/* Group Selector */}
           <div className="w-full">
             <label htmlFor="group-selector" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
-              Grupo Scout *
+              Grupo Scout {isNoScout ? '(Opcional)' : '*'}
             </label>
             <button
               type="button"
               id="group-selector"
               onClick={() => {
-                if (selectedDistrictId) {
+                if (!isGroupDisabled) {
                   setIsGroupModalOpen(true);
                 }
               }}
               className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${getGroupButtonClass()}`}
-              disabled={!selectedDistrictId || loadingHierarchy}
+              disabled={isGroupDisabled}
             >
-              <span className="truncate">{selectedGroup ? selectedGroup.name : 'Seleccione un grupo scout'}</span>
-              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${!selectedDistrictId || loadingHierarchy ? 'text-neutral/20' : 'text-primary/70'}`} />
+              <span className="truncate">
+                {selectedGroup ? selectedGroup.name : (selectedDistrictId === '0' || selectedRegionId === '0' || isNoScout ? 'No aplica' : 'Seleccione un grupo scout')}
+              </span>
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isGroupDisabled ? 'text-neutral/20' : 'text-primary/70'}`} />
             </button>
             {errors.groupId && (
               <p className="mt-1.5 text-sm text-red-500 font-medium">{errors.groupId.message as string}</p>
@@ -239,8 +252,17 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
         title="Seleccionar Región Scout"
         placeholder="Buscar región..."
         items={regions}
-        selectedId={selectedRegionId}
-        onSelect={(r) => setValue('regionId', r.id.toString(), { shouldValidate: true })}
+        selectedId={selectedRegionId || null}
+        onSelect={(r) => {
+          setValue('regionId', r.id.toString(), { shouldValidate: true });
+          if (r.id === 0) {
+            setValue('districtId', '0', { shouldValidate: true });
+            setValue('groupId', '0', { shouldValidate: true });
+          } else {
+            setValue('districtId', '', { shouldValidate: true });
+            setValue('groupId', '', { shouldValidate: true });
+          }
+        }}
         searchFilter={(r, q) => r.name.toLowerCase().includes(q.toLowerCase())}
         renderItem={(r) => <span>{r.name}</span>}
         keyExtractor={(r) => r.id}
@@ -253,8 +275,15 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
         title="Seleccionar Distrito Scout"
         placeholder="Buscar distrito..."
         items={filteredDistricts}
-        selectedId={selectedDistrictId}
-        onSelect={(d) => setValue('districtId', d.id.toString(), { shouldValidate: true })}
+        selectedId={selectedDistrictId || null}
+        onSelect={(d) => {
+          setValue('districtId', d.id.toString(), { shouldValidate: true });
+          if (d.id === 0) {
+            setValue('groupId', '0', { shouldValidate: true });
+          } else {
+            setValue('groupId', '', { shouldValidate: true });
+          }
+        }}
         searchFilter={(d, q) => d.name.toLowerCase().includes(q.toLowerCase())}
         renderItem={(d) => <span>{d.name}</span>}
         keyExtractor={(d) => d.id}
@@ -267,7 +296,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
         title="Seleccionar Grupo Scout"
         placeholder="Buscar grupo..."
         items={filteredGroups}
-        selectedId={selectedGroupId}
+        selectedId={selectedGroupId || null}
         onSelect={(g) => setValue('groupId', g.id.toString(), { shouldValidate: true })}
         searchFilter={(g, q) => g.name.toLowerCase().includes(q.toLowerCase())}
         renderItem={(g) => <span>{g.name}</span>}

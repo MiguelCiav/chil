@@ -50,11 +50,36 @@ import { Step3Review } from './wizard/Step3Review';
 // Step 1 Validation Schema
 const step1Schema = z.object({
   comment: z.string().optional(),
-  regionId: z.string().min(1, "Debe seleccionar una región"),
-  districtId: z.string().min(1, "Debe seleccionar un distrito"),
-  groupId: z.string().min(1, "Debe seleccionar un grupo scout"),
+  regionId: z.string().optional(),
+  districtId: z.string().optional(),
+  groupId: z.string().optional(),
   recognitionType: z.string().min(1, "Debe seleccionar un tipo de reconocimiento"),
   unitScope: z.string().optional()
+}).superRefine((data, ctx) => {
+  const isNoScout = data.unitScope === 'no_scout';
+  if (!isNoScout) {
+    if (!data.regionId || data.regionId.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['regionId'],
+        message: 'Debe seleccionar una región'
+      });
+    }
+    if (!data.districtId || data.districtId.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['districtId'],
+        message: 'Debe seleccionar un distrito'
+      });
+    }
+    if (!data.groupId || data.groupId.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['groupId'],
+        message: 'Debe seleccionar un grupo scout'
+      });
+    }
+  }
 });
 
 type Step1FormData = z.infer<typeof step1Schema>;
@@ -180,13 +205,22 @@ export const NewBatchWizard: React.FC = () => {
 
   // Cascading Drops Logic: Reset dependent dropdowns when parent changes
   useEffect(() => {
-    setValue('districtId', '');
-    setValue('groupId', '');
+    if (selectedRegionId === '0') {
+      setValue('districtId', '0', { shouldValidate: true });
+      setValue('groupId', '0', { shouldValidate: true });
+    } else {
+      setValue('districtId', '');
+      setValue('groupId', '');
+    }
   }, [selectedRegionId, setValue]);
 
   useEffect(() => {
-    setValue('groupId', '');
-  }, [selectedDistrictId, setValue]);
+    if (selectedDistrictId === '0') {
+      setValue('groupId', '0', { shouldValidate: true });
+    } else if (selectedRegionId !== '0') {
+      setValue('groupId', '');
+    }
+  }, [selectedDistrictId, selectedRegionId, setValue]);
 
   // --- Step 1 Submit: Create or Update Batch ---
   const onSubmitStep1 = async (data: Step1FormData) => {
@@ -195,11 +229,15 @@ export const NewBatchWizard: React.FC = () => {
       const unit_scope: BatchUnitScope = (data.unitScope as BatchUnitScope) || 'mixed';
       setBatchUnitScope(unit_scope);
 
+      const region_id = data.regionId ? Number(data.regionId) : 0;
+      const district_id = data.districtId ? Number(data.districtId) : 0;
+      const group_id = data.groupId ? Number(data.groupId) : 0;
+
       const params = {
         comment: data.comment || '',
-        region_id: Number(data.regionId),
-        district_id: Number(data.districtId),
-        group_id: Number(data.groupId),
+        region_id,
+        district_id,
+        group_id,
         unit_scope,
         recognition_type: data.recognitionType,
         user_id: user?.uid
@@ -255,6 +293,7 @@ export const NewBatchWizard: React.FC = () => {
               member_type: type,
               unit: 'no_scout',
               status: 'active',
+              verified_in_registry: false,
               batch_id: batchId,
               user_id: user?.uid
             },
@@ -323,6 +362,7 @@ export const NewBatchWizard: React.FC = () => {
               member_type: type,
               unit: memberUnit,
               status: 'pending',
+              verified_in_registry: true,
               batch_id: batchId,
               user_id: user?.uid
             },
@@ -370,6 +410,7 @@ export const NewBatchWizard: React.FC = () => {
               member_type: type,
               unit: memberUnit,
               status: isScrapedActive ? 'active' : 'pending',
+              verified_in_registry: true,
               batch_id: batchId,
               user_id: user?.uid
             },
