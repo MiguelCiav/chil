@@ -82,6 +82,29 @@ describe('useWalkthrough hook', () => {
     expect(result.current.currentStep).toBeNull();
   });
 
+  it('does NOT auto-start on mount when autoStart is false, but allows manual startTour', () => {
+    const { result } = renderHook(() =>
+      useWalkthrough({ ...defaultConfig, autoStart: false })
+    );
+
+    // Should remain closed even after delay
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(result.current.isOpen).toBe(false);
+    expect(result.current.currentStep).toBeNull();
+
+    // Can still be opened manually
+    act(() => {
+      result.current.startTour(0);
+    });
+
+    expect(result.current.isOpen).toBe(true);
+    expect(result.current.currentStepIndex).toBe(0);
+    expect(result.current.currentStep?.id).toBe('step-1');
+  });
+
   it('allows manual startTour at a specific step index', () => {
     localStorage.setItem('chil_tour_test-tour_user-123', 'true');
 

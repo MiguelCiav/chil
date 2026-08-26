@@ -42,7 +42,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
     : `${template.page_width || 297} / ${template.page_height || 210}`;
 
   return (
-    <div className="lg:col-span-8 xl:col-span-8 2xl:col-span-9 space-y-4">
+    <div data-walkthrough="designer-canvas" className="lg:col-span-8 xl:col-span-8 2xl:col-span-9 space-y-4">
       {/* Large Interactive Canvas Viewport */}
       <div className="bg-gray-100/80 border border-gray-200/80 rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[480px]">
         {/* The Dynamic Canvas Box */}

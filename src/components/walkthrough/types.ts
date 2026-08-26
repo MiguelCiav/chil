@@ -15,4 +15,6 @@ export interface TourConfig {
   onComplete?: () => void;
   userId?: string | null;
   autoStartDelay?: number; // Delay in ms before first-time auto-start (defaults to 400ms)
+  autoStart?: boolean; // Controls whether tour auto-launches on mount if not seen before (defaults to true)
 }
+

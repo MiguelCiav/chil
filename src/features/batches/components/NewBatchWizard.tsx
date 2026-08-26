@@ -210,6 +210,7 @@ export const NewBatchWizard: React.FC = () => {
   } = useWalkthrough({
     tourId: 'new-batch-wizard-tour',
     steps: NEW_BATCH_WIZARD_TOUR_STEPS,
+    autoStart: true,
     userId: user?.uid
   });
 

@@ -291,6 +291,7 @@ export const BatchList: React.FC = () => {
   } = useWalkthrough({
     tourId: 'batch-list-tour',
     steps: BATCH_LIST_TOUR_STEPS,
+    autoStart: false,
     userId: user?.uid
   });
 

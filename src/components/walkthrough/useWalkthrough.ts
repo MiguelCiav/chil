@@ -18,7 +18,7 @@ export interface UseWalkthroughReturn {
 }
 
 export function useWalkthrough(config: TourConfig): UseWalkthroughReturn {
-  const { tourId, steps, onComplete, userId, autoStartDelay = 400 } = config;
+  const { tourId, steps, onComplete, userId, autoStartDelay = 400, autoStart = true } = config;
   const storageKey = `chil_tour_${tourId}_${userId || 'anon'}`;
 
   const [isOpen, setIsOpen] = useState(false);
@@ -94,6 +94,7 @@ export function useWalkthrough(config: TourConfig): UseWalkthroughReturn {
   // Auto-start tour if not seen before
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (autoStart === false) return;
     try {
       const hasSeen = localStorage.getItem(storageKey);
       if (!hasSeen && totalSteps > 0) {
@@ -106,7 +107,7 @@ export function useWalkthrough(config: TourConfig): UseWalkthroughReturn {
     } catch (err) {
       console.warn('Unable to read tour status from localStorage:', err);
     }
-  }, [storageKey, totalSteps, autoStartDelay]);
+  }, [storageKey, totalSteps, autoStartDelay, autoStart]);
 
   // Helper to calculate target element bounding rect
   const updateTargetRect = useCallback(() => {

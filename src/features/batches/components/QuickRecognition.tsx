@@ -64,6 +64,7 @@ export const QuickRecognition: React.FC = () => {
   } = useWalkthrough({
     tourId: 'quick-recognition-tour',
     steps: QUICK_RECOGNITION_TOUR_STEPS,
+    autoStart: true,
     userId: user?.uid
   });
   const {

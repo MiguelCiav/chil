@@ -18,6 +18,17 @@ vi.mock('../../api', () => ({
   processBackgroundImageFile: vi.fn()
 }));
 
+vi.mock('../../../auth', () => ({
+  useAuth: vi.fn(() => ({
+    user: { uid: 'test-user-id', email: 'test@scouts.org.ve', displayName: 'Test User' },
+    loading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    resetPassword: vi.fn()
+  }))
+}));
+
 const mockRecognition: RecognitionType = {
   id: 'sct-wood-badge',
   name: 'Insignia de Madera',
@@ -622,5 +633,129 @@ describe('CertificateDesigner component', () => {
     expect(inputClickSpy).toHaveBeenCalledTimes(1);
 
     inputClickSpy.mockRestore();
+  });
+
+  it('renders interactive walkthrough attributes and WalkthroughHelpButton', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognition);
+
+    const { container } = render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    // Check WalkthroughHelpButton is rendered
+    const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+    expect(helpBtn).toBeInTheDocument();
+
+    // Check all data-walkthrough selectors exist on the DOM
+    expect(container.querySelector('[data-walkthrough="designer-header"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-walkthrough="designer-canvas"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-walkthrough="designer-background-btn"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-walkthrough="designer-sidebar"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-walkthrough="designer-mode-switch"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-walkthrough="designer-save-btn"]')).toBeInTheDocument();
+  });
+
+  it('starts and steps through the 6-step walkthrough tour upon clicking the help button', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognition);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+    fireEvent.click(helpBtn);
+
+    // Step 1: Cabecera y Objetivo
+    await waitFor(() => {
+      expect(screen.getByText('Diseñador Visual de Plantillas')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Paso 1 de 6')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Configura la plantilla gráfica oficial para este reconocimiento. Los cambios que realices aquí se aplicarán a todos los diplomas generados a partir de este tipo.'
+      )
+    ).toBeInTheDocument();
+
+    // Click Siguiente -> Step 2
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+    // Step 2: Lienzo de Diseño WYSIWYG
+    expect(screen.getByText('Lienzo del Diploma (Canvas 1:1)')).toBeInTheDocument();
+    expect(screen.getByText('Paso 2 de 6')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Este es el lienzo interactivo de tu diploma. Los campos posicionados aquí se estamparán en el PDF con exacta fidelidad de tamaño, posición y proporciones físicas milimétricas.'
+      )
+    ).toBeInTheDocument();
+
+    // Click Siguiente -> Step 3
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+    // Step 3: Carga de Fondo Gráfico
+    expect(screen.getByText('Cargar Imagen de Fondo')).toBeInTheDocument();
+    expect(screen.getByText('Paso 3 de 6')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Sube la imagen del diploma o certificado en formato PNG, JPEG o WebP. El editor adaptará automáticamente las dimensiones y orientación física sin distorsión.'
+      )
+    ).toBeInTheDocument();
+
+    // Click Siguiente -> Step 4
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+    // Step 4: Paleta de Variables y Arrastre
+    expect(screen.getByText('Paleta de Variables y Estilo')).toBeInTheDocument();
+    expect(screen.getByText('Paso 4 de 6')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Haz clic en cualquier campo dinámico (Nombre, Cédula, Unidad, Código REC, etc.) para agregarlo al lienzo. Arrástralo libremente con el mouse hasta su ubicación deseada.'
+      )
+    ).toBeInTheDocument();
+
+    // Click Siguiente -> Step 5
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+    // Step 5: Modo Vista Previa con Datos Reales
+    expect(screen.getByText('Vista Previa con Datos Scout')).toBeInTheDocument();
+    expect(screen.getByText('Paso 5 de 6')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Usa el modo vista previa (icono del ojo) para previsualizar el diploma con datos de prueba realistas antes de guardar.'
+      )
+    ).toBeInTheDocument();
+
+    // Test Anterior button (Step 5 -> Step 4)
+    fireEvent.click(screen.getByRole('button', { name: /◀ Anterior/i }));
+    expect(screen.getByText('Paleta de Variables y Estilo')).toBeInTheDocument();
+    expect(screen.getByText('Paso 4 de 6')).toBeInTheDocument();
+
+    // Go forward again to Step 5
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+    expect(screen.getByText('Vista Previa con Datos Scout')).toBeInTheDocument();
+
+    // Click Siguiente -> Step 6
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+    // Step 6: Guardar Plantilla
+    expect(screen.getByText('Guardar Plantilla Oficial')).toBeInTheDocument();
+    expect(screen.getByText('Paso 6 de 6')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Una vez satisfecho con el diseño, haz clic en 'Guardar Plantilla' para almacenar las coordenadas y estilos en la nube de forma segura."
+      )
+    ).toBeInTheDocument();
+
+    // Finish tour
+    const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+    expect(finishBtn).toBeInTheDocument();
+    fireEvent.click(finishBtn);
+
+    // Overlay closes & saves to localStorage
+    expect(screen.queryByText('Guardar Plantilla Oficial')).not.toBeInTheDocument();
+    expect(localStorage.getItem('chil_tour_certificate-designer-tour_test-user-id')).toBe('true');
   });
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Save, Upload, Eye, Edit3 } from 'lucide-react';
 import { Button } from '../../../../components/Button';
+import { WalkthroughHelpButton } from '../../../../components/walkthrough';
 
 export interface DesignerHeaderProps {
   recognitionName: string;
@@ -12,6 +13,7 @@ export interface DesignerHeaderProps {
   onUploadClick: () => void;
   onSave: () => void;
   onBack: () => void;
+  onStartTour?: () => void;
 }
 
 export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
@@ -23,10 +25,14 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
   onTogglePreview,
   onUploadClick,
   onSave,
-  onBack
+  onBack,
+  onStartTour
 }) => {
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-primary/20 rounded-2xl p-4 sm:p-5 shadow-sm">
+    <div
+      data-walkthrough="designer-header"
+      className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-primary/20 rounded-2xl p-4 sm:p-5 shadow-sm"
+    >
       <div className="flex items-center gap-3">
         <Button
           type="button"
@@ -41,16 +47,22 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
         </Button>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <h1 className="text-xl sm:text-2xl font-extrabold text-neutral tracking-tight">
-            {recognitionName}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-neutral tracking-tight">
+              {recognitionName}
+            </h1>
+            {onStartTour && <WalkthroughHelpButton onClick={onStartTour} />}
+          </div>
         </div>
       </div>
 
       {/* Global Action Controls */}
       <div className="flex flex-wrap items-center gap-2.5">
         {/* Mode Switcher */}
-        <div className="inline-flex rounded-xl p-1 bg-gray-100 border border-gray-200">
+        <div
+          data-walkthrough="designer-mode-switch"
+          className="inline-flex rounded-xl p-1 bg-gray-100 border border-gray-200"
+        >
           <button
             type="button"
             onClick={() => onTogglePreview(false)}
@@ -81,6 +93,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
 
         {/* Background Upload */}
         <Button
+          data-walkthrough="designer-background-btn"
           type="button"
           variant="outline"
           size="sm"
@@ -97,6 +110,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
 
         {/* Save Template Primary Button */}
         <Button
+          data-walkthrough="designer-save-btn"
           type="button"
           variant="primary"
           size="sm"
@@ -111,3 +125,4 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
     </div>
   );
 };
+
