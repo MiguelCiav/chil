@@ -179,6 +179,17 @@ export interface YoYComparisonData {
   monthly: YoYMonthlyItem[];
 }
 
+export interface CalculateYoYOptions {
+  currentMembers: import('../../batches/types').ScoutMember[];
+  previousMembers: import('../../batches/types').ScoutMember[];
+  currentBatches?: import('../../batches/types').Batch[];
+  previousBatches?: import('../../batches/types').Batch[];
+  regions?: import('../../batches/types').Region[];
+  districts?: import('../../batches/types').District[];
+  currentYear?: number;
+  previousYear?: number;
+}
+
 export interface StatisticsDataset {
   kpis: KpiMetrics;
   monthlyTrends: MonthlyTrendData[];

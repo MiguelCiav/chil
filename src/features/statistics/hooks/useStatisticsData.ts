@@ -73,6 +73,163 @@ function matchesDateRange(createdAt: string, period: string, startDate?: string,
   return true;
 }
 
+export function buildAvailableDistricts(districts: District[], regionId?: string): District[] {
+  if (!regionId) return districts;
+  return districts.filter(d => String(d.region_id) === regionId);
+}
+
+export function filterBatchesByCriteria(batches: Batch[], filters: StatisticsFilterState): Batch[] {
+  return batches.filter(b => {
+    if (filters.period !== 'all') {
+      if (!matchesDateRange(b.created_at ?? '', filters.period, filters.startDate, filters.endDate)) {
+        return false;
+      }
+    }
+    if (filters.recognitionId && b.recognition_type !== filters.recognitionId) {
+      return false;
+    }
+    if (filters.regionId && String(b.region_id) !== filters.regionId) {
+      return false;
+    }
+    if (filters.districtId && String(b.district_id) !== filters.districtId) {
+      return false;
+    }
+    return true;
+  });
+}
+
+export function filterMembersByCriteria(
+  members: ScoutMember[],
+  batchMap: Map<number, Batch>,
+  filters: StatisticsFilterState
+): ScoutMember[] {
+  return members.filter(m => {
+    const batch = m.batch_id ? batchMap.get(m.batch_id) : undefined;
+
+    // 1. Date filter on batch created_at
+    if (filters.period !== 'all') {
+      const batchCreatedAt = batch?.created_at ?? '';
+      if (!matchesDateRange(batchCreatedAt, filters.period, filters.startDate, filters.endDate)) {
+        return false;
+      }
+    }
+
+    // 2. Recognition filter
+    if (filters.recognitionId && batch?.recognition_type !== filters.recognitionId) {
+      return false;
+    }
+
+    // 3. Region filter
+    if (filters.regionId && String(batch?.region_id) !== filters.regionId) {
+      return false;
+    }
+
+    // 4. District filter
+    if (filters.districtId && String(batch?.district_id) !== filters.districtId) {
+      return false;
+    }
+
+    // 5. Member type filter
+    if (filters.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function determineTargetYears(
+  batches: Batch[],
+  filters: StatisticsFilterState
+): { currentYear: number; previousYear: number } {
+  let currentYear: number;
+  if (filters.period === 'this-year') {
+    currentYear = new Date().getFullYear();
+  } else if (filters.period === 'custom' && filters.startDate) {
+    currentYear = new Date(filters.startDate).getFullYear();
+  } else {
+    const allBatchYears = batches
+      .map(b => (b.created_at ? new Date(b.created_at).getFullYear() : null))
+      .filter((y): y is number => y !== null && !Number.isNaN(y));
+    currentYear = allBatchYears.length > 0 ? Math.max(...allBatchYears) : new Date().getFullYear();
+  }
+  return { currentYear, previousYear: currentYear - 1 };
+}
+
+export function extractYearBatches(
+  allBatches: Batch[],
+  year: number,
+  filters?: StatisticsFilterState
+): Batch[] {
+  return allBatches.filter(b => {
+    if (!b.created_at) return false;
+    const d = new Date(b.created_at);
+    if (Number.isNaN(d.getTime()) || d.getFullYear() !== year) return false;
+    if (filters?.recognitionId && b.recognition_type !== filters.recognitionId) return false;
+    if (filters?.regionId && String(b.region_id) !== filters.regionId) return false;
+    if (filters?.districtId && String(b.district_id) !== filters.districtId) return false;
+    return true;
+  });
+}
+
+export function extractYearMembers(
+  members: ScoutMember[],
+  yearBatchIds: Set<number>,
+  memberType?: string
+): ScoutMember[] {
+  return members.filter(m => {
+    if (!m.batch_id || !yearBatchIds.has(m.batch_id)) return false;
+    if (memberType && memberType !== 'all' && m.member_type !== memberType) return false;
+    return true;
+  });
+}
+
+export function buildFilterSummaryLabels(
+  filters: StatisticsFilterState,
+  recognitionTypes: RecognitionType[],
+  regions: Region[],
+  districts: District[]
+): FilterSummaryLabels {
+  let periodLabel: string | undefined;
+  if (filters.period === 'this-year') periodLabel = 'Este Año';
+  else if (filters.period === 'this-month') periodLabel = 'Este Mes';
+  else if (filters.period === 'last-30') periodLabel = 'Últimos 30 días';
+  else if (filters.period === 'last-90') periodLabel = 'Últimos 90 días';
+  else if (filters.period === 'custom') {
+    periodLabel = `Desde ${filters.startDate || 'inicio'} hasta ${filters.endDate || 'fin'}`;
+  }
+
+  let recognitionLabel: string | undefined;
+  if (filters.recognitionId) {
+    const rec = recognitionTypes.find(r => r.id === filters.recognitionId);
+    recognitionLabel = rec ? rec.name : filters.recognitionId;
+  }
+
+  let regionLabel: string | undefined;
+  if (filters.regionId) {
+    const reg = regions.find(r => String(r.id) === filters.regionId);
+    regionLabel = reg ? reg.name : `Región ${filters.regionId}`;
+  }
+
+  let districtLabel: string | undefined;
+  if (filters.districtId) {
+    const dist = districts.find(d => String(d.id) === filters.districtId);
+    districtLabel = dist ? dist.name : `Distrito ${filters.districtId}`;
+  }
+
+  let memberTypeLabel: string | undefined;
+  if (filters.memberType === 'young') memberTypeLabel = 'Jóvenes';
+  else if (filters.memberType === 'adult') memberTypeLabel = 'Adultos';
+
+  return {
+    periodLabel,
+    recognitionLabel,
+    regionLabel,
+    districtLabel,
+    memberTypeLabel
+  };
+}
+
 export function useStatisticsData() {
   const { user } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -98,12 +255,12 @@ export function useStatisticsData() {
     ])
       .then(([batchList, memberList, hierarchy, recTypes]) => {
         if (!isCancelled) {
-          setBatches(batchList || []);
-          setMembers(memberList || []);
-          setRegions(hierarchy.regions || []);
-          setDistricts(hierarchy.districts || []);
-          setGroups(hierarchy.groups || []);
-          setRecognitionTypes(recTypes || []);
+          setBatches(batchList ?? []);
+          setMembers(memberList ?? []);
+          setRegions(hierarchy.regions ?? []);
+          setDistricts(hierarchy.districts ?? []);
+          setGroups(hierarchy.groups ?? []);
+          setRecognitionTypes(recTypes ?? []);
           setError(null);
         }
       })
@@ -158,8 +315,7 @@ export function useStatisticsData() {
   }, [filters]);
 
   const availableDistricts = useMemo(() => {
-    if (!filters.regionId) return districts;
-    return districts.filter(d => String(d.region_id) === filters.regionId);
+    return buildAvailableDistricts(districts, filters.regionId);
   }, [districts, filters.regionId]);
 
   // Reactive filtering of Batches and Members
@@ -168,120 +324,34 @@ export function useStatisticsData() {
     batches.forEach(b => batchMap.set(b.id, b));
 
     // Filter members
-    const filteredMembers = members.filter(m => {
-      const batch = m.batch_id ? batchMap.get(m.batch_id) : undefined;
-
-      // 1. Date filter on batch created_at
-      if (filters.period !== 'all') {
-        const batchCreatedAt = batch?.created_at || '';
-        if (!matchesDateRange(batchCreatedAt, filters.period, filters.startDate, filters.endDate)) {
-          return false;
-        }
-      }
-
-      // 2. Recognition filter
-      if (filters.recognitionId) {
-        const rec = batch?.recognition_type || '';
-        if (rec !== filters.recognitionId) return false;
-      }
-
-      // 3. Region filter
-      if (filters.regionId) {
-        if (String(batch?.region_id) !== filters.regionId) return false;
-      }
-
-      // 4. District filter
-      if (filters.districtId) {
-        if (String(batch?.district_id) !== filters.districtId) return false;
-      }
-
-      // 5. Member type filter
-      if (filters.memberType && filters.memberType !== 'all') {
-        if (m.member_type !== filters.memberType) return false;
-      }
-
-      return true;
-    });
+    const filteredMembers = filterMembersByCriteria(members, batchMap, filters);
 
     // Filter batches matching the criteria
-    const filteredBatches = batches.filter(b => {
-      if (filters.period !== 'all') {
-        if (!matchesDateRange(b.created_at || '', filters.period, filters.startDate, filters.endDate)) {
-          return false;
-        }
-      }
-      if (filters.recognitionId && b.recognition_type !== filters.recognitionId) {
-        return false;
-      }
-      if (filters.regionId && String(b.region_id) !== filters.regionId) {
-        return false;
-      }
-      if (filters.districtId && String(b.district_id) !== filters.districtId) {
-        return false;
-      }
-      return true;
-    });
+    const filteredBatches = filterBatchesByCriteria(batches, filters);
 
     // Determine current and previous year for YoY comparison
-    let currentYear: number;
-    if (filters.period === 'this-year') {
-      currentYear = new Date().getFullYear();
-    } else if (filters.period === 'custom' && filters.startDate) {
-      currentYear = new Date(filters.startDate).getFullYear();
-    } else {
-      const allBatchYears = batches
-        .map(b => (b.created_at ? new Date(b.created_at).getFullYear() : null))
-        .filter((y): y is number => y !== null && !Number.isNaN(y));
-      currentYear = allBatchYears.length > 0 ? Math.max(...allBatchYears) : new Date().getFullYear();
-    }
-    const previousYear = currentYear - 1;
+    const { currentYear, previousYear } = determineTargetYears(batches, filters);
 
     // Filter current year and previous year batches applying active non-period filters
-    const currentYearBatches = batches.filter(b => {
-      if (!b.created_at) return false;
-      const d = new Date(b.created_at);
-      if (Number.isNaN(d.getTime()) || d.getFullYear() !== currentYear) return false;
-      if (filters.recognitionId && b.recognition_type !== filters.recognitionId) return false;
-      if (filters.regionId && String(b.region_id) !== filters.regionId) return false;
-      if (filters.districtId && String(b.district_id) !== filters.districtId) return false;
-      return true;
-    });
-
-    const previousYearBatches = batches.filter(b => {
-      if (!b.created_at) return false;
-      const d = new Date(b.created_at);
-      if (Number.isNaN(d.getTime()) || d.getFullYear() !== previousYear) return false;
-      if (filters.recognitionId && b.recognition_type !== filters.recognitionId) return false;
-      if (filters.regionId && String(b.region_id) !== filters.regionId) return false;
-      if (filters.districtId && String(b.district_id) !== filters.districtId) return false;
-      return true;
-    });
+    const currentYearBatches = extractYearBatches(batches, currentYear, filters);
+    const previousYearBatches = extractYearBatches(batches, previousYear, filters);
 
     const currentYearBatchIds = new Set<number>(currentYearBatches.map(b => b.id));
     const previousYearBatchIds = new Set<number>(previousYearBatches.map(b => b.id));
 
-    const currentYearMembers = members.filter(m => {
-      if (!m.batch_id || !currentYearBatchIds.has(m.batch_id)) return false;
-      if (filters.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) return false;
-      return true;
-    });
+    const currentYearMembers = extractYearMembers(members, currentYearBatchIds, filters.memberType);
+    const previousYearMembers = extractYearMembers(members, previousYearBatchIds, filters.memberType);
 
-    const previousYearMembers = members.filter(m => {
-      if (!m.batch_id || !previousYearBatchIds.has(m.batch_id)) return false;
-      if (filters.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) return false;
-      return true;
-    });
-
-    const yoyComparison = calculateYoYComparison(
-      currentYearMembers,
-      previousYearMembers,
-      currentYearBatches,
-      previousYearBatches,
+    const yoyComparison = calculateYoYComparison({
+      currentMembers: currentYearMembers,
+      previousMembers: previousYearMembers,
+      currentBatches: currentYearBatches,
+      previousBatches: previousYearBatches,
       regions,
       districts,
       currentYear,
       previousYear
-    );
+    });
 
     const dataset = buildStatisticsDataset(
       filteredMembers,
@@ -296,44 +366,7 @@ export function useStatisticsData() {
   }, [batches, members, regions, districts, recognitionTypes, filters]);
 
   const getFilterSummaryLabels = useCallback((): FilterSummaryLabels => {
-    let periodLabel: string | undefined;
-    if (filters.period === 'this-year') periodLabel = 'Este Año';
-    else if (filters.period === 'this-month') periodLabel = 'Este Mes';
-    else if (filters.period === 'last-30') periodLabel = 'Últimos 30 días';
-    else if (filters.period === 'last-90') periodLabel = 'Últimos 90 días';
-    else if (filters.period === 'custom') {
-      periodLabel = `Desde ${filters.startDate || 'inicio'} hasta ${filters.endDate || 'fin'}`;
-    }
-
-    let recognitionLabel: string | undefined;
-    if (filters.recognitionId) {
-      const rec = recognitionTypes.find(r => r.id === filters.recognitionId);
-      recognitionLabel = rec ? rec.name : filters.recognitionId;
-    }
-
-    let regionLabel: string | undefined;
-    if (filters.regionId) {
-      const reg = regions.find(r => String(r.id) === filters.regionId);
-      regionLabel = reg ? reg.name : `Región ${filters.regionId}`;
-    }
-
-    let districtLabel: string | undefined;
-    if (filters.districtId) {
-      const dist = districts.find(d => String(d.id) === filters.districtId);
-      districtLabel = dist ? dist.name : `Distrito ${filters.districtId}`;
-    }
-
-    let memberTypeLabel: string | undefined;
-    if (filters.memberType === 'young') memberTypeLabel = 'Jóvenes';
-    else if (filters.memberType === 'adult') memberTypeLabel = 'Adultos';
-
-    return {
-      periodLabel,
-      recognitionLabel,
-      regionLabel,
-      districtLabel,
-      memberTypeLabel
-    };
+    return buildFilterSummaryLabels(filters, recognitionTypes, regions, districts);
   }, [filters, recognitionTypes, regions, districts]);
 
   return {

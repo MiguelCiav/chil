@@ -88,7 +88,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <select
             id="stats-filter-rec"
             aria-label="Filtrar por tipo de reconocimiento"
-            value={filters.recognitionId || ''}
+            value={filters.recognitionId ?? ''}
             onChange={e => setFilter('recognitionId', e.target.value)}
             className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
           >
@@ -109,7 +109,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <select
             id="stats-filter-region"
             aria-label="Filtrar por región"
-            value={filters.regionId || ''}
+            value={filters.regionId ?? ''}
             onChange={e => {
               setFilter('regionId', e.target.value);
               setFilter('districtId', '');
@@ -133,7 +133,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <select
             id="stats-filter-district"
             aria-label="Filtrar por distrito"
-            value={filters.districtId || ''}
+            value={filters.districtId ?? ''}
             onChange={e => setFilter('districtId', e.target.value)}
             className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
           >
@@ -154,7 +154,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <select
             id="stats-filter-member-type"
             aria-label="Filtrar por tipo demográfico"
-            value={filters.memberType || 'all'}
+            value={filters.memberType ?? 'all'}
             onChange={e => setFilter('memberType', e.target.value as 'all' | 'young' | 'adult')}
             className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
           >
@@ -176,7 +176,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <input
                 id="stats-custom-start"
                 type="date"
-                value={filters.startDate || ''}
+                value={filters.startDate ?? ''}
                 onChange={e => setFilter('startDate', e.target.value)}
                 className="px-2.5 py-1.5 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label="Fecha inicio personalizado"
@@ -189,7 +189,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <input
                 id="stats-custom-end"
                 type="date"
-                value={filters.endDate || ''}
+                value={filters.endDate ?? ''}
                 onChange={e => setFilter('endDate', e.target.value)}
                 className="px-2.5 py-1.5 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label="Fecha fin personalizado"

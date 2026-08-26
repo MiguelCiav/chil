@@ -81,12 +81,12 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
           <div>
             <p
               className="text-lg font-black text-emerald-700 tracking-tight truncate"
-              title={metrics.topRecognitionName || '-'}
+              title={metrics.topRecognitionName ?? '-'}
             >
-              {metrics.topRecognitionName || '-'}
+              {metrics.topRecognitionName ?? '-'}
             </p>
             <p className="text-[11px] text-neutral/50 mt-1 font-medium">
-              {metrics.topRecognitionCount || 0} reconocimientos emitidos
+              {metrics.topRecognitionCount ?? 0} reconocimientos emitidos
             </p>
           </div>
         </div>

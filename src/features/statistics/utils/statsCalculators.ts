@@ -17,7 +17,8 @@ import {
   YoYDistrictItem,
   YoYUnitItem,
   YoYDemographics,
-  YoYMonthlyItem
+  YoYMonthlyItem,
+  CalculateYoYOptions
 } from '../types';
 
 export const MONTH_LABELS_ES = [
@@ -61,7 +62,7 @@ export function partitionDataByYear(
         currentYear = Math.max(...years);
       }
     }
-    if (!currentYear) currentYear = new Date().getFullYear();
+    currentYear ??= new Date().getFullYear();
   }
 
   const previousYear = currentYear - 1;
@@ -102,65 +103,30 @@ export function partitionDataByYear(
   };
 }
 
-/**
- * Calculates Year-over-Year (YoY) comparison across all statistical dimensions
- */
-export function calculateYoYComparison(
+function calculateYoYCountMetric(current: number, previous: number): YoYCountMetric {
+  return {
+    current,
+    previous,
+    diff: current - previous,
+    percentChange: calculatePercentChange(current, previous)
+  };
+}
+
+function buildYoYRegionComparison(
   currentMembers: ScoutMember[],
   previousMembers: ScoutMember[],
-  currentBatches: Batch[] = [],
-  previousBatches: Batch[] = [],
-  regions: Region[] = [],
-  districts: District[] = [],
-  currentYear?: number,
-  previousYear?: number
-): YoYComparisonData {
-  const cYear = currentYear || new Date().getFullYear();
-  const pYear = previousYear !== undefined ? previousYear : cYear - 1;
-  const hasPreviousYearData = previousMembers.length > 0;
-
-  // 1. KPI Diplomas
-  const currentTotalDiplomas = currentMembers.filter(m => m.status === 'active' || m.status === 'exceptional').length;
-  const previousTotalDiplomas = previousMembers.filter(m => m.status === 'active' || m.status === 'exceptional').length;
-  const totalDiplomas: YoYCountMetric = {
-    current: currentTotalDiplomas,
-    previous: previousTotalDiplomas,
-    diff: currentTotalDiplomas - previousTotalDiplomas,
-    percentChange: calculatePercentChange(currentTotalDiplomas, previousTotalDiplomas)
-  };
-
-  // 2. KPI Batches
-  const currentBatchesCount = currentBatches.length;
-  const previousBatchesCount = previousBatches.length;
-  const totalBatches: YoYCountMetric = {
-    current: currentBatchesCount,
-    previous: previousBatchesCount,
-    diff: currentBatchesCount - previousBatchesCount,
-    percentChange: calculatePercentChange(currentBatchesCount, previousBatchesCount)
-  };
-
-  // 3. KPI Total Members
-  const currentMembersCount = currentMembers.length;
-  const previousMembersCount = previousMembers.length;
-  const totalMembers: YoYCountMetric = {
-    current: currentMembersCount,
-    previous: previousMembersCount,
-    diff: currentMembersCount - previousMembersCount,
-    percentChange: calculatePercentChange(currentMembersCount, previousMembersCount)
-  };
-
-  // 4. Region Comparison
-  const currentBatchMap = new Map<number, Batch>();
-  currentBatches.forEach(b => currentBatchMap.set(b.id, b));
-  const previousBatchMap = new Map<number, Batch>();
-  previousBatches.forEach(b => previousBatchMap.set(b.id, b));
-
+  currentBatchMap: Map<number, Batch>,
+  previousBatchMap: Map<number, Batch>,
+  regions: Region[],
+  currentMembersCount: number,
+  previousMembersCount: number
+): YoYRegionItem[] {
   const currentRegionCounts = new Map<number, number>();
   currentMembers.forEach(m => {
     if (m.batch_id && currentBatchMap.has(m.batch_id)) {
-      const b = currentBatchMap.get(m.batch_id)!;
-      if (b.region_id) {
-        currentRegionCounts.set(b.region_id, (currentRegionCounts.get(b.region_id) || 0) + 1);
+      const b = currentBatchMap.get(m.batch_id);
+      if (b?.region_id) {
+        currentRegionCounts.set(b.region_id, (currentRegionCounts.get(b.region_id) ?? 0) + 1);
       }
     }
   });
@@ -168,9 +134,9 @@ export function calculateYoYComparison(
   const previousRegionCounts = new Map<number, number>();
   previousMembers.forEach(m => {
     if (m.batch_id && previousBatchMap.has(m.batch_id)) {
-      const b = previousBatchMap.get(m.batch_id)!;
-      if (b.region_id) {
-        previousRegionCounts.set(b.region_id, (previousRegionCounts.get(b.region_id) || 0) + 1);
+      const b = previousBatchMap.get(m.batch_id);
+      if (b?.region_id) {
+        previousRegionCounts.set(b.region_id, (previousRegionCounts.get(b.region_id) ?? 0) + 1);
       }
     }
   });
@@ -182,9 +148,9 @@ export function calculateYoYComparison(
 
   const yoyRegions: YoYRegionItem[] = Array.from(allRegionIds).map(regId => {
     const regObj = regions.find(r => r.id === regId);
-    const name = regObj ? regObj.name : `Región ${regId}`;
-    const currentCount = currentRegionCounts.get(regId) || 0;
-    const previousCount = previousRegionCounts.get(regId) || 0;
+    const name = regObj?.name ?? `Región ${regId}`;
+    const currentCount = currentRegionCounts.get(regId) ?? 0;
+    const previousCount = previousRegionCounts.get(regId) ?? 0;
     const diff = currentCount - previousCount;
     const percentChange = calculatePercentChange(currentCount, previousCount);
     const currentPercentage = currentMembersCount > 0 ? Number(((currentCount / currentMembersCount) * 100).toFixed(1)) : 0;
@@ -202,19 +168,29 @@ export function calculateYoYComparison(
     };
   });
 
-  yoyRegions.sort((a, b) => {
+  return yoyRegions.sort((a, b) => {
     if (b.currentCount !== a.currentCount) return b.currentCount - a.currentCount;
     if (b.previousCount !== a.previousCount) return b.previousCount - a.previousCount;
     return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
   });
+}
 
-  // 5. District Comparison
+function buildYoYDistrictComparison(
+  currentMembers: ScoutMember[],
+  previousMembers: ScoutMember[],
+  currentBatchMap: Map<number, Batch>,
+  previousBatchMap: Map<number, Batch>,
+  regions: Region[],
+  districts: District[],
+  currentMembersCount: number,
+  previousMembersCount: number
+): YoYDistrictItem[] {
   const currentDistrictCounts = new Map<number, number>();
   currentMembers.forEach(m => {
     if (m.batch_id && currentBatchMap.has(m.batch_id)) {
-      const b = currentBatchMap.get(m.batch_id)!;
-      if (b.district_id) {
-        currentDistrictCounts.set(b.district_id, (currentDistrictCounts.get(b.district_id) || 0) + 1);
+      const b = currentBatchMap.get(m.batch_id);
+      if (b?.district_id) {
+        currentDistrictCounts.set(b.district_id, (currentDistrictCounts.get(b.district_id) ?? 0) + 1);
       }
     }
   });
@@ -222,9 +198,9 @@ export function calculateYoYComparison(
   const previousDistrictCounts = new Map<number, number>();
   previousMembers.forEach(m => {
     if (m.batch_id && previousBatchMap.has(m.batch_id)) {
-      const b = previousBatchMap.get(m.batch_id)!;
-      if (b.district_id) {
-        previousDistrictCounts.set(b.district_id, (previousDistrictCounts.get(b.district_id) || 0) + 1);
+      const b = previousBatchMap.get(m.batch_id);
+      if (b?.district_id) {
+        previousDistrictCounts.set(b.district_id, (previousDistrictCounts.get(b.district_id) ?? 0) + 1);
       }
     }
   });
@@ -237,10 +213,10 @@ export function calculateYoYComparison(
   const yoyDistricts: YoYDistrictItem[] = Array.from(allDistrictIds).map(distId => {
     const distObj = districts.find(d => d.id === distId);
     const regObj = distObj ? regions.find(r => r.id === distObj.region_id) : undefined;
-    const name = distObj ? distObj.name : `Distrito ${distId}`;
-    const parentName = regObj ? regObj.name : undefined;
-    const currentCount = currentDistrictCounts.get(distId) || 0;
-    const previousCount = previousDistrictCounts.get(distId) || 0;
+    const name = distObj?.name ?? `Distrito ${distId}`;
+    const parentName = regObj?.name ?? undefined;
+    const currentCount = currentDistrictCounts.get(distId) ?? 0;
+    const previousCount = previousDistrictCounts.get(distId) ?? 0;
     const diff = currentCount - previousCount;
     const percentChange = calculatePercentChange(currentCount, previousCount);
     const currentPercentage = currentMembersCount > 0 ? Number(((currentCount / currentMembersCount) * 100).toFixed(1)) : 0;
@@ -259,13 +235,19 @@ export function calculateYoYComparison(
     };
   });
 
-  yoyDistricts.sort((a, b) => {
+  return yoyDistricts.sort((a, b) => {
     if (b.currentCount !== a.currentCount) return b.currentCount - a.currentCount;
     if (b.previousCount !== a.previousCount) return b.previousCount - a.previousCount;
     return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
   });
+}
 
-  // 6. Unit Comparison
+function buildYoYUnitComparison(
+  currentMembers: ScoutMember[],
+  previousMembers: ScoutMember[],
+  currentMembersCount: number,
+  previousMembersCount: number
+): YoYUnitItem[] {
   const unitOrder: ScoutUnit[] = ['manada', 'tropa', 'caminantes', 'clan', 'institucional', 'no_scout'];
   const currentUnitCounts = new Map<ScoutUnit, number>();
   const previousUnitCounts = new Map<ScoutUnit, number>();
@@ -275,18 +257,20 @@ export function calculateYoYComparison(
   });
 
   currentMembers.forEach(m => {
-    const u: ScoutUnit = m.unit || (m.member_type === 'young' ? 'tropa' : 'institucional');
-    currentUnitCounts.set(u, (currentUnitCounts.get(u) || 0) + 1);
+    const fallbackUnit: ScoutUnit = m.member_type === 'young' ? 'tropa' : 'institucional';
+    const u: ScoutUnit = m.unit ?? fallbackUnit;
+    currentUnitCounts.set(u, (currentUnitCounts.get(u) ?? 0) + 1);
   });
 
   previousMembers.forEach(m => {
-    const u: ScoutUnit = m.unit || (m.member_type === 'young' ? 'tropa' : 'institucional');
-    previousUnitCounts.set(u, (previousUnitCounts.get(u) || 0) + 1);
+    const fallbackUnit: ScoutUnit = m.member_type === 'young' ? 'tropa' : 'institucional';
+    const u: ScoutUnit = m.unit ?? fallbackUnit;
+    previousUnitCounts.set(u, (previousUnitCounts.get(u) ?? 0) + 1);
   });
 
-  const yoyUnits: YoYUnitItem[] = unitOrder.map(u => {
-    const currentCount = currentUnitCounts.get(u) || 0;
-    const previousCount = previousUnitCounts.get(u) || 0;
+  return unitOrder.map(u => {
+    const currentCount = currentUnitCounts.get(u) ?? 0;
+    const previousCount = previousUnitCounts.get(u) ?? 0;
     const diff = currentCount - previousCount;
     const percentChange = calculatePercentChange(currentCount, previousCount);
     const currentPercentage = currentMembersCount > 0 ? Number(((currentCount / currentMembersCount) * 100).toFixed(1)) : 0;
@@ -304,8 +288,14 @@ export function calculateYoYComparison(
       previousPercentage
     };
   });
+}
 
-  // 7. Demographics Comparison
+function buildYoYDemographicsComparison(
+  currentMembers: ScoutMember[],
+  previousMembers: ScoutMember[],
+  currentMembersCount: number,
+  previousMembersCount: number
+): YoYDemographics {
   const currentYoung = currentMembers.filter(m => m.member_type === 'young').length;
   const previousYoung = previousMembers.filter(m => m.member_type === 'young').length;
   const currentAdult = currentMembers.filter(m => m.member_type === 'adult').length;
@@ -314,7 +304,7 @@ export function calculateYoYComparison(
   const youngPercentChange = calculatePercentChange(currentYoung, previousYoung);
   const adultPercentChange = calculatePercentChange(currentAdult, previousAdult);
 
-  const demographics: YoYDemographics = {
+  return {
     young: {
       current: currentYoung,
       previous: previousYoung,
@@ -338,15 +328,23 @@ export function calculateYoYComparison(
       percentChange: calculatePercentChange(currentMembersCount, previousMembersCount)
     }
   };
+}
 
-  // 8. Monthly Comparison (1..12)
+function buildYoYMonthlyComparison(
+  currentMembers: ScoutMember[],
+  previousMembers: ScoutMember[],
+  currentBatchMap: Map<number, Batch>,
+  previousBatchMap: Map<number, Batch>,
+  cYear: number,
+  pYear: number
+): YoYMonthlyItem[] {
   const currentMonthCounts = new Array(12).fill(0);
   const previousMonthCounts = new Array(12).fill(0);
 
   currentMembers.forEach(m => {
     let dateStr = '';
     if (m.batch_id && currentBatchMap.has(m.batch_id)) {
-      dateStr = currentBatchMap.get(m.batch_id)?.created_at || '';
+      dateStr = currentBatchMap.get(m.batch_id)?.created_at ?? '';
     }
     if (!dateStr) return;
     const d = new Date(dateStr);
@@ -359,7 +357,7 @@ export function calculateYoYComparison(
   previousMembers.forEach(m => {
     let dateStr = '';
     if (m.batch_id && previousBatchMap.has(m.batch_id)) {
-      dateStr = previousBatchMap.get(m.batch_id)?.created_at || '';
+      dateStr = previousBatchMap.get(m.batch_id)?.created_at ?? '';
     }
     if (!dateStr) return;
     const d = new Date(dateStr);
@@ -369,7 +367,7 @@ export function calculateYoYComparison(
     }
   });
 
-  const monthly: YoYMonthlyItem[] = Array.from({ length: 12 }, (_, i) => {
+  return Array.from({ length: 12 }, (_, i) => {
     const currentCount = currentMonthCounts[i];
     const previousCount = previousMonthCounts[i];
     const diff = currentCount - previousCount;
@@ -383,6 +381,94 @@ export function calculateYoYComparison(
       percentChange
     };
   });
+}
+
+/**
+ * Calculates Year-over-Year (YoY) comparison across all statistical dimensions
+ */
+export function calculateYoYComparison(options: CalculateYoYOptions): YoYComparisonData {
+  const {
+    currentMembers,
+    previousMembers,
+    currentBatches = [],
+    previousBatches = [],
+    regions = [],
+    districts = [],
+    currentYear,
+    previousYear
+  } = options;
+
+  const cYear = currentYear ?? new Date().getFullYear();
+  const pYear = previousYear ?? cYear - 1;
+  const hasPreviousYearData = previousMembers.length > 0;
+
+  // 1. KPI Diplomas
+  const currentTotalDiplomas = currentMembers.filter(m => m.status === 'active' || m.status === 'exceptional').length;
+  const previousTotalDiplomas = previousMembers.filter(m => m.status === 'active' || m.status === 'exceptional').length;
+  const totalDiplomas = calculateYoYCountMetric(currentTotalDiplomas, previousTotalDiplomas);
+
+  // 2. KPI Batches
+  const totalBatches = calculateYoYCountMetric(currentBatches.length, previousBatches.length);
+
+  // 3. KPI Total Members
+  const currentMembersCount = currentMembers.length;
+  const previousMembersCount = previousMembers.length;
+  const totalMembers = calculateYoYCountMetric(currentMembersCount, previousMembersCount);
+
+  // Batch Maps
+  const currentBatchMap = new Map<number, Batch>();
+  currentBatches.forEach(b => currentBatchMap.set(b.id, b));
+  const previousBatchMap = new Map<number, Batch>();
+  previousBatches.forEach(b => previousBatchMap.set(b.id, b));
+
+  // 4. Region Comparison
+  const yoyRegions = buildYoYRegionComparison(
+    currentMembers,
+    previousMembers,
+    currentBatchMap,
+    previousBatchMap,
+    regions,
+    currentMembersCount,
+    previousMembersCount
+  );
+
+  // 5. District Comparison
+  const yoyDistricts = buildYoYDistrictComparison(
+    currentMembers,
+    previousMembers,
+    currentBatchMap,
+    previousBatchMap,
+    regions,
+    districts,
+    currentMembersCount,
+    previousMembersCount
+  );
+
+  // 6. Unit Comparison
+  const yoyUnits = buildYoYUnitComparison(
+    currentMembers,
+    previousMembers,
+    currentMembersCount,
+    previousMembersCount
+  );
+
+  // 7. Demographics Comparison
+  const demographics = buildYoYDemographicsComparison(
+    currentMembers,
+    previousMembers,
+    currentMembersCount,
+    previousMembersCount
+  );
+
+  // 8. Monthly Comparison (1..12)
+  const monthly = buildYoYMonthlyComparison(
+    currentMembers,
+    previousMembers,
+    currentBatchMap,
+    previousBatchMap,
+    cYear,
+    pYear
+  );
 
   return {
     hasPreviousYearData,
@@ -462,13 +548,13 @@ export function calculateKpiMetrics(
 
     let recType = 'general';
     if (m.batch_id && batchMap.has(m.batch_id)) {
-      const b = batchMap.get(m.batch_id)!;
-      if (b.region_id) activeRegionIds.add(b.region_id);
-      if (b.district_id) activeDistrictIds.add(b.district_id);
-      if (b.group_id) activeGroupIds.add(b.group_id);
-      if (b.recognition_type) recType = b.recognition_type;
+      const b = batchMap.get(m.batch_id);
+      if (b?.region_id) activeRegionIds.add(b.region_id);
+      if (b?.district_id) activeDistrictIds.add(b.district_id);
+      if (b?.group_id) activeGroupIds.add(b.group_id);
+      if (b?.recognition_type) recType = b.recognition_type;
     }
-    countsByRec.set(recType, (countsByRec.get(recType) || 0) + 1);
+    countsByRec.set(recType, (countsByRec.get(recType) ?? 0) + 1);
   });
 
   // Also include batch IDs from batches list directly if not covered
@@ -492,7 +578,7 @@ export function calculateKpiMetrics(
     const matchedType = recognitionTypes.find(
       r => r.id === topRecId || r.name.toLowerCase() === topRecId.toLowerCase()
     );
-    topRecognitionName = matchedType ? matchedType.name : getRecognitionName(topRecId);
+    topRecognitionName = matchedType?.name ?? getRecognitionName(topRecId);
   }
 
   const totalDiplomas = activeCount + exceptionalCount;
@@ -547,7 +633,7 @@ export function calculateMonthlyTrends(
         year = Math.max(...years);
       }
     }
-    if (!year) year = new Date().getFullYear();
+    year ??= new Date().getFullYear();
   }
 
   // Initialize 12 months for the year
@@ -568,7 +654,7 @@ export function calculateMonthlyTrends(
   members.forEach(m => {
     let dateStr = '';
     if (m.batch_id && batchMap.has(m.batch_id)) {
-      dateStr = batchMap.get(m.batch_id)?.created_at || '';
+      dateStr = batchMap.get(m.batch_id)?.created_at ?? '';
     }
 
     if (!dateStr) return;
@@ -606,9 +692,9 @@ export function calculateRecognitionRankings(
   members.forEach(m => {
     let recType = 'general';
     if (m.batch_id && batchMap.has(m.batch_id)) {
-      recType = batchMap.get(m.batch_id)?.recognition_type || 'general';
+      recType = batchMap.get(m.batch_id)?.recognition_type ?? 'general';
     }
-    countsByRec.set(recType, (countsByRec.get(recType) || 0) + 1);
+    countsByRec.set(recType, (countsByRec.get(recType) ?? 0) + 1);
   });
 
   const totalMembers = members.length;
@@ -618,9 +704,9 @@ export function calculateRecognitionRankings(
     const matchedType = recognitionTypes.find(
       r => r.id === recId || r.name.toLowerCase() === recId.toLowerCase()
     );
-    const name = matchedType ? matchedType.name : getRecognitionName(recId);
+    const name = matchedType?.name ?? getRecognitionName(recId);
     const percentage = totalMembers > 0 ? Number(((count / totalMembers) * 100).toFixed(1)) : 0;
-    const badgeStyle = getRecognitionBadgeStyle(name || recId);
+    const badgeStyle = getRecognitionBadgeStyle(name ?? recId);
 
     results.push({
       id: recId,
@@ -701,12 +787,12 @@ export function calculateGeographicBreakdown(
 
   members.forEach(m => {
     if (m.batch_id && batchMap.has(m.batch_id)) {
-      const b = batchMap.get(m.batch_id)!;
-      if (b.region_id) {
-        regionCounts.set(b.region_id, (regionCounts.get(b.region_id) || 0) + 1);
+      const b = batchMap.get(m.batch_id);
+      if (b?.region_id) {
+        regionCounts.set(b.region_id, (regionCounts.get(b.region_id) ?? 0) + 1);
       }
-      if (b.district_id) {
-        districtCounts.set(b.district_id, (districtCounts.get(b.district_id) || 0) + 1);
+      if (b?.district_id) {
+        districtCounts.set(b.district_id, (districtCounts.get(b.district_id) ?? 0) + 1);
       }
     }
   });
@@ -717,7 +803,7 @@ export function calculateGeographicBreakdown(
   const regionsResult: GeographicItem[] = [];
   regionCounts.forEach((count, regionId) => {
     const regionObj = regions.find(r => r.id === regionId);
-    const name = regionObj ? regionObj.name : `Región ${regionId}`;
+    const name = regionObj?.name ?? `Región ${regionId}`;
     const percentage = totalMembers > 0 ? Number(((count / totalMembers) * 100).toFixed(1)) : 0;
     regionsResult.push({ id: regionId, name, count, percentage });
   });
@@ -727,8 +813,8 @@ export function calculateGeographicBreakdown(
   districtCounts.forEach((count, districtId) => {
     const districtObj = districts.find(d => d.id === districtId);
     const regionObj = districtObj ? regions.find(r => r.id === districtObj.region_id) : undefined;
-    const name = districtObj ? districtObj.name : `Distrito ${districtId}`;
-    const parentName = regionObj ? regionObj.name : undefined;
+    const name = districtObj?.name ?? `Distrito ${districtId}`;
+    const parentName = regionObj?.name ?? undefined;
     const percentage = totalMembers > 0 ? Number(((count / totalMembers) * 100).toFixed(1)) : 0;
     districtsResult.push({ id: districtId, name, count, percentage, parentName });
   });
@@ -783,12 +869,13 @@ export function calculateUnitDistribution(members: ScoutMember[]): UnitDistribut
   unitOrder.forEach(u => counts.set(u, 0));
 
   members.forEach(m => {
-    const u: ScoutUnit = m.unit || (m.member_type === 'young' ? 'tropa' : 'institucional');
-    counts.set(u, (counts.get(u) || 0) + 1);
+    const fallbackUnit: ScoutUnit = m.member_type === 'young' ? 'tropa' : 'institucional';
+    const u: ScoutUnit = m.unit ?? fallbackUnit;
+    counts.set(u, (counts.get(u) ?? 0) + 1);
   });
 
   const items: UnitDistributionItem[] = unitOrder.map(u => {
-    const count = counts.get(u) || 0;
+    const count = counts.get(u) ?? 0;
     const percentage = totalCount > 0 ? Number(((count / totalCount) * 100).toFixed(1)) : 0;
     return {
       unit: u,

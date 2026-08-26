@@ -387,16 +387,16 @@ describe('statsCalculators', () => {
     ];
 
     it('calculates YoY comparison metrics accurately when previous year data exists', () => {
-      const yoy = calculateYoYComparison(
+      const yoy = calculateYoYComparison({
         currentMembers,
         previousMembers,
         currentBatches,
         previousBatches,
-        mockRegions,
-        mockDistricts,
-        2025,
-        2024
-      );
+        regions: mockRegions,
+        districts: mockDistricts,
+        currentYear: 2025,
+        previousYear: 2024
+      });
 
       expect(yoy.hasPreviousYearData).toBe(true);
       expect(yoy.currentYear).toBe(2025);
@@ -441,18 +441,17 @@ describe('statsCalculators', () => {
       expect(feb?.previousCount).toBe(2);
     });
 
-
     it('sets hasPreviousYearData to false when previous year members is empty', () => {
-      const yoy = calculateYoYComparison(
+      const yoy = calculateYoYComparison({
         currentMembers,
-        [],
+        previousMembers: [],
         currentBatches,
-        [],
-        mockRegions,
-        mockDistricts,
-        2025,
-        2024
-      );
+        previousBatches: [],
+        regions: mockRegions,
+        districts: mockDistricts,
+        currentYear: 2025,
+        previousYear: 2024
+      });
 
       expect(yoy.hasPreviousYearData).toBe(false);
       expect(yoy.totalDiplomas.previous).toBe(0);

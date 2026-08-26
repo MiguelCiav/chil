@@ -1,6 +1,6 @@
 import React from 'react';
 import { Compass } from 'lucide-react';
-import { UnitDistributionData, YoYComparisonData } from '../../types';
+import { UnitDistributionData, UnitDistributionItem, YoYComparisonData, YoYUnitItem } from '../../types';
 import { YoYVariationBadge } from '../YoYVariationBadge';
 
 interface UnitDistributionCardProps {
@@ -17,14 +17,144 @@ const UNIT_BAR_COLORS: Record<string, string> = {
   no_scout: 'bg-slate-400'
 };
 
+function computeUnitMaxCount(
+  items: UnitDistributionItem[],
+  yoy?: YoYComparisonData,
+  hasYoY: boolean = false
+): number {
+  if (hasYoY && yoy) {
+    return Math.max(...yoy.units.map(i => i.currentCount), 1);
+  }
+  if (items.length > 0) {
+    return Math.max(...items.map(i => i.count), 1);
+  }
+  return 1;
+}
+
+interface UnitTableYoYProps {
+  units: YoYUnitItem[];
+  currentYear: number;
+  previousYear: number;
+  maxCount: number;
+}
+
+const UnitTableYoY: React.FC<UnitTableYoYProps> = ({
+  units,
+  currentYear,
+  previousYear,
+  maxCount
+}) => (
+  <div className="overflow-x-auto">
+    <table className="w-full text-left border-collapse font-sans text-xs">
+      <thead>
+        <tr className="border-b border-gray-200 bg-[#faf8f5]">
+          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
+          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+            Total ({currentYear})
+          </th>
+          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+            Año Anterior ({previousYear})
+          </th>
+          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+            Variación
+          </th>
+          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+            % del Total
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {units.map(item => {
+          const barColor = UNIT_BAR_COLORS[item.unit] ?? 'bg-primary';
+          return (
+            <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
+              <td className="px-4 py-2.5 font-semibold text-neutral">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
+                  {item.label}
+                </span>
+              </td>
+              <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                {item.currentCount}
+              </td>
+              <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
+                {item.previousCount}
+              </td>
+              <td className="px-4 py-2.5 text-right">
+                <YoYVariationBadge diff={item.diff} percentChange={item.percentChange} />
+              </td>
+              <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                <div className="flex items-center justify-end gap-2">
+                  <span>{item.currentPercentage}%</span>
+                  <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                    <div
+                      className={`${barColor} h-full rounded-full`}
+                      style={{ width: `${(item.currentCount / maxCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+);
+
+interface UnitTableStandardProps {
+  items: UnitDistributionItem[];
+  maxCount: number;
+}
+
+const UnitTableStandard: React.FC<UnitTableStandardProps> = ({
+  items,
+  maxCount
+}) => (
+  <div className="overflow-x-auto">
+    <table className="w-full text-left border-collapse font-sans text-xs">
+      <thead>
+        <tr className="border-b border-gray-200 bg-[#faf8f5]">
+          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
+          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
+          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {items.map(item => {
+          const barColor = UNIT_BAR_COLORS[item.unit] ?? 'bg-primary';
+          return (
+            <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
+              <td className="px-4 py-2.5 font-semibold text-neutral">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
+                  {item.label}
+                </span>
+              </td>
+              <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                {item.count}
+              </td>
+              <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                <div className="flex items-center justify-end gap-2">
+                  <span>{item.percentage}%</span>
+                  <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                    <div
+                      className={`${barColor} h-full rounded-full`}
+                      style={{ width: `${(item.count / maxCount) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+);
+
 export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data, yoy }) => {
   const { items, totalCount } = data;
-  const hasYoY = Boolean(yoy && yoy.hasPreviousYearData);
-  const maxCount = hasYoY && yoy
-    ? Math.max(...yoy.units.map(i => i.currentCount), 1)
-    : items.length > 0
-    ? Math.max(...items.map(i => i.count), 1)
-    : 1;
+  const hasYoY = Boolean(yoy?.hasPreviousYearData);
+  const maxCount = computeUnitMaxCount(items, yoy, hasYoY);
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
@@ -57,7 +187,7 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
       <div className="w-full bg-gray-100 h-3.5 rounded-full overflow-hidden flex shadow-inner">
         {items.map(item => {
           if (item.count === 0) return null;
-          const barColor = UNIT_BAR_COLORS[item.unit] || 'bg-primary';
+          const barColor = UNIT_BAR_COLORS[item.unit] ?? 'bg-primary';
           return (
             <div
               key={item.unit}
@@ -71,101 +201,17 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
 
       {/* Unit Table */}
       {hasYoY && yoy ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
-                  Total ({yoy.currentYear})
-                </th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
-                  Año Anterior ({yoy.previousYear})
-                </th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
-                  Variación
-                </th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
-                  % del Total
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {yoy.units.map(item => {
-                const barColor = UNIT_BAR_COLORS[item.unit] || 'bg-primary';
-                return (
-                  <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-4 py-2.5 font-semibold text-neutral">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
-                        {item.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 font-bold text-neutral text-right">
-                      {item.currentCount}
-                    </td>
-                    <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
-                      {item.previousCount}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <YoYVariationBadge diff={item.diff} percentChange={item.percentChange} />
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
-                      <div className="flex items-center justify-end gap-2">
-                        <span>{item.currentPercentage}%</span>
-                        <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
-                          <div
-                            className={`${barColor} h-full rounded-full`}
-                            style={{ width: `${(item.currentCount / maxCount) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <UnitTableYoY
+          units={yoy.units}
+          currentYear={yoy.currentYear}
+          previousYear={yoy.previousYear}
+          maxCount={maxCount}
+        />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {items.map(item => {
-                const barColor = UNIT_BAR_COLORS[item.unit] || 'bg-primary';
-                return (
-                  <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-4 py-2.5 font-semibold text-neutral">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
-                        {item.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 font-bold text-neutral text-right">
-                      {item.count}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
-                      <div className="flex items-center justify-end gap-2">
-                        <span>{item.percentage}%</span>
-                        <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
-                          <div
-                            className={`${barColor} h-full rounded-full`}
-                            style={{ width: `${(item.count / maxCount) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <UnitTableStandard
+          items={items}
+          maxCount={maxCount}
+        />
       )}
     </div>
   );

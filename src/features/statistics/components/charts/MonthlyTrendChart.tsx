@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
-import { MonthlyTrendData, YoYComparisonData } from '../../types';
+import { MonthlyTrendData, YoYComparisonData, YoYMonthlyItem } from '../../types';
 import { YoYVariationBadge } from '../YoYVariationBadge';
 
 interface MonthlyTrendChartProps {
@@ -9,16 +9,486 @@ interface MonthlyTrendChartProps {
   yoy?: YoYComparisonData;
 }
 
+interface TrendBarMetrics {
+  xCenter: number;
+  slotX: number;
+  slotWidth: number;
+  singleBarWidth: number;
+  dualBarWidth: number;
+  xBarCurr: number;
+  xBarPrev: number;
+  xBarSingle: number;
+  yBarCurr: number;
+  yBarPrev: number;
+  yBarSingle: number;
+  currentBarH: number;
+  prevBarH: number;
+  singleBarH: number;
+}
+
+function calculateTrendBarMetrics(
+  idx: number,
+  slotWidth: number,
+  chartHeight: number,
+  paddingLeft: number,
+  paddingTop: number,
+  maxVal: number,
+  currentCount: number,
+  previousCount: number = 0
+): TrendBarMetrics {
+  const slotX = paddingLeft + idx * slotWidth;
+  const xCenter = slotX + slotWidth / 2;
+  const singleBarWidth = Math.max(slotWidth * 0.55, 14);
+  const dualBarWidth = Math.max((slotWidth - 8) / 2, 7);
+
+  const currentBarH = maxVal > 0 ? (currentCount / maxVal) * chartHeight : 0;
+  const prevBarH = maxVal > 0 ? (previousCount / maxVal) * chartHeight : 0;
+  const singleBarH = maxVal > 0 ? (currentCount / maxVal) * chartHeight : 0;
+
+  const xBarCurr = xCenter - dualBarWidth - 1.5;
+  const xBarPrev = xCenter + 1.5;
+  const xBarSingle = xCenter - singleBarWidth / 2;
+
+  const yBarCurr = paddingTop + chartHeight - currentBarH;
+  const yBarPrev = paddingTop + chartHeight - prevBarH;
+  const yBarSingle = paddingTop + chartHeight - singleBarH;
+
+  return {
+    xCenter,
+    slotX,
+    slotWidth,
+    singleBarWidth,
+    dualBarWidth,
+    xBarCurr,
+    xBarPrev,
+    xBarSingle,
+    yBarCurr,
+    yBarPrev,
+    yBarSingle,
+    currentBarH,
+    prevBarH,
+    singleBarH
+  };
+}
+
+function computeMaxMonthlyValue(data: MonthlyTrendData[], yoy?: YoYComparisonData, hasYoY: boolean = false): number {
+  if (hasYoY && yoy) {
+    return Math.max(...yoy.monthly.map(m => Math.max(m.currentCount, m.previousCount)), 5);
+  }
+  return Math.max(...data.map(d => d.totalCount), 5);
+}
+
+interface MonthlySummaryTableProps {
+  data: MonthlyTrendData[];
+  yoy?: YoYComparisonData;
+  hasYoY: boolean;
+  totalPeriodDiplomas: number;
+}
+
+const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
+  data,
+  yoy,
+  hasYoY,
+  totalPeriodDiplomas
+}) => {
+  if (hasYoY && yoy) {
+    return (
+      <table className="w-full text-left border-collapse font-sans text-xs">
+        <thead>
+          <tr className="border-b border-gray-200 bg-[#faf8f5]">
+            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
+            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
+              Total ({yoy.currentYear})
+            </th>
+            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
+              Año Anterior ({yoy.previousYear})
+            </th>
+            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
+              Variación
+            </th>
+            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
+              % del Total
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {yoy.monthly.map((m) => {
+            const totalCurr = yoy.totalDiplomas.current || 1;
+            const pct = yoy.totalDiplomas.current > 0 ? Number(((m.currentCount / totalCurr) * 100).toFixed(1)) : 0;
+            return (
+              <tr key={m.label} className="hover:bg-gray-50/80 transition-colors">
+                <td className="px-3 py-1.5 font-semibold text-neutral">
+                  {m.label}
+                </td>
+                <td className="px-3 py-1.5 font-bold text-neutral text-right">
+                  {m.currentCount}
+                </td>
+                <td className="px-3 py-1.5 font-medium text-neutral/60 text-right">
+                  {m.previousCount}
+                </td>
+                <td className="px-3 py-1.5 text-right">
+                  <YoYVariationBadge diff={m.diff} percentChange={m.percentChange} />
+                </td>
+                <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
+                  {pct}%
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    );
+  }
+
+  return (
+    <table className="w-full text-left border-collapse font-sans text-xs">
+      <thead>
+        <tr className="border-b border-gray-200 bg-[#faf8f5]">
+          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
+          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">Reconocimientos Emitidos</th>
+          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {data.map((m) => {
+          const pct = totalPeriodDiplomas > 0 ? Number(((m.totalCount / totalPeriodDiplomas) * 100).toFixed(1)) : 0;
+          return (
+            <tr key={m.monthKey} className="hover:bg-gray-50/80 transition-colors">
+              <td className="px-3 py-1.5 font-semibold text-neutral">
+                {m.label}
+              </td>
+              <td className="px-3 py-1.5 font-bold text-neutral text-right">
+                {m.totalCount}
+              </td>
+              <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
+                {pct}%
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+};
+
+interface MonthlyTrendDualBarProps {
+  item: YoYMonthlyItem;
+  idx: number;
+  metrics: TrendBarMetrics;
+  displayYear: number;
+  prevYear: number;
+  isHovered: boolean;
+  paddingTop: number;
+  chartHeight: number;
+  svgHeight: number;
+  onHover: (idx: number | null) => void;
+}
+
+const MonthlyTrendDualBar: React.FC<MonthlyTrendDualBarProps> = ({
+  item,
+  idx,
+  metrics,
+  displayYear,
+  prevYear,
+  isHovered,
+  paddingTop,
+  chartHeight,
+  svgHeight,
+  onHover
+}) => {
+  const currentFill = isHovered ? '#0e7490' : '#0284c7';
+  const prevFill = isHovered ? '#94a3b8' : '#cbd5e1';
+  const labelFill = isHovered ? '#0f172a' : '#64748b';
+  const labelWeight = isHovered ? '700' : '600';
+  const textValueFill = isHovered ? '#0369a1' : '#64748b';
+
+  return (
+    <g
+      onMouseEnter={() => onHover(idx)}
+      onMouseLeave={() => onHover(null)}
+      className="cursor-pointer transition-all"
+      tabIndex={0}
+      role="graphics-symbol"
+      aria-label={`${item.label}: ${item.currentCount} (${displayYear}) vs ${item.previousCount} (${prevYear})`}
+    >
+      {/* Background hover column highlight */}
+      <rect
+        x={metrics.slotX + 1}
+        y={paddingTop}
+        width={metrics.slotWidth - 2}
+        height={chartHeight}
+        fill={isHovered ? '#f8fafc' : 'transparent'}
+        rx={6}
+      />
+
+      {/* Current year bar */}
+      <rect
+        x={metrics.xBarCurr}
+        y={paddingTop}
+        width={metrics.dualBarWidth}
+        height={chartHeight}
+        fill="#f1f5f9"
+        rx={3}
+      />
+      {item.currentCount > 0 && (
+        <rect
+          x={metrics.xBarCurr}
+          y={metrics.yBarCurr}
+          width={metrics.dualBarWidth}
+          height={metrics.currentBarH}
+          fill={currentFill}
+          rx={3}
+          className="transition-all duration-200"
+        />
+      )}
+
+      {/* Previous year bar */}
+      <rect
+        x={metrics.xBarPrev}
+        y={paddingTop}
+        width={metrics.dualBarWidth}
+        height={chartHeight}
+        fill="#f8fafc"
+        rx={3}
+      />
+      {item.previousCount > 0 && (
+        <rect
+          x={metrics.xBarPrev}
+          y={metrics.yBarPrev}
+          width={metrics.dualBarWidth}
+          height={metrics.prevBarH}
+          fill={prevFill}
+          rx={3}
+          className="transition-all duration-200"
+        />
+      )}
+
+      {/* Value above current bar */}
+      {item.currentCount > 0 && (
+        <text
+          x={metrics.xBarCurr + metrics.dualBarWidth / 2}
+          y={metrics.yBarCurr - 4}
+          textAnchor="middle"
+          fontSize="9"
+          fill={textValueFill}
+          fontWeight="700"
+          fontFamily="sans-serif"
+        >
+          {item.currentCount}
+        </text>
+      )}
+
+      {/* X-axis Month Label */}
+      <text
+        x={metrics.xCenter}
+        y={svgHeight - 10}
+        textAnchor="middle"
+        fontSize="11"
+        fill={labelFill}
+        fontWeight={labelWeight}
+        fontFamily="sans-serif"
+      >
+        {item.label}
+      </text>
+    </g>
+  );
+};
+
+interface MonthlyTrendSingleBarProps {
+  item: MonthlyTrendData;
+  idx: number;
+  metrics: TrendBarMetrics;
+  isHovered: boolean;
+  paddingTop: number;
+  chartHeight: number;
+  svgHeight: number;
+  onHover: (idx: number | null) => void;
+}
+
+const MonthlyTrendSingleBar: React.FC<MonthlyTrendSingleBarProps> = ({
+  item,
+  idx,
+  metrics,
+  isHovered,
+  paddingTop,
+  chartHeight,
+  svgHeight,
+  onHover
+}) => {
+  const currentFill = isHovered ? '#0e7490' : '#0284c7';
+  const labelFill = isHovered ? '#0f172a' : '#64748b';
+  const labelWeight = isHovered ? '700' : '600';
+  const textValueFill = isHovered ? '#0369a1' : '#64748b';
+
+  return (
+    <g
+      onMouseEnter={() => onHover(idx)}
+      onMouseLeave={() => onHover(null)}
+      className="cursor-pointer transition-all"
+      tabIndex={0}
+      role="graphics-symbol"
+      aria-label={`${item.label}: ${item.totalCount} reconocimientos`}
+    >
+      {/* Background hover column highlight */}
+      <rect
+        x={metrics.slotX + 2}
+        y={paddingTop}
+        width={metrics.slotWidth - 4}
+        height={chartHeight}
+        fill={isHovered ? '#f8fafc' : 'transparent'}
+        rx={6}
+      />
+
+      {/* Base track */}
+      <rect
+        x={metrics.xBarSingle}
+        y={paddingTop}
+        width={metrics.singleBarWidth}
+        height={chartHeight}
+        fill="#f1f5f9"
+        rx={4}
+      />
+
+      {/* Value bar */}
+      {item.totalCount > 0 && (
+        <rect
+          x={metrics.xBarSingle}
+          y={metrics.yBarSingle}
+          width={metrics.singleBarWidth}
+          height={metrics.singleBarH}
+          fill={currentFill}
+          rx={4}
+          className="transition-all duration-200"
+        />
+      )}
+
+      {/* Value on top of bar */}
+      {item.totalCount > 0 && (
+        <text
+          x={metrics.xCenter}
+          y={metrics.yBarSingle - 5}
+          textAnchor="middle"
+          fontSize="10"
+          fill={textValueFill}
+          fontWeight="700"
+          fontFamily="sans-serif"
+        >
+          {item.totalCount}
+        </text>
+      )}
+
+      {/* X-axis Month Label */}
+      <text
+        x={metrics.xCenter}
+        y={svgHeight - 10}
+        textAnchor="middle"
+        fontSize="11"
+        fill={labelFill}
+        fontWeight={labelWeight}
+        fontFamily="sans-serif"
+      >
+        {item.label}
+      </text>
+    </g>
+  );
+};
+
+interface MonthlyTrendTooltipProps {
+  hoveredIdx: number;
+  data: MonthlyTrendData[];
+  yoy?: YoYComparisonData;
+  hasYoY: boolean;
+  displayYear: number;
+  prevYear: number;
+}
+
+const MonthlyTrendTooltip: React.FC<MonthlyTrendTooltipProps> = ({
+  hoveredIdx,
+  data,
+  yoy,
+  hasYoY,
+  displayYear,
+  prevYear
+}) => {
+  if (hasYoY && yoy?.monthly[hoveredIdx]) {
+    const item = yoy.monthly[hoveredIdx];
+    const diffSign = item.diff >= 0 ? '+' : '';
+    const diffColorClass = item.diff >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold';
+    const pctSign = item.percentChange !== null && item.percentChange >= 0 ? '+' : '';
+    const pctStr = item.percentChange !== null ? ` (${pctSign}${item.percentChange}%)` : '';
+
+    return (
+      <div
+        className="absolute top-1 right-2 bg-slate-900 text-white text-xs rounded-xl px-3 py-2 shadow-lg pointer-events-none transition-opacity z-10 border border-slate-700"
+        style={{ minWidth: '140px' }}
+      >
+        <p className="font-bold text-sky-400 border-b border-slate-700 pb-1 mb-1">
+          {item.label} • Comparativa
+        </p>
+        <div className="space-y-0.5 text-[11px]">
+          <p className="flex justify-between gap-2">
+            <span className="text-sky-300">Año {displayYear}:</span>
+            <span className="font-bold">{item.currentCount}</span>
+          </p>
+          <p className="flex justify-between gap-2">
+            <span className="text-slate-400">Año {prevYear}:</span>
+            <span className="font-semibold">{item.previousCount}</span>
+          </p>
+          <p className="flex justify-between gap-2 pt-1 border-t border-slate-700/60">
+            <span className="text-slate-300">Variación:</span>
+            <span className={diffColorClass}>
+              {diffSign}{item.diff}{pctStr}
+            </span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const singleItem = data[hoveredIdx];
+  if (!singleItem) return null;
+
+  return (
+    <div
+      className="absolute top-1 right-2 bg-slate-900 text-white text-xs rounded-xl px-3 py-2 shadow-lg pointer-events-none transition-opacity z-10 border border-slate-700"
+      style={{ minWidth: '130px' }}
+    >
+      <p className="font-bold text-sky-400 border-b border-slate-700 pb-1 mb-1">
+        {singleItem.label} {displayYear}
+      </p>
+      <div className="space-y-0.5 text-[11px]">
+        <p className="flex justify-between gap-2">
+          <span className="text-slate-300">Total:</span>
+          <span className="font-bold">{singleItem.totalCount}</span>
+        </p>
+        <p className="flex justify-between gap-2">
+          <span className="text-emerald-400">Válidos:</span>
+          <span className="font-semibold">{singleItem.activeCount}</span>
+        </p>
+        <p className="flex justify-between gap-2">
+          <span className="text-purple-400">Excepcionales:</span>
+          <span className="font-semibold">{singleItem.exceptionalCount}</span>
+        </p>
+        {singleItem.pendingCount > 0 && (
+          <p className="flex justify-between gap-2">
+            <span className="text-red-400">Inválidos:</span>
+            <span className="font-semibold">{singleItem.pendingCount}</span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year, yoy }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
-  const hasYoY = Boolean(yoy && yoy.hasPreviousYearData);
-  const displayYear = yoy?.currentYear || year || (data[0]?.year ?? new Date().getFullYear());
-  const prevYear = yoy?.previousYear || displayYear - 1;
+  const hasYoY = Boolean(yoy?.hasPreviousYearData);
+  const fallbackYear = data[0]?.year ?? new Date().getFullYear();
+  const displayYear = yoy?.currentYear ?? year ?? fallbackYear;
+  const prevYear = yoy?.previousYear ?? displayYear - 1;
 
-  const maxVal = hasYoY && yoy
-    ? Math.max(...yoy.monthly.map(m => Math.max(m.currentCount, m.previousCount)), 5)
-    : Math.max(...data.map(d => d.totalCount), 5);
+  const maxVal = computeMaxMonthlyValue(data, yoy, hasYoY);
 
   const svgWidth = 600;
   const svgHeight = 220;
@@ -32,13 +502,14 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
 
   const monthCount = hasYoY && yoy ? yoy.monthly.length : data.length;
   const slotWidth = chartWidth / (monthCount || 12);
-  const singleBarWidth = Math.max(slotWidth * 0.55, 14);
-  const dualBarWidth = Math.max((slotWidth - 8) / 2, 7);
 
   // Y-axis tick values
   const yTicks = [0, Math.round(maxVal / 2), maxVal];
-
   const totalPeriodDiplomas = data.reduce((acc, curr) => acc + curr.totalCount, 0);
+
+  const chartAriaLabel = hasYoY && yoy
+    ? `Gráfico de tendencia mensual para el año ${displayYear} y comparativa con ${prevYear}`
+    : `Gráfico de tendencia mensual para el año ${displayYear}`;
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-full font-sans">
@@ -88,80 +559,12 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
 
       {/* Monthly Summary Table */}
       <div className="overflow-x-auto mb-6">
-        {hasYoY && yoy ? (
-          <table className="w-full text-left border-collapse font-sans text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
-                <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
-                  Total ({yoy.currentYear})
-                </th>
-                <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
-                  Año Anterior ({yoy.previousYear})
-                </th>
-                <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
-                  Variación
-                </th>
-                <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
-                  % del Total
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {yoy.monthly.map((m) => {
-                const totalCurr = yoy.totalDiplomas.current || 1;
-                const pct = yoy.totalDiplomas.current > 0 ? Number(((m.currentCount / totalCurr) * 100).toFixed(1)) : 0;
-                return (
-                  <tr key={m.label} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-3 py-1.5 font-semibold text-neutral">
-                      {m.label}
-                    </td>
-                    <td className="px-3 py-1.5 font-bold text-neutral text-right">
-                      {m.currentCount}
-                    </td>
-                    <td className="px-3 py-1.5 font-medium text-neutral/60 text-right">
-                      {m.previousCount}
-                    </td>
-                    <td className="px-3 py-1.5 text-right">
-                      <YoYVariationBadge diff={m.diff} percentChange={m.percentChange} />
-                    </td>
-                    <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
-                      {pct}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        ) : (
-          <table className="w-full text-left border-collapse font-sans text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
-                <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">Reconocimientos Emitidos</th>
-                <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {data.map((m) => {
-                const pct = totalPeriodDiplomas > 0 ? Number(((m.totalCount / totalPeriodDiplomas) * 100).toFixed(1)) : 0;
-                return (
-                  <tr key={m.monthKey} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-3 py-1.5 font-semibold text-neutral">
-                      {m.label}
-                    </td>
-                    <td className="px-3 py-1.5 font-bold text-neutral text-right">
-                      {m.totalCount}
-                    </td>
-                    <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
-                      {pct}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+        <MonthlySummaryTable
+          data={data}
+          yoy={yoy}
+          hasYoY={hasYoY}
+          totalPeriodDiplomas={totalPeriodDiplomas}
+        />
       </div>
 
       {/* Interactive SVG Chart Directly Below */}
@@ -170,7 +573,7 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           className="w-full h-auto max-h-[240px] select-none"
           role="img"
-          aria-label={`Gráfico de tendencia mensual para el año ${displayYear}${hasYoY && yoy ? ` y comparativa con ${prevYear}` : ''}`}
+          aria-label={chartAriaLabel}
         >
           {/* Chart Legend (Top Right) */}
           {hasYoY && yoy && (
@@ -218,190 +621,55 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
           {/* Dual or Single Month Bars */}
           {hasYoY && yoy ? (
             yoy.monthly.map((item, idx) => {
-              const currentBarH = (item.currentCount / maxVal) * chartHeight;
-              const prevBarH = (item.previousCount / maxVal) * chartHeight;
-
-              const slotX = paddingLeft + idx * slotWidth;
-              const xCenter = slotX + slotWidth / 2;
-
-              const xBarCurr = xCenter - dualBarWidth - 1.5;
-              const xBarPrev = xCenter + 1.5;
-
-              const yBarCurr = paddingTop + chartHeight - currentBarH;
-              const yBarPrev = paddingTop + chartHeight - prevBarH;
-              const isHovered = hoveredIdx === idx;
-
+              const metrics = calculateTrendBarMetrics(
+                idx,
+                slotWidth,
+                chartHeight,
+                paddingLeft,
+                paddingTop,
+                maxVal,
+                item.currentCount,
+                item.previousCount
+              );
               return (
-                <g
+                <MonthlyTrendDualBar
                   key={item.label}
-                  onMouseEnter={() => setHoveredIdx(idx)}
-                  onMouseLeave={() => setHoveredIdx(null)}
-                  className="cursor-pointer transition-all"
-                  tabIndex={0}
-                  role="graphics-symbol"
-                  aria-label={`${item.label}: ${item.currentCount} (${displayYear}) vs ${item.previousCount} (${prevYear})`}
-                >
-                  {/* Background hover column highlight */}
-                  <rect
-                    x={slotX + 1}
-                    y={paddingTop}
-                    width={slotWidth - 2}
-                    height={chartHeight}
-                    fill={isHovered ? '#f8fafc' : 'transparent'}
-                    rx={6}
-                  />
-
-                  {/* Current year bar */}
-                  <rect
-                    x={xBarCurr}
-                    y={paddingTop}
-                    width={dualBarWidth}
-                    height={chartHeight}
-                    fill="#f1f5f9"
-                    rx={3}
-                  />
-                  {item.currentCount > 0 && (
-                    <rect
-                      x={xBarCurr}
-                      y={yBarCurr}
-                      width={dualBarWidth}
-                      height={currentBarH}
-                      fill={isHovered ? '#0e7490' : '#0284c7'}
-                      rx={3}
-                      className="transition-all duration-200"
-                    />
-                  )}
-
-                  {/* Previous year bar */}
-                  <rect
-                    x={xBarPrev}
-                    y={paddingTop}
-                    width={dualBarWidth}
-                    height={chartHeight}
-                    fill="#f8fafc"
-                    rx={3}
-                  />
-                  {item.previousCount > 0 && (
-                    <rect
-                      x={xBarPrev}
-                      y={yBarPrev}
-                      width={dualBarWidth}
-                      height={prevBarH}
-                      fill={isHovered ? '#94a3b8' : '#cbd5e1'}
-                      rx={3}
-                      className="transition-all duration-200"
-                    />
-                  )}
-
-                  {/* Value above current bar */}
-                  {item.currentCount > 0 && (
-                    <text
-                      x={xBarCurr + dualBarWidth / 2}
-                      y={yBarCurr - 4}
-                      textAnchor="middle"
-                      fontSize="9"
-                      fill={isHovered ? '#0369a1' : '#64748b'}
-                      fontWeight="700"
-                      fontFamily="sans-serif"
-                    >
-                      {item.currentCount}
-                    </text>
-                  )}
-
-                  {/* X-axis Month Label */}
-                  <text
-                    x={xCenter}
-                    y={svgHeight - 10}
-                    textAnchor="middle"
-                    fontSize="11"
-                    fill={isHovered ? '#0f172a' : '#64748b'}
-                    fontWeight={isHovered ? '700' : '600'}
-                    fontFamily="sans-serif"
-                  >
-                    {item.label}
-                  </text>
-                </g>
+                  item={item}
+                  idx={idx}
+                  metrics={metrics}
+                  displayYear={displayYear}
+                  prevYear={prevYear}
+                  isHovered={hoveredIdx === idx}
+                  paddingTop={paddingTop}
+                  chartHeight={chartHeight}
+                  svgHeight={svgHeight}
+                  onHover={setHoveredIdx}
+                />
               );
             })
           ) : (
             data.map((item, idx) => {
-              const barHeight = (item.totalCount / maxVal) * chartHeight;
-              const xCenter = paddingLeft + idx * slotWidth + slotWidth / 2;
-              const xBar = xCenter - singleBarWidth / 2;
-              const yBar = paddingTop + chartHeight - barHeight;
-              const isHovered = hoveredIdx === idx;
-
+              const metrics = calculateTrendBarMetrics(
+                idx,
+                slotWidth,
+                chartHeight,
+                paddingLeft,
+                paddingTop,
+                maxVal,
+                item.totalCount
+              );
               return (
-                <g
+                <MonthlyTrendSingleBar
                   key={item.monthKey}
-                  onMouseEnter={() => setHoveredIdx(idx)}
-                  onMouseLeave={() => setHoveredIdx(null)}
-                  className="cursor-pointer transition-all"
-                  tabIndex={0}
-                  role="graphics-symbol"
-                  aria-label={`${item.label}: ${item.totalCount} reconocimientos`}
-                >
-                  {/* Background hover column highlight */}
-                  <rect
-                    x={paddingLeft + idx * slotWidth + 2}
-                    y={paddingTop}
-                    width={slotWidth - 4}
-                    height={chartHeight}
-                    fill={isHovered ? '#f8fafc' : 'transparent'}
-                    rx={6}
-                  />
-
-                  {/* Base track (subtle background for zero or partial bars) */}
-                  <rect
-                    x={xBar}
-                    y={paddingTop}
-                    width={singleBarWidth}
-                    height={chartHeight}
-                    fill="#f1f5f9"
-                    rx={4}
-                  />
-
-                  {/* Value bar */}
-                  {item.totalCount > 0 && (
-                    <rect
-                      x={xBar}
-                      y={yBar}
-                      width={singleBarWidth}
-                      height={barHeight}
-                      fill={isHovered ? '#0e7490' : '#0284c7'}
-                      rx={4}
-                      className="transition-all duration-200"
-                    />
-                  )}
-
-                  {/* Value on top of bar when hovered or non-zero */}
-                  {item.totalCount > 0 && (
-                    <text
-                      x={xCenter}
-                      y={yBar - 5}
-                      textAnchor="middle"
-                      fontSize="10"
-                      fill={isHovered ? '#0369a1' : '#64748b'}
-                      fontWeight="700"
-                      fontFamily="sans-serif"
-                    >
-                      {item.totalCount}
-                    </text>
-                  )}
-
-                  {/* X-axis Month Label */}
-                  <text
-                    x={xCenter}
-                    y={svgHeight - 10}
-                    textAnchor="middle"
-                    fontSize="11"
-                    fill={isHovered ? '#0f172a' : '#64748b'}
-                    fontWeight={isHovered ? '700' : '600'}
-                    fontFamily="sans-serif"
-                  >
-                    {item.label}
-                  </text>
-                </g>
+                  item={item}
+                  idx={idx}
+                  metrics={metrics}
+                  isHovered={hoveredIdx === idx}
+                  paddingTop={paddingTop}
+                  chartHeight={chartHeight}
+                  svgHeight={svgHeight}
+                  onHover={setHoveredIdx}
+                />
               );
             })
           )}
@@ -409,62 +677,14 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
 
         {/* Hover Tooltip Overlay */}
         {hoveredIdx !== null && (
-          hasYoY && yoy && yoy.monthly[hoveredIdx] ? (
-            <div
-              className="absolute top-1 right-2 bg-slate-900 text-white text-xs rounded-xl px-3 py-2 shadow-lg pointer-events-none transition-opacity z-10 border border-slate-700"
-              style={{ minWidth: '140px' }}
-            >
-              <p className="font-bold text-sky-400 border-b border-slate-700 pb-1 mb-1">
-                {yoy.monthly[hoveredIdx].label} • Comparativa
-              </p>
-              <div className="space-y-0.5 text-[11px]">
-                <p className="flex justify-between gap-2">
-                  <span className="text-sky-300">Año {displayYear}:</span>
-                  <span className="font-bold">{yoy.monthly[hoveredIdx].currentCount}</span>
-                </p>
-                <p className="flex justify-between gap-2">
-                  <span className="text-slate-400">Año {prevYear}:</span>
-                  <span className="font-semibold">{yoy.monthly[hoveredIdx].previousCount}</span>
-                </p>
-                <p className="flex justify-between gap-2 pt-1 border-t border-slate-700/60">
-                  <span className="text-slate-300">Variación:</span>
-                  <span className={yoy.monthly[hoveredIdx].diff >= 0 ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                    {yoy.monthly[hoveredIdx].diff >= 0 ? '+' : ''}{yoy.monthly[hoveredIdx].diff}
-                    {yoy.monthly[hoveredIdx].percentChange !== null ? ` (${yoy.monthly[hoveredIdx].percentChange >= 0 ? '+' : ''}${yoy.monthly[hoveredIdx].percentChange}%)` : ''}
-                  </span>
-                </p>
-              </div>
-            </div>
-          ) : data[hoveredIdx] ? (
-            <div
-              className="absolute top-1 right-2 bg-slate-900 text-white text-xs rounded-xl px-3 py-2 shadow-lg pointer-events-none transition-opacity z-10 border border-slate-700"
-              style={{ minWidth: '130px' }}
-            >
-              <p className="font-bold text-sky-400 border-b border-slate-700 pb-1 mb-1">
-                {data[hoveredIdx].label} {displayYear}
-              </p>
-              <div className="space-y-0.5 text-[11px]">
-                <p className="flex justify-between gap-2">
-                  <span className="text-slate-300">Total:</span>
-                  <span className="font-bold">{data[hoveredIdx].totalCount}</span>
-                </p>
-                <p className="flex justify-between gap-2">
-                  <span className="text-emerald-400">Válidos:</span>
-                  <span className="font-semibold">{data[hoveredIdx].activeCount}</span>
-                </p>
-                <p className="flex justify-between gap-2">
-                  <span className="text-purple-400">Excepcionales:</span>
-                  <span className="font-semibold">{data[hoveredIdx].exceptionalCount}</span>
-                </p>
-                {data[hoveredIdx].pendingCount > 0 && (
-                  <p className="flex justify-between gap-2">
-                    <span className="text-red-400">Inválidos:</span>
-                    <span className="font-semibold">{data[hoveredIdx].pendingCount}</span>
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : null
+          <MonthlyTrendTooltip
+            hoveredIdx={hoveredIdx}
+            data={data}
+            yoy={yoy}
+            hasYoY={hasYoY}
+            displayYear={displayYear}
+            prevYear={prevYear}
+          />
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, ChevronDown, ChevronUp } from 'lucide-react';
-import { GeographicItem, YoYComparisonData } from '../../types';
+import { GeographicItem, YoYComparisonData, YoYDistrictItem } from '../../types';
 import { YoYVariationBadge } from '../YoYVariationBadge';
 
 interface DistrictSummaryTableProps {
@@ -8,20 +8,154 @@ interface DistrictSummaryTableProps {
   yoy?: YoYComparisonData;
 }
 
+function computeDistrictMaxCount(
+  districts: GeographicItem[],
+  yoy?: YoYComparisonData,
+  hasYoY: boolean = false
+): number {
+  if (hasYoY && yoy) {
+    return Math.max(...yoy.districts.map(d => d.currentCount), 1);
+  }
+  if (districts.length > 0) {
+    return Math.max(...districts.map(d => d.count), 1);
+  }
+  return 1;
+}
+
+interface DistrictTableYoYProps {
+  districts: YoYDistrictItem[];
+  currentYear: number;
+  previousYear: number;
+  maxCount: number;
+}
+
+const DistrictTableYoY: React.FC<DistrictTableYoYProps> = ({
+  districts,
+  currentYear,
+  previousYear,
+  maxCount
+}) => (
+  <div className="overflow-x-auto">
+    <table className="w-full text-left border-collapse font-sans">
+      <thead>
+        <tr className="bg-primary/10 border-b border-primary/20">
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Región</th>
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Distrito</th>
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
+            Total ({currentYear})
+          </th>
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
+            Año Anterior ({previousYear})
+          </th>
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
+            Variación
+          </th>
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
+            % del Total
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100 bg-white">
+        {districts.map((d, idx) => (
+          <tr key={d.id || d.name} className="hover:bg-primary/5 transition-colors bg-white">
+            <td className="px-6 py-4 text-sm text-neutral/70 font-medium whitespace-nowrap">
+              {d.parentName ?? '-'}
+            </td>
+            <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
+              <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
+              <span>{d.name}</span>
+            </td>
+            <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
+              {d.currentCount}
+            </td>
+            <td className="px-6 py-4 text-sm font-medium text-neutral/60 whitespace-nowrap text-right">
+              {d.previousCount}
+            </td>
+            <td className="px-6 py-4 text-sm whitespace-nowrap text-right">
+              <YoYVariationBadge diff={d.diff} percentChange={d.percentChange} />
+            </td>
+            <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
+              <div className="flex items-center justify-end gap-2">
+                <span>{d.currentPercentage}%</span>
+                <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                  <div
+                    className="bg-emerald-600 h-full rounded-full"
+                    style={{ width: `${(d.currentCount / maxCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+interface DistrictTableStandardProps {
+  districts: GeographicItem[];
+  maxCount: number;
+}
+
+const DistrictTableStandard: React.FC<DistrictTableStandardProps> = ({
+  districts,
+  maxCount
+}) => (
+  <div className="overflow-x-auto">
+    <table className="w-full text-left border-collapse font-sans">
+      <thead>
+        <tr className="bg-primary/10 border-b border-primary/20">
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Región</th>
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Distrito</th>
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">Total Reconocimientos</th>
+          <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">% del Total</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100 bg-white">
+        {districts.map((d, idx) => (
+          <tr key={d.id || d.name} className="hover:bg-primary/5 transition-colors bg-white">
+            <td className="px-6 py-4 text-sm text-neutral/70 font-medium whitespace-nowrap">
+              {d.parentName ?? '-'}
+            </td>
+            <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
+              <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
+              <span>{d.name}</span>
+            </td>
+            <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
+              {d.count}
+            </td>
+            <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
+              <div className="flex items-center justify-end gap-2">
+                <span>{d.percentage}%</span>
+                <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                  <div
+                    className="bg-emerald-600 h-full rounded-full"
+                    style={{ width: `${(d.count / maxCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
 export const DistrictSummaryTable: React.FC<DistrictSummaryTableProps> = ({ districts, yoy }) => {
   const [showAll, setShowAll] = useState(false);
 
-  const hasYoY = Boolean(yoy && yoy.hasPreviousYearData);
+  const hasYoY = Boolean(yoy?.hasPreviousYearData);
   const itemsCount = hasYoY && yoy ? yoy.districts.length : districts.length;
-  const maxCount = hasYoY && yoy
-    ? Math.max(...yoy.districts.map(d => d.currentCount), 1)
-    : districts.length > 0
-    ? Math.max(...districts.map(d => d.count), 1)
-    : 1;
+  const maxCount = computeDistrictMaxCount(districts, yoy, hasYoY);
 
-  const displayedDistricts = hasYoY && yoy
+  const displayedYoYDistricts = hasYoY && yoy
     ? (showAll ? yoy.districts : yoy.districts.slice(0, 5))
-    : (showAll ? districts : districts.slice(0, 5));
+    : [];
+
+  const displayedStandardDistricts = !hasYoY
+    ? (showAll ? districts : districts.slice(0, 5))
+    : [];
 
   return (
     <div className="bg-white border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
@@ -46,107 +180,23 @@ export const DistrictSummaryTable: React.FC<DistrictSummaryTableProps> = ({ dist
         </span>
       </div>
 
-      {/* Table */}
+      {/* Table Content */}
       {itemsCount === 0 ? (
         <div className="py-8 text-center text-neutral/50 text-xs">
           No hay registros disponibles por distrito para los filtros seleccionados.
         </div>
       ) : hasYoY && yoy ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans">
-            <thead>
-              <tr className="bg-primary/10 border-b border-primary/20">
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Región</th>
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Distrito</th>
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
-                  Total ({yoy.currentYear})
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
-                  Año Anterior ({yoy.previousYear})
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
-                  Variación
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
-                  % del Total
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {(displayedDistricts as typeof yoy.districts).map((d, idx) => (
-                <tr key={d.id || d.name} className="hover:bg-primary/5 transition-colors bg-white">
-                  <td className="px-6 py-4 text-sm text-neutral/70 font-medium whitespace-nowrap">
-                    {d.parentName || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
-                    <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
-                    <span>{d.name}</span>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
-                    {d.currentCount}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-neutral/60 whitespace-nowrap text-right">
-                    {d.previousCount}
-                  </td>
-                  <td className="px-6 py-4 text-sm whitespace-nowrap text-right">
-                    <YoYVariationBadge diff={d.diff} percentChange={d.percentChange} />
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <span>{d.currentPercentage}%</span>
-                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
-                        <div
-                          className="bg-emerald-600 h-full rounded-full"
-                          style={{ width: `${(d.currentCount / maxCount) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DistrictTableYoY
+          districts={displayedYoYDistricts}
+          currentYear={yoy.currentYear}
+          previousYear={yoy.previousYear}
+          maxCount={maxCount}
+        />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans">
-            <thead>
-              <tr className="bg-primary/10 border-b border-primary/20">
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Región</th>
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Distrito</th>
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">Total Reconocimientos</th>
-                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">% del Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {(displayedDistricts as GeographicItem[]).map((d, idx) => (
-                <tr key={d.id || d.name} className="hover:bg-primary/5 transition-colors bg-white">
-                  <td className="px-6 py-4 text-sm text-neutral/70 font-medium whitespace-nowrap">
-                    {d.parentName || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
-                    <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
-                    <span>{d.name}</span>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
-                    {d.count}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <span>{d.percentage}%</span>
-                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
-                        <div
-                          className="bg-emerald-600 h-full rounded-full"
-                          style={{ width: `${(d.count / maxCount) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DistrictTableStandard
+          districts={displayedStandardDistricts}
+          maxCount={maxCount}
+        />
       )}
 
       {/* Show more toggle */}
