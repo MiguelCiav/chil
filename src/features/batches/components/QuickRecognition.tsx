@@ -5,12 +5,67 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Button } from '../../../components/Button';
+import { useAuth } from '../../auth';
+import {
+  useWalkthrough,
+  WalkthroughOverlay,
+  WalkthroughHelpButton,
+  WalkthroughStep
+} from '../../../components/walkthrough';
 import { useQuickRecognition } from '../hooks/useQuickRecognition';
 import { QuickRecognitionSuccess } from './quick/QuickRecognitionSuccess';
 import { RecognitionFieldsSection } from './quick/RecognitionFieldsSection';
 import { RecipientFieldsSection } from './quick/RecipientFieldsSection';
 
+const QUICK_RECOGNITION_TOUR_STEPS: WalkthroughStep[] = [
+  {
+    id: 'quick-rec-header',
+    targetSelector: '[data-walkthrough="quick-rec-header"]',
+    title: 'Emisión Rápida de Reconocimientos',
+    content: 'Este módulo te permite emitir y descargar un reconocimiento individual en un solo paso, ideal para homenajear a una persona o colaborador sin procesar lotes masivos.',
+    placement: 'bottom'
+  },
+  {
+    id: 'quick-rec-recognition-section',
+    targetSelector: '[data-walkthrough="quick-rec-recognition-section"]',
+    title: 'Tipo de Reconocimiento y Ubicación',
+    content: 'Selecciona el tipo de reconocimiento a otorgar y la estructura geográfica (Región, Distrito, Grupo). Si es para un colaborador No Scout, estos campos son opcionales.',
+    placement: 'bottom'
+  },
+  {
+    id: 'quick-rec-recipient-section',
+    targetSelector: '[data-walkthrough="quick-rec-recipient-section"]',
+    title: 'Datos del Homenajeado y Unidad',
+    content: "Selecciona la unidad scout (o No Scout). Para miembros scouts, ingresa la cédula y haz clic en 'Consultar' para autocompletar sus datos desde el sistema de registro.",
+    placement: 'bottom'
+  },
+  {
+    id: 'quick-rec-actions-section',
+    targetSelector: '[data-walkthrough="quick-rec-actions-section"]',
+    title: 'Código y Descarga Inmediata',
+    content: "El código oficial se genera automáticamente (puedes regenerarlo o editarlo). Al pulsar 'Emitir y Descargar Reconocimiento', el lote se crea en el sistema y el PDF se descarga al instante.",
+    placement: 'top'
+  }
+];
+
 export const QuickRecognition: React.FC = () => {
+  const { user } = useAuth();
+
+  const {
+    isOpen: isTourOpen,
+    currentStep,
+    currentStepIndex,
+    totalSteps,
+    targetRect,
+    startTour,
+    nextStep,
+    prevStep,
+    skipTour
+  } = useWalkthrough({
+    tourId: 'quick-recognition-tour',
+    steps: QUICK_RECOGNITION_TOUR_STEPS,
+    userId: user?.uid
+  });
   const {
     // Hierarchy & Types
     regions,
@@ -94,14 +149,17 @@ export const QuickRecognition: React.FC = () => {
         /* Form View */
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center gap-4">
+          <div data-walkthrough="quick-rec-header" className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center flex-shrink-0 shadow-sm">
               <Zap className="w-6 h-6 fill-amber-500/20" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
-                Emisión Rápida de Reconocimiento
-              </h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
+                  Emisión Rápida de Reconocimiento
+                </h1>
+                <WalkthroughHelpButton onClick={() => startTour()} />
+              </div>
               <p className="text-sm text-neutral/60 mt-0.5">
                 Emite y descarga un reconocimiento individual de forma inmediata en un solo paso.
               </p>
@@ -151,7 +209,7 @@ export const QuickRecognition: React.FC = () => {
             />
 
             {/* Form Submit Button */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div data-walkthrough="quick-rec-actions-section" className="flex items-center justify-end gap-3 pt-2">
               <Button
                 type="submit"
                 variant="primary"
@@ -166,6 +224,19 @@ export const QuickRecognition: React.FC = () => {
           </form>
         </div>
       )}
+
+      {/* Walkthrough Interactive Guide Overlay */}
+      <WalkthroughOverlay
+        isOpen={isTourOpen}
+        currentStep={currentStep}
+        currentStepIndex={currentStepIndex}
+        totalSteps={totalSteps}
+        targetRect={targetRect}
+        onNext={nextStep}
+        onPrev={prevStep}
+        onSkip={skipTour}
+        onClose={skipTour}
+      />
     </div>
   );
 };
