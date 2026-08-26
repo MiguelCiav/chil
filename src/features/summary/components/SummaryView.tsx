@@ -614,6 +614,7 @@ export const SummaryView: React.FC = () => {
           >
             <Download className="w-4 h-4" />
             <span>{hasActiveFilters ? 'Descargar filtrados' : 'Descargar Excel'}</span>
+
           </Button>
         </div>
       </div>

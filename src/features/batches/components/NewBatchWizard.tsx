@@ -703,6 +703,7 @@ export const NewBatchWizard: React.FC = () => {
                 />
 
                 <div data-walkthrough="wizard-navigation-buttons" className="flex justify-end pt-4 border-t border-primary/10">
+
                   <Button
                     type="submit"
                     variant="primary"
