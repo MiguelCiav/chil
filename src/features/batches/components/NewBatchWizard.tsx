@@ -42,10 +42,47 @@ import {
 import { inferBatchMemberUnits } from '../utils/unitInference';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { useAuth } from '../../auth';
+import {
+  useWalkthrough,
+  WalkthroughOverlay,
+  WalkthroughHelpButton,
+  WalkthroughStep
+} from '../../../components/walkthrough';
 
 import { Step1Org } from './wizard/Step1Org';
 import { Step2Verification } from './wizard/Step2Verification';
 import { Step3Review } from './wizard/Step3Review';
+
+const NEW_BATCH_WIZARD_TOUR_STEPS: WalkthroughStep[] = [
+  {
+    id: 'wizard-header',
+    targetSelector: '[data-walkthrough="wizard-header"]',
+    title: 'Asistente de Creación de Lote',
+    content: 'Crea y emite lotes masivos de reconocimientos scouts mediante un proceso guiado y seguro en 3 sencillos pasos.',
+    placement: 'bottom'
+  },
+  {
+    id: 'wizard-stepper',
+    targetSelector: '[data-walkthrough="wizard-stepper"]',
+    title: 'Progreso del Asistente',
+    content: 'El flujo se compone de: 1. Configuración del Lote, 2. Carga y Verificación en el Sistema de Registro, y 3. Revisión de Códigos y Emisión Final.',
+    placement: 'bottom'
+  },
+  {
+    id: 'wizard-step-container',
+    targetSelector: '[data-walkthrough="wizard-step-container"]',
+    title: 'Configuración y Alcance de Unidad',
+    content: 'Define el tipo de reconocimiento a otorgar, la estructura geográfica (Región, Distrito, Grupo) y el alcance (Lote Mixto o exclusivo de Manada, Tropa, Caminantes, Clan, Institucional o No Scout).',
+    placement: 'bottom'
+  },
+  {
+    id: 'wizard-navigation-buttons',
+    targetSelector: '[data-walkthrough="wizard-navigation-buttons"]',
+    title: 'Avance entre Pasos',
+    content: "Usa 'Siguiente paso' para avanzar. En el paso 2 pegarás las cédulas a verificar, y en el paso 3 el sistema inferirá las unidades por edad y generará los códigos oficiales.",
+    placement: 'top'
+  }
+];
 
 // Step 1 Validation Schema
 const step1Schema = z.object({
@@ -159,6 +196,22 @@ export const NewBatchWizard: React.FC = () => {
   const [savedMembers, setSavedMembers] = useState<ScoutMember[]>([]);
 
   const { user } = useAuth();
+
+  const {
+    isOpen: isTourOpen,
+    currentStep: tourCurrentStep,
+    currentStepIndex,
+    totalSteps,
+    targetRect,
+    startTour,
+    nextStep,
+    prevStep,
+    skipTour
+  } = useWalkthrough({
+    tourId: 'new-batch-wizard-tour',
+    steps: NEW_BATCH_WIZARD_TOUR_STEPS,
+    userId: user?.uid
+  });
 
   // --- Initialize Form (Step 1) ---
   const {
@@ -557,8 +610,26 @@ export const NewBatchWizard: React.FC = () => {
         </div>
       )}
 
+      {/* Header */}
+      <div data-walkthrough="wizard-header" className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+          <ClipboardList className="w-6 h-6" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
+              Asistente de Creación de Lote
+            </h1>
+            <WalkthroughHelpButton onClick={() => startTour()} />
+          </div>
+          <p className="text-sm text-neutral/60 mt-0.5">
+            Configura la estructura geográfica, verifica miembros y genera reconocimientos masivos.
+          </p>
+        </div>
+      </div>
+
       {/* Premium Step Wizard Navigation Bar */}
-      <div className="relative">
+      <div data-walkthrough="wizard-stepper" className="relative">
         {/* Background connector bar */}
         <div className="absolute top-6 left-6 right-6 h-1 bg-gray-200 -translate-y-1/2 rounded-full z-0" />
         <div
@@ -601,7 +672,7 @@ export const NewBatchWizard: React.FC = () => {
 
       {/* STEP 1: CONFIGURATION OF METADATA */}
       {currentStep === 1 && (
-        <div className="space-y-4">
+        <div data-walkthrough="wizard-step-container" className="space-y-4">
           <div className="bg-amber-50/80 border border-amber-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-neutral/80 flex items-center justify-between gap-2 shadow-xs">
             <div className="flex items-center gap-2">
               <span>💡</span>
@@ -634,7 +705,7 @@ export const NewBatchWizard: React.FC = () => {
                   recognitionTypes={recognitionTypes}
                 />
 
-                <div className="flex justify-end pt-4 border-t border-primary/10">
+                <div data-walkthrough="wizard-navigation-buttons" className="flex justify-end pt-4 border-t border-primary/10">
                   <Button
                     type="submit"
                     variant="primary"
@@ -741,6 +812,19 @@ export const NewBatchWizard: React.FC = () => {
           </Button>
         </ModalFooter>
       </Modal>
+
+      {/* Walkthrough Interactive Guide Overlay */}
+      <WalkthroughOverlay
+        isOpen={isTourOpen}
+        currentStep={tourCurrentStep}
+        currentStepIndex={currentStepIndex}
+        totalSteps={totalSteps}
+        targetRect={targetRect}
+        onNext={nextStep}
+        onPrev={prevStep}
+        onSkip={skipTour}
+        onClose={skipTour}
+      />
 
     </div>
   );

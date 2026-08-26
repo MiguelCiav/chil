@@ -132,7 +132,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div data-walkthrough="wizard-step-container" className="space-y-6">
       <Card className="shadow-lg border-primary/10">
         <CardHeader className="bg-primary/5 border-b border-primary/10">
           <div className="flex justify-between items-center flex-wrap gap-4">
@@ -368,7 +368,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             )}
           </div>
         </CardBody>
-        <CardFooter>
+        <CardFooter data-walkthrough="wizard-navigation-buttons">
           <Button
             variant="outline"
             onClick={onBack}

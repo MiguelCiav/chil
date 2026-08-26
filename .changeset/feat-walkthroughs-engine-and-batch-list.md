@@ -2,7 +2,7 @@
 "chil": minor
 ---
 
-Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Interactivas), Module 1 (Listado de Lotes), and Module 2 (Emisión Rápida) tour integration:
+Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Interactivas), Module 1 (Listado de Lotes), Module 2 (Emisión Rápida), and Module 3 (Nuevo Lote - Wizard de 3 Pasos) tour integration:
 - Core Walkthrough Engine (`src/components/walkthrough/`):
   - `types.ts`: Define `WalkthroughPlacement`, `WalkthroughStep`, and `TourConfig` types.
   - `useWalkthrough.ts`: Custom hook managing tour lifecycle (`isOpen`, `currentStepIndex`, `currentStep`, `targetRect`), first-time auto-start with per-user `localStorage` persistence (`chil_tour_${tourId}_${userId}`), dynamic DOM measurement & smooth viewport scrolling, window resize/scroll listeners, and keyboard navigation (`Escape`, `ArrowRight`, `Enter`, `ArrowLeft`).
@@ -18,5 +18,9 @@ Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Inte
   - Added `data-walkthrough` selectors for Header (`quick-rec-header`), Recognition fields section (`quick-rec-recognition-section`), Recipient fields section (`quick-rec-recipient-section`), and Action buttons (`quick-rec-actions-section`).
   - Implemented 4-step interactive guided tour (`QUICK_RECOGNITION_TOUR_STEPS`) covering single-step emission, recognition type/location, recipient data lookup, and immediate code generation/download.
   - Mounted `WalkthroughHelpButton` and `WalkthroughOverlay`.
+- Module 3 Integration: Nuevo Lote - Wizard de 3 Pasos (`src/features/batches/components/NewBatchWizard.tsx`):
+  - Added `data-walkthrough` selectors for Header (`wizard-header`), Stepper (`wizard-stepper`), Step container (`wizard-step-container`), and Navigation buttons (`wizard-navigation-buttons`).
+  - Implemented 4-step interactive guided tour (`NEW_BATCH_WIZARD_TOUR_STEPS`) explaining header objective, 3-step progress flow, metadata/unit scope configuration, and step navigation.
+  - Mounted `WalkthroughHelpButton` in the header and `WalkthroughOverlay`.
 - Test Suites & Quality Gate:
-  - Unit tests for `useWalkthrough`, `WalkthroughOverlay`, `WalkthroughDialog`, `WalkthroughHelpButton`, `BatchList`, and `QuickRecognition` integration.
+  - Unit tests for `useWalkthrough`, `WalkthroughOverlay`, `WalkthroughDialog`, `WalkthroughHelpButton`, `BatchList`, `QuickRecognition`, and `NewBatchWizard` integration.
