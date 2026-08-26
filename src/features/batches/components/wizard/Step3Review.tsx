@@ -132,7 +132,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div data-walkthrough="wizard-step-container" className="space-y-6">
       <Card className="shadow-lg border-primary/10">
         <CardHeader className="bg-primary/5 border-b border-primary/10">
           <div className="flex justify-between items-center flex-wrap gap-4">
@@ -171,9 +171,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   <Button
                     type="button"
                     variant="outline"
+                    size="sm"
                     onClick={handleRegenerateCodes}
                     icon={<RotateCcw size={14} />}
-                    className="text-xs font-semibold border-primary/20 hover:bg-primary/10 text-primary py-1.5 px-3"
+                    className="border-primary/20 hover:bg-primary/10 text-primary"
                   >
                     Regenerar códigos
                   </Button>
@@ -181,9 +182,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={handleClearCodes}
                   icon={<Eraser size={14} />}
-                  className="text-xs font-semibold border-gray-200 hover:bg-gray-100 text-neutral/70 py-1.5 px-3"
+                  className="border-gray-200 hover:bg-gray-100 text-neutral/70"
                 >
                   Limpiar códigos
                 </Button>
@@ -368,7 +370,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             )}
           </div>
         </CardBody>
-        <CardFooter>
+        <CardFooter data-walkthrough="wizard-navigation-buttons">
           <Button
             variant="outline"
             onClick={onBack}

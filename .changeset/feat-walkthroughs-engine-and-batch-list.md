@@ -1,0 +1,34 @@
+---
+"chil": minor
+---
+
+Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Interactivas), autoStart configuration, and comprehensive tours across all core modules:
+- Core Walkthrough Engine (`src/components/walkthrough/`):
+  - `types.ts`: Define `WalkthroughPlacement`, `WalkthroughStep`, and `TourConfig` types, including optional `autoStart?: boolean` (default `true`).
+  - `useWalkthrough.ts`: Custom hook managing tour lifecycle (`isOpen`, `currentStepIndex`, `currentStep`, `targetRect`), first-time auto-start with per-user `localStorage` persistence (`chil_tour_${tourId}_${userId}`), auto-start control (`autoStart !== false`), dynamic DOM measurement & smooth viewport scrolling, window resize/scroll listeners, and keyboard navigation (`Escape`, `ArrowRight`, `Enter`, `ArrowLeft`).
+  - `WalkthroughDialog.tsx`: Game-like narrative dialog card with step counter badges, narrative explanations, viewport boundary collision checks, and control buttons (`Omitir guía`, `◀ Anterior`, `Siguiente ▶` / `¡Entendido!`).
+  - `WalkthroughOverlay.tsx`: Full-screen SVG mask backdrop with spotlight rectangle cutout, glowing animated target highlight border, and dynamic SVG dashed connector line with target anchor dot.
+  - `WalkthroughHelpButton.tsx`: Accessible interactive `?` help button triggering module guides on demand.
+  - `index.ts`: Public module exports for components, hooks, and types.
+- Module 1 Integration: Listado de Lotes (`src/features/batches/components/BatchList.tsx`):
+  - Added `data-walkthrough` selectors for Header (`batch-list-header`), Actions (`batch-list-actions`), Filters (`batch-list-filters`), and Table (`batch-list-table`).
+  - Implemented 4-step interactive guided tour for batch management and recognition downloads with `autoStart: false`.
+  - Mounted `WalkthroughHelpButton` and `WalkthroughOverlay`.
+- Module 2 Integration: Emisión Rápida (`src/features/batches/components/QuickRecognition.tsx`):
+  - Added `data-walkthrough` selectors for Header (`quick-rec-header`), Recognition fields section (`quick-rec-recognition-section`), Recipient fields section (`quick-rec-recipient-section`), and Action buttons (`quick-rec-actions-section`).
+  - Implemented 4-step interactive guided tour (`QUICK_RECOGNITION_TOUR_STEPS`) covering single-step emission, recognition type/location, recipient data lookup, and immediate code generation/download with `autoStart: true`.
+  - Mounted `WalkthroughHelpButton` and `WalkthroughOverlay`.
+- Module 3 Integration: Nuevo Lote - Wizard de 3 Pasos (`src/features/batches/components/NewBatchWizard.tsx`):
+  - Added `data-walkthrough` selectors for Header (`wizard-header`), Stepper (`wizard-stepper`), Step container (`wizard-step-container`), and Navigation buttons (`wizard-navigation-buttons`).
+  - Implemented 4-step interactive guided tour (`NEW_BATCH_WIZARD_TOUR_STEPS`) explaining header objective, 3-step progress flow, metadata/unit scope configuration, and step navigation with `autoStart: true`.
+  - Mounted `WalkthroughHelpButton` in the header and `WalkthroughOverlay`.
+- Module 4 Integration: Detalle del Lote (`src/features/batches/components/BatchDetail.tsx`):
+  - Added `data-walkthrough` selectors for Header card (`batch-detail-header`), Summary cards (`batch-detail-summary-cards`), Members table (`batch-detail-members-table`), and Member row actions (`batch-detail-table-actions`).
+  - Implemented 4-step interactive guided tour (`BATCH_DETAIL_TOUR_STEPS`) explaining batch details & PDF actions, demographic/structure summaries & observations, member list & badges, and individual actions/exceptional cases with `autoStart: false`.
+  - Mounted `WalkthroughHelpButton` next to main title in header and `WalkthroughOverlay`.
+- Module 5 Integration: Diseñador Visual de Plantillas (`src/features/recognitions/components/CertificateDesigner.tsx`):
+  - Added `data-walkthrough` selectors for Header bar (`designer-header`), Canvas area (`designer-canvas`), Upload background button (`designer-background-btn`), Sidebar tabs/panel (`designer-sidebar`), Edit/Preview mode switcher (`designer-mode-switch`), and Save template button (`designer-save-btn`).
+  - Implemented comprehensive 6-step interactive guided tour (`CERTIFICATE_DESIGNER_TOUR_STEPS`) explaining template objectives, WYSIWYG 1:1 canvas, custom background graphic upload, dynamic variable palette and drag-and-drop, realistic scout test data preview mode, and secure cloud template persistence.
+  - Mounted `WalkthroughHelpButton` in `DesignerHeader.tsx` and `WalkthroughOverlay` in `CertificateDesigner.tsx`.
+- Test Suites & Quality Gate:
+  - Unit tests for `useWalkthrough` (including `autoStart: false` behavior), `WalkthroughOverlay`, `WalkthroughDialog`, `WalkthroughHelpButton`, `BatchList`, `QuickRecognition`, `NewBatchWizard`, `BatchDetail`, `DesignerHeader`, `DesignerCanvas`, `DesignerSidebar`, and `CertificateDesigner` walkthrough flow.

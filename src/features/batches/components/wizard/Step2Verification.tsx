@@ -188,7 +188,7 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
   );
 
   return (
-    <Card className="shadow-lg border-primary/10">
+    <Card data-walkthrough="wizard-step-container" className="shadow-lg border-primary/10">
       <CardHeader className="bg-primary/5 border-b border-primary/10">
         <div>
           <div className="text-lg font-bold text-neutral">Verificación de Cédulas</div>
@@ -241,7 +241,7 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
           </div>
         )}
       </CardBody>
-      <CardFooter>
+      <CardFooter data-walkthrough="wizard-navigation-buttons">
         <Button
           variant="outline"
           onClick={onBack}

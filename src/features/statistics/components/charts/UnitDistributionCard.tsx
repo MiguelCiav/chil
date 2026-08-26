@@ -1,9 +1,11 @@
 import React from 'react';
 import { Compass } from 'lucide-react';
-import { UnitDistributionData } from '../../types';
+import { UnitDistributionData, YoYComparisonData } from '../../types';
+import { YoYVariationBadge } from '../YoYVariationBadge';
 
 interface UnitDistributionCardProps {
   data: UnitDistributionData;
+  yoy?: YoYComparisonData;
 }
 
 const UNIT_BAR_COLORS: Record<string, string> = {
@@ -15,12 +17,17 @@ const UNIT_BAR_COLORS: Record<string, string> = {
   no_scout: 'bg-slate-400'
 };
 
-export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data }) => {
+export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data, yoy }) => {
   const { items, totalCount } = data;
-  const maxCount = items.length > 0 ? Math.max(...items.map(i => i.count), 1) : 1;
+  const hasYoY = Boolean(yoy && yoy.hasPreviousYearData);
+  const maxCount = hasYoY && yoy
+    ? Math.max(...yoy.units.map(i => i.currentCount), 1)
+    : items.length > 0
+    ? Math.max(...items.map(i => i.count), 1)
+    : 1;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -33,6 +40,7 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
             </h3>
             <p className="text-xs text-neutral/60">
               Distribución de reconocimientos según la unidad scout o emisión directa
+              {hasYoY && yoy && ` • Comparativa ${yoy.previousYear} vs ${yoy.currentYear}`}
             </p>
           </div>
         </div>
@@ -62,45 +70,104 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
       </div>
 
       {/* Unit Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse font-sans text-xs">
-          <thead>
-            <tr className="border-b border-gray-200 bg-[#faf8f5]">
-              <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
-              <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
-              <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {items.map(item => {
-              const barColor = UNIT_BAR_COLORS[item.unit] || 'bg-primary';
-              return (
-                <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="px-4 py-2.5 font-semibold text-neutral">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
-                      {item.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
-                    {item.count}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
-                    <div className="flex items-center justify-end gap-2">
-                      <span>{item.percentage}%</span>
-                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
-                        <div
-                          className={`${barColor} h-full rounded-full`}
-                          style={{ width: `${(item.count / maxCount) * 100}%` }}
-                        />
+      {hasYoY && yoy ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse font-sans text-xs">
+            <thead>
+              <tr className="border-b border-gray-200 bg-[#faf8f5]">
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                  Total ({yoy.currentYear})
+                </th>
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                  Año Anterior ({yoy.previousYear})
+                </th>
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                  Variación
+                </th>
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                  % del Total
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {yoy.units.map(item => {
+                const barColor = UNIT_BAR_COLORS[item.unit] || 'bg-primary';
+                return (
+                  <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-4 py-2.5 font-semibold text-neutral">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
+                        {item.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                      {item.currentCount}
+                    </td>
+                    <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
+                      {item.previousCount}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <YoYVariationBadge diff={item.diff} percentChange={item.percentChange} />
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                      <div className="flex items-center justify-end gap-2">
+                        <span>{item.currentPercentage}%</span>
+                        <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                          <div
+                            className={`${barColor} h-full rounded-full`}
+                            style={{ width: `${(item.currentCount / maxCount) * 100}%` }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse font-sans text-xs">
+            <thead>
+              <tr className="border-b border-gray-200 bg-[#faf8f5]">
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
+                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {items.map(item => {
+                const barColor = UNIT_BAR_COLORS[item.unit] || 'bg-primary';
+                return (
+                  <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-4 py-2.5 font-semibold text-neutral">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
+                        {item.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                      {item.count}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                      <div className="flex items-center justify-end gap-2">
+                        <span>{item.percentage}%</span>
+                        <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                          <div
+                            className={`${barColor} h-full rounded-full`}
+                            style={{ width: `${(item.count / maxCount) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
+

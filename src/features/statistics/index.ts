@@ -13,3 +13,5 @@ export * from './components/charts/StatusBreakdownCard';
 export * from './components/charts/RegionSummaryTable';
 export * from './components/charts/DistrictSummaryTable';
 export * from './components/charts/UnitDistributionCard';
+export * from './components/YoYVariationBadge';
+

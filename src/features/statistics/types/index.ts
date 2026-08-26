@@ -108,6 +108,77 @@ export interface UnitDistributionData {
   totalCount: number;
 }
 
+export interface YoYCountMetric {
+  current: number;
+  previous: number;
+  diff: number;
+  percentChange: number | null;
+}
+
+export interface YoYRegionItem {
+  id: number;
+  name: string;
+  currentCount: number;
+  previousCount: number;
+  diff: number;
+  percentChange: number | null;
+  currentPercentage: number;
+  previousPercentage: number;
+}
+
+export interface YoYDistrictItem {
+  id: number;
+  name: string;
+  parentName?: string;
+  currentCount: number;
+  previousCount: number;
+  diff: number;
+  percentChange: number | null;
+  currentPercentage: number;
+  previousPercentage: number;
+}
+
+export interface YoYUnitItem {
+  unit: ScoutUnit;
+  label: string;
+  badgeClass: string;
+  currentCount: number;
+  previousCount: number;
+  diff: number;
+  percentChange: number | null;
+  currentPercentage: number;
+  previousPercentage: number;
+}
+
+export interface YoYDemographics {
+  young: YoYCountMetric & { currentPercentage: number; previousPercentage: number };
+  adult: YoYCountMetric & { currentPercentage: number; previousPercentage: number };
+  total: YoYCountMetric;
+}
+
+export interface YoYMonthlyItem {
+  monthIndex: number;
+  label: string;
+  currentCount: number;
+  previousCount: number;
+  diff: number;
+  percentChange: number | null;
+}
+
+export interface YoYComparisonData {
+  hasPreviousYearData: boolean;
+  currentYear: number;
+  previousYear: number;
+  totalDiplomas: YoYCountMetric;
+  totalBatches: YoYCountMetric;
+  totalMembers: YoYCountMetric;
+  regions: YoYRegionItem[];
+  districts: YoYDistrictItem[];
+  units: YoYUnitItem[];
+  demographics: YoYDemographics;
+  monthly: YoYMonthlyItem[];
+}
+
 export interface StatisticsDataset {
   kpis: KpiMetrics;
   monthlyTrends: MonthlyTrendData[];
@@ -118,4 +189,6 @@ export interface StatisticsDataset {
   unitDistribution: UnitDistributionData;
   filteredMembersCount: number;
   filteredBatchesCount: number;
+  yoyComparison?: YoYComparisonData;
 }
+

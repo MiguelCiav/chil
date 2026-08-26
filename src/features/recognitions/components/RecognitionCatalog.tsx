@@ -216,7 +216,7 @@ export const RecognitionCatalog: React.FC = () => {
   const totalCount = recognitions.length;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 font-sans py-2">
+    <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Toast Notification */}
       {showToast && (
         <div
@@ -229,12 +229,12 @@ export const RecognitionCatalog: React.FC = () => {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Tipos de Reconocimiento
           </h1>
-          <p className="text-sm text-neutral/60 mt-1">
+          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
             Administre las condecoraciones, insignias y certificaciones scouts disponibles en el sistema.
           </p>
         </div>

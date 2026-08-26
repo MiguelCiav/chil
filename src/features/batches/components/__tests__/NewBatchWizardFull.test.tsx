@@ -554,4 +554,131 @@ describe('NewBatchWizard full flow', () => {
       expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
     });
   });
+
+  describe('Walkthrough Interactive Guide', () => {
+    it('renders help button and all data-walkthrough targets in the DOM', async () => {
+      const { container } = render(
+        <MemoryRouter>
+          <NewBatchWizard />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Asistente de Creación de Lote')).toBeInTheDocument();
+      });
+
+      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+      expect(helpBtn).toBeInTheDocument();
+
+      expect(container.querySelector('[data-walkthrough="wizard-header"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-walkthrough="wizard-stepper"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-walkthrough="wizard-step-container"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-walkthrough="wizard-navigation-buttons"]')).toBeInTheDocument();
+    });
+
+    it('starts and steps through the 4-step walkthrough tour upon clicking the help button', async () => {
+      render(
+        <MemoryRouter>
+          <NewBatchWizard />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Asistente de Creación de Lote')).toBeInTheDocument();
+      });
+
+      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+      fireEvent.click(helpBtn);
+
+      // Step 1: Cabecera y Objetivo
+      await waitFor(() => {
+        expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
+      });
+      expect(
+        screen.getByText(
+          'Crea y emite lotes masivos de reconocimientos scouts mediante un proceso guiado y seguro en 3 sencillos pasos.'
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 2
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 2: Indicador de Progreso
+      expect(screen.getByText('Progreso del Asistente')).toBeInTheDocument();
+      expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'El flujo se compone de: 1. Configuración del Lote, 2. Carga y Verificación en el Sistema de Registro, y 3. Revisión de Códigos y Emisión Final.'
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 3
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 3: Configuración y Alcance del Lote
+      expect(screen.getByText('Configuración y Alcance de Unidad')).toBeInTheDocument();
+      expect(screen.getByText('Paso 3 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Define el tipo de reconocimiento a otorgar, la estructura geográfica (Región, Distrito, Grupo) y el alcance (Lote Mixto o exclusivo de Manada, Tropa, Caminantes, Clan, Institucional o No Scout).'
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 4
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 4: Navegación y Avance
+      expect(screen.getByText('Avance entre Pasos')).toBeInTheDocument();
+      expect(screen.getByText('Paso 4 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Usa 'Siguiente paso' para avanzar. En el paso 2 pegarás las cédulas a verificar, y en el paso 3 el sistema inferirá las unidades por edad y generará los códigos oficiales."
+        )
+      ).toBeInTheDocument();
+
+      // Last step finish button
+      const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
+      expect(finishBtn).toBeInTheDocument();
+
+      // Complete tour
+      fireEvent.click(finishBtn);
+
+      // Overlay closes
+      expect(screen.queryByText('Avance entre Pasos')).not.toBeInTheDocument();
+      expect(localStorage.getItem('chil_tour_new-batch-wizard-tour_test-user-id')).toBe('true');
+    });
+
+    it('allows previous step navigation and skipping the tour', async () => {
+      render(
+        <MemoryRouter>
+          <NewBatchWizard />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Asistente de Creación de Lote')).toBeInTheDocument();
+      });
+
+      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+      fireEvent.click(helpBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
+      });
+
+      // Next to Step 2
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+      expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
+
+      // Back to Step 1
+      fireEvent.click(screen.getByRole('button', { name: /◀ Anterior/i }));
+      expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
+
+      // Skip tour
+      const skipBtn = screen.getByRole('button', { name: /Omitir guía/i });
+      fireEvent.click(skipBtn);
+
+      expect(screen.queryByText('Paso 1 de 4')).not.toBeInTheDocument();
+    });
+  });
 });

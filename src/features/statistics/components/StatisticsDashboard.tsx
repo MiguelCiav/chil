@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useStatisticsData } from '../hooks/useStatisticsData';
 import { StatKpiGrid } from './StatKpiGrid';
 import { FilterBar } from './FilterBar';
@@ -13,6 +13,7 @@ import { Button } from '../../../components/Button';
 export const StatisticsDashboard: React.FC = () => {
   const {
     stats,
+    yoyComparison,
     filters,
     setFilter,
     resetFilters,
@@ -28,7 +29,7 @@ export const StatisticsDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6 font-sans py-4">
+      <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
         {/* Header Skeleton */}
         <div className="space-y-2">
           <div className="h-8 w-64 bg-gray-200 animate-pulse rounded-lg" />
@@ -71,21 +72,14 @@ export const StatisticsDashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-primary/10 text-primary rounded-xl">
-              <BarChart3 className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-neutral tracking-tight">
-                Estadísticas y Análisis
-              </h1>
-              <p className="text-xs sm:text-sm text-neutral/70 mt-0.5">
-                Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
-              </p>
-            </div>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
+            Estadísticas y Análisis
+          </h1>
+          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+            Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
+          </p>
         </div>
       </div>
 
@@ -103,32 +97,33 @@ export const StatisticsDashboard: React.FC = () => {
       />
 
       {/* Top 5 KPI Metrics Grid */}
-      <StatKpiGrid metrics={stats.kpis} />
+      <StatKpiGrid metrics={stats.kpis} yoy={yoyComparison} />
 
       {/* Section 1: Tabla de reconocimientos entregados por Región */}
       <div>
-        <RegionSummaryTable regions={stats.geographic.regions} />
+        <RegionSummaryTable regions={stats.geographic.regions} yoy={yoyComparison} />
       </div>
 
       {/* Section 2: Tabla de reconocimientos entregados por Distrito */}
       <div>
-        <DistrictSummaryTable districts={stats.geographic.districts} />
+        <DistrictSummaryTable districts={stats.geographic.districts} yoy={yoyComparison} />
       </div>
 
       {/* Section 3: Tabla de reconocimientos entregados por Unidad */}
       <div>
-        <UnitDistributionCard data={stats.unitDistribution} />
+        <UnitDistributionCard data={stats.unitDistribution} yoy={yoyComparison} />
       </div>
 
       {/* Section 4: Resumen de reconocimientos entregados a Jóvenes y Adultos */}
       <div>
-        <DemographicsDonut data={stats.demographics} />
+        <DemographicsDonut data={stats.demographics} yoy={yoyComparison} />
       </div>
 
       {/* Section 5: Tabla de resumen mensual de los reconocimientos, con su gráfico debajo */}
       <div>
-        <MonthlyTrendChart data={stats.monthlyTrends} />
+        <MonthlyTrendChart data={stats.monthlyTrends} yoy={yoyComparison} />
       </div>
     </div>
   );
 };
+

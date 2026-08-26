@@ -47,7 +47,7 @@ export const DesignerSidebar: React.FC<DesignerSidebarProps> = ({
   onRemoveBg
 }) => {
   return (
-    <div className="lg:col-span-4 xl:col-span-4 2xl:col-span-3 space-y-4">
+    <div data-walkthrough="designer-sidebar" className="lg:col-span-4 xl:col-span-4 2xl:col-span-3 space-y-4">
       {/* Quick Tab Switcher */}
       <div className="flex rounded-2xl p-1 bg-white border border-gray-200 shadow-sm">
         <button

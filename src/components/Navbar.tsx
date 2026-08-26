@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Bell, Settings, LogIn, UserPlus } from 'lucide-react';
+import { Settings, LogIn, UserPlus } from 'lucide-react';
 import logo from '../assets/CHIL_LOGO.png';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from './Modal';
 import { Button } from './Button';
@@ -57,7 +57,7 @@ export const Navbar: React.FC = () => {
     <nav className="h-16 px-6 border-b border-gray-200 bg-white flex items-center justify-between font-sans">
       <div className="flex items-center h-full">
         {/* Logo */}
-        <Link to={user ? "/lotes" : "/login"} className="flex items-center mr-8 hover:opacity-95 transition-opacity">
+        <Link to={user ? "/lotes" : "/"} className="flex items-center mr-8 hover:opacity-95 transition-opacity">
           <img src={logo} alt="Chil Logo" className="h-8 w-auto mr-2" />
           <div className="text-primary font-bold text-xl">
             Chil
@@ -146,9 +146,6 @@ export const Navbar: React.FC = () => {
       {/* Right Side */}
       {user ? (
         <div className="flex items-center space-x-4 text-neutral">
-          <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" aria-label="Notificaciones">
-            <Bell className="w-5 h-5" />
-          </button>
           <button
             type="button"
             onClick={() => {

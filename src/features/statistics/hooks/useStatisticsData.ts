@@ -7,9 +7,10 @@ import {
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../batches/types';
 import { StatisticsFilterState } from '../types';
-import { buildStatisticsDataset } from '../utils/statsCalculators';
+import { buildStatisticsDataset, calculateYoYComparison } from '../utils/statsCalculators';
 import { FilterSummaryLabels } from '../utils/statsPdfExport';
 import { useAuth } from '../../auth';
+
 
 export const initialFilterState: StatisticsFilterState = {
   period: 'all',
@@ -221,15 +222,77 @@ export function useStatisticsData() {
       return true;
     });
 
+    // Determine current and previous year for YoY comparison
+    let currentYear: number;
+    if (filters.period === 'this-year') {
+      currentYear = new Date().getFullYear();
+    } else if (filters.period === 'custom' && filters.startDate) {
+      currentYear = new Date(filters.startDate).getFullYear();
+    } else {
+      const allBatchYears = batches
+        .map(b => (b.created_at ? new Date(b.created_at).getFullYear() : null))
+        .filter((y): y is number => y !== null && !Number.isNaN(y));
+      currentYear = allBatchYears.length > 0 ? Math.max(...allBatchYears) : new Date().getFullYear();
+    }
+    const previousYear = currentYear - 1;
+
+    // Filter current year and previous year batches applying active non-period filters
+    const currentYearBatches = batches.filter(b => {
+      if (!b.created_at) return false;
+      const d = new Date(b.created_at);
+      if (Number.isNaN(d.getTime()) || d.getFullYear() !== currentYear) return false;
+      if (filters.recognitionId && b.recognition_type !== filters.recognitionId) return false;
+      if (filters.regionId && String(b.region_id) !== filters.regionId) return false;
+      if (filters.districtId && String(b.district_id) !== filters.districtId) return false;
+      return true;
+    });
+
+    const previousYearBatches = batches.filter(b => {
+      if (!b.created_at) return false;
+      const d = new Date(b.created_at);
+      if (Number.isNaN(d.getTime()) || d.getFullYear() !== previousYear) return false;
+      if (filters.recognitionId && b.recognition_type !== filters.recognitionId) return false;
+      if (filters.regionId && String(b.region_id) !== filters.regionId) return false;
+      if (filters.districtId && String(b.district_id) !== filters.districtId) return false;
+      return true;
+    });
+
+    const currentYearBatchIds = new Set<number>(currentYearBatches.map(b => b.id));
+    const previousYearBatchIds = new Set<number>(previousYearBatches.map(b => b.id));
+
+    const currentYearMembers = members.filter(m => {
+      if (!m.batch_id || !currentYearBatchIds.has(m.batch_id)) return false;
+      if (filters.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) return false;
+      return true;
+    });
+
+    const previousYearMembers = members.filter(m => {
+      if (!m.batch_id || !previousYearBatchIds.has(m.batch_id)) return false;
+      if (filters.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) return false;
+      return true;
+    });
+
+    const yoyComparison = calculateYoYComparison(
+      currentYearMembers,
+      previousYearMembers,
+      currentYearBatches,
+      previousYearBatches,
+      regions,
+      districts,
+      currentYear,
+      previousYear
+    );
+
     const dataset = buildStatisticsDataset(
       filteredMembers,
       filteredBatches,
       regions,
       districts,
-      recognitionTypes
+      recognitionTypes,
+      yoyComparison
     );
 
-    return dataset;
+    return { dataset, yoyComparison };
   }, [batches, members, regions, districts, recognitionTypes, filters]);
 
   const getFilterSummaryLabels = useCallback((): FilterSummaryLabels => {
@@ -274,7 +337,9 @@ export function useStatisticsData() {
   }, [filters, recognitionTypes, regions, districts]);
 
   return {
-    stats: filteredDataset,
+    stats: filteredDataset.dataset,
+    yoyComparison: filteredDataset.yoyComparison,
+    hasPreviousYearData: filteredDataset.yoyComparison.hasPreviousYearData,
     filters,
     setFilter,
     resetFilters,

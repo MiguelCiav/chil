@@ -31,7 +31,7 @@ describe('DesignerCanvas component', () => {
     const onPointerDownField = vi.fn();
     const canvasRef = { current: document.createElement('div') };
 
-    render(
+    const { container } = render(
       <DesignerCanvas
         canvasRef={canvasRef}
         template={mockTemplate}
@@ -45,6 +45,8 @@ describe('DesignerCanvas component', () => {
         onSelectField={onSelectField}
       />
     );
+
+    expect(container.querySelector('[data-walkthrough="designer-canvas"]')).toBeInTheDocument();
 
     expect(screen.getByText('Fondo Estándar Scout')).toBeInTheDocument();
     expect(screen.getByText('[Nombre y Apellido]')).toBeInTheDocument();

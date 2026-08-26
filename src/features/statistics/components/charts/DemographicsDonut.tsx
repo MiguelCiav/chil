@@ -1,12 +1,14 @@
 import React from 'react';
 import { Users, User, UserCheck } from 'lucide-react';
-import { DemographicsData } from '../../types';
+import { DemographicsData, YoYComparisonData } from '../../types';
+import { YoYVariationBadge } from '../YoYVariationBadge';
 
 interface DemographicsDonutProps {
   data: DemographicsData;
+  yoy?: YoYComparisonData;
 }
 
-export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data }) => {
+export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy }) => {
   const {
     youngCount,
     adultCount,
@@ -14,6 +16,8 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data }) =>
     youngPercentage,
     adultPercentage
   } = data;
+
+  const hasYoY = Boolean(yoy && yoy.hasPreviousYearData);
 
   const radius = 38;
   const strokeWidth = 14;
@@ -27,7 +31,7 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data }) =>
   const adultArc = (adultPercentage / 100) * circumference;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
       {/* Card Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -40,6 +44,7 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data }) =>
             </h3>
             <p className="text-xs text-neutral/60">
               Distribución demográfica entre scouts jóvenes y dirigentes/adultos
+              {hasYoY && yoy && ` • Comparativa ${yoy.previousYear} vs ${yoy.currentYear}`}
             </p>
           </div>
         </div>
@@ -115,74 +120,181 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data }) =>
 
         {/* Demographics Summary Table (8 cols) */}
         <div className="md:col-span-8 overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Categoría</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              <tr className="hover:bg-gray-50/80 transition-colors">
-                <td className="px-4 py-2.5 font-semibold text-sky-900 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] inline-block" />
-                  <User className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Jóvenes</span>
-                </td>
-                <td className="px-4 py-2.5 font-bold text-neutral text-right">
-                  {youngCount}
-                </td>
-                <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
-                  <div className="flex items-center justify-end gap-2">
-                    <span className="font-bold text-sky-900">{youngPercentage}%</span>
-                    <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
-                      <div
-                        className="bg-sky-600 h-full rounded-full"
-                        style={{ width: `${youngPercentage}%` }}
-                      />
+          {hasYoY && yoy ? (
+            <table className="w-full text-left border-collapse font-sans text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 bg-[#faf8f5]">
+                  <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Categoría</th>
+                  <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                    Total ({yoy.currentYear})
+                  </th>
+                  <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                    Año Anterior ({yoy.previousYear})
+                  </th>
+                  <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                    Variación
+                  </th>
+                  <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                    % del Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                <tr className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-4 py-2.5 font-semibold text-sky-900 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] inline-block" />
+                    <User className="w-3.5 h-3.5 text-sky-600" />
+                    <span>Jóvenes</span>
+                  </td>
+                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                    {yoy.demographics.young.current}
+                  </td>
+                  <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
+                    {yoy.demographics.young.previous}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <YoYVariationBadge
+                      diff={yoy.demographics.young.diff}
+                      percentChange={yoy.demographics.young.percentChange}
+                    />
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="font-bold text-sky-900">{yoy.demographics.young.currentPercentage}%</span>
+                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                        <div
+                          className="bg-sky-600 h-full rounded-full"
+                          style={{ width: `${yoy.demographics.young.currentPercentage}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
 
-              <tr className="hover:bg-gray-50/80 transition-colors">
-                <td className="px-4 py-2.5 font-semibold text-amber-900 flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] inline-block" />
-                  <UserCheck className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Adultos</span>
-                </td>
-                <td className="px-4 py-2.5 font-bold text-neutral text-right">
-                  {adultCount}
-                </td>
-                <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
-                  <div className="flex items-center justify-end gap-2">
-                    <span className="font-bold text-amber-900">{adultPercentage}%</span>
-                    <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
-                      <div
-                        className="bg-amber-500 h-full rounded-full"
-                        style={{ width: `${adultPercentage}%` }}
-                      />
+                <tr className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-4 py-2.5 font-semibold text-amber-900 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] inline-block" />
+                    <UserCheck className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Adultos</span>
+                  </td>
+                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                    {yoy.demographics.adult.current}
+                  </td>
+                  <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
+                    {yoy.demographics.adult.previous}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <YoYVariationBadge
+                      diff={yoy.demographics.adult.diff}
+                      percentChange={yoy.demographics.adult.percentChange}
+                    />
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="font-bold text-amber-900">{yoy.demographics.adult.currentPercentage}%</span>
+                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                        <div
+                          className="bg-amber-500 h-full rounded-full"
+                          style={{ width: `${yoy.demographics.adult.currentPercentage}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
 
-              <tr className="bg-[#faf8f5]/60 font-bold border-t border-gray-200">
-                <td className="px-4 py-2.5 text-neutral">
-                  Total
-                </td>
-                <td className="px-4 py-2.5 text-neutral text-right">
-                  {totalCount}
-                </td>
-                <td className="px-4 py-2.5 text-neutral text-right">
-                  100%
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                <tr className="bg-[#faf8f5]/60 font-bold border-t border-gray-200">
+                  <td className="px-4 py-2.5 text-neutral">
+                    Total
+                  </td>
+                  <td className="px-4 py-2.5 text-neutral text-right">
+                    {yoy.demographics.total.current}
+                  </td>
+                  <td className="px-4 py-2.5 text-neutral/60 text-right">
+                    {yoy.demographics.total.previous}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <YoYVariationBadge
+                      diff={yoy.demographics.total.diff}
+                      percentChange={yoy.demographics.total.percentChange}
+                    />
+                  </td>
+                  <td className="px-4 py-2.5 text-neutral text-right">
+                    100%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-left border-collapse font-sans text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 bg-[#faf8f5]">
+                  <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Categoría</th>
+                  <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
+                  <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                <tr className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-4 py-2.5 font-semibold text-sky-900 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] inline-block" />
+                    <User className="w-3.5 h-3.5 text-sky-600" />
+                    <span>Jóvenes</span>
+                  </td>
+                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                    {youngCount}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="font-bold text-sky-900">{youngPercentage}%</span>
+                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                        <div
+                          className="bg-sky-600 h-full rounded-full"
+                          style={{ width: `${youngPercentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-4 py-2.5 font-semibold text-amber-900 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] inline-block" />
+                    <UserCheck className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Adultos</span>
+                  </td>
+                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                    {adultCount}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="font-bold text-amber-900">{adultPercentage}%</span>
+                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                        <div
+                          className="bg-amber-500 h-full rounded-full"
+                          style={{ width: `${adultPercentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr className="bg-[#faf8f5]/60 font-bold border-t border-gray-200">
+                  <td className="px-4 py-2.5 text-neutral">
+                    Total
+                  </td>
+                  <td className="px-4 py-2.5 text-neutral text-right">
+                    {totalCount}
+                  </td>
+                  <td className="px-4 py-2.5 text-neutral text-right">
+                    100%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
   );
 };
+

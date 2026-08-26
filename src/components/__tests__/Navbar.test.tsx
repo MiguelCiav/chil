@@ -43,6 +43,9 @@ describe('Navbar component', () => {
     );
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
+    const logoLink = screen.getByRole('link', { name: /Chil Logo Chil/i });
+    expect(logoLink).toHaveAttribute('href', '/lotes');
+
     expect(screen.getByText('Emisión Rápida')).toBeInTheDocument();
     expect(screen.getByText('Nuevo lote')).toBeInTheDocument();
     expect(screen.getByText('Listado de lotes')).toBeInTheDocument();
@@ -69,6 +72,8 @@ describe('Navbar component', () => {
     );
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
+    const logoLink = screen.getByRole('link', { name: /Chil Logo Chil/i });
+    expect(logoLink).toHaveAttribute('href', '/');
     expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registrarse/i })).toBeInTheDocument();
     expect(screen.queryByText('Emisión Rápida')).not.toBeInTheDocument();

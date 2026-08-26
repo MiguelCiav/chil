@@ -1,18 +1,30 @@
 import React, { useState } from 'react';
 import { MapPin, ChevronDown, ChevronUp } from 'lucide-react';
-import { GeographicItem } from '../../types';
+import { GeographicItem, YoYComparisonData } from '../../types';
+import { YoYVariationBadge } from '../YoYVariationBadge';
 
 interface RegionSummaryTableProps {
   regions: GeographicItem[];
+  yoy?: YoYComparisonData;
 }
 
-export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions }) => {
+export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions, yoy }) => {
   const [showAll, setShowAll] = useState(false);
-  const displayed = showAll ? regions : regions.slice(0, 5);
-  const maxCount = regions.length > 0 ? Math.max(...regions.map(r => r.count), 1) : 1;
+
+  const hasYoY = Boolean(yoy && yoy.hasPreviousYearData);
+  const itemsCount = hasYoY && yoy ? yoy.regions.length : regions.length;
+  const maxCount = hasYoY && yoy
+    ? Math.max(...yoy.regions.map(r => r.currentCount), 1)
+    : regions.length > 0
+    ? Math.max(...regions.map(r => r.count), 1)
+    : 1;
+
+  const displayedRegions = hasYoY && yoy
+    ? (showAll ? yoy.regions : yoy.regions.slice(0, 5))
+    : (showAll ? regions : regions.slice(0, 5));
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+    <div className="bg-white border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -25,40 +37,93 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions 
             </h3>
             <p className="text-xs text-neutral/60">
               Distribución territorial consolidada por región scout
+              {hasYoY && yoy && ` • Comparativa ${yoy.previousYear} vs ${yoy.currentYear}`}
             </p>
           </div>
         </div>
         <span className="text-xs font-semibold text-neutral/50 bg-gray-100 px-2.5 py-1 rounded-full">
-          {regions.length} {regions.length === 1 ? 'región' : 'regiones'}
+          {itemsCount} {itemsCount === 1 ? 'región' : 'regiones'}
         </span>
       </div>
 
       {/* Table */}
-      {regions.length === 0 ? (
+      {itemsCount === 0 ? (
         <div className="py-8 text-center text-neutral/50 text-xs">
           No hay registros disponibles por región para los filtros seleccionados.
         </div>
-      ) : (
+      ) : hasYoY && yoy ? (
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans text-xs">
+          <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Región</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+              <tr className="bg-primary/10 border-b border-primary/20">
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Región</th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
+                  Total ({yoy.currentYear})
+                </th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
+                  Año Anterior ({yoy.previousYear})
+                </th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
+                  Variación
+                </th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
+                  % del Total
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {displayed.map((r, idx) => (
-                <tr key={r.id || r.name} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="px-4 py-2.5 font-semibold text-neutral flex items-center gap-2">
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {(displayedRegions as typeof yoy.regions).map((r, idx) => (
+                <tr key={r.id || r.name} className="hover:bg-primary/5 transition-colors bg-white">
+                  <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
                     <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
                     <span>{r.name}</span>
                   </td>
-                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                  <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
+                    {r.currentCount}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-neutral/60 whitespace-nowrap text-right">
+                    {r.previousCount}
+                  </td>
+                  <td className="px-6 py-4 text-sm whitespace-nowrap text-right">
+                    <YoYVariationBadge diff={r.diff} percentChange={r.percentChange} />
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <span>{r.currentPercentage}%</span>
+                      <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                        <div
+                          className="bg-emerald-600 h-full rounded-full"
+                          style={{ width: `${(r.currentCount / maxCount) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse font-sans">
+            <thead>
+              <tr className="bg-primary/10 border-b border-primary/20">
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Región</th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">Total Reconocimientos</th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">% del Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {(displayedRegions as GeographicItem[]).map((r, idx) => (
+                <tr key={r.id || r.name} className="hover:bg-primary/5 transition-colors bg-white">
+                  <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
+                    <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
+                    <span>{r.name}</span>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
                     {r.count}
                   </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                  <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
                       <span>{r.percentage}%</span>
                       <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -77,7 +142,7 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions 
       )}
 
       {/* Show more toggle */}
-      {regions.length > 5 && (
+      {itemsCount > 5 && (
         <div className="pt-2 border-t border-gray-100 text-center">
           <button
             type="button"
@@ -92,7 +157,7 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions 
             ) : (
               <>
                 <ChevronDown className="w-3.5 h-3.5" />
-                Ver todas ({regions.length})
+                Ver todas ({itemsCount})
               </>
             )}
           </button>
@@ -101,3 +166,4 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions 
     </div>
   );
 };
+

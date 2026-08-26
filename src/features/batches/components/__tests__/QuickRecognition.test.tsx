@@ -60,6 +60,8 @@ describe('QuickRecognition Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('chil_tour_quick-recognition-tour_user-quick-123', 'true');
 
     vi.mocked(authFeature.useAuth).mockReturnValue({
       user: {
@@ -531,6 +533,101 @@ describe('QuickRecognition Component', () => {
     // Click "Ir al Listado de Lotes"
     fireEvent.click(screen.getByRole('button', { name: /Ir al Listado de Lotes/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/lotes');
+  });
+
+  describe('Walkthrough Interactive Guide', () => {
+    it('renders help button and all data-walkthrough targets in the DOM', async () => {
+      const { container } = render(
+        <MemoryRouter>
+          <QuickRecognition />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Emisión Rápida de Reconocimiento')).toBeInTheDocument();
+      });
+
+      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+      expect(helpBtn).toBeInTheDocument();
+
+      expect(container.querySelector('[data-walkthrough="quick-rec-header"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-walkthrough="quick-rec-recognition-section"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-walkthrough="quick-rec-recipient-section"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-walkthrough="quick-rec-actions-section"]')).toBeInTheDocument();
+    });
+
+    it('starts and steps through the 4-step walkthrough tour upon clicking the help button', async () => {
+      render(
+        <MemoryRouter>
+          <QuickRecognition />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Emisión Rápida de Reconocimiento')).toBeInTheDocument();
+      });
+
+      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+      fireEvent.click(helpBtn);
+
+      // Step 1: Cabecera y Objetivo
+      await waitFor(() => {
+        expect(screen.getByText('Emisión Rápida de Reconocimientos')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Este módulo te permite emitir y descargar un reconocimiento individual en un solo paso, ideal para reconocer a una persona sin procesar lotes masivos.'
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 2
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 2: Tipo de Reconocimiento y Ubicación
+      expect(screen.getByText('Tipo de Reconocimiento y Ubicación')).toBeInTheDocument();
+      expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Selecciona el tipo de reconocimiento a otorgar y la estructura geográfica (Región, Distrito, Grupo). Si es para alguien no scout (agradecimiento), estos campos son opcionales.'
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 3
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 3: Datos del Reconocido y Unidad
+      expect(screen.getByText('Datos del Reconocido y Unidad')).toBeInTheDocument();
+      expect(screen.getByText('Paso 3 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Selecciona la unidad. Para miembros scouts, ingresa la cédula y haz clic en 'Consultar' para autocompletar sus datos desde el sistema de registro."
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 4
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 4: Código y Descarga Inmediata
+      expect(screen.getByText('Código y Descarga Inmediata')).toBeInTheDocument();
+      expect(screen.getByText('Paso 4 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "El código oficial se genera automáticamente (puedes regenerarlo o editarlo). Al pulsar 'Emitir y Descargar Reconocimiento', el lote se crea en el sistema y el PDF se descarga al instante."
+        )
+      ).toBeInTheDocument();
+
+      // Last step finish button
+      const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
+      expect(finishBtn).toBeInTheDocument();
+
+      // Complete tour
+      fireEvent.click(finishBtn);
+
+      // Overlay closes
+      expect(screen.queryByText('Código y Descarga Inmediata')).not.toBeInTheDocument();
+      expect(localStorage.getItem('chil_tour_quick-recognition-tour_user-quick-123')).toBe('true');
+    });
   });
 
   describe('splitFullName helper function', () => {

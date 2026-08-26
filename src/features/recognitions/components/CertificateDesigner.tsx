@@ -3,6 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '../../../components/Button';
 import {
+  WalkthroughOverlay,
+  useWalkthrough,
+  WalkthroughStep
+} from '../../../components/walkthrough';
+import { useAuth } from '../../auth';
+import {
   RecognitionType,
   CertificateTemplate,
   RecognitionFieldConfig,
@@ -18,9 +24,78 @@ import {
 import { useCanvasScale, useCanvasDrag } from '../hooks';
 import { DesignerHeader, DesignerCanvas, DesignerSidebar } from './designer';
 
+const CERTIFICATE_DESIGNER_TOUR_STEPS: WalkthroughStep[] = [
+  {
+    id: 'designer-header',
+    targetSelector: '[data-walkthrough="designer-header"]',
+    title: 'Diseñador Visual de Plantillas',
+    content:
+      'Configura la plantilla gráfica oficial para este reconocimiento. Los cambios que realices aquí se aplicarán a todos los diplomas generados a partir de este tipo.',
+    placement: 'bottom'
+  },
+  {
+    id: 'designer-canvas',
+    targetSelector: '[data-walkthrough="designer-canvas"]',
+    title: 'Lienzo del Diploma (Canvas 1:1)',
+    content:
+      'Este es el lienzo interactivo de tu diploma. Los campos posicionados aquí se estamparán en el PDF con exacta fidelidad de tamaño, posición y proporciones físicas milimétricas.',
+    placement: 'right'
+  },
+  {
+    id: 'designer-background-btn',
+    targetSelector: '[data-walkthrough="designer-background-btn"]',
+    title: 'Cargar Imagen de Fondo',
+    content:
+      'Sube la imagen del diploma o certificado en formato PNG, JPEG o WebP. El editor adaptará automáticamente las dimensiones y orientación física sin distorsión.',
+    placement: 'bottom'
+  },
+  {
+    id: 'designer-sidebar',
+    targetSelector: '[data-walkthrough="designer-sidebar"]',
+    title: 'Paleta de Variables y Estilo',
+    content:
+      'Haz clic en cualquier campo dinámico (Nombre, Cédula, Unidad, Código REC, etc.) para agregarlo al lienzo. Arrástralo libremente con el mouse hasta su ubicación deseada.',
+    placement: 'left'
+  },
+  {
+    id: 'designer-mode-switch',
+    targetSelector: '[data-walkthrough="designer-mode-switch"]',
+    title: 'Vista Previa con Datos Scout',
+    content:
+      'Usa el modo vista previa (icono del ojo) para previsualizar el diploma con datos de prueba realistas antes de guardar.',
+    placement: 'bottom'
+  },
+  {
+    id: 'designer-save-btn',
+    targetSelector: '[data-walkthrough="designer-save-btn"]',
+    title: 'Guardar Plantilla Oficial',
+    content:
+      'Una vez satisfecho con el diseño, haz clic en \'Guardar Plantilla\' para almacenar las coordenadas y estilos en la nube de forma segura.',
+    placement: 'bottom'
+  }
+];
+
 export const CertificateDesigner: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const {
+    isOpen: isTourOpen,
+    currentStep: tourCurrentStep,
+    currentStepIndex,
+    totalSteps,
+    targetRect,
+    startTour,
+    nextStep,
+    prevStep,
+    skipTour
+  } = useWalkthrough({
+    tourId: 'certificate-designer-tour',
+    steps: CERTIFICATE_DESIGNER_TOUR_STEPS,
+    autoStart: true,
+    userId: user?.uid
+  });
 
   const [recognition, setRecognition] = useState<RecognitionType | null>(null);
   const [template, setTemplate] = useState<CertificateTemplate>(DEFAULT_CERTIFICATE_TEMPLATE);
@@ -377,6 +452,7 @@ export const CertificateDesigner: React.FC = () => {
         onUploadClick={() => fileInputRef.current?.click()}
         onSave={handleSaveTemplate}
         onBack={() => navigate('/reconocimientos')}
+        onStartTour={startTour}
       />
 
       {/* Main Ergonomic 2-Column Workspace */}
@@ -416,6 +492,18 @@ export const CertificateDesigner: React.FC = () => {
           onRemoveBg={handleRemoveBackground}
         />
       </div>
+
+      {/* Interactive Feature Walkthrough */}
+      <WalkthroughOverlay
+        isOpen={isTourOpen}
+        currentStep={tourCurrentStep}
+        currentStepIndex={currentStepIndex}
+        totalSteps={totalSteps}
+        targetRect={targetRect}
+        onNext={nextStep}
+        onPrev={prevStep}
+        onSkip={skipTour}
+      />
     </div>
   );
 };

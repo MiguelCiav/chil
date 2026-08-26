@@ -199,4 +199,63 @@ describe('StatisticsDashboard Component', () => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
   });
+
+  it('renders comparative columns when data spans across multiple years', async () => {
+    const multiYearBatches: Batch[] = [
+      {
+        id: 101,
+        comment: 'Lote 2026',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2026-04-10T10:00:00.000Z'
+      },
+      {
+        id: 201,
+        comment: 'Lote 2025',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2025-04-10T10:00:00.000Z'
+      }
+    ];
+
+    const multiYearMembers: ScoutMember[] = [
+      {
+        identity: 'V-1111',
+        first_names: 'Gabriel',
+        last_names: 'Mendoza',
+        birth_date: '2010-02-14',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 101
+      },
+      {
+        identity: 'V-2222',
+        first_names: 'Elena',
+        last_names: 'Torres',
+        birth_date: '1988-11-23',
+        member_type: 'adult',
+        status: 'exceptional',
+        batch_id: 201
+      }
+    ];
+
+    vi.mocked(batchApi.getAllBatches).mockResolvedValue(multiYearBatches);
+    vi.mocked(batchApi.getAllMembers).mockResolvedValue(multiYearMembers);
+
+    render(<StatisticsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
+    });
+
+    // Check comparative column headers
+    expect(screen.getAllByText('Total (2026)').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Año Anterior (2025)').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Variación').length).toBeGreaterThanOrEqual(1);
+  });
 });
+

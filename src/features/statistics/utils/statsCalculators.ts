@@ -10,13 +10,420 @@ import {
   StatusBreakdownData,
   UnitDistributionData,
   UnitDistributionItem,
-  StatisticsDataset
+  StatisticsDataset,
+  YoYComparisonData,
+  YoYCountMetric,
+  YoYRegionItem,
+  YoYDistrictItem,
+  YoYUnitItem,
+  YoYDemographics,
+  YoYMonthlyItem
 } from '../types';
 
-const MONTH_LABELS_ES = [
+export const MONTH_LABELS_ES = [
   'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
 ];
+
+/**
+ * Calculates percentage variation between current and previous values
+ */
+export function calculatePercentChange(current: number, previous: number): number | null {
+  if (previous === 0) {
+    if (current === 0) return 0;
+    return null;
+  }
+  return Number((((current - previous) / previous) * 100).toFixed(1));
+}
+
+/**
+ * Partitions batches and members into currentYear and previousYear datasets
+ */
+export function partitionDataByYear(
+  members: ScoutMember[],
+  batches: Batch[],
+  targetYear?: number
+): {
+  currentYear: number;
+  previousYear: number;
+  currentBatches: Batch[];
+  previousBatches: Batch[];
+  currentMembers: ScoutMember[];
+  previousMembers: ScoutMember[];
+} {
+  let currentYear = targetYear;
+  if (!currentYear) {
+    if (batches.length > 0) {
+      const years = batches
+        .map(b => (b.created_at ? new Date(b.created_at).getFullYear() : null))
+        .filter((y): y is number => y !== null && !Number.isNaN(y));
+      if (years.length > 0) {
+        currentYear = Math.max(...years);
+      }
+    }
+    if (!currentYear) currentYear = new Date().getFullYear();
+  }
+
+  const previousYear = currentYear - 1;
+
+  const currentBatches = batches.filter(b => {
+    if (!b.created_at) return false;
+    const d = new Date(b.created_at);
+    return !Number.isNaN(d.getTime()) && d.getFullYear() === currentYear;
+  });
+
+  const previousBatches = batches.filter(b => {
+    if (!b.created_at) return false;
+    const d = new Date(b.created_at);
+    return !Number.isNaN(d.getTime()) && d.getFullYear() === previousYear;
+  });
+
+  const currentBatchIds = new Set<number>(currentBatches.map(b => b.id));
+  const previousBatchIds = new Set<number>(previousBatches.map(b => b.id));
+
+  const currentMembers = members.filter(m => {
+    if (m.batch_id && currentBatchIds.has(m.batch_id)) return true;
+    if (!m.batch_id && !targetYear) return true;
+    return false;
+  });
+
+  const previousMembers = members.filter(m => {
+    if (m.batch_id && previousBatchIds.has(m.batch_id)) return true;
+    return false;
+  });
+
+  return {
+    currentYear,
+    previousYear,
+    currentBatches,
+    previousBatches,
+    currentMembers,
+    previousMembers
+  };
+}
+
+/**
+ * Calculates Year-over-Year (YoY) comparison across all statistical dimensions
+ */
+export function calculateYoYComparison(
+  currentMembers: ScoutMember[],
+  previousMembers: ScoutMember[],
+  currentBatches: Batch[] = [],
+  previousBatches: Batch[] = [],
+  regions: Region[] = [],
+  districts: District[] = [],
+  currentYear?: number,
+  previousYear?: number
+): YoYComparisonData {
+  const cYear = currentYear || new Date().getFullYear();
+  const pYear = previousYear !== undefined ? previousYear : cYear - 1;
+  const hasPreviousYearData = previousMembers.length > 0;
+
+  // 1. KPI Diplomas
+  const currentTotalDiplomas = currentMembers.filter(m => m.status === 'active' || m.status === 'exceptional').length;
+  const previousTotalDiplomas = previousMembers.filter(m => m.status === 'active' || m.status === 'exceptional').length;
+  const totalDiplomas: YoYCountMetric = {
+    current: currentTotalDiplomas,
+    previous: previousTotalDiplomas,
+    diff: currentTotalDiplomas - previousTotalDiplomas,
+    percentChange: calculatePercentChange(currentTotalDiplomas, previousTotalDiplomas)
+  };
+
+  // 2. KPI Batches
+  const currentBatchesCount = currentBatches.length;
+  const previousBatchesCount = previousBatches.length;
+  const totalBatches: YoYCountMetric = {
+    current: currentBatchesCount,
+    previous: previousBatchesCount,
+    diff: currentBatchesCount - previousBatchesCount,
+    percentChange: calculatePercentChange(currentBatchesCount, previousBatchesCount)
+  };
+
+  // 3. KPI Total Members
+  const currentMembersCount = currentMembers.length;
+  const previousMembersCount = previousMembers.length;
+  const totalMembers: YoYCountMetric = {
+    current: currentMembersCount,
+    previous: previousMembersCount,
+    diff: currentMembersCount - previousMembersCount,
+    percentChange: calculatePercentChange(currentMembersCount, previousMembersCount)
+  };
+
+  // 4. Region Comparison
+  const currentBatchMap = new Map<number, Batch>();
+  currentBatches.forEach(b => currentBatchMap.set(b.id, b));
+  const previousBatchMap = new Map<number, Batch>();
+  previousBatches.forEach(b => previousBatchMap.set(b.id, b));
+
+  const currentRegionCounts = new Map<number, number>();
+  currentMembers.forEach(m => {
+    if (m.batch_id && currentBatchMap.has(m.batch_id)) {
+      const b = currentBatchMap.get(m.batch_id)!;
+      if (b.region_id) {
+        currentRegionCounts.set(b.region_id, (currentRegionCounts.get(b.region_id) || 0) + 1);
+      }
+    }
+  });
+
+  const previousRegionCounts = new Map<number, number>();
+  previousMembers.forEach(m => {
+    if (m.batch_id && previousBatchMap.has(m.batch_id)) {
+      const b = previousBatchMap.get(m.batch_id)!;
+      if (b.region_id) {
+        previousRegionCounts.set(b.region_id, (previousRegionCounts.get(b.region_id) || 0) + 1);
+      }
+    }
+  });
+
+  const allRegionIds = new Set<number>([
+    ...currentRegionCounts.keys(),
+    ...previousRegionCounts.keys()
+  ]);
+
+  const yoyRegions: YoYRegionItem[] = Array.from(allRegionIds).map(regId => {
+    const regObj = regions.find(r => r.id === regId);
+    const name = regObj ? regObj.name : `Región ${regId}`;
+    const currentCount = currentRegionCounts.get(regId) || 0;
+    const previousCount = previousRegionCounts.get(regId) || 0;
+    const diff = currentCount - previousCount;
+    const percentChange = calculatePercentChange(currentCount, previousCount);
+    const currentPercentage = currentMembersCount > 0 ? Number(((currentCount / currentMembersCount) * 100).toFixed(1)) : 0;
+    const previousPercentage = previousMembersCount > 0 ? Number(((previousCount / previousMembersCount) * 100).toFixed(1)) : 0;
+
+    return {
+      id: regId,
+      name,
+      currentCount,
+      previousCount,
+      diff,
+      percentChange,
+      currentPercentage,
+      previousPercentage
+    };
+  });
+
+  yoyRegions.sort((a, b) => {
+    if (b.currentCount !== a.currentCount) return b.currentCount - a.currentCount;
+    if (b.previousCount !== a.previousCount) return b.previousCount - a.previousCount;
+    return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+  });
+
+  // 5. District Comparison
+  const currentDistrictCounts = new Map<number, number>();
+  currentMembers.forEach(m => {
+    if (m.batch_id && currentBatchMap.has(m.batch_id)) {
+      const b = currentBatchMap.get(m.batch_id)!;
+      if (b.district_id) {
+        currentDistrictCounts.set(b.district_id, (currentDistrictCounts.get(b.district_id) || 0) + 1);
+      }
+    }
+  });
+
+  const previousDistrictCounts = new Map<number, number>();
+  previousMembers.forEach(m => {
+    if (m.batch_id && previousBatchMap.has(m.batch_id)) {
+      const b = previousBatchMap.get(m.batch_id)!;
+      if (b.district_id) {
+        previousDistrictCounts.set(b.district_id, (previousDistrictCounts.get(b.district_id) || 0) + 1);
+      }
+    }
+  });
+
+  const allDistrictIds = new Set<number>([
+    ...currentDistrictCounts.keys(),
+    ...previousDistrictCounts.keys()
+  ]);
+
+  const yoyDistricts: YoYDistrictItem[] = Array.from(allDistrictIds).map(distId => {
+    const distObj = districts.find(d => d.id === distId);
+    const regObj = distObj ? regions.find(r => r.id === distObj.region_id) : undefined;
+    const name = distObj ? distObj.name : `Distrito ${distId}`;
+    const parentName = regObj ? regObj.name : undefined;
+    const currentCount = currentDistrictCounts.get(distId) || 0;
+    const previousCount = previousDistrictCounts.get(distId) || 0;
+    const diff = currentCount - previousCount;
+    const percentChange = calculatePercentChange(currentCount, previousCount);
+    const currentPercentage = currentMembersCount > 0 ? Number(((currentCount / currentMembersCount) * 100).toFixed(1)) : 0;
+    const previousPercentage = previousMembersCount > 0 ? Number(((previousCount / previousMembersCount) * 100).toFixed(1)) : 0;
+
+    return {
+      id: distId,
+      name,
+      parentName,
+      currentCount,
+      previousCount,
+      diff,
+      percentChange,
+      currentPercentage,
+      previousPercentage
+    };
+  });
+
+  yoyDistricts.sort((a, b) => {
+    if (b.currentCount !== a.currentCount) return b.currentCount - a.currentCount;
+    if (b.previousCount !== a.previousCount) return b.previousCount - a.previousCount;
+    return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+  });
+
+  // 6. Unit Comparison
+  const unitOrder: ScoutUnit[] = ['manada', 'tropa', 'caminantes', 'clan', 'institucional', 'no_scout'];
+  const currentUnitCounts = new Map<ScoutUnit, number>();
+  const previousUnitCounts = new Map<ScoutUnit, number>();
+  unitOrder.forEach(u => {
+    currentUnitCounts.set(u, 0);
+    previousUnitCounts.set(u, 0);
+  });
+
+  currentMembers.forEach(m => {
+    const u: ScoutUnit = m.unit || (m.member_type === 'young' ? 'tropa' : 'institucional');
+    currentUnitCounts.set(u, (currentUnitCounts.get(u) || 0) + 1);
+  });
+
+  previousMembers.forEach(m => {
+    const u: ScoutUnit = m.unit || (m.member_type === 'young' ? 'tropa' : 'institucional');
+    previousUnitCounts.set(u, (previousUnitCounts.get(u) || 0) + 1);
+  });
+
+  const yoyUnits: YoYUnitItem[] = unitOrder.map(u => {
+    const currentCount = currentUnitCounts.get(u) || 0;
+    const previousCount = previousUnitCounts.get(u) || 0;
+    const diff = currentCount - previousCount;
+    const percentChange = calculatePercentChange(currentCount, previousCount);
+    const currentPercentage = currentMembersCount > 0 ? Number(((currentCount / currentMembersCount) * 100).toFixed(1)) : 0;
+    const previousPercentage = previousMembersCount > 0 ? Number(((previousCount / previousMembersCount) * 100).toFixed(1)) : 0;
+
+    return {
+      unit: u,
+      label: SCOUT_UNITS[u].label,
+      badgeClass: SCOUT_UNITS[u].badgeClass,
+      currentCount,
+      previousCount,
+      diff,
+      percentChange,
+      currentPercentage,
+      previousPercentage
+    };
+  });
+
+  // 7. Demographics Comparison
+  const currentYoung = currentMembers.filter(m => m.member_type === 'young').length;
+  const previousYoung = previousMembers.filter(m => m.member_type === 'young').length;
+  const currentAdult = currentMembers.filter(m => m.member_type === 'adult').length;
+  const previousAdult = previousMembers.filter(m => m.member_type === 'adult').length;
+
+  const youngPercentChange = calculatePercentChange(currentYoung, previousYoung);
+  const adultPercentChange = calculatePercentChange(currentAdult, previousAdult);
+
+  const demographics: YoYDemographics = {
+    young: {
+      current: currentYoung,
+      previous: previousYoung,
+      diff: currentYoung - previousYoung,
+      percentChange: youngPercentChange,
+      currentPercentage: currentMembersCount > 0 ? Number(((currentYoung / currentMembersCount) * 100).toFixed(1)) : 0,
+      previousPercentage: previousMembersCount > 0 ? Number(((previousYoung / previousMembersCount) * 100).toFixed(1)) : 0
+    },
+    adult: {
+      current: currentAdult,
+      previous: previousAdult,
+      diff: currentAdult - previousAdult,
+      percentChange: adultPercentChange,
+      currentPercentage: currentMembersCount > 0 ? Number(((currentAdult / currentMembersCount) * 100).toFixed(1)) : 0,
+      previousPercentage: previousMembersCount > 0 ? Number(((previousAdult / previousMembersCount) * 100).toFixed(1)) : 0
+    },
+    total: {
+      current: currentMembersCount,
+      previous: previousMembersCount,
+      diff: currentMembersCount - previousMembersCount,
+      percentChange: calculatePercentChange(currentMembersCount, previousMembersCount)
+    }
+  };
+
+  // 8. Monthly Comparison (1..12)
+  const currentMonthCounts = new Array(12).fill(0);
+  const previousMonthCounts = new Array(12).fill(0);
+
+  currentMembers.forEach(m => {
+    let dateStr = '';
+    if (m.batch_id && currentBatchMap.has(m.batch_id)) {
+      dateStr = currentBatchMap.get(m.batch_id)?.created_at || '';
+    }
+    if (!dateStr) return;
+    const d = new Date(dateStr);
+    if (!Number.isNaN(d.getTime()) && d.getFullYear() === cYear) {
+      const monthIdx = d.getMonth();
+      if (monthIdx >= 0 && monthIdx < 12) currentMonthCounts[monthIdx]++;
+    }
+  });
+
+  previousMembers.forEach(m => {
+    let dateStr = '';
+    if (m.batch_id && previousBatchMap.has(m.batch_id)) {
+      dateStr = previousBatchMap.get(m.batch_id)?.created_at || '';
+    }
+    if (!dateStr) return;
+    const d = new Date(dateStr);
+    if (!Number.isNaN(d.getTime()) && d.getFullYear() === pYear) {
+      const monthIdx = d.getMonth();
+      if (monthIdx >= 0 && monthIdx < 12) previousMonthCounts[monthIdx]++;
+    }
+  });
+
+  const monthly: YoYMonthlyItem[] = Array.from({ length: 12 }, (_, i) => {
+    const currentCount = currentMonthCounts[i];
+    const previousCount = previousMonthCounts[i];
+    const diff = currentCount - previousCount;
+    const percentChange = calculatePercentChange(currentCount, previousCount);
+    return {
+      monthIndex: i,
+      label: MONTH_LABELS_ES[i],
+      currentCount,
+      previousCount,
+      diff,
+      percentChange
+    };
+  });
+
+  return {
+    hasPreviousYearData,
+    currentYear: cYear,
+    previousYear: pYear,
+    totalDiplomas,
+    totalBatches,
+    totalMembers,
+    regions: yoyRegions,
+    districts: yoyDistricts,
+    units: yoyUnits,
+    demographics,
+    monthly
+  };
+}
+
+/**
+ * Consolidates all metrics calculations into a complete dataset
+ */
+export function buildStatisticsDataset(
+  members: ScoutMember[],
+  batches: Batch[],
+  regions: Region[],
+  districts: District[],
+  recognitionTypes: RecognitionTypeInfo[] = [],
+  yoyComparison?: YoYComparisonData
+): StatisticsDataset {
+  return {
+    kpis: calculateKpiMetrics(members, batches, recognitionTypes),
+    monthlyTrends: calculateMonthlyTrends(members, batches),
+    recognitionRankings: calculateRecognitionRankings(members, batches, recognitionTypes),
+    demographics: calculateDemographics(members),
+    geographic: calculateGeographicBreakdown(batches, members, regions, districts),
+    statusBreakdown: calculateStatusBreakdown(members),
+    unitDistribution: calculateUnitDistribution(members),
+    filteredMembersCount: members.length,
+    filteredBatchesCount: batches.length,
+    yoyComparison
+  };
+}
+
 
 /**
  * Calculates overall KPI metrics for the statistics dashboard
@@ -400,25 +807,3 @@ export function calculateUnitDistribution(members: ScoutMember[]): UnitDistribut
 
 export const getUnitDistribution = calculateUnitDistribution;
 
-/**
- * Consolidates all metrics calculations into a complete dataset
- */
-export function buildStatisticsDataset(
-  members: ScoutMember[],
-  batches: Batch[],
-  regions: Region[],
-  districts: District[],
-  recognitionTypes: RecognitionTypeInfo[] = []
-): StatisticsDataset {
-  return {
-    kpis: calculateKpiMetrics(members, batches, recognitionTypes),
-    monthlyTrends: calculateMonthlyTrends(members, batches),
-    recognitionRankings: calculateRecognitionRankings(members, batches, recognitionTypes),
-    demographics: calculateDemographics(members),
-    geographic: calculateGeographicBreakdown(batches, members, regions, districts),
-    statusBreakdown: calculateStatusBreakdown(members),
-    unitDistribution: calculateUnitDistribution(members),
-    filteredMembersCount: members.length,
-    filteredBatchesCount: batches.length
-  };
-}

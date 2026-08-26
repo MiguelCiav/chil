@@ -37,7 +37,7 @@ describe('DesignerSidebar component', () => {
     const onAddField = vi.fn();
     const onRemoveField = vi.fn();
 
-    const { rerender } = render(
+    const { container, rerender } = render(
       <DesignerSidebar
         activeTab="palette"
         onTabChange={onTabChange}
@@ -56,6 +56,7 @@ describe('DesignerSidebar component', () => {
       />
     );
 
+    expect(container.querySelector('[data-walkthrough="designer-sidebar"]')).toBeInTheDocument();
     expect(screen.getByText('Paleta de Campos')).toBeInTheDocument();
 
     const estiloTab = screen.getByRole('button', { name: /^Estilo$/i });

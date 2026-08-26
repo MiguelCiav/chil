@@ -14,7 +14,8 @@ import {
   ChevronRight,
   AlertCircle,
   X,
-  RotateCcw
+  RotateCcw,
+  CheckCircle2
 } from 'lucide-react';
 
 import { Button } from '../../../components/Button';
@@ -137,15 +138,14 @@ function renderSummaryTableRows(
     );
   }
 
-  return rows.map((row, index) => {
-    const isLast = index === rows.length - 1;
+  return rows.map(row => {
     return (
       <tr
         key={row.id}
-        className={`hover:bg-[#faf8f5] transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}
+        className="hover:bg-primary/5 transition-colors bg-white"
       >
         {row.getVisibleCells().map(cell => (
-          <td key={cell.id} className="px-4 py-3.5 text-xs whitespace-nowrap text-neutral">
+          <td key={cell.id} className="px-6 py-4 text-sm text-neutral whitespace-nowrap">
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </td>
         ))}
@@ -181,6 +181,10 @@ export const SummaryView: React.FC = () => {
 
   // Pagination state
   const [pageSize, setPageSize] = useState(25);
+
+  // Toast feedback state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -415,8 +419,18 @@ export const SummaryView: React.FC = () => {
     setCustomEndDate('');
   };
 
+  const handleExportAll = () => {
+    exportToExcel(flatData);
+    setToastMessage(`¡Todos los registros (${flatData.length}) han sido exportados exitosamente!`);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 4000);
+  };
+
   const handleExport = () => {
     exportToExcel(filteredData);
+    setToastMessage(`¡Registros exportados exitosamente (${filteredData.length})!`);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 4000);
   };
 
   // TanStack Table Column Definitions (12 columns)
@@ -558,11 +572,19 @@ export const SummaryView: React.FC = () => {
   const currentPageIndex = table.getState().pagination.pageIndex;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
+    <div className="max-w-7xl mx-auto space-y-6 font-sans py-2 relative">
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl animate-fade-in border border-primary/20">
+          <CheckCircle2 className="w-5 h-5 text-green-400" />
+          <span className="text-sm font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
       {/* Header with Title and Download Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
-          <h1 className="text-2xl font-black text-neutral tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Resumen General de Reconocimientos
           </h1>
           <p className="text-xs sm:text-sm text-neutral/70 mt-1">
@@ -573,14 +595,26 @@ export const SummaryView: React.FC = () => {
         <div className="flex items-center gap-3">
           <Button
             type="button"
+            variant="outline"
+            onClick={handleExportAll}
+            disabled={flatData.length === 0}
+            className="shadow-2xs whitespace-nowrap"
+            aria-label="Descargar todo"
+          >
+            <Download className="w-4 h-4" />
+            <span>Descargar todo</span>
+          </Button>
+          <Button
+            type="button"
             variant="primary"
             onClick={handleExport}
             disabled={filteredData.length === 0}
-            className="flex items-center gap-2 text-sm font-bold shadow-sm whitespace-nowrap"
+            className="shadow-sm whitespace-nowrap"
             aria-label="Descargar Excel"
           >
             <Download className="w-4 h-4" />
-            <span>Descargar Excel</span>
+            <span>{hasActiveFilters ? 'Descargar filtrados' : 'Descargar Excel'}</span>
+
           </Button>
         </div>
       </div>
@@ -825,16 +859,16 @@ export const SummaryView: React.FC = () => {
       </div>
 
       {/* TanStack Table Container */}
-      <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
+              <tr className="bg-primary/10 border-b border-primary/20">
                 {table.getHeaderGroups().map(headerGroup => (
                   headerGroup.headers.map(header => (
                     <th
                       key={header.id}
-                      className="px-4 py-3 text-[11px] font-extrabold text-neutral/70 uppercase tracking-wider whitespace-nowrap"
+                      className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider whitespace-nowrap"
                     >
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
@@ -842,7 +876,7 @@ export const SummaryView: React.FC = () => {
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100 bg-white">
               {renderSummaryTableRows(loading, currentPageRows, columns.length)}
             </tbody>
           </table>
