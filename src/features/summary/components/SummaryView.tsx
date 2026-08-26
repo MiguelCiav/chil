@@ -138,15 +138,14 @@ function renderSummaryTableRows(
     );
   }
 
-  return rows.map((row, index) => {
-    const isLast = index === rows.length - 1;
+  return rows.map(row => {
     return (
       <tr
         key={row.id}
-        className={`hover:bg-[#faf8f5] transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}
+        className="hover:bg-primary/5 transition-colors bg-white"
       >
         {row.getVisibleCells().map(cell => (
-          <td key={cell.id} className="px-4 py-3.5 text-xs whitespace-nowrap text-neutral">
+          <td key={cell.id} className="px-6 py-4 text-sm text-neutral whitespace-nowrap">
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </td>
         ))}
@@ -583,9 +582,9 @@ export const SummaryView: React.FC = () => {
       )}
 
       {/* Header with Title and Download Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
-          <h1 className="text-2xl font-black text-neutral tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Resumen General de Reconocimientos
           </h1>
           <p className="text-xs sm:text-sm text-neutral/70 mt-1">
@@ -599,7 +598,7 @@ export const SummaryView: React.FC = () => {
             variant="outline"
             onClick={handleExportAll}
             disabled={flatData.length === 0}
-            className="flex items-center gap-2 text-sm font-bold shadow-2xs whitespace-nowrap"
+            className="shadow-2xs whitespace-nowrap"
             aria-label="Descargar todo"
           >
             <Download className="w-4 h-4" />
@@ -610,7 +609,7 @@ export const SummaryView: React.FC = () => {
             variant="primary"
             onClick={handleExport}
             disabled={filteredData.length === 0}
-            className="flex items-center gap-2 text-sm font-bold shadow-sm whitespace-nowrap"
+            className="shadow-sm whitespace-nowrap"
             aria-label="Descargar Excel"
           >
             <Download className="w-4 h-4" />
@@ -859,16 +858,16 @@ export const SummaryView: React.FC = () => {
       </div>
 
       {/* TanStack Table Container */}
-      <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
+              <tr className="bg-primary/10 border-b border-primary/20">
                 {table.getHeaderGroups().map(headerGroup => (
                   headerGroup.headers.map(header => (
                     <th
                       key={header.id}
-                      className="px-4 py-3 text-[11px] font-extrabold text-neutral/70 uppercase tracking-wider whitespace-nowrap"
+                      className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider whitespace-nowrap"
                     >
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
@@ -876,7 +875,7 @@ export const SummaryView: React.FC = () => {
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100 bg-white">
               {renderSummaryTableRows(loading, currentPageRows, columns.length)}
             </tbody>
           </table>

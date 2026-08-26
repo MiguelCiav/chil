@@ -257,12 +257,11 @@ function renderBatchTableRows(
       </tr>
     );
   }
-  return rows.map((row, index) => {
-    const isLast = index === rows.length - 1;
+  return rows.map(row => {
     return (
       <tr
         key={row.id}
-        className={`hover:bg-[#faf8f5] transition-colors ${!isLast ? 'border-b border-gray-100' : ''}`}
+        className="hover:bg-primary/5 transition-colors bg-white"
       >
         {row.getVisibleCells().map(cell => (
           <td key={cell.id} className="px-6 py-4 text-sm whitespace-nowrap text-neutral">
@@ -621,7 +620,7 @@ export const BatchList: React.FC = () => {
   const totalCount = filteredData.length;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 font-sans py-2">
+    <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
@@ -631,15 +630,15 @@ export const BatchList: React.FC = () => {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div data-walkthrough="batch-list-header">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
               Listado de Lotes
             </h1>
             <WalkthroughHelpButton onClick={() => startTour()} />
           </div>
-          <p className="text-sm text-neutral/60 mt-1">
+          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
             Gestione y descargue los lotes de reconocimientos emitidos.
           </p>
         </div>
@@ -711,16 +710,16 @@ export const BatchList: React.FC = () => {
       </div>
 
       {/* Batches Data Table */}
-      <div data-walkthrough="batch-list-table" className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <div data-walkthrough="batch-list-table" className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
         <div className="overflow-x-auto min-h-[260px] pb-12">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
+              <tr className="bg-primary/10 border-b border-primary/20">
                 {table.getHeaderGroups().map(headerGroup => (
                   headerGroup.headers.map(header => (
                     <th
                       key={header.id}
-                      className="px-6 py-4 text-xs font-extrabold text-neutral/70 uppercase tracking-wider"
+                      className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider"
                     >
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
@@ -728,7 +727,7 @@ export const BatchList: React.FC = () => {
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100 bg-white">
               {renderBatchTableRows(loading, currentPageRows, columns.length)}
             </tbody>
           </table>

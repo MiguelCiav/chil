@@ -13,7 +13,7 @@ import {
   Eye
 } from 'lucide-react';
 
-import { Card, CardHeader, CardBody } from '../../../components/Card';
+import { Card, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
 import { Table } from '../../../components/Table';
 import { ColumnDef } from '@tanstack/react-table';
@@ -275,7 +275,7 @@ export const SuccessPage: React.FC = () => {
   const eligibleCount = members.filter(m => m.status === 'active' || m.status === 'exceptional').length;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 font-sans relative">
+    <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
 
       {/* Toast Notification */}
       {showToast && (
@@ -291,8 +291,8 @@ export const SuccessPage: React.FC = () => {
           <CheckCircle2 className="w-10 h-10" />
         </div>
         <div>
-          <h1 className="text-3xl font-extrabold text-neutral tracking-tight">¡Lote Generado Exitosamente!</h1>
-          <p className="text-neutral/50 font-medium mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">¡Lote Generado Exitosamente!</h1>
+          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
             El lote{' '}
             <span className="text-primary font-bold">#{batch?.id}</span>{' '}
             está listo para ser procesado.
@@ -381,15 +381,13 @@ export const SuccessPage: React.FC = () => {
       )}
 
       {/* Resumen del Lote Table */}
-      <Card className="shadow-lg border-primary/10">
-        <CardHeader className="bg-primary/5 border-b border-primary/10 flex items-center gap-2">
+      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
+        <div className="p-4 sm:p-5 border-b border-primary/20 bg-primary/5 flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" />
-          Resumen del Lote
-        </CardHeader>
-        <CardBody className="p-0">
-          <Table columns={columns} data={members} className="border-0 rounded-none shadow-none" />
-        </CardBody>
-      </Card>
+          <h2 className="text-base font-bold text-neutral">Resumen del Lote</h2>
+        </div>
+        <Table columns={columns} data={members} className="border-0 rounded-none shadow-none" />
+      </div>
 
     </div>
   );

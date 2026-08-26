@@ -601,7 +601,7 @@ export const NewBatchWizard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 font-sans relative">
+    <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
 
       {/* Toast Notification */}
       {showToast && (
@@ -612,16 +612,18 @@ export const NewBatchWizard: React.FC = () => {
       )}
 
       {/* Header */}
-      <div data-walkthrough="wizard-header">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
-            Asistente de Creación de Lote
-          </h1>
-          <WalkthroughHelpButton onClick={() => startTour()} />
+      <div data-walkthrough="wizard-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight flex items-center gap-2">
+              Asistente de Creación de Lote
+            </h1>
+            <WalkthroughHelpButton onClick={() => startTour()} />
+          </div>
+          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+            Configura la estructura geográfica, verifica miembros y genera reconocimientos masivos.
+          </p>
         </div>
-        <p className="text-sm text-neutral/60 mt-0.5">
-          Configura la estructura geográfica, verifica miembros y genera reconocimientos masivos.
-        </p>
       </div>
 
       {/* Premium Step Wizard Navigation Bar */}

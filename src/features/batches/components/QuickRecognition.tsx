@@ -120,7 +120,7 @@ export const QuickRecognition: React.FC = () => {
   } = useQuickRecognition();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 font-sans py-4">
+    <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Toast Notification */}
       {showToast && (
         <div
@@ -149,16 +149,18 @@ export const QuickRecognition: React.FC = () => {
         /* Form View */
         <div className="space-y-6">
           {/* Header */}
-          <div data-walkthrough="quick-rec-header">
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
-                Emisión Rápida de Reconocimiento
-              </h1>
-              <WalkthroughHelpButton onClick={() => startTour()} />
+          <div data-walkthrough="quick-rec-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight flex items-center gap-2">
+                  Emisión Rápida de Reconocimiento
+                </h1>
+                <WalkthroughHelpButton onClick={() => startTour()} />
+              </div>
+              <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+                Emite y descarga un reconocimiento individual de forma inmediata en un solo paso.
+              </p>
             </div>
-            <p className="text-sm text-neutral/60 mt-0.5">
-              Emite y descarga un reconocimiento individual de forma inmediata en un solo paso.
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

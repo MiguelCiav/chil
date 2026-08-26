@@ -520,7 +520,7 @@ export const BatchDetail: React.FC = () => {
     : 'Servicio Prolongado';
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 font-sans py-2 relative">
+    <div className="max-w-7xl mx-auto space-y-6 font-sans py-2 relative">
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
@@ -532,11 +532,11 @@ export const BatchDetail: React.FC = () => {
       {/* Header with Title and Action Buttons */}
       <div
         data-walkthrough="batch-detail-header"
-        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2"
       >
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
               Lote #{batch.id}
             </h1>
             <WalkthroughHelpButton onClick={() => startTour()} />
@@ -544,7 +544,7 @@ export const BatchDetail: React.FC = () => {
               {`LT-${new Date(batch.created_at).getFullYear()}-${String(batch.id).padStart(3, '0')}`}
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-neutral/60 font-medium mt-1">
+          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
             Revisión y gestión de reconocimientos del lote actual.
           </p>
         </div>
@@ -554,7 +554,7 @@ export const BatchDetail: React.FC = () => {
             variant="outline"
             onClick={() => setIsDeleteModalOpen(true)}
             icon={<Trash2 size={16} />}
-            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-semibold text-xs sm:text-sm"
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
           >
             Eliminar Lote
           </Button>
@@ -564,7 +564,7 @@ export const BatchDetail: React.FC = () => {
             onClick={handleDownloadMemberListPDF}
             disabled={downloadingReport}
             icon={<Download size={16} />}
-            className="border-gray-200 hover:bg-gray-50 text-neutral font-semibold text-xs sm:text-sm"
+            className="border-gray-200 hover:bg-gray-50 text-neutral"
           >
             {downloadingReport ? 'Generando PDF...' : 'Descargar lista'}
           </Button>
@@ -579,7 +579,7 @@ export const BatchDetail: React.FC = () => {
                 : undefined
             }
             icon={<FileText size={16} />}
-            className="bg-[#5c371d] hover:bg-[#4b2c17] text-white font-semibold text-xs sm:text-sm"
+            className="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
           >
             {downloading ? 'Generando PDF...' : 'Descargar Reconocimientos (PDF)'}
           </Button>
@@ -599,10 +599,10 @@ export const BatchDetail: React.FC = () => {
       {/* Members Table Container ("Miembros del Lote") */}
       <div
         data-walkthrough="batch-detail-members-table"
-        className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm"
+        className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm"
       >
         {/* Table Header with Search Input */}
-        <div className="p-4 sm:p-5 border-b border-gray-200 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="p-4 sm:p-5 border-b border-primary/20 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-base sm:text-lg font-bold text-neutral">Miembros del Lote</h2>
 
           <div className="relative w-full sm:w-72">
@@ -621,12 +621,12 @@ export const BatchDetail: React.FC = () => {
         <div className="overflow-x-auto min-h-[260px] pb-12">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
+              <tr className="bg-primary/10 border-b border-primary/20">
                 {table.getHeaderGroups().map((headerGroup) =>
                   headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="px-6 py-4 text-xs font-extrabold text-neutral/70 uppercase tracking-wider"
+                      className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider"
                     >
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
@@ -634,28 +634,23 @@ export const BatchDetail: React.FC = () => {
                 )}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100 bg-white">
               {currentPageRows.length > 0 ? (
-                currentPageRows.map((row, index) => {
-                  const isLast = index === currentPageRows.length - 1;
-                  return (
-                    <tr
-                      key={row.id}
-                      className={`hover:bg-[#faf8f5] transition-colors ${
-                        !isLast ? 'border-b border-gray-100' : ''
-                      }`}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="px-6 py-4 text-sm whitespace-nowrap text-neutral"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })
+                currentPageRows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-primary/5 transition-colors bg-white"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className="px-6 py-4 text-sm whitespace-nowrap text-neutral"
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : (
                 <tr>
                   <td colSpan={columns.length} className="px-6 py-12 text-center text-neutral/50">

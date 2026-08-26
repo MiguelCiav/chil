@@ -171,9 +171,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   <Button
                     type="button"
                     variant="outline"
+                    size="sm"
                     onClick={handleRegenerateCodes}
                     icon={<RotateCcw size={14} />}
-                    className="text-xs font-semibold border-primary/20 hover:bg-primary/10 text-primary py-1.5 px-3"
+                    className="border-primary/20 hover:bg-primary/10 text-primary"
                   >
                     Regenerar códigos
                   </Button>
@@ -181,9 +182,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={handleClearCodes}
                   icon={<Eraser size={14} />}
-                  className="text-xs font-semibold border-gray-200 hover:bg-gray-100 text-neutral/70 py-1.5 px-3"
+                  className="border-gray-200 hover:bg-gray-100 text-neutral/70"
                 >
                   Limpiar códigos
                 </Button>

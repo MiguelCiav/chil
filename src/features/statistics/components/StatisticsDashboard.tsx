@@ -29,7 +29,7 @@ export const StatisticsDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6 font-sans py-4">
+      <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
         {/* Header Skeleton */}
         <div className="space-y-2">
           <div className="h-8 w-64 bg-gray-200 animate-pulse rounded-lg" />
@@ -72,12 +72,12 @@ export const StatisticsDashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
-          <h1 className="text-2xl font-black text-neutral tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Estadísticas y Análisis
           </h1>
-          <p className="text-xs sm:text-sm text-neutral/70 mt-0.5">
+          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
             Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
           </p>
         </div>

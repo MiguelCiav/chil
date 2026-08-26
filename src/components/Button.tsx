@@ -24,7 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   // Base styles
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+  const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
   
   // Variant styles
   const variants: Record<ButtonVariant, string> = {
@@ -36,9 +36,9 @@ export const Button: React.FC<ButtonProps> = ({
 
   // Size styles
   const sizes: Record<ButtonSize, string> = {
-    sm: 'h-8 px-3 text-sm gap-1.5',
-    md: 'h-10 px-4 text-base gap-2',
-    lg: 'h-12 px-6 text-lg gap-2.5'
+    sm: 'h-8 px-3 text-xs gap-1.5 rounded-lg',
+    md: 'h-10 px-4 text-sm gap-2 rounded-xl',
+    lg: 'h-12 px-6 text-sm sm:text-base gap-2.5 rounded-xl'
   };
 
   const widthStyle = fullWidth ? 'w-full' : '';

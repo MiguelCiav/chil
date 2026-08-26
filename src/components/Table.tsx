@@ -23,7 +23,7 @@ export function Table<TData, TValue>({
   });
 
   return (
-    <div className={`w-full border border-primary/20 rounded-2xl overflow-hidden bg-white ${className}`}>
+    <div className={`w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -32,7 +32,7 @@ export function Table<TData, TValue>({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-6 py-4 text-sm font-bold text-neutral uppercase tracking-wide"
+                    className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider"
                   >
                     {header.isPlaceholder
                       ? null
@@ -45,18 +45,17 @@ export function Table<TData, TValue>({
               </tr>
             ))}
           </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row, index) => {
-              const isLast = index === table.getRowModel().rows.length - 1;
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {table.getRowModel().rows.map((row) => {
               return (
                 <tr 
                   key={row.id} 
-                  className={`bg-white hover:bg-primary/5 transition-colors ${!isLast ? 'border-b border-primary/10' : ''}`}
+                  className="hover:bg-primary/5 transition-colors bg-white"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className="px-6 py-5 text-sm text-neutral whitespace-nowrap"
+                      className="px-6 py-4 text-sm text-neutral whitespace-nowrap"
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>

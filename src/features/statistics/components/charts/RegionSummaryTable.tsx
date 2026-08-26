@@ -24,7 +24,7 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
     : (showAll ? regions : regions.slice(0, 5));
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
+    <div className="bg-white border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -53,41 +53,41 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
         </div>
       ) : hasYoY && yoy ? (
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans text-xs">
+          <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Región</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+              <tr className="bg-primary/10 border-b border-primary/20">
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Región</th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
                   Total ({yoy.currentYear})
                 </th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
                   Año Anterior ({yoy.previousYear})
                 </th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
                   Variación
                 </th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">
                   % del Total
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 bg-white">
               {(displayedRegions as typeof yoy.regions).map((r, idx) => (
-                <tr key={r.id || r.name} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="px-4 py-2.5 font-semibold text-neutral flex items-center gap-2">
+                <tr key={r.id || r.name} className="hover:bg-primary/5 transition-colors bg-white">
+                  <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
                     <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
                     <span>{r.name}</span>
                   </td>
-                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                  <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
                     {r.currentCount}
                   </td>
-                  <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
+                  <td className="px-6 py-4 text-sm font-medium text-neutral/60 whitespace-nowrap text-right">
                     {r.previousCount}
                   </td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="px-6 py-4 text-sm whitespace-nowrap text-right">
                     <YoYVariationBadge diff={r.diff} percentChange={r.percentChange} />
                   </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                  <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
                       <span>{r.currentPercentage}%</span>
                       <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -105,25 +105,25 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans text-xs">
+          <table className="w-full text-left border-collapse font-sans">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#faf8f5]">
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Región</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
-                <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+              <tr className="bg-primary/10 border-b border-primary/20">
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider">Región</th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">Total Reconocimientos</th>
+                <th className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider text-right">% del Total</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 bg-white">
               {(displayedRegions as GeographicItem[]).map((r, idx) => (
-                <tr key={r.id || r.name} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="px-4 py-2.5 font-semibold text-neutral flex items-center gap-2">
+                <tr key={r.id || r.name} className="hover:bg-primary/5 transition-colors bg-white">
+                  <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
                     <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
                     <span>{r.name}</span>
                   </td>
-                  <td className="px-4 py-2.5 font-bold text-neutral text-right">
+                  <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
                     {r.count}
                   </td>
-                  <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+                  <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
                       <span>{r.percentage}%</span>
                       <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
