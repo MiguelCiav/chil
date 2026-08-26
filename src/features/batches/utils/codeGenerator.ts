@@ -6,9 +6,11 @@ import { ScoutMember } from '../types';
  */
 export function generateRecognitionCode(prefix: string = 'REC', length: number = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // exclude ambiguous 0/O, 1/I
+  const randomBytes = new Uint8Array(length);
+  crypto.getRandomValues(randomBytes);
   let hash = '';
   for (let i = 0; i < length; i++) {
-    hash += chars.charAt(Math.floor(Math.random() * chars.length));
+    hash += chars[randomBytes[i] % chars.length];
   }
   const cleanPrefix = prefix ? prefix.trim().toUpperCase() : 'REC';
   return `${cleanPrefix}-${hash}`;

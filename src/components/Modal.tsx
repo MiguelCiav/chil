@@ -27,9 +27,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/* Overlay */}
       <div
+        data-testid="modal-backdrop"
         className="absolute inset-0 bg-neutral/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
-        role="presentation"
+        aria-hidden="true"
         onKeyDown={(e) => {
           if (e.key === 'Escape') onClose();
         }}

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import {
   AuthContextType,
   AuthUser,
@@ -54,14 +54,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await resetPasswordEmail(email);
   }, []);
 
-  const value: AuthContextType = {
-    user,
-    loading,
-    login,
-    register,
-    logout,
-    resetPassword
-  };
+  const value: AuthContextType = useMemo(
+    () => ({
+      user,
+      loading,
+      login,
+      register,
+      logout,
+      resetPassword
+    }),
+    [user, loading, login, register, logout, resetPassword]
+  );
 
   return (
     <AuthContext.Provider value={value}>

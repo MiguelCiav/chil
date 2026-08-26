@@ -4,12 +4,12 @@ export const loginSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, 'El correo electrónico es requerido')
-    .email('Ingrese un correo electrónico válido'),
+    .min(1, { message: 'El correo electrónico es requerido' })
+    .email({ message: 'Ingrese un correo electrónico válido' }),
   password: z
     .string()
-    .min(1, 'La contraseña es requerida')
-    .min(6, 'La contraseña debe tener al menos 6 caracteres')
+    .min(1, { message: 'La contraseña es requerida' })
+    .min(6, { message: 'La contraseña debe tener al menos 6 caracteres' })
 });
 
 export type LoginCredentials = z.infer<typeof loginSchema>;
@@ -19,20 +19,20 @@ export const registerSchema = z
     full_name: z
       .string()
       .trim()
-      .min(2, 'El nombre completo debe tener al menos 2 caracteres')
-      .max(100, 'El nombre completo no puede exceder 100 caracteres'),
+      .min(2, { message: 'El nombre completo debe tener al menos 2 caracteres' })
+      .max(100, { message: 'El nombre completo no puede exceder 100 caracteres' }),
     email: z
       .string()
       .trim()
-      .min(1, 'El correo electrónico es requerido')
-      .email('Ingrese un correo electrónico válido'),
+      .min(1, { message: 'El correo electrónico es requerido' })
+      .email({ message: 'Ingrese un correo electrónico válido' }),
     password: z
       .string()
-      .min(1, 'La contraseña es requerida')
-      .min(6, 'La contraseña debe tener al menos 6 caracteres'),
+      .min(1, { message: 'La contraseña es requerida' })
+      .min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
     confirm_password: z
       .string()
-      .min(1, 'Debe confirmar la contraseña')
+      .min(1, { message: 'Debe confirmar la contraseña' })
   })
   .refine(data => data.password === data.confirm_password, {
     message: 'Las contraseñas no coinciden',
@@ -45,8 +45,8 @@ export const forgotPasswordSchema = z.object({
   email: z
     .string()
     .trim()
-    .min(1, 'El correo electrónico es requerido')
-    .email('Ingrese un correo electrónico válido')
+    .min(1, { message: 'El correo electrónico es requerido' })
+    .email({ message: 'Ingrese un correo electrónico válido' })
 });
 
 export type ForgotPasswordParams = z.infer<typeof forgotPasswordSchema>;

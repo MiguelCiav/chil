@@ -116,7 +116,7 @@ describe('RecognitionDeleteModal Component', () => {
     fireEvent.click(closeHeaderBtn);
     expect(handleClose).toHaveBeenCalledTimes(2);
 
-    const backdrop = screen.getByRole('presentation');
+    const backdrop = screen.getByTestId('modal-backdrop');
     fireEvent.click(backdrop);
     expect(handleClose).toHaveBeenCalledTimes(3);
 

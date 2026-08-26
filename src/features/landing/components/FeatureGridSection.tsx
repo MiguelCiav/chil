@@ -156,8 +156,8 @@ export const FeatureGridSection: React.FC = () => {
 
               {/* Highlights List */}
               <div className="mt-6 pt-4 border-t border-gray-100/90 space-y-2">
-                {feature.highlights.map((highlight, index) => (
-                  <div key={index} className="flex items-center gap-2.5 text-xs text-neutral/80">
+                {feature.highlights.map((highlight) => (
+                  <div key={highlight} className="flex items-center gap-2.5 text-xs text-neutral/80">
                     <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                     <span>{highlight}</span>
                   </div>

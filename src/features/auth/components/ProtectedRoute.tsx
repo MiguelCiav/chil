@@ -12,10 +12,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3" role="status" aria-label="Cargando sesión">
+      <output className="min-h-[50vh] flex flex-col items-center justify-center space-y-3" aria-live="polite" aria-label="Cargando sesión">
         <div className="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
         <span className="text-xs font-semibold text-neutral/60">Verificando sesión...</span>
-      </div>
+      </output>
     );
   }
 

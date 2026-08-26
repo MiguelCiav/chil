@@ -7,7 +7,7 @@ function getInitials(name?: string | null, email?: string | null): string {
   if (name && name.trim()) {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      return `${parts[0][0]}${parts.at(-1)?.[0] ?? ''}`.toUpperCase();
     }
     return parts[0].substring(0, 2).toUpperCase();
   }
@@ -57,9 +57,9 @@ export const UserProfileMenu: React.FC = () => {
 
   if (!user) return null;
 
-  const initials = getInitials(user.displayName, user.email);
-  const displayName = user.displayName || 'Usuario Scout';
-  const email = user.email || '';
+  const initials = getInitials(user?.displayName, user?.email);
+  const displayName = user?.displayName || 'Usuario Scout';
+  const email = user?.email || '';
 
   const handleLogout = async () => {
     setIsOpen(false);
@@ -81,7 +81,7 @@ export const UserProfileMenu: React.FC = () => {
         aria-haspopup="true"
         aria-label="Menú de usuario"
       >
-        {user.photoURL ? (
+        {user?.photoURL ? (
           <img
             src={user.photoURL}
             alt={displayName}

@@ -15,6 +15,115 @@ export interface WalkthroughDialogProps {
   className?: string;
 }
 
+interface ViewportDimensions {
+  vw: number;
+  vh: number;
+}
+
+interface DialogDimensions {
+  dialogWidth: number;
+  dialogHeight: number;
+  padding: number;
+  margin: number;
+}
+
+function resolveAutoPlacement(
+  targetRect: DOMRect,
+  dimensions: DialogDimensions,
+  viewport: ViewportDimensions
+): WalkthroughPlacement {
+  const { dialogHeight, dialogWidth, margin, padding } = dimensions;
+  const { vh, vw } = viewport;
+  const spaceBelow = vh - targetRect.bottom;
+  const spaceAbove = targetRect.top;
+
+  if (spaceBelow >= dialogHeight + margin + padding) {
+    return 'bottom';
+  }
+  if (spaceAbove >= dialogHeight + margin + padding) {
+    return 'top';
+  }
+
+  const spaceRight = vw - targetRect.right;
+  const spaceLeft = targetRect.left;
+  if (spaceRight >= dialogWidth + margin + padding) {
+    return 'right';
+  }
+  if (spaceLeft >= dialogWidth + margin + padding) {
+    return 'left';
+  }
+
+  return spaceBelow >= spaceAbove ? 'bottom' : 'top';
+}
+
+function computeRawPosition(
+  placement: WalkthroughPlacement,
+  targetRect: DOMRect,
+  dialogWidth: number,
+  dialogHeight: number,
+  margin: number
+): { top: number; left: number } {
+  switch (placement) {
+    case 'top':
+      return {
+        top: targetRect.top - dialogHeight - margin,
+        left: targetRect.left + targetRect.width / 2 - dialogWidth / 2
+      };
+    case 'left':
+      return {
+        top: targetRect.top + targetRect.height / 2 - dialogHeight / 2,
+        left: targetRect.left - dialogWidth - margin
+      };
+    case 'right':
+      return {
+        top: targetRect.top + targetRect.height / 2 - dialogHeight / 2,
+        left: targetRect.right + margin
+      };
+    case 'bottom':
+    default:
+      return {
+        top: targetRect.bottom + margin,
+        left: targetRect.left + targetRect.width / 2 - dialogWidth / 2
+      };
+  }
+}
+
+function computeDialogPosition(
+  targetRect: DOMRect | null,
+  dialogWidth: number,
+  dialogHeight: number,
+  requestedPlacement: WalkthroughPlacement = 'auto'
+): { top: number; left: number; placement: WalkthroughPlacement } {
+  const padding = 16;
+  const margin = 12;
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 768;
+
+  if (!targetRect) {
+    return {
+      top: Math.max(padding, (vh - dialogHeight) / 2),
+      left: Math.max(padding, (vw - dialogWidth) / 2),
+      placement: 'auto'
+    };
+  }
+
+  const placement =
+    requestedPlacement === 'auto'
+      ? resolveAutoPlacement(targetRect, { dialogWidth, dialogHeight, padding, margin }, { vw, vh })
+      : requestedPlacement;
+
+  const rawPos = computeRawPosition(placement, targetRect, dialogWidth, dialogHeight, margin);
+
+  const clampedTop = Math.max(padding, Math.min(vh - dialogHeight - padding, rawPos.top));
+  const clampedLeft = Math.max(padding, Math.min(vw - dialogWidth - padding, rawPos.left));
+
+  return {
+    top: clampedTop,
+    left: clampedLeft,
+    placement
+  };
+}
+
 export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
   step,
   stepIndex,
@@ -38,79 +147,21 @@ export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
     const dialogEl = dialogRef.current;
     const dialogWidth = dialogEl ? dialogEl.offsetWidth : 360;
     const dialogHeight = dialogEl ? dialogEl.offsetHeight : 180;
-    const padding = 16;
-    const margin = 12;
 
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const { top, left, placement } = computeDialogPosition(
+      targetRect,
+      dialogWidth,
+      dialogHeight,
+      step.placement || 'auto'
+    );
 
-    if (!targetRect) {
-      const top = Math.max(padding, (vh - dialogHeight) / 2);
-      const left = Math.max(padding, (vw - dialogWidth) / 2);
-      setPosition({ top, left });
-      onPositionChange?.({ top, left, width: dialogWidth, height: dialogHeight, placement: 'auto' });
-      return;
-    }
-
-    let chosenPlacement: WalkthroughPlacement = step.placement || 'auto';
-
-    if (chosenPlacement === 'auto') {
-      const spaceBelow = vh - targetRect.bottom;
-      const spaceAbove = targetRect.top;
-
-      if (spaceBelow >= dialogHeight + margin + padding) {
-        chosenPlacement = 'bottom';
-      } else if (spaceAbove >= dialogHeight + margin + padding) {
-        chosenPlacement = 'top';
-      } else {
-        const spaceRight = vw - targetRect.right;
-        const spaceLeft = targetRect.left;
-        if (spaceRight >= dialogWidth + margin + padding) {
-          chosenPlacement = 'right';
-        } else if (spaceLeft >= dialogWidth + margin + padding) {
-          chosenPlacement = 'left';
-        } else {
-          chosenPlacement = spaceBelow >= spaceAbove ? 'bottom' : 'top';
-        }
-      }
-    }
-
-    let top: number;
-    let left: number;
-
-    switch (chosenPlacement) {
-      case 'top':
-        top = targetRect.top - dialogHeight - margin;
-        left = targetRect.left + targetRect.width / 2 - dialogWidth / 2;
-        break;
-      case 'bottom':
-        top = targetRect.bottom + margin;
-        left = targetRect.left + targetRect.width / 2 - dialogWidth / 2;
-        break;
-      case 'left':
-        top = targetRect.top + targetRect.height / 2 - dialogHeight / 2;
-        left = targetRect.left - dialogWidth - margin;
-        break;
-      case 'right':
-        top = targetRect.top + targetRect.height / 2 - dialogHeight / 2;
-        left = targetRect.right + margin;
-        break;
-      default:
-        top = targetRect.bottom + margin;
-        left = targetRect.left + targetRect.width / 2 - dialogWidth / 2;
-    }
-
-    // Boundary constraints: ensure dialog stays fully inside the viewport
-    const clampedTop = Math.max(padding, Math.min(vh - dialogHeight - padding, top));
-    const clampedLeft = Math.max(padding, Math.min(vw - dialogWidth - padding, left));
-
-    setPosition({ top: clampedTop, left: clampedLeft });
+    setPosition({ top, left });
     onPositionChange?.({
-      top: clampedTop,
-      left: clampedLeft,
+      top,
+      left,
       width: dialogWidth,
       height: dialogHeight,
-      placement: chosenPlacement
+      placement
     });
   }, [targetRect, step, onPositionChange]);
 

@@ -8,6 +8,24 @@ import { Button } from '../../../components/Button';
 import { useAuth } from '../hooks/useAuth';
 import { registerSchema, RegisterCredentials } from '../types';
 
+const getFieldClassName = (hasError = false, hasPaddingRight = false): string => {
+  const base = `w-full rounded-xl py-2.5 ${hasPaddingRight ? 'pl-4 pr-11' : 'px-4'} text-sm transition-all focus:outline-none focus:ring-2 focus:border-transparent`;
+  if (hasError) {
+    return `${base} bg-red-50 border border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500`;
+  }
+  return `${base} bg-primary/5 border border-primary/20 text-neutral placeholder-primary/40 focus:ring-primary`;
+};
+
+const getLabelClassName = (hasError = false): string =>
+  `block uppercase text-xs font-bold mb-1.5 tracking-wider ${hasError ? 'text-red-600' : 'text-neutral/70'}`;
+
+const getRegistrationErrorMessage = (err: unknown): string => {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return 'Error al registrar usuario';
+};
+
 export const RegisterPage: React.FC = () => {
   const { user, register: registerUser } = useAuth();
   const navigate = useNavigate();
@@ -41,8 +59,7 @@ export const RegisterPage: React.FC = () => {
       await registerUser(data);
       navigate('/lotes', { replace: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar usuario';
-      setServerError(msg);
+      setServerError(getRegistrationErrorMessage(err));
     }
   };
 
@@ -80,9 +97,7 @@ export const RegisterPage: React.FC = () => {
             <div className="w-full">
               <label
                 htmlFor="register-name"
-                className={`block uppercase text-xs font-bold mb-1.5 tracking-wider ${
-                  errors.full_name ? 'text-red-600' : 'text-neutral/70'
-                }`}
+                className={getLabelClassName(Boolean(errors.full_name))}
               >
                 Nombre y Apellido
               </label>
@@ -92,11 +107,7 @@ export const RegisterPage: React.FC = () => {
                 placeholder="Ej. Carlos Mendoza"
                 autoComplete="name"
                 disabled={isSubmitting}
-                className={`w-full rounded-xl py-2.5 px-4 text-sm transition-all focus:outline-none focus:ring-2 focus:border-transparent ${
-                  errors.full_name
-                    ? 'bg-red-50 border border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500'
-                    : 'bg-primary/5 border border-primary/20 text-neutral placeholder-primary/40 focus:ring-primary'
-                }`}
+                className={getFieldClassName(Boolean(errors.full_name))}
                 {...register('full_name')}
               />
               {errors.full_name && (
@@ -108,9 +119,7 @@ export const RegisterPage: React.FC = () => {
             <div className="w-full">
               <label
                 htmlFor="register-email"
-                className={`block uppercase text-xs font-bold mb-1.5 tracking-wider ${
-                  errors.email ? 'text-red-600' : 'text-neutral/70'
-                }`}
+                className={getLabelClassName(Boolean(errors.email))}
               >
                 Correo Electrónico
               </label>
@@ -120,11 +129,7 @@ export const RegisterPage: React.FC = () => {
                 placeholder="ejemplo@scouts.org.ve"
                 autoComplete="email"
                 disabled={isSubmitting}
-                className={`w-full rounded-xl py-2.5 px-4 text-sm transition-all focus:outline-none focus:ring-2 focus:border-transparent ${
-                  errors.email
-                    ? 'bg-red-50 border border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500'
-                    : 'bg-primary/5 border border-primary/20 text-neutral placeholder-primary/40 focus:ring-primary'
-                }`}
+                className={getFieldClassName(Boolean(errors.email))}
                 {...register('email')}
               />
               {errors.email && (
@@ -136,9 +141,7 @@ export const RegisterPage: React.FC = () => {
             <div className="w-full">
               <label
                 htmlFor="register-password"
-                className={`block uppercase text-xs font-bold mb-1.5 tracking-wider ${
-                  errors.password ? 'text-red-600' : 'text-neutral/70'
-                }`}
+                className={getLabelClassName(Boolean(errors.password))}
               >
                 Contraseña
               </label>
@@ -149,11 +152,7 @@ export const RegisterPage: React.FC = () => {
                   placeholder="Mínimo 6 caracteres"
                   autoComplete="new-password"
                   disabled={isSubmitting}
-                  className={`w-full rounded-xl py-2.5 pl-4 pr-11 text-sm transition-all focus:outline-none focus:ring-2 focus:border-transparent ${
-                    errors.password
-                      ? 'bg-red-50 border border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500'
-                      : 'bg-primary/5 border border-primary/20 text-neutral placeholder-primary/40 focus:ring-primary'
-                  }`}
+                  className={getFieldClassName(Boolean(errors.password), true)}
                   {...register('password')}
                 />
                 <button
@@ -178,9 +177,7 @@ export const RegisterPage: React.FC = () => {
             <div className="w-full">
               <label
                 htmlFor="register-confirm-password"
-                className={`block uppercase text-xs font-bold mb-1.5 tracking-wider ${
-                  errors.confirm_password ? 'text-red-600' : 'text-neutral/70'
-                }`}
+                className={getLabelClassName(Boolean(errors.confirm_password))}
               >
                 Confirmar Contraseña
               </label>
@@ -191,11 +188,7 @@ export const RegisterPage: React.FC = () => {
                   placeholder="Repita la contraseña"
                   autoComplete="new-password"
                   disabled={isSubmitting}
-                  className={`w-full rounded-xl py-2.5 pl-4 pr-11 text-sm transition-all focus:outline-none focus:ring-2 focus:border-transparent ${
-                    errors.confirm_password
-                      ? 'bg-red-50 border border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500'
-                      : 'bg-primary/5 border border-primary/20 text-neutral placeholder-primary/40 focus:ring-primary'
-                  }`}
+                  className={getFieldClassName(Boolean(errors.confirm_password), true)}
                   {...register('confirm_password')}
                 />
                 <button
