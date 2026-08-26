@@ -2,7 +2,7 @@
 "chil": minor
 ---
 
-Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Interactivas), Module 1 (Listado de Lotes), Module 2 (Emisión Rápida), and Module 3 (Nuevo Lote - Wizard de 3 Pasos) tour integration:
+Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Interactivas), Module 1 (Listado de Lotes), Module 2 (Emisión Rápida), Module 3 (Nuevo Lote - Wizard de 3 Pasos), and Module 4 (Detalle del Lote) tour integration:
 - Core Walkthrough Engine (`src/components/walkthrough/`):
   - `types.ts`: Define `WalkthroughPlacement`, `WalkthroughStep`, and `TourConfig` types.
   - `useWalkthrough.ts`: Custom hook managing tour lifecycle (`isOpen`, `currentStepIndex`, `currentStep`, `targetRect`), first-time auto-start with per-user `localStorage` persistence (`chil_tour_${tourId}_${userId}`), dynamic DOM measurement & smooth viewport scrolling, window resize/scroll listeners, and keyboard navigation (`Escape`, `ArrowRight`, `Enter`, `ArrowLeft`).
@@ -22,5 +22,9 @@ Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Inte
   - Added `data-walkthrough` selectors for Header (`wizard-header`), Stepper (`wizard-stepper`), Step container (`wizard-step-container`), and Navigation buttons (`wizard-navigation-buttons`).
   - Implemented 4-step interactive guided tour (`NEW_BATCH_WIZARD_TOUR_STEPS`) explaining header objective, 3-step progress flow, metadata/unit scope configuration, and step navigation.
   - Mounted `WalkthroughHelpButton` in the header and `WalkthroughOverlay`.
+- Module 4 Integration: Detalle del Lote (`src/features/batches/components/BatchDetail.tsx`):
+  - Added `data-walkthrough` selectors for Header card (`batch-detail-header`), Summary cards (`batch-detail-summary-cards`), Members table (`batch-detail-members-table`), and Member row actions (`batch-detail-table-actions`).
+  - Implemented 4-step interactive guided tour (`BATCH_DETAIL_TOUR_STEPS`) explaining batch details & PDF actions, demographic/structure summaries & observations, member list & badges, and individual actions/exceptional cases.
+  - Mounted `WalkthroughHelpButton` next to main title in header and `WalkthroughOverlay`.
 - Test Suites & Quality Gate:
-  - Unit tests for `useWalkthrough`, `WalkthroughOverlay`, `WalkthroughDialog`, `WalkthroughHelpButton`, `BatchList`, `QuickRecognition`, and `NewBatchWizard` integration.
+  - Unit tests for `useWalkthrough`, `WalkthroughOverlay`, `WalkthroughDialog`, `WalkthroughHelpButton`, `BatchList`, `QuickRecognition`, `NewBatchWizard`, and `BatchDetail` integration.

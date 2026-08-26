@@ -24,6 +24,12 @@ import {
 
 import { Button } from '../../../components/Button';
 import {
+  useWalkthrough,
+  WalkthroughOverlay,
+  WalkthroughHelpButton,
+  WalkthroughStep
+} from '../../../components/walkthrough';
+import {
   getBatchById,
   getMembersByBatchId,
   updateMember,
@@ -55,11 +61,62 @@ import { EditMemberModal } from './detail/EditMemberModal';
 import { MemberQuickViewModal } from './detail/MemberQuickViewModal';
 import { DeleteBatchModal } from './detail/DeleteBatchModal';
 
+const BATCH_DETAIL_TOUR_STEPS: WalkthroughStep[] = [
+  {
+    id: 'batch-detail-header',
+    targetSelector: '[data-walkthrough="batch-detail-header"]',
+    title: 'Detalle y Acciones del Lote',
+    content:
+      'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista o eliminar el lote si es necesario.',
+    placement: 'bottom'
+  },
+  {
+    id: 'batch-detail-summary-cards',
+    targetSelector: '[data-walkthrough="batch-detail-summary-cards"]',
+    title: 'Resumen y Observaciones',
+    content:
+      'Revisa la estructura geográfica, el tipo de reconocimiento otorgado, el desglose demográfico de miembros (Jóvenes y Adultos) y los comentarios u observaciones registradas.',
+    placement: 'bottom'
+  },
+  {
+    id: 'batch-detail-members-table',
+    targetSelector: '[data-walkthrough="batch-detail-members-table"]',
+    title: 'Listado de Homenajeados',
+    content:
+      'Visualiza todos los miembros del lote con su cédula, nombres, unidad scout (Manada, Tropa, No Scout, etc.), estatus y código oficial de reconocimiento.',
+    placement: 'top'
+  },
+  {
+    id: 'batch-detail-table-actions',
+    targetSelector: '[data-walkthrough="batch-detail-table-actions"]',
+    title: 'Gestión Individual de Miembros',
+    content:
+      'Desde el menú de 3 puntos en cada fila puedes descargar el reconocimiento individual en PDF, consultar la vista rápida o editar los datos (incluyendo la autorización con justificación para casos excepcionales).',
+    placement: 'left'
+  }
+];
+
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const batchId = Number(id);
+
+  const {
+    isOpen: isTourOpen,
+    currentStep,
+    currentStepIndex,
+    totalSteps,
+    targetRect,
+    startTour,
+    nextStep,
+    prevStep,
+    skipTour
+  } = useWalkthrough({
+    tourId: 'batch-detail-tour',
+    steps: BATCH_DETAIL_TOUR_STEPS,
+    userId: user?.uid
+  });
 
   const [batch, setBatch] = useState<Batch | null>(null);
   const [members, setMembers] = useState<ScoutMember[]>([]);
@@ -351,7 +408,10 @@ export const BatchDetail: React.FC = () => {
           const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
 
           return (
-            <div className="flex items-center gap-2 relative">
+            <div
+              data-walkthrough="batch-detail-table-actions"
+              className="flex items-center gap-2 relative"
+            >
               {/* Quick View Eye Icon Button */}
               <button
                 type="button"
@@ -469,12 +529,16 @@ export const BatchDetail: React.FC = () => {
       )}
 
       {/* Header with Title and Action Buttons */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div
+        data-walkthrough="batch-detail-header"
+        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+      >
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight">
               Lote #{batch.id}
             </h1>
+            <WalkthroughHelpButton onClick={() => startTour()} />
             <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
               {`LT-${new Date(batch.created_at).getFullYear()}-${String(batch.id).padStart(3, '0')}`}
             </span>
@@ -532,7 +596,10 @@ export const BatchDetail: React.FC = () => {
       />
 
       {/* Members Table Container ("Miembros del Lote") */}
-      <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <div
+        data-walkthrough="batch-detail-members-table"
+        className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm"
+      >
         {/* Table Header with Search Input */}
         <div className="p-4 sm:p-5 border-b border-gray-200 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-base sm:text-lg font-bold text-neutral">Miembros del Lote</h2>
@@ -677,6 +744,19 @@ export const BatchDetail: React.FC = () => {
         deleting={deleting}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Walkthrough Interactive Guide Overlay */}
+      <WalkthroughOverlay
+        isOpen={isTourOpen}
+        currentStep={currentStep}
+        currentStepIndex={currentStepIndex}
+        totalSteps={totalSteps}
+        targetRect={targetRect}
+        onNext={nextStep}
+        onPrev={prevStep}
+        onSkip={skipTour}
+        onClose={skipTour}
       />
     </div>
   );

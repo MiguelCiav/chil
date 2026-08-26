@@ -47,7 +47,10 @@ export const BatchSummaryCards: React.FC<BatchSummaryCardsProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div
+      data-walkthrough="batch-detail-summary-cards"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+    >
       {/* Card 1: Detalles del Lote */}
       <Card className="shadow-sm border-gray-200">
         <CardBody className="p-6 flex flex-col h-full min-h-[140px]">

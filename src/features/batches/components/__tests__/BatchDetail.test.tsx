@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BatchDetail } from '../BatchDetail';
-import { ScoutMember } from '../../types';
+import { ScoutMember, Batch } from '../../types';
 import * as api from '../../api';
 import * as recognitions from '../../../recognitions';
 
@@ -47,6 +47,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 describe('BatchDetail component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.mocked(recognitions.getAllRecognitionTypes).mockResolvedValue([]);
   });
 
@@ -1327,6 +1328,189 @@ describe('BatchDetail component', () => {
           status: 'pending'
         })
       );
+    });
+  });
+
+  describe('BatchDetail Walkthrough Tour', () => {
+    const mockWalkthroughBatch: Batch = {
+      id: 101,
+      comment: 'Lote de Prueba Walkthrough',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      unit_scope: 'mixed',
+      recognition_type: 'Servicio Prolongado',
+      created_at: '2026-08-20T10:00:00.000Z'
+    };
+
+    const mockWalkthroughMembers: ScoutMember[] = [
+      {
+        identity: 'V-12345678',
+        first_names: 'Mariana',
+        last_names: 'Rojas',
+        birth_date: '2004-03-12',
+        member_type: 'young',
+        unit: 'clan',
+        status: 'active',
+        batch_id: 101,
+        recognition_code: 'REC-SP-001'
+      }
+    ];
+
+    const mockWalkthroughHierarchy = {
+      regions: [{ id: 1, name: 'Región Capital' }],
+      districts: [{ id: 10, name: 'Distrito Sucre', region_id: 1 }],
+      groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
+    };
+
+    it('renders WalkthroughHelpButton and all data-walkthrough DOM attributes', async () => {
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(mockWalkthroughBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce(mockWalkthroughMembers);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockWalkthroughHierarchy);
+
+      const { container } = render(
+        <MemoryRouter initialEntries={['/lotes/101']}>
+          <Routes>
+            <Route path="/lotes/:id" element={<BatchDetail />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Lote #101')).toBeInTheDocument();
+      });
+
+      // Verify WalkthroughHelpButton
+      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+      expect(helpBtn).toBeInTheDocument();
+
+      // Verify DOM data-walkthrough selectors
+      expect(container.querySelector('[data-walkthrough="batch-detail-header"]')).toBeInTheDocument();
+      expect(
+        container.querySelector('[data-walkthrough="batch-detail-summary-cards"]')
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector('[data-walkthrough="batch-detail-members-table"]')
+      ).toBeInTheDocument();
+      expect(
+        container.querySelector('[data-walkthrough="batch-detail-table-actions"]')
+      ).toBeInTheDocument();
+    });
+
+    it('starts and steps through the 4-step walkthrough tour upon clicking the help button', async () => {
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(mockWalkthroughBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce(mockWalkthroughMembers);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockWalkthroughHierarchy);
+
+      render(
+        <MemoryRouter initialEntries={['/lotes/101']}>
+          <Routes>
+            <Route path="/lotes/:id" element={<BatchDetail />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Lote #101')).toBeInTheDocument();
+      });
+
+      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+      fireEvent.click(helpBtn);
+
+      // Step 1: Detalle y Acciones del Lote
+      await waitFor(() => {
+        expect(screen.getByText('Detalle y Acciones del Lote')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista o eliminar el lote si es necesario.'
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 2
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 2: Resumen y Observaciones
+      expect(screen.getByText('Resumen y Observaciones')).toBeInTheDocument();
+      expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Revisa la estructura geográfica, el tipo de reconocimiento otorgado, el desglose demográfico de miembros (Jóvenes y Adultos) y los comentarios u observaciones registradas.'
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 3
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 3: Listado de Homenajeados
+      expect(screen.getByText('Listado de Homenajeados')).toBeInTheDocument();
+      expect(screen.getByText('Paso 3 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Visualiza todos los miembros del lote con su cédula, nombres, unidad scout (Manada, Tropa, No Scout, etc.), estatus y código oficial de reconocimiento.'
+        )
+      ).toBeInTheDocument();
+
+      // Click Siguiente -> Step 4
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+
+      // Step 4: Gestión Individual de Miembros
+      expect(screen.getByText('Gestión Individual de Miembros')).toBeInTheDocument();
+      expect(screen.getByText('Paso 4 de 4')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Desde el menú de 3 puntos en cada fila puedes descargar el reconocimiento individual en PDF, consultar la vista rápida o editar los datos (incluyendo la autorización con justificación para casos excepcionales).'
+        )
+      ).toBeInTheDocument();
+
+      // Last step finish button
+      const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+      expect(finishBtn).toBeInTheDocument();
+
+      // Complete tour
+      fireEvent.click(finishBtn);
+
+      // Overlay closes
+      expect(screen.queryByText('Gestión Individual de Miembros')).not.toBeInTheDocument();
+      expect(localStorage.getItem('chil_tour_batch-detail-tour_test-user-id')).toBe('true');
+    });
+
+    it('allows navigating backwards and skipping the tour', async () => {
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(mockWalkthroughBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce(mockWalkthroughMembers);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockWalkthroughHierarchy);
+
+      render(
+        <MemoryRouter initialEntries={['/lotes/101']}>
+          <Routes>
+            <Route path="/lotes/:id" element={<BatchDetail />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Lote #101')).toBeInTheDocument();
+      });
+
+      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
+      fireEvent.click(helpBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Detalle y Acciones del Lote')).toBeInTheDocument();
+      });
+
+      // Move to Step 2
+      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
+      expect(screen.getByText('Resumen y Observaciones')).toBeInTheDocument();
+
+      // Go back to Step 1
+      fireEvent.click(screen.getByRole('button', { name: /◀ Anterior/i }));
+      expect(screen.getByText('Detalle y Acciones del Lote')).toBeInTheDocument();
+
+      // Skip tour
+      fireEvent.click(screen.getByRole('button', { name: /Omitir guía/i }));
+      expect(screen.queryByText('Detalle y Acciones del Lote')).not.toBeInTheDocument();
     });
   });
 });
