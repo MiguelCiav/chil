@@ -18,11 +18,11 @@ export const FeatureGridSection: React.FC = () => {
       badge: '1 Solo Paso',
       title: 'Emisión Rápida',
       description:
-        'Galardona individualmente en 1 solo paso con descarga instantánea de diploma en PDF y asignación automática de código verificable.',
+        'Reconoce individualmente en 1 solo paso con descarga instantánea de diploma en PDF y asignación automática de código verificable.',
       highlights: [
         'Generación de diploma en segundos',
         'Previsualización en tiempo real',
-        'Ideal para eventos y entregas urgentes'
+        'Ideal para entregas urgentes'
       ]
     },
     {
@@ -31,9 +31,9 @@ export const FeatureGridSection: React.FC = () => {
       badge: 'Escalable & Eficiente',
       title: 'Lotes Masivos',
       description:
-        'Carga de cédulas, verificación automática en el sistema de registro scout y generación por lotes con folios y códigos únicos.',
+        'Carga de cédulas, verificación automática en el sistema de registro scout y generación por lotes con códigos únicos.',
       highlights: [
-        'Carga masiva de cédulas y homenajeados',
+        'Carga masiva de cédulas',
         'Validación en el registro nacional',
         'Descarga consolidada o individual'
       ]
@@ -57,10 +57,9 @@ export const FeatureGridSection: React.FC = () => {
       badge: 'Estructura Scout Completa',
       title: 'Unidades Scouts & No Scout',
       description:
-        'Soporte completo para Manada, Tropa, Caminantes, Clan, Adultos Institucionales y Agradecimientos a No Scouts o Aliados.',
+        'Soporte completo para Manada, Tropa, Caminantes, Clan, Adultos Institucionales y Agradecimientos a No Scouts.',
       highlights: [
         'Ramas menores y mayores',
-        'Dirigencia y consejos de grupo',
         'Agradecimientos a instituciones y aliados'
       ]
     },
@@ -68,7 +67,7 @@ export const FeatureGridSection: React.FC = () => {
       id: 'analitica-territorial',
       icon: <BarChart3 className="w-6 h-6 text-indigo-600" />,
       badge: 'Reportes & Métricas',
-      title: 'Analítica Territorial & YoY',
+      title: 'Analítica Territorial',
       description:
         'Métricas interanuales (Year-over-Year), distribución geográfica por región y distrito, y exportación ejecutiva en PDF y Excel.',
       highlights: [
@@ -81,9 +80,9 @@ export const FeatureGridSection: React.FC = () => {
       id: 'seguridad-multi-tenant',
       icon: <Lock className="w-6 h-6 text-neutral" />,
       badge: 'Privacidad Garantizada',
-      title: 'Aislamiento Multi-Tenant',
+      title: 'Aislamiento y Seguridad',
       description:
-        'Privacidad, seguridad y control total sobre los lotes y datos de cada dirigente, protegiendo la información institucional.',
+        'Privacidad, seguridad y control total sobre los lotes y datos de cada usuario.',
       highlights: [
         'Aislamiento estricto por usuario y grupo',
         'Reglas de seguridad en base de datos',
@@ -97,15 +96,9 @@ export const FeatureGridSection: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3 mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
-            Capacidades del Sistema
-          </div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-neutral tracking-tight">
             Todo lo necesario para la gestión de reconocimientos
           </h2>
-          <p className="text-sm sm:text-base text-neutral/70">
-            Diseñado desde las bases del escultismo para brindar agilidad técnica y rigurosidad institucional en cada diploma otorgado.
-          </p>
         </div>
 
         {/* 6 Capability Cards Grid */}

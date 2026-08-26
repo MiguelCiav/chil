@@ -426,7 +426,7 @@ describe('CertificateDesigner component', () => {
         bottom: 700,
         x: 0,
         y: 0,
-        toJSON: () => {}
+        toJSON: () => { }
       });
 
       fireEvent.pointerMove(canvas, {
@@ -625,7 +625,7 @@ describe('CertificateDesigner component', () => {
     fireEvent.click(fondoTabBtn);
 
     const fileInput = screen.getByLabelText('Subir imagen de fondo');
-    const inputClickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {});
+    const inputClickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => { });
 
     // Click "Subir Fondo Personalizado" button
     const uploadCustomBtn = screen.getByRole('button', { name: /Subir Fondo Personalizado/i });
@@ -750,7 +750,7 @@ describe('CertificateDesigner component', () => {
     ).toBeInTheDocument();
 
     // Finish tour
-    const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+    const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
     expect(finishBtn).toBeInTheDocument();
     fireEvent.click(finishBtn);
 

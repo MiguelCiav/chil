@@ -510,7 +510,7 @@ describe('BatchList component', () => {
   });
 
   it('handles PDF download error and deletion error gracefully with alerts', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -670,8 +670,8 @@ describe('BatchList component', () => {
     expect(screen.getByText('Paso 4 de 4')).toBeInTheDocument();
     expect(screen.getByText(/Haz clic en cualquier lote para ver sus miembros/i)).toBeInTheDocument();
 
-    // Last step button is "¡Entendido! 🎉"
-    const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+    // Last step button is "¡Entendido!"
+    const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
     expect(finishBtn).toBeInTheDocument();
 
     // Finish tour

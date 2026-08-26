@@ -612,21 +612,16 @@ export const NewBatchWizard: React.FC = () => {
       )}
 
       {/* Header */}
-      <div data-walkthrough="wizard-header" className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center flex-shrink-0 shadow-sm">
-          <ClipboardList className="w-6 h-6" />
+      <div data-walkthrough="wizard-header">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
+            Asistente de Creación de Lote
+          </h1>
+          <WalkthroughHelpButton onClick={() => startTour()} />
         </div>
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
-              Asistente de Creación de Lote
-            </h1>
-            <WalkthroughHelpButton onClick={() => startTour()} />
-          </div>
-          <p className="text-sm text-neutral/60 mt-0.5">
-            Configura la estructura geográfica, verifica miembros y genera reconocimientos masivos.
-          </p>
-        </div>
+        <p className="text-sm text-neutral/60 mt-0.5">
+          Configura la estructura geográfica, verifica miembros y genera reconocimientos masivos.
+        </p>
       </div>
 
       {/* Premium Step Wizard Navigation Bar */}
@@ -676,7 +671,6 @@ export const NewBatchWizard: React.FC = () => {
         <div data-walkthrough="wizard-step-container" className="space-y-4">
           <div className="bg-amber-50/80 border border-amber-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-neutral/80 flex items-center justify-between gap-2 shadow-xs">
             <div className="flex items-center gap-2">
-              <span>💡</span>
               <span>¿Solo vas a emitir un reconocimiento individual?</span>
             </div>
             <Link

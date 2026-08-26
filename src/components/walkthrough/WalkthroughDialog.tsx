@@ -176,7 +176,7 @@ export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
             onClick={onNext}
             className="px-3.5 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
           >
-            {isLastStep ? '¡Entendido! 🎉' : 'Siguiente ▶'}
+            {isLastStep ? '¡Entendido!' : 'Siguiente ▶'}
           </button>
         </div>
       </div>

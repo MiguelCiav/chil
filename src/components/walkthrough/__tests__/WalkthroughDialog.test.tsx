@@ -88,7 +88,7 @@ describe('WalkthroughDialog component', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('displays "¡Entendido! 🎉" button label on the last step', () => {
+  it('displays "¡Entendido!" button label on the last step', () => {
     const onNext = vi.fn();
     render(
       <WalkthroughDialog
@@ -99,7 +99,7 @@ describe('WalkthroughDialog component', () => {
       />
     );
 
-    const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+    const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
     expect(finishBtn).toBeInTheDocument();
     fireEvent.click(finishBtn);
     expect(onNext).toHaveBeenCalledTimes(1);
@@ -116,7 +116,7 @@ describe('WalkthroughDialog component', () => {
       right: 300,
       x: 100,
       y: 100,
-      toJSON: () => {}
+      toJSON: () => { }
     } as DOMRect;
 
     render(

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogIn, UserPlus, Heart, Shield } from 'lucide-react';
+import { LogIn, UserPlus, Heart } from 'lucide-react';
 import logo from '../../../assets/CHIL_LOGO.png';
 
 export const LandingFooter: React.FC = () => {
@@ -19,10 +19,6 @@ export const LandingFooter: React.FC = () => {
             <p className="text-sm text-neutral/70 max-w-sm mx-auto md:mx-0 leading-relaxed">
               Sistema de Emisión y Control de Reconocimientos Scouts. Estandarizando el reconocimiento institucional con excelencia y modernidad.
             </p>
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary/90 bg-primary/10 px-3 py-1 rounded-full">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Siempre Listos para Servir ⚜️</span>
-            </div>
           </div>
 
           {/* Col 2: Acceso Directo */}
@@ -79,9 +75,7 @@ export const LandingFooter: React.FC = () => {
 
         {/* Bottom copyright & attribution */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral/60 gap-4">
-          <div>
-            © {currentYear} Chil — Sistema de Reconocimientos Scouts. Todos los derechos reservados.
-          </div>
+          <p>© {currentYear} Chil. Todos los derechos reservados.</p>
           <div className="flex items-center gap-1">
             <span>Hecho con</span>
             <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />

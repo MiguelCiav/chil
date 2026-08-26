@@ -151,6 +151,7 @@ describe('SummaryView component', () => {
       screen.getByText('Consulta y exportación consolidada de todos los reconocimientos emitidos.')
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Descargar Excel/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Descargar todo/i })).toBeInTheDocument();
 
     // 12 Table Columns
     await waitFor(() => {
@@ -463,7 +464,7 @@ describe('SummaryView component', () => {
       fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
     });
 
-    // Click Export Excel
+    // Click Export Excel (now showing Descargar filtrados)
     const exportBtn = screen.getByRole('button', { name: /Descargar Excel/i });
     act(() => {
       fireEvent.click(exportBtn);
@@ -473,9 +474,46 @@ describe('SummaryView component', () => {
     expect(excelExportModule.exportToExcel).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ identity: 'V-1001' }),
+        expect.objectContaining({ identity: 'V-2001' }),
+        expect.objectContaining({ identity: 'V-1003' })
+      ])
+    );
+    expect(screen.getByText(/¡Registros exportados exitosamente \(3\)!/i)).toBeInTheDocument();
+  });
+
+  it('calls exportToExcel with ALL rows when clicking Descargar todo button even when filters are active', async () => {
+    render(
+      <MemoryRouter>
+        <SummaryView />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('V-1001')).toBeInTheDocument();
+    });
+
+    // Filter to young members only
+    const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
+    act(() => {
+      fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
+    });
+
+    // Click "Descargar todo"
+    const exportAllBtn = screen.getByRole('button', { name: /Descargar todo/i });
+    act(() => {
+      fireEvent.click(exportAllBtn);
+    });
+
+    expect(excelExportModule.exportToExcel).toHaveBeenCalledTimes(1);
+    expect(excelExportModule.exportToExcel).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ identity: 'V-1001' }),
+        expect.objectContaining({ identity: 'V-1002' }),
+        expect.objectContaining({ identity: 'V-1003' }),
         expect.objectContaining({ identity: 'V-2001' })
       ])
     );
+    expect(screen.getByText(/¡Todos los registros \(4\) han sido exportados exitosamente!/i)).toBeInTheDocument();
   });
 
   it('displays empty state when no records match filter criteria', async () => {

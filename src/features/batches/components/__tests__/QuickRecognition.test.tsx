@@ -577,7 +577,7 @@ describe('QuickRecognition Component', () => {
       expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Este módulo te permite emitir y descargar un reconocimiento individual en un solo paso, ideal para homenajear a una persona o colaborador sin procesar lotes masivos.'
+          'Este módulo te permite emitir y descargar un reconocimiento individual en un solo paso, ideal para reconocer a una persona sin procesar lotes masivos.'
         )
       ).toBeInTheDocument();
 
@@ -589,19 +589,19 @@ describe('QuickRecognition Component', () => {
       expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Selecciona el tipo de reconocimiento a otorgar y la estructura geográfica (Región, Distrito, Grupo). Si es para un colaborador No Scout, estos campos son opcionales.'
+          'Selecciona el tipo de reconocimiento a otorgar y la estructura geográfica (Región, Distrito, Grupo). Si es para alguien no scout (agradecimiento), estos campos son opcionales.'
         )
       ).toBeInTheDocument();
 
       // Click Siguiente -> Step 3
       fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
 
-      // Step 3: Datos del Homenajeado y Unidad
-      expect(screen.getByText('Datos del Homenajeado y Unidad')).toBeInTheDocument();
+      // Step 3: Datos del Reconocido y Unidad
+      expect(screen.getByText('Datos del Reconocido y Unidad')).toBeInTheDocument();
       expect(screen.getByText('Paso 3 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Selecciona la unidad scout (o No Scout). Para miembros scouts, ingresa la cédula y haz clic en 'Consultar' para autocompletar sus datos desde el sistema de registro."
+          "Selecciona la unidad. Para miembros scouts, ingresa la cédula y haz clic en 'Consultar' para autocompletar sus datos desde el sistema de registro."
         )
       ).toBeInTheDocument();
 
@@ -618,7 +618,7 @@ describe('QuickRecognition Component', () => {
       ).toBeInTheDocument();
 
       // Last step finish button
-      const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+      const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
       expect(finishBtn).toBeInTheDocument();
 
       // Complete tour

@@ -8,7 +8,8 @@ import * as recognitions from '../../../recognitions';
 vi.mock('../../api', () => ({
   getBatchById: vi.fn(),
   getMembersByBatchId: vi.fn(),
-  getHierarchyData: vi.fn(() => Promise.resolve({ regions: [], districts: [], groups: [] }))
+  getHierarchyData: vi.fn(() => Promise.resolve({ regions: [], districts: [], groups: [] })),
+  generateBatchReport: vi.fn(() => Promise.resolve('Reporte_Lote_555.pdf'))
 }));
 
 vi.mock('../../../recognitions', () => ({
@@ -36,7 +37,7 @@ describe('SuccessPage component', () => {
     });
   });
 
-  it('renders batch success metrics, members table, and downloads PDF report', async () => {
+  it('renders batch success metrics, members table, and downloads PDF report and member list', async () => {
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 555,
       comment: 'Lote Exitoso',
@@ -70,6 +71,7 @@ describe('SuccessPage component', () => {
     ]);
 
     vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Reconocimientos_Lote_555_go_solar.pdf');
+    vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_555.pdf');
 
     render(
       <MemoryRouter initialEntries={[{ pathname: '/lotes/exito', state: { batchId: 555, name: 'Lote San Luis' } }]}>
@@ -97,9 +99,19 @@ describe('SuccessPage component', () => {
     expect(screen.getByText('Registro Válido')).toBeInTheDocument();
     expect(screen.getByText('Registro Inválido')).toBeInTheDocument();
 
-    // Trigger PDF download
-    const downloadBtn = screen.getByText(/Descargar PDF del Reporte/i);
-    fireEvent.click(downloadBtn);
+    // Verify all 4 action buttons exist
+    const downloadRecBtn = screen.getByRole('button', { name: /Descargar Reconocimientos/i });
+    const downloadListBtn = screen.getByRole('button', { name: /Descargar Lista/i });
+    const newBatchLink = screen.getByRole('button', { name: /Crear nuevo lote/i });
+    const backListLink = screen.getByRole('button', { name: /Volver a la lista/i });
+
+    expect(downloadRecBtn).toBeInTheDocument();
+    expect(downloadListBtn).toBeInTheDocument();
+    expect(newBatchLink).toBeInTheDocument();
+    expect(backListLink).toBeInTheDocument();
+
+    // 1. Trigger certificates PDF download
+    fireEvent.click(downloadRecBtn);
 
     await waitFor(() => {
       expect(recognitions.generateBatchCertificatesPdf).toHaveBeenCalledWith(
@@ -110,10 +122,22 @@ describe('SuccessPage component', () => {
       );
       expect(screen.getByText(/¡Reconocimientos descargados exitosamente en Reconocimientos_Lote_555_go_solar\.pdf!/i)).toBeInTheDocument();
     });
+
+    // 2. Trigger members list PDF report download
+    fireEvent.click(downloadListBtn);
+
+    await waitFor(() => {
+      expect(api.generateBatchReport).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 555 }),
+        expect.any(Array),
+        expect.any(Object)
+      );
+      expect(screen.getByText(/¡Lista de miembros \(PDF\) descargada exitosamente!/i)).toBeInTheDocument();
+    });
   });
 
   it('handles PDF download error with alert', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
 
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 555,
@@ -146,13 +170,59 @@ describe('SuccessPage component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Descargar PDF del Reporte/i)).toBeInTheDocument();
+      expect(screen.getByText(/Descargar Reconocimientos/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText(/Descargar PDF del Reporte/i));
+    fireEvent.click(screen.getByText(/Descargar Reconocimientos/i));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en PDF.');
+    });
+
+    alertSpy.mockRestore();
+  });
+
+  it('handles member list PDF download error with alert', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
+
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 555,
+      comment: 'Lote Exitoso',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      recognition_type: 'Go Solar',
+      created_at: '2026-08-21T12:00:00.000Z'
+    });
+
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        identity: 'V-11111111',
+        first_names: 'Ana',
+        last_names: 'Perez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 555
+      }
+    ]);
+
+    vi.mocked(api.generateBatchReport).mockRejectedValueOnce(new Error('Report generation error'));
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/lotes/exito', state: { batchId: 555 } }]}>
+        <SuccessPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Descargar Lista/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Descargar Lista/i));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Error al generar la lista de miembros en PDF.');
     });
 
     alertSpy.mockRestore();

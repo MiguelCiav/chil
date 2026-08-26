@@ -6,7 +6,7 @@ Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Inte
 - Core Walkthrough Engine (`src/components/walkthrough/`):
   - `types.ts`: Define `WalkthroughPlacement`, `WalkthroughStep`, and `TourConfig` types, including optional `autoStart?: boolean` (default `true`).
   - `useWalkthrough.ts`: Custom hook managing tour lifecycle (`isOpen`, `currentStepIndex`, `currentStep`, `targetRect`), first-time auto-start with per-user `localStorage` persistence (`chil_tour_${tourId}_${userId}`), auto-start control (`autoStart !== false`), dynamic DOM measurement & smooth viewport scrolling, window resize/scroll listeners, and keyboard navigation (`Escape`, `ArrowRight`, `Enter`, `ArrowLeft`).
-  - `WalkthroughDialog.tsx`: Game-like narrative dialog card with step counter badges, narrative explanations, viewport boundary collision checks, and control buttons (`Omitir guía`, `◀ Anterior`, `Siguiente ▶` / `¡Entendido! 🎉`).
+  - `WalkthroughDialog.tsx`: Game-like narrative dialog card with step counter badges, narrative explanations, viewport boundary collision checks, and control buttons (`Omitir guía`, `◀ Anterior`, `Siguiente ▶` / `¡Entendido!`).
   - `WalkthroughOverlay.tsx`: Full-screen SVG mask backdrop with spotlight rectangle cutout, glowing animated target highlight border, and dynamic SVG dashed connector line with target anchor dot.
   - `WalkthroughHelpButton.tsx`: Accessible interactive `?` help button triggering module guides on demand.
   - `index.ts`: Public module exports for components, hooks, and types.

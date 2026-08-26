@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Bell, Settings, LogIn, UserPlus } from 'lucide-react';
+import { Settings, LogIn, UserPlus } from 'lucide-react';
 import logo from '../assets/CHIL_LOGO.png';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from './Modal';
 import { Button } from './Button';
@@ -146,9 +146,6 @@ export const Navbar: React.FC = () => {
       {/* Right Side */}
       {user ? (
         <div className="flex items-center space-x-4 text-neutral">
-          <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" aria-label="Notificaciones">
-            <Bell className="w-5 h-5" />
-          </button>
           <button
             type="button"
             onClick={() => {

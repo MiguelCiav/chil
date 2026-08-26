@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { 
-  CheckCircle2, 
-  Download, 
-  FileText, 
-  ArrowLeft, 
-  Users, 
-  GraduationCap, 
-  User, 
-  AlertCircle, 
+import {
+  CheckCircle2,
+  Download,
+  FileText,
+  ArrowLeft,
+  Users,
+  GraduationCap,
+  User,
+  AlertCircle,
   ChevronRight,
   Eye
 } from 'lucide-react';
@@ -18,7 +18,7 @@ import { Button } from '../../../components/Button';
 import { Table } from '../../../components/Table';
 import { ColumnDef } from '@tanstack/react-table';
 
-import { getBatchById, getMembersByBatchId, getHierarchyData } from '../api';
+import { getBatchById, getMembersByBatchId, getHierarchyData, generateBatchReport } from '../api';
 import { Batch, ScoutMember } from '../types';
 import {
   generateBatchCertificatesPdf,
@@ -64,6 +64,7 @@ export const SuccessPage: React.FC = () => {
   const [members, setMembers] = useState<ScoutMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -130,6 +131,23 @@ export const SuccessPage: React.FC = () => {
       alert("Error al generar los reconocimientos en PDF.");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (!batch) return;
+    setDownloadingReport(true);
+    try {
+      const hierarchy = await getHierarchyData();
+      await generateBatchReport(batch, members, hierarchy);
+      setToastMessage('¡Lista de miembros (PDF) descargada exitosamente!');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+    } catch (err) {
+      console.error('Error generating member list PDF:', err);
+      alert('Error al generar la lista de miembros en PDF.');
+    } finally {
+      setDownloadingReport(false);
     }
   };
 
@@ -240,7 +258,7 @@ export const SuccessPage: React.FC = () => {
       cell: () => {
         return (
           <div className="flex gap-2">
-            <button 
+            <button
               type="button"
               onClick={() => navigate(`/lotes/${batch.id}`)}
               className="p-1.5 border border-gray-200 hover:border-primary text-neutral hover:text-primary rounded-lg transition-all"
@@ -258,7 +276,7 @@ export const SuccessPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 font-sans relative">
-      
+
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl animate-fade-in border border-primary/20">
@@ -280,7 +298,7 @@ export const SuccessPage: React.FC = () => {
             está listo para ser procesado.
           </p>
         </div>
-        <div className="flex justify-center gap-3 pt-3">
+        <div className="flex flex-wrap justify-center gap-3 pt-3">
           <Button
             variant="primary"
             onClick={handleDownloadPDF}
@@ -288,11 +306,25 @@ export const SuccessPage: React.FC = () => {
             title={eligibleCount === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos" : undefined}
             icon={<Download size={18} />}
           >
-            {downloading ? 'Generando PDF...' : 'Descargar PDF del Reporte'}
+            {downloading ? 'Generando PDF...' : 'Descargar Reconocimientos'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDownloadReport}
+            disabled={downloadingReport || members.length === 0}
+            title={members.length === 0 ? "No hay miembros en este lote para generar la lista" : undefined}
+            icon={<FileText size={18} />}
+          >
+            {downloadingReport ? 'Generando Lista...' : 'Descargar Lista'}
           </Button>
           <Link to="/lotes/nuevo">
             <Button variant="outline" icon={<ArrowLeft size={18} />}>
               Crear nuevo lote
+            </Button>
+          </Link>
+          <Link to="/lotes">
+            <Button variant="outline">
+              Volver a la lista
             </Button>
           </Link>
         </div>
@@ -307,7 +339,7 @@ export const SuccessPage: React.FC = () => {
           iconBgClass="bg-primary/10"
           iconColorClass="text-primary"
         />
-        
+
         <StatSummaryCard
           title="Jóvenes Registrados"
           value={totals.young}
@@ -337,7 +369,7 @@ export const SuccessPage: React.FC = () => {
               <p className="text-xs text-red-600 font-medium">Hay {totals.pending} miembros que no están inscritos en el sistema nacional de scouts.</p>
             </div>
           </div>
-          <button 
+          <button
             type="button"
             onClick={() => navigate(`/lotes/${batch.id}`)}
             className="flex items-center text-sm font-bold text-red-700 hover:text-red-900 transition-colors"

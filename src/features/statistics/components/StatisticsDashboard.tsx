@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { useStatisticsData } from '../hooks/useStatisticsData';
 import { StatKpiGrid } from './StatKpiGrid';
 import { FilterBar } from './FilterBar';
@@ -74,19 +74,12 @@ export const StatisticsDashboard: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-primary/10 text-primary rounded-xl">
-              <BarChart3 className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-neutral tracking-tight">
-                Estadísticas y Análisis
-              </h1>
-              <p className="text-xs sm:text-sm text-neutral/70 mt-0.5">
-                Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
-              </p>
-            </div>
-          </div>
+          <h1 className="text-2xl font-black text-neutral tracking-tight">
+            Estadísticas y Análisis
+          </h1>
+          <p className="text-xs sm:text-sm text-neutral/70 mt-0.5">
+            Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
+          </p>
         </div>
       </div>
 

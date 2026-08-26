@@ -5,7 +5,6 @@ import { LandingPage } from '../LandingPage';
 import { HeroSection } from '../HeroSection';
 import { FeatureGridSection } from '../FeatureGridSection';
 import { WorkflowSection } from '../WorkflowSection';
-import { ScoutValuesSection } from '../ScoutValuesSection';
 import { LandingFooter } from '../LandingFooter';
 import * as authFeature from '../../../auth';
 
@@ -23,30 +22,35 @@ describe('Landing Page Feature', () => {
   });
 
   describe('HeroSection', () => {
-    it('renders branding, title, subtitle and mock certificate preview with required tags', () => {
+    it('renders prominent logo, brand name, title, subtitle and centered CTA buttons', () => {
       render(
         <MemoryRouter>
           <HeroSection />
         </MemoryRouter>
       );
 
+      // Logo and Brand Name
+      const logoImg = screen.getByAltText('Chil Logo');
+      expect(logoImg).toBeInTheDocument();
+      expect(screen.getByText('Chil')).toBeInTheDocument();
+
       // Headline and Subtitle
       expect(
         screen.getByRole('heading', {
           level: 1,
-          name: /Chil — Sistema de Emisión y Control de Reconocimientos Scouts/i
+          name: /Un Sistema Scout de Emisión y Control de Reconocimientos/i
         })
       ).toBeInTheDocument();
 
       expect(
         screen.getByText(
-          /La plataforma moderna, ágil y oficial para gestionar lotes de reconocimientos, diseñar diplomas visuales interactivos y generar analítica territorial en el Movimiento Scout./i
+          /La plataforma moderna, ágil y usable para gestionar lotes de reconocimientos, hacer diseños visuales interactivos y generar analítica en el Movimiento\./i
         )
       ).toBeInTheDocument();
 
       // CTA Buttons and Links
       const registerBtn = screen.getByRole('link', {
-        name: /Comenzar Ahora \/ Registrarse/i
+        name: /Comenzar Ahora/i
       });
       expect(registerBtn).toHaveAttribute('href', '/registro');
 
@@ -54,18 +58,6 @@ describe('Landing Page Feature', () => {
         name: /Iniciar Sesión/i
       });
       expect(loginBtn).toHaveAttribute('href', '/login');
-
-      const quickAction = screen.getByRole('link', {
-        name: /Conoce la Emisión Rápida/i
-      });
-      expect(quickAction).toHaveAttribute('href', '#emision-rapida');
-
-      // Visual Mock Preview tags
-      expect(screen.getByText(/V-12\.345\.678/i)).toBeInTheDocument();
-      expect(screen.getByText(/Tropa Scout/i)).toBeInTheDocument();
-      expect(screen.getByText(/REC-8F3A2B/i)).toBeInTheDocument();
-      expect(screen.getByText('Mariana Rojas Cadenas')).toBeInTheDocument();
-      expect(screen.getByText(/Mérito Scout de Bronce/i)).toBeInTheDocument();
     });
   });
 
@@ -83,7 +75,7 @@ describe('Landing Page Feature', () => {
       // 1. Emisión Rápida
       expect(screen.getByRole('heading', { level: 3, name: 'Emisión Rápida' })).toBeInTheDocument();
       expect(
-        screen.getByText(/Galardona individualmente en 1 solo paso con descarga instantánea/i)
+        screen.getByText(/Reconoce individualmente en 1 solo paso con descarga instantánea/i)
       ).toBeInTheDocument();
 
       // 2. Lotes Masivos
@@ -108,17 +100,17 @@ describe('Landing Page Feature', () => {
         screen.getByText(/Soporte completo para Manada, Tropa, Caminantes, Clan/i)
       ).toBeInTheDocument();
 
-      // 5. Analítica Territorial & YoY
+      // 5. Analítica Territorial
       expect(
-        screen.getByRole('heading', { level: 3, name: 'Analítica Territorial & YoY' })
+        screen.getByRole('heading', { level: 3, name: 'Analítica Territorial' })
       ).toBeInTheDocument();
       expect(
         screen.getByText(/Métricas interanuales \(Year-over-Year\), distribución geográfica/i)
       ).toBeInTheDocument();
 
-      // 6. Aislamiento Multi-Tenant
+      // 6. Aislamiento y Seguridad
       expect(
-        screen.getByRole('heading', { level: 3, name: 'Aislamiento Multi-Tenant' })
+        screen.getByRole('heading', { level: 3, name: 'Aislamiento y Seguridad' })
       ).toBeInTheDocument();
       expect(
         screen.getByText(/Privacidad, seguridad y control total sobre los lotes y datos/i)
@@ -145,40 +137,22 @@ describe('Landing Page Feature', () => {
         screen.getByText(/Ingresa las cédulas para consultar automáticamente la membresía/i)
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Genera los certificados PDF de alta resolución con códigos únicos/i)
+        screen.getByText(/Genera los reconocimientos PDF de alta resolución con códigos únicos/i)
       ).toBeInTheDocument();
-    });
-  });
-
-  describe('ScoutValuesSection', () => {
-    it('renders scout institutional values and badges', () => {
-      render(<ScoutValuesSection />);
-
-      expect(
-        screen.getByRole('heading', {
-          level: 2,
-          name: /Valores que impulsan cada reconocimiento/i
-        })
-      ).toBeInTheDocument();
-
-      expect(screen.getByText('Promesa y Ley Scout')).toBeInTheDocument();
-      expect(screen.getByText('Reconocimiento al Mérito')).toBeInTheDocument();
-      expect(screen.getByText('Hermandad Scout')).toBeInTheDocument();
-      expect(screen.getByText('Siempre Listos')).toBeInTheDocument();
-      expect(screen.getByText('Fundamento')).toBeInTheDocument();
-      expect(screen.getByText('Superación')).toBeInTheDocument();
     });
   });
 
   describe('LandingFooter', () => {
-    it('renders public footer with links to login, register, branding and scout motto', () => {
+    it('renders public footer with links to login, register, branding and scout attribution', () => {
       render(
         <MemoryRouter>
           <LandingFooter />
         </MemoryRouter>
       );
 
-      expect(screen.getByText(/Siempre Listos para Servir ⚜️/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Sistema de Emisión y Control de Reconocimientos Scouts/i)
+      ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Iniciar Sesión/i })).toHaveAttribute('href', '/login');
       expect(screen.getByRole('link', { name: /Crear Cuenta \/ Registrarse/i })).toHaveAttribute(
         'href',
@@ -187,6 +161,7 @@ describe('Landing Page Feature', () => {
       expect(
         screen.getByText(new RegExp(`© ${new Date().getFullYear()} Chil`, 'i'))
       ).toBeInTheDocument();
+      expect(screen.getByText(/para el Movimiento Scout/i)).toBeInTheDocument();
     });
   });
 
@@ -202,7 +177,7 @@ describe('Landing Page Feature', () => {
       expect(
         screen.getByRole('heading', {
           level: 1,
-          name: /Chil — Sistema de Emisión y Control de Reconocimientos Scouts/i
+          name: /Un Sistema Scout de Emisión y Control de Reconocimientos/i
         })
       ).toBeInTheDocument();
 
@@ -219,16 +194,8 @@ describe('Landing Page Feature', () => {
         screen.getByRole('heading', { level: 2, name: /¿Cómo funciona Chil\?/i })
       ).toBeInTheDocument();
 
-      // Scout Values
-      expect(
-        screen.getByRole('heading', {
-          level: 2,
-          name: /Valores que impulsan cada reconocimiento/i
-        })
-      ).toBeInTheDocument();
-
       // Footer
-      expect(screen.getByText(/Siempre Listos para Servir ⚜️/i)).toBeInTheDocument();
+      expect(screen.getByText(/para el Movimiento Scout/i)).toBeInTheDocument();
     });
   });
 
@@ -254,7 +221,7 @@ describe('Landing Page Feature', () => {
       expect(
         screen.getByRole('heading', {
           level: 1,
-          name: /Chil — Sistema de Emisión y Control de Reconocimientos Scouts/i
+          name: /Un Sistema Scout de Emisión y Control de Reconocimientos/i
         })
       ).toBeInTheDocument();
     });
@@ -271,7 +238,7 @@ describe('Landing Page Feature', () => {
       expect(
         screen.getByRole('heading', {
           level: 1,
-          name: /Chil — Sistema de Emisión y Control de Reconocimientos Scouts/i
+          name: /Un Sistema Scout de Emisión y Control de Reconocimientos/i
         })
       ).toBeInTheDocument();
     });

@@ -22,21 +22,21 @@ const QUICK_RECOGNITION_TOUR_STEPS: WalkthroughStep[] = [
     id: 'quick-rec-header',
     targetSelector: '[data-walkthrough="quick-rec-header"]',
     title: 'Emisión Rápida de Reconocimientos',
-    content: 'Este módulo te permite emitir y descargar un reconocimiento individual en un solo paso, ideal para homenajear a una persona o colaborador sin procesar lotes masivos.',
+    content: 'Este módulo te permite emitir y descargar un reconocimiento individual en un solo paso, ideal para reconocer a una persona sin procesar lotes masivos.',
     placement: 'bottom'
   },
   {
     id: 'quick-rec-recognition-section',
     targetSelector: '[data-walkthrough="quick-rec-recognition-section"]',
     title: 'Tipo de Reconocimiento y Ubicación',
-    content: 'Selecciona el tipo de reconocimiento a otorgar y la estructura geográfica (Región, Distrito, Grupo). Si es para un colaborador No Scout, estos campos son opcionales.',
+    content: 'Selecciona el tipo de reconocimiento a otorgar y la estructura geográfica (Región, Distrito, Grupo). Si es para alguien no scout (agradecimiento), estos campos son opcionales.',
     placement: 'bottom'
   },
   {
     id: 'quick-rec-recipient-section',
     targetSelector: '[data-walkthrough="quick-rec-recipient-section"]',
-    title: 'Datos del Homenajeado y Unidad',
-    content: "Selecciona la unidad scout (o No Scout). Para miembros scouts, ingresa la cédula y haz clic en 'Consultar' para autocompletar sus datos desde el sistema de registro.",
+    title: 'Datos del Reconocido y Unidad',
+    content: "Selecciona la unidad. Para miembros scouts, ingresa la cédula y haz clic en 'Consultar' para autocompletar sus datos desde el sistema de registro.",
     placement: 'bottom'
   },
   {
@@ -125,11 +125,10 @@ export const QuickRecognition: React.FC = () => {
       {showToast && (
         <div
           role="alert"
-          className={`fixed top-6 right-6 z-50 flex items-center gap-3 text-white px-5 py-3 rounded-2xl shadow-xl border animate-fade-in ${
-            toastType === 'success'
-              ? 'bg-neutral border-primary/30'
-              : 'bg-red-700 border-red-500/30'
-          }`}
+          className={`fixed top-6 right-6 z-50 flex items-center gap-3 text-white px-5 py-3 rounded-2xl shadow-xl border animate-fade-in ${toastType === 'success'
+            ? 'bg-neutral border-primary/30'
+            : 'bg-red-700 border-red-500/30'
+            }`}
         >
           {toastType === 'success' ? (
             <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
@@ -150,21 +149,16 @@ export const QuickRecognition: React.FC = () => {
         /* Form View */
         <div className="space-y-6">
           {/* Header */}
-          <div data-walkthrough="quick-rec-header" className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-              <Zap className="w-6 h-6 fill-amber-500/20" />
+          <div data-walkthrough="quick-rec-header">
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
+                Emisión Rápida de Reconocimiento
+              </h1>
+              <WalkthroughHelpButton onClick={() => startTour()} />
             </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral tracking-tight flex items-center gap-2">
-                  Emisión Rápida de Reconocimiento
-                </h1>
-                <WalkthroughHelpButton onClick={() => startTour()} />
-              </div>
-              <p className="text-sm text-neutral/60 mt-0.5">
-                Emite y descarga un reconocimiento individual de forma inmediata en un solo paso.
-              </p>
-            </div>
+            <p className="text-sm text-neutral/60 mt-0.5">
+              Emite y descarga un reconocimiento individual de forma inmediata en un solo paso.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

@@ -536,7 +536,7 @@ describe('BatchDetail component', () => {
   });
 
   it('handles member edit submission error gracefully with alert', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
 
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 101,
@@ -596,7 +596,7 @@ describe('BatchDetail component', () => {
   });
 
   it('handles single certificate download error and member list PDF generation error gracefully', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
 
     vi.mocked(api.getBatchById).mockResolvedValue({
       id: 101,
@@ -829,7 +829,7 @@ describe('BatchDetail component', () => {
   });
 
   it('handles deleteBatch error gracefully with alert', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
 
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 101,
@@ -1465,7 +1465,7 @@ describe('BatchDetail component', () => {
       ).toBeInTheDocument();
 
       // Last step finish button
-      const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+      const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
       expect(finishBtn).toBeInTheDocument();
 
       // Complete tour

@@ -2,7 +2,6 @@ import React from 'react';
 import { HeroSection } from './HeroSection';
 import { FeatureGridSection } from './FeatureGridSection';
 import { WorkflowSection } from './WorkflowSection';
-import { ScoutValuesSection } from './ScoutValuesSection';
 import { LandingFooter } from './LandingFooter';
 
 export const LandingPage: React.FC = () => {
@@ -16,9 +15,6 @@ export const LandingPage: React.FC = () => {
 
       {/* How it Works / Workflow */}
       <WorkflowSection />
-
-      {/* Scout Identity & Values */}
-      <ScoutValuesSection />
 
       {/* Public Footer */}
       <LandingFooter />

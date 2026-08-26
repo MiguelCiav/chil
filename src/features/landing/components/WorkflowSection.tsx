@@ -23,9 +23,9 @@ export const WorkflowSection: React.FC = () => {
     {
       stepNumber: 3,
       title: '3. Emitir',
-      tagline: 'Diplomas & Códigos Únicos',
+      tagline: 'Reconocimientos & Códigos Únicos',
       description:
-        'Genera los certificados PDF de alta resolución con códigos únicos antifraude para descarga individual o masiva.',
+        'Genera los reconocimientos PDF de alta resolución con códigos únicos para descarga individual o masiva.',
       icon: <Award className="w-7 h-7 text-amber-600" />
     }
   ];
@@ -35,14 +35,11 @@ export const WorkflowSection: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3 mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary/20 text-neutral text-xs font-bold uppercase tracking-wider">
-            Flujo de Emisión
-          </div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-neutral tracking-tight">
             ¿Cómo funciona Chil?
           </h2>
           <p className="text-sm sm:text-base text-neutral/70">
-            Un proceso ágil, intuitivo y estandarizado en solo tres pasos para dirigentes y comisiones.
+            Un proceso ágil, intuitivo y estandarizado en solo tres pasos.
           </p>
         </div>
 

@@ -637,7 +637,7 @@ describe('NewBatchWizard full flow', () => {
       ).toBeInTheDocument();
 
       // Last step finish button
-      const finishBtn = screen.getByRole('button', { name: /¡Entendido! 🎉/i });
+      const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
       expect(finishBtn).toBeInTheDocument();
 
       // Complete tour
