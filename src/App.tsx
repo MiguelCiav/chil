@@ -4,12 +4,33 @@ import { NewBatchWizard, QuickRecognition, BatchDetail, BatchList, SuccessPage }
 import { RecognitionCatalog, CertificateDesigner } from './features/recognitions';
 import { SummaryView } from './features/summary';
 import { StatisticsDashboard } from './features/statistics';
+import { LandingPage } from './features/landing';
 import {
   AuthProvider,
   LoginPage,
   RegisterPage,
-  ProtectedRoute
+  ProtectedRoute,
+  useAuth
 } from './features/auth';
+
+const RootRoute: React.FC = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3" role="status" aria-label="Cargando sesión">
+        <div className="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <span className="text-xs font-semibold text-neutral/60">Verificando sesión...</span>
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/lotes" replace />;
+  }
+
+  return <LandingPage />;
+};
 
 function App() {
   return (
@@ -17,7 +38,9 @@ function App() {
       <HashRouter>
         <MainLayout>
           <Routes>
-            {/* Public Auth Routes */}
+            {/* Public Routes */}
+            <Route path="/" element={<RootRoute />} />
+            <Route path="/inicio" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<RegisterPage />} />
 
@@ -103,15 +126,7 @@ function App() {
               }
             />
 
-            {/* Root & Catch-all Redirects */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Navigate to="/lotes" replace />
-                </ProtectedRoute>
-              }
-            />
+            {/* Catch-all Redirect */}
             <Route path="*" element={<Navigate to="/lotes" replace />} />
           </Routes>
         </MainLayout>
