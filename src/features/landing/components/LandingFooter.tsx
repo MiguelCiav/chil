@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogIn, UserPlus, Heart } from 'lucide-react';
+import { LogIn, UserPlus } from 'lucide-react';
 import logo from '../../../assets/CHIL_LOGO.png';
 
 export const LandingFooter: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="mt-16 border-t border-gray-200 bg-white pt-12 pb-8 text-neutral">
+    <footer className="mt-16 border-t border-gray-200/80 bg-white/80 backdrop-blur-xs pt-12 pb-8 text-neutral rounded-2xl sm:rounded-3xl shadow-2xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10 border-b border-gray-100">
           {/* Col 1: Branding & Mission */}
@@ -26,22 +26,22 @@ export const LandingFooter: React.FC = () => {
             <h4 className="text-xs font-bold uppercase tracking-wider text-neutral/80">
               Acceso a la Plataforma
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-2.5 text-sm">
               <li>
                 <Link
                   to="/login"
-                  className="inline-flex items-center gap-1.5 text-neutral/70 hover:text-primary transition-colors"
+                  className="inline-flex items-center gap-2 text-neutral/70 hover:text-primary transition-colors font-medium"
                 >
-                  <LogIn className="w-3.5 h-3.5" />
+                  <LogIn className="w-4 h-4 text-primary shrink-0" />
                   <span>Iniciar Sesión</span>
                 </Link>
               </li>
               <li>
                 <Link
                   to="/registro"
-                  className="inline-flex items-center gap-1.5 text-neutral/70 hover:text-primary transition-colors"
+                  className="inline-flex items-center gap-2 text-neutral/70 hover:text-primary transition-colors font-medium"
                 >
-                  <UserPlus className="w-3.5 h-3.5" />
+                  <UserPlus className="w-4 h-4 text-primary shrink-0" />
                   <span>Crear Cuenta / Registrarse</span>
                 </Link>
               </li>
@@ -53,7 +53,7 @@ export const LandingFooter: React.FC = () => {
             <h4 className="text-xs font-bold uppercase tracking-wider text-neutral/80">
               Módulos Principales
             </h4>
-            <ul className="space-y-2 text-sm text-neutral/70">
+            <ul className="space-y-2.5 text-sm text-neutral/70">
               <li>
                 <a href="#emision-rapida" className="hover:text-primary transition-colors">
                   Emisión Rápida de Reconocimientos
@@ -73,12 +73,12 @@ export const LandingFooter: React.FC = () => {
           </div>
         </div>
 
-        {/* Bottom copyright & attribution */}
+        {/* Bottom copyright & formal Scout motto */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral/60 gap-4">
           <p>© {currentYear} Chil. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-1">
-            <span>Hecho con</span>
-            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
+          <div className="flex items-center gap-2 font-medium text-neutral/70">
+            <span className="italic">"Siempre Listos para Servir"</span>
+            <span>·</span>
             <span>para el Movimiento Scout</span>
           </div>
         </div>
