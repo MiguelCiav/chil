@@ -8,6 +8,22 @@ export interface MemberQuickViewModalProps {
   onClose: () => void;
 }
 
+function getMemberTypeLabel(type: 'young' | 'adult'): string {
+  return type === 'young' ? 'Joven' : 'Adulto';
+}
+
+function getMemberStatusClass(status: string): string {
+  if (status === 'active') return 'text-green-700';
+  if (status === 'exceptional') return 'text-purple-700';
+  return 'text-red-700';
+}
+
+function getMemberStatusText(status: string): string {
+  if (status === 'active') return '● Registro Válido';
+  if (status === 'exceptional') return '● Emisión Excepcional';
+  return '● Registro Inválido';
+}
+
 export const MemberQuickViewModal: React.FC<MemberQuickViewModalProps> = ({
   member,
   onClose
@@ -31,7 +47,7 @@ export const MemberQuickViewModal: React.FC<MemberQuickViewModalProps> = ({
             <div className="flex justify-between border-b border-gray-200 pb-2">
               <span className="text-neutral/50 font-semibold">Tipo</span>
               <span className="font-semibold text-neutral">
-                {member.member_type === 'young' ? 'Joven' : 'Adulto'}
+                {getMemberTypeLabel(member.member_type)}
               </span>
             </div>
             <div className="flex justify-between border-b border-gray-200 pb-2">
@@ -40,20 +56,8 @@ export const MemberQuickViewModal: React.FC<MemberQuickViewModalProps> = ({
             </div>
             <div className="flex justify-between border-b border-gray-200 pb-2">
               <span className="text-neutral/50 font-semibold">Estatus</span>
-              <span
-                className={`font-bold ${
-                  member.status === 'active'
-                    ? 'text-green-700'
-                    : member.status === 'exceptional'
-                    ? 'text-purple-700'
-                    : 'text-red-700'
-                }`}
-              >
-                {member.status === 'active'
-                  ? '● Registro Válido'
-                  : member.status === 'exceptional'
-                  ? '● Emisión Excepcional'
-                  : '● Registro Inválido'}
+              <span className={`font-bold ${getMemberStatusClass(member.status)}`}>
+                {getMemberStatusText(member.status)}
               </span>
             </div>
             {member.status === 'exceptional' && (

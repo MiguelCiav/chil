@@ -40,78 +40,67 @@ export const RECOGNITION_TYPES: RecognitionTypeInfo[] = [
   { id: "sct-go-solar", name: "Go Solar" }
 ];
 
-export function getRecognitionBadgeStyle(recognitionIdOrName?: string): { bg: string; text: string; border: string; pillClass: string } {
-  if (!recognitionIdOrName) {
-    return {
-      bg: 'bg-gray-100',
-      text: 'text-gray-700',
-      border: 'border-gray-200',
-      pillClass: 'bg-gray-100 text-gray-700 border border-gray-200'
-    };
+interface BadgeStyle {
+  bg: string;
+  text: string;
+  border: string;
+  pillClass: string;
+}
+
+const BADGE_STYLE_RULES: { keywords: string[]; style: BadgeStyle }[] = [
+  {
+    keywords: ['plástico', 'plastico', 'marea', 'plastic'],
+    style: { bg: 'bg-sky-100', text: 'text-sky-800', border: 'border-sky-200', pillClass: 'bg-sky-100 text-sky-800 border border-sky-200' }
+  },
+  {
+    keywords: ['tribu', 'tierra', 'earth'],
+    style: { bg: 'bg-[#e9e7db]', text: 'text-[#5e5c46]', border: 'border-[#d6d3c2]', pillClass: 'bg-[#e9e7db] text-[#5e5c46] border border-[#d6d3c2]' }
+  },
+  {
+    keywords: ['campeones', 'naturaleza', 'champions'],
+    style: { bg: 'bg-[#fee2d8]', text: 'text-[#c2410c]', border: 'border-[#fdba74]', pillClass: 'bg-[#fee2d8] text-[#c2410c] border border-[#fdba74]' }
+  },
+  {
+    keywords: ['solar'],
+    style: { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-200', pillClass: 'bg-amber-100 text-amber-800 border border-amber-200' }
+  },
+  {
+    keywords: ['servicio', 'service', 'distinguido', 'prolongado'],
+    style: { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-200', pillClass: 'bg-amber-100 text-amber-900 border border-amber-200' }
+  },
+  {
+    keywords: ['promesa', 'wood', 'madera'],
+    style: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200', pillClass: 'bg-blue-100 text-blue-800 border border-blue-200' }
+  },
+  {
+    keywords: ['mérito', 'merito'],
+    style: { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200', pillClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200' }
   }
+];
+
+const DEFAULT_BADGE_STYLE: BadgeStyle = {
+  bg: 'bg-primary/10',
+  text: 'text-primary',
+  border: 'border-primary/20',
+  pillClass: 'bg-primary/10 text-primary border border-primary/20'
+};
+
+const EMPTY_BADGE_STYLE: BadgeStyle = {
+  bg: 'bg-gray-100',
+  text: 'text-gray-700',
+  border: 'border-gray-200',
+  pillClass: 'bg-gray-100 text-gray-700 border border-gray-200'
+};
+
+export function getRecognitionBadgeStyle(recognitionIdOrName?: string): BadgeStyle {
+  if (!recognitionIdOrName) return EMPTY_BADGE_STYLE;
   const lower = recognitionIdOrName.toLowerCase();
-  if (lower.includes('plástico') || lower.includes('plastico') || lower.includes('marea') || lower.includes('plastic')) {
-    return {
-      bg: 'bg-sky-100',
-      text: 'text-sky-800',
-      border: 'border-sky-200',
-      pillClass: 'bg-sky-100 text-sky-800 border border-sky-200'
-    };
+  for (const rule of BADGE_STYLE_RULES) {
+    if (rule.keywords.some(kw => lower.includes(kw))) {
+      return rule.style;
+    }
   }
-  if (lower.includes('tribu') || lower.includes('tierra') || lower.includes('earth')) {
-    return {
-      bg: 'bg-[#e9e7db]',
-      text: 'text-[#5e5c46]',
-      border: 'border-[#d6d3c2]',
-      pillClass: 'bg-[#e9e7db] text-[#5e5c46] border border-[#d6d3c2]'
-    };
-  }
-  if (lower.includes('campeones') || lower.includes('naturaleza') || lower.includes('champions')) {
-    return {
-      bg: 'bg-[#fee2d8]',
-      text: 'text-[#c2410c]',
-      border: 'border-[#fdba74]',
-      pillClass: 'bg-[#fee2d8] text-[#c2410c] border border-[#fdba74]'
-    };
-  }
-  if (lower.includes('solar')) {
-    return {
-      bg: 'bg-amber-100',
-      text: 'text-amber-800',
-      border: 'border-amber-200',
-      pillClass: 'bg-amber-100 text-amber-800 border border-amber-200'
-    };
-  }
-  if (lower.includes('servicio') || lower.includes('service') || lower.includes('distinguido') || lower.includes('prolongado')) {
-    return {
-      bg: 'bg-amber-100',
-      text: 'text-amber-900',
-      border: 'border-amber-200',
-      pillClass: 'bg-amber-100 text-amber-900 border border-amber-200'
-    };
-  }
-  if (lower.includes('promesa') || lower.includes('wood') || lower.includes('madera')) {
-    return {
-      bg: 'bg-blue-100',
-      text: 'text-blue-800',
-      border: 'border-blue-200',
-      pillClass: 'bg-blue-100 text-blue-800 border border-blue-200'
-    };
-  }
-  if (lower.includes('mérito') || lower.includes('merito')) {
-    return {
-      bg: 'bg-emerald-100',
-      text: 'text-emerald-800',
-      border: 'border-emerald-200',
-      pillClass: 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-    };
-  }
-  return {
-    bg: 'bg-primary/10',
-    text: 'text-primary',
-    border: 'border-primary/20',
-    pillClass: 'bg-primary/10 text-primary border border-primary/20'
-  };
+  return DEFAULT_BADGE_STYLE;
 }
 
 export function getRecognitionName(recognitionIdOrName?: string): string {
@@ -156,6 +145,41 @@ const safeSetItem = (key: string, value: string): void => {
   }
 };
 
+async function seedHierarchyCollection<T extends { id: number }>(
+  collectionName: string,
+  items: T[]
+): Promise<void> {
+  const batch = writeBatch(db);
+  for (const item of items) {
+    batch.set(doc(db, collectionName, String(item.id)), item);
+  }
+  await batch.commit();
+}
+
+async function seedHierarchy(): Promise<{ regions: Region[]; districts: District[]; groups: ScoutGroup[] }> {
+  console.log("Firestore hierarchy collections empty. Seeding...");
+  await seedHierarchyCollection("regions", hierarchyData.regions);
+  await seedHierarchyCollection("districts", hierarchyData.districts);
+  await seedHierarchyCollection("groups", hierarchyData.groups);
+  console.log("Seeding complete!");
+  return {
+    regions: hierarchyData.regions,
+    districts: hierarchyData.districts,
+    groups: hierarchyData.groups
+  };
+}
+
+function normalizeHierarchyItems<T extends { id: number; name: string }>(
+  items: T[],
+  fallbackItem: T
+): T[] {
+  const copy = [...items];
+  if (!copy.some(item => item.id === 0)) {
+    copy.unshift(fallbackItem);
+  }
+  return copy.sort((a, b) => a.id - b.id);
+}
+
 export async function getHierarchyData(): Promise<{ regions: Region[]; districts: District[]; groups: ScoutGroup[] }> {
   try {
     const [regionsSnap, districtsSnap, groupsSnap] = await Promise.all([
@@ -169,52 +193,14 @@ export async function getHierarchyData(): Promise<{ regions: Region[]; districts
     const groups = groupsSnap.docs.map(d => d.data() as ScoutGroup);
 
     if (regions.length === 0) {
-      console.log("Firestore hierarchy collections empty. Seeding...");
-
-      // Seed Regions
-      const regionBatch = writeBatch(db);
-      for (const r of hierarchyData.regions) {
-        regionBatch.set(doc(db, "regions", String(r.id)), r);
-      }
-      await regionBatch.commit();
-
-      // Seed Districts
-      const districtBatch = writeBatch(db);
-      for (const d of hierarchyData.districts) {
-        districtBatch.set(doc(db, "districts", String(d.id)), d);
-      }
-      await districtBatch.commit();
-
-      // Seed Groups
-      const groupBatch = writeBatch(db);
-      for (const g of hierarchyData.groups) {
-        groupBatch.set(doc(db, "groups", String(g.id)), g);
-      }
-      await groupBatch.commit();
-
-      console.log("Seeding complete!");
-      return {
-        regions: hierarchyData.regions,
-        districts: hierarchyData.districts,
-        groups: hierarchyData.groups
-      };
+      return await seedHierarchy();
     }
 
-    if (!regions.some(r => r.id === 0)) {
-      regions.unshift({ id: 0, name: "No aplica" });
-    }
-    if (!districts.some(d => d.id === 0)) {
-      districts.unshift({ id: 0, name: "No aplica", region_id: 0 });
-    }
-    if (!groups.some(g => g.id === 0)) {
-      groups.unshift({ id: 0, name: "No aplica", district_id: 0 });
-    }
-
-    regions.sort((a, b) => a.id - b.id);
-    districts.sort((a, b) => a.id - b.id);
-    groups.sort((a, b) => a.id - b.id);
-
-    return { regions, districts, groups };
+    return {
+      regions: normalizeHierarchyItems(regions, { id: 0, name: "No aplica" }),
+      districts: normalizeHierarchyItems(districts, { id: 0, name: "No aplica", region_id: 0 }),
+      groups: normalizeHierarchyItems(groups, { id: 0, name: "No aplica", district_id: 0 })
+    };
   } catch (error) {
     console.error("Failed to fetch hierarchy from Firestore, falling back to local JSON:", error);
     return hierarchyData;
@@ -330,8 +316,20 @@ export async function deleteMember(identity: string): Promise<void> {
   await deleteDoc(doc(db, "scout_members", identity));
 }
 
+export function buildBatchQueryForUser(userId: string) {
+  return query(collection(db, "batches"), where("user_id", "==", userId));
+}
+
+export function buildMembersQueryForBatch(batchId: number) {
+  return query(collection(db, "scout_members"), where("batch_id", "==", batchId));
+}
+
+export function buildMembersQueryForBatchChunk(batchIds: number[]) {
+  return query(collection(db, "scout_members"), where("batch_id", "in", batchIds));
+}
+
 export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[]> {
-  const q = query(collection(db, "scout_members"), where("batch_id", "==", batchId));
+  const q = buildMembersQueryForBatch(batchId);
   const querySnapshot = await getDocs(q);
   const members: ScoutMember[] = [];
   querySnapshot.forEach((docSnapshot) => {
@@ -356,7 +354,7 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
     chunks.push(batchIds.slice(i, i + 30));
   }
   const memberPromises = chunks.map(async (chunk) => {
-    const q = query(collection(db, "scout_members"), where("batch_id", "in", chunk));
+    const q = buildMembersQueryForBatchChunk(chunk);
     const snap = await getDocs(q);
     return snap.docs.map(docSnapshot => docSnapshot.data() as ScoutMember);
   });
@@ -369,7 +367,7 @@ export async function getAllBatches(userId?: string): Promise<Batch[]> {
   if (!targetUserId) {
     return [];
   }
-  const q = query(collection(db, "batches"), where("user_id", "==", targetUserId));
+  const q = buildBatchQueryForUser(targetUserId);
   const querySnapshot = await getDocs(q);
   const batches: Batch[] = [];
   querySnapshot.forEach((docSnapshot) => {
@@ -441,6 +439,18 @@ export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
   link.remove();
   URL.revokeObjectURL(url);
 }
+function getReportMemberStatusColor(status: string): [number, number, number] {
+  if (status === 'active') return [40, 167, 69]; // Green
+  if (status === 'exceptional') return [126, 34, 206]; // Purple
+  return [220, 53, 69]; // Red
+}
+
+function getReportMemberStatusText(status: string): string {
+  if (status === 'active') return 'Registro Válido';
+  if (status === 'exceptional') return 'Emisión Excepcional';
+  return 'No registrado';
+}
+
 export async function generateBatchReport(
   batchOrId: number | Batch,
   membersParam?: ScoutMember[],
@@ -545,9 +555,8 @@ export async function generateBatchReport(
     
     const fullName = `${m.first_names} ${m.last_names}`;
     const typeStr = m.member_type === 'young' ? 'Joven' : 'Adulto';
-    const isActive = m.status === 'active';
-    const isExceptional = m.status === 'exceptional';
-    const statusStr = isActive ? 'Registro Válido' : isExceptional ? 'Emisión Excepcional' : 'No registrado';
+    const statusStr = getReportMemberStatusText(m.status);
+    const [r, g, bColor] = getReportMemberStatusColor(m.status);
     
     // Draw row separator
     docPdf.setDrawColor(245, 245, 245);
@@ -557,13 +566,7 @@ export async function generateBatchReport(
     docPdf.text(fullName.substring(0, 35), 46, y);
     docPdf.text(typeStr, 116, y);
     
-    if (isActive) {
-      docPdf.setTextColor(40, 167, 69); // Green
-    } else if (isExceptional) {
-      docPdf.setTextColor(126, 34, 206); // Purple #7e22ce
-    } else {
-      docPdf.setTextColor(220, 53, 69); // Red
-    }
+    docPdf.setTextColor(r, g, bColor);
     docPdf.text(statusStr, 146, y);
     docPdf.setTextColor(0, 0, 0); // Reset
     

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   getHierarchyData,
   createBatch,
@@ -27,6 +27,60 @@ export interface SuccessEmissionData {
   batch: Batch;
   member: ScoutMember;
   recognitionName: string;
+}
+
+export interface QuickRecognitionValidationParams {
+  recognitionType: string;
+  unit: ScoutUnit;
+  regionId: string;
+  districtId: string;
+  groupId: string;
+  identity: string;
+  scraperStatus: 'idle' | 'success' | 'error';
+  verifiedCedula: string | null;
+  firstNames: string;
+  lastNames: string;
+  recognitionCode: string;
+}
+
+export function validateQuickRecognitionFields(params: QuickRecognitionValidationParams): Record<string, string> {
+  const newErrors: Record<string, string> = {};
+  const isNoScout = params.unit === 'no_scout';
+
+  if (!params.recognitionType) {
+    newErrors.recognitionType = 'Debe seleccionar un tipo de reconocimiento';
+  }
+
+  if (!isNoScout) {
+    if (!params.regionId && params.regionId !== '0') {
+      newErrors.regionId = 'Debe seleccionar una región';
+    }
+    if (!params.districtId && params.districtId !== '0') {
+      newErrors.districtId = 'Debe seleccionar un distrito';
+    }
+    if (!params.groupId && params.groupId !== '0') {
+      newErrors.groupId = 'Debe seleccionar un grupo scout';
+    }
+  }
+
+  const cleanIdentity = params.identity.trim();
+  if (!cleanIdentity) {
+    newErrors.identity = 'Debe ingresar la cédula de identidad';
+  } else if (!isNoScout && (params.scraperStatus !== 'success' || params.verifiedCedula !== cleanIdentity)) {
+    newErrors.identity = 'Debe consultar el sistema de registro para verificar la cédula del scout antes de emitir el reconocimiento.';
+  }
+
+  if (!params.firstNames.trim()) {
+    newErrors.firstNames = 'Debe ingresar el o los nombres';
+  }
+  if (!params.lastNames.trim()) {
+    newErrors.lastNames = 'Debe ingresar el o los apellidos';
+  }
+  if (!params.recognitionCode.trim()) {
+    newErrors.recognitionCode = 'Debe generar o ingresar un código de reconocimiento';
+  }
+
+  return newErrors;
 }
 
 export function useQuickRecognition() {
@@ -311,29 +365,25 @@ export function useQuickRecognition() {
   }, [identity, triggerToast]);
 
   const validateForm = useCallback((): boolean => {
-    const newErrors: Record<string, string> = {};
-    const isNoScout = unit === 'no_scout';
-
-    if (!recognitionType) newErrors.recognitionType = 'Debe seleccionar un tipo de reconocimiento';
-    if (!isNoScout) {
-      if (!regionId && regionId !== '0') newErrors.regionId = 'Debe seleccionar una región';
-      if (!districtId && districtId !== '0') newErrors.districtId = 'Debe seleccionar un distrito';
-      if (!groupId && groupId !== '0') newErrors.groupId = 'Debe seleccionar un grupo scout';
-    }
-    if (!identity.trim()) {
-      newErrors.identity = 'Debe ingresar la cédula de identidad';
-    } else if (!isNoScout && (scraperStatus !== 'success' || verifiedCedula !== identity.trim())) {
-      newErrors.identity = 'Debe consultar el sistema de registro para verificar la cédula del scout antes de emitir el reconocimiento.';
-    }
-    if (!firstNames.trim()) newErrors.firstNames = 'Debe ingresar el o los nombres';
-    if (!lastNames.trim()) newErrors.lastNames = 'Debe ingresar el o los apellidos';
-    if (!recognitionCode.trim()) newErrors.recognitionCode = 'Debe generar o ingresar un código de reconocimiento';
+    const newErrors = validateQuickRecognitionFields({
+      recognitionType,
+      unit,
+      regionId,
+      districtId,
+      groupId,
+      identity,
+      scraperStatus,
+      verifiedCedula,
+      firstNames,
+      lastNames,
+      recognitionCode
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [recognitionType, unit, regionId, districtId, groupId, identity, scraperStatus, verifiedCedula, firstNames, lastNames, recognitionCode]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validateForm()) return;
 

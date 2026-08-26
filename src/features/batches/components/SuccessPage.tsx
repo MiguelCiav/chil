@@ -54,6 +54,24 @@ const StatSummaryCard: React.FC<StatSummaryCardProps> = ({
   </Card>
 );
 
+async function loadFallbackBatch(): Promise<{ batch: Batch | null; members: ScoutMember[] }> {
+  let batches: Batch[] = [];
+  try {
+    if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+      batches = JSON.parse(localStorage.getItem('chil_batches') || '[]');
+    }
+  } catch {
+    batches = [];
+  }
+
+  if (batches.length > 0) {
+    const lastBatch = batches[batches.length - 1];
+    const lastBatchMembers = await getMembersByBatchId(lastBatch.id);
+    return { batch: lastBatch, members: lastBatchMembers };
+  }
+  return { batch: null, members: [] };
+}
+
 export const SuccessPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,22 +89,9 @@ export const SuccessPage: React.FC = () => {
   useEffect(() => {
     const loadBatchData = async () => {
       if (!batchId) {
-        // Fallback: try to read the last created batch from localStorage
-        let batches: Batch[] = [];
-        try {
-          if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
-            batches = JSON.parse(localStorage.getItem('chil_batches') || '[]');
-          }
-        } catch {
-          batches = [];
-        }
-
-        if (batches.length > 0) {
-          const lastBatch = batches[batches.length - 1];
-          const lastBatchMembers = await getMembersByBatchId(lastBatch.id);
-          setBatch(lastBatch);
-          setMembers(lastBatchMembers);
-        }
+        const fallback = await loadFallbackBatch();
+        setBatch(fallback.batch);
+        setMembers(fallback.members);
         setLoading(false);
         return;
       }
@@ -244,10 +249,10 @@ export const SuccessPage: React.FC = () => {
       header: 'CÓDIGO REC.',
       cell: (info) => {
         const rowData = info.row.original;
-        const code = rowData.recognition_code || ((rowData.status === 'active' || rowData.status === 'exceptional') ? '-' : '-');
+        const code = rowData.recognition_code || '-';
         return (
           <span className="font-mono text-xs sm:text-sm font-semibold text-primary">
-            {code || '-'}
+            {code}
           </span>
         );
       }

@@ -24,6 +24,39 @@ interface Step3ReviewProps {
   onBack: () => void;
 }
 
+function getMemberStatusBadge(status: 'active' | 'pending' | 'exceptional') {
+  if (status === 'active') {
+    return (
+      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0] rounded-full">
+        Válido
+      </span>
+    );
+  }
+  if (status === 'exceptional') {
+    return (
+      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff] rounded-full">
+        Excepcional
+      </span>
+    );
+  }
+  return (
+    <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca] rounded-full">
+      Pendiente
+    </span>
+  );
+}
+
+function getExceptionalRecognitionCode(member: ScoutMember, isChecked: boolean): string | undefined {
+  if (!isChecked) {
+    return member.recognition_code;
+  }
+  if (member.recognition_code) {
+    return member.recognition_code;
+  }
+  const suffix = member.identity.slice(-4) || 'EXC';
+  return `REC-${suffix}`;
+}
+
 export const Step3Review: React.FC<Step3ReviewProps> = ({
   batchId,
   savedMembers,
@@ -195,6 +228,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             {/* Strategy Selectors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <label
+                htmlFor="radio-code-auto"
                 className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                   codeMode === 'auto'
                     ? 'bg-white border-primary shadow-sm ring-2 ring-primary/10'
@@ -202,6 +236,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 }`}
               >
                 <input
+                  id="radio-code-auto"
                   type="radio"
                   name="recognitionCodeMode"
                   value="auto"
@@ -218,6 +253,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
               </label>
 
               <label
+                htmlFor="radio-code-manual"
                 className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                   codeMode === 'manual'
                     ? 'bg-white border-primary shadow-sm ring-2 ring-primary/10'
@@ -225,6 +261,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 }`}
               >
                 <input
+                  id="radio-code-manual"
                   type="radio"
                   name="recognitionCodeMode"
                   value="manual"
@@ -336,19 +373,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                       );
                     })()}
 
-                    {member.status === 'active' ? (
-                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0] rounded-full">
-                        Válido
-                      </span>
-                    ) : member.status === 'exceptional' ? (
-                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff] rounded-full">
-                        Excepcional
-                      </span>
-                    ) : (
-                      <span className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca] rounded-full">
-                        Pendiente
-                      </span>
-                    )}
+                    {getMemberStatusBadge(member.status)}
 
                     <button
                       type="button"
@@ -470,13 +495,14 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                         checked={editingMember.status === 'exceptional'}
                         onChange={(e) => {
                           const isChecked = e.target.checked;
+                          const nextStatus = isChecked ? 'exceptional' : 'pending';
+                          const nextCode = getExceptionalRecognitionCode(editingMember, isChecked);
+                          const nextReason = isChecked ? (editingMember.exceptional_reason || '') : undefined;
                           setEditingMember({
                             ...editingMember,
-                            status: isChecked ? 'exceptional' : 'pending',
-                            recognition_code: isChecked
-                              ? (editingMember.recognition_code || `REC-${editingMember.identity.slice(-4) || 'EXC'}`)
-                              : editingMember.recognition_code,
-                            exceptional_reason: isChecked ? (editingMember.exceptional_reason || '') : undefined
+                            status: nextStatus,
+                            recognition_code: nextCode,
+                            exceptional_reason: nextReason
                           });
                         }}
                         className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 accent-purple-600"

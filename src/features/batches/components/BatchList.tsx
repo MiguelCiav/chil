@@ -120,13 +120,7 @@ function formatDateToDisplay(isoDate: string): string {
   return isoDate;
 }
 
-function matchesDateFilter(createdAt: string, filterValue: string): boolean {
-  const batchDate = new Date(createdAt);
-  if (Number.isNaN(batchDate.getTime())) return false;
-
-  const now = new Date();
-
-  // Predefined periods
+function matchesPredefinedPeriod(batchDate: Date, now: Date, filterValue: string): boolean {
   if (filterValue === 'Este Año') {
     return batchDate.getFullYear() === now.getFullYear();
   }
@@ -146,52 +140,84 @@ function matchesDateFilter(createdAt: string, filterValue: string): boolean {
     ninetyDaysAgo.setHours(0, 0, 0, 0);
     return batchDate >= ninetyDaysAgo && batchDate <= now;
   }
-  if (filterValue === 'Todo el histórico') {
-    return true;
-  }
+  return filterValue === 'Todo el histórico';
+}
 
-  // Date range: "DD/MM/YYYY - DD/MM/YYYY"
-  if (filterValue.includes(' - ')) {
-    const [startStr, endStr] = filterValue.split(' - ');
-    const [sDay, sMonth, sYear] = startStr.split('/').map(Number);
-    const [eDay, eMonth, eYear] = endStr.split('/').map(Number);
-    if (sDay && sMonth && sYear && eDay && eMonth && eYear) {
-      const startDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
-      const endDate = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
-      return batchDate >= startDate && batchDate <= endDate;
-    }
+function matchesDateRange(batchDate: Date, filterValue: string): boolean {
+  if (!filterValue.includes(' - ')) return false;
+  const [startStr, endStr] = filterValue.split(' - ');
+  const [sDay, sMonth, sYear] = startStr.split('/').map(Number);
+  const [eDay, eMonth, eYear] = endStr.split('/').map(Number);
+  if (sDay && sMonth && sYear && eDay && eMonth && eYear) {
+    const startDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
+    const endDate = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
+    return batchDate >= startDate && batchDate <= endDate;
   }
+  return false;
+}
 
-  // Specific date: "DD/MM/YYYY"
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(filterValue)) {
-    const [day, month, year] = filterValue.split('/').map(Number);
-    if (day && month && year) {
-      const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
-      return batchDate >= startOfDay && batchDate <= endOfDay;
-    }
+function matchesSpecificDate(batchDate: Date, filterValue: string): boolean {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(filterValue)) return false;
+  const [day, month, year] = filterValue.split('/').map(Number);
+  if (day && month && year) {
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+    return batchDate >= startOfDay && batchDate <= endOfDay;
   }
+  return false;
+}
+
+function matchesDateFilter(createdAt: string, filterValue: string): boolean {
+  const batchDate = new Date(createdAt);
+  if (Number.isNaN(batchDate.getTime())) return false;
+
+  const now = new Date();
+  if (matchesPredefinedPeriod(batchDate, now, filterValue)) return true;
+  if (filterValue.includes(' - ')) return matchesDateRange(batchDate, filterValue);
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(filterValue)) return matchesSpecificDate(batchDate, filterValue);
 
   return true;
 }
 
-function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip[]): boolean {
-  for (const filter of activeFilters) {
-    if (filter.type === 'date') {
-      if (!matchesDateFilter(row.created_at, filter.value)) {
-        return false;
-      }
-    } else if (filter.type === 'region') {
-      if (row.regionName !== filter.value && filter.value !== '-') return false;
-    } else if (filter.type === 'district') {
-      if (row.districtName !== filter.value && filter.value !== '-') return false;
-    } else if (filter.type === 'group') {
-      if (!row.groupName.toLowerCase().includes(filter.value.toLowerCase())) return false;
-    } else if (filter.type === 'recognition') {
-      if (row.recognitionName !== filter.value && row.recognitionType !== filter.value) return false;
-    }
+function matchesRegionFilter(rowRegion: string, filterValue: string): boolean {
+  return rowRegion === filterValue || filterValue === '-';
+}
+
+function matchesDistrictFilter(rowDistrict: string, filterValue: string): boolean {
+  return rowDistrict === filterValue || filterValue === '-';
+}
+
+function matchesGroupFilter(rowGroup: string, filterValue: string): boolean {
+  return rowGroup.toLowerCase().includes(filterValue.toLowerCase());
+}
+
+function matchesRecognitionFilter(
+  rowRecognitionName: string,
+  rowRecognitionType: string,
+  filterValue: string
+): boolean {
+  return rowRecognitionName === filterValue || rowRecognitionType === filterValue;
+}
+
+function matchesSingleFilter(row: BatchRowData, filter: ActiveFilterChip): boolean {
+  switch (filter.type) {
+    case 'date':
+      return matchesDateFilter(row.created_at, filter.value);
+    case 'region':
+      return matchesRegionFilter(row.regionName, filter.value);
+    case 'district':
+      return matchesDistrictFilter(row.districtName, filter.value);
+    case 'group':
+      return matchesGroupFilter(row.groupName, filter.value);
+    case 'recognition':
+      return matchesRecognitionFilter(row.recognitionName, row.recognitionType, filter.value);
+    default:
+      return true;
   }
-  return true;
+}
+
+function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip[]): boolean {
+  return activeFilters.every(filter => matchesSingleFilter(row, filter));
 }
 
 function getFilterLabelAndValue(
@@ -228,6 +254,23 @@ function getFilterLabelAndValue(
       };
     }
   }
+}
+
+function isApplyFilterDisabled(
+  newFilterType: 'date' | 'region' | 'district' | 'group' | 'recognition',
+  dateFilterMode: 'predefined' | 'range' | 'specific',
+  datePredefinedValue: string,
+  dateRangeStart: string,
+  dateRangeEnd: string,
+  dateSpecificValue: string,
+  newFilterValue: string
+): boolean {
+  if (newFilterType === 'date') {
+    if (dateFilterMode === 'predefined') return !datePredefinedValue;
+    if (dateFilterMode === 'range') return !dateRangeStart || !dateRangeEnd;
+    return !dateSpecificValue;
+  }
+  return !newFilterValue;
 }
 
 function renderBatchTableRows(
@@ -480,9 +523,9 @@ export const BatchList: React.FC = () => {
         batch,
         created_at: batch.created_at,
         formattedDate,
-        regionName: regionObj ? regionObj.name : '-',
-        districtName: districtObj ? districtObj.name : '-',
-        groupName: groupObj ? groupObj.name : (batch.comment || '-'),
+        regionName: regionObj?.name || '-',
+        districtName: districtObj?.name || '-',
+        groupName: groupObj?.name || batch.comment || '-',
         recognitionName: resolveRecognitionName(batch.recognition_type),
         recognitionType: batch.recognition_type || '',
         memberCount
@@ -985,15 +1028,15 @@ export const BatchList: React.FC = () => {
             <Button
               type="submit"
               variant="primary"
-              disabled={
-                newFilterType === 'date'
-                  ? dateFilterMode === 'predefined'
-                    ? !datePredefinedValue
-                    : dateFilterMode === 'range'
-                      ? !dateRangeStart || !dateRangeEnd
-                      : !dateSpecificValue
-                  : !newFilterValue
-              }
+              disabled={isApplyFilterDisabled(
+                newFilterType,
+                dateFilterMode,
+                datePredefinedValue,
+                dateRangeStart,
+                dateRangeEnd,
+                dateSpecificValue,
+                newFilterValue
+              )}
             >
               Aplicar Filtro
             </Button>

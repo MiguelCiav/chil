@@ -1,39 +1,40 @@
 import { ScoutMember, ScoutUnit, BatchUnitScope } from '../types';
 
 /**
- * Calculates the age in whole years from a birth date string.
+ * Parses a birth date string into a Date object.
  * Supports formats: 'YYYY-MM-DD', 'DD/MM/YYYY', 'DD-MM-YYYY', and ISO strings.
  */
-export function calculateAge(birthDateStr?: string): number | null {
+export function parseBirthDate(birthDateStr?: string): Date | null {
   if (!birthDateStr || typeof birthDateStr !== 'string') return null;
   const trimmed = birthDateStr.trim();
   if (!trimmed) return null;
 
-  let d: Date | null = null;
-
-  // Check if DD/MM/YYYY or DD-MM-YYYY
   const parts = trimmed.split(/[-/]/);
   if (parts.length === 3) {
     if (parts[0].length === 4) {
-      // YYYY-MM-DD or YYYY/MM/DD
       const year = Number(parts[0]);
       const month = Number(parts[1]) - 1;
       const day = Number(parts[2]);
-      d = new Date(year, month, day);
-    } else if (parts[2].length === 4) {
-      // DD-MM-YYYY or DD/MM/YYYY
+      return new Date(year, month, day);
+    }
+    if (parts[2].length === 4) {
       const day = Number(parts[0]);
       const month = Number(parts[1]) - 1;
       const year = Number(parts[2]);
-      d = new Date(year, month, day);
+      return new Date(year, month, day);
     }
   }
 
-  if (!d || isNaN(d.getTime())) {
-    d = new Date(trimmed);
-  }
+  const d = new Date(trimmed);
+  return isNaN(d.getTime()) ? null : d;
+}
 
-  if (isNaN(d.getTime())) return null;
+/**
+ * Calculates the age in whole years from a birth date string.
+ */
+export function calculateAge(birthDateStr?: string): number | null {
+  const d = parseBirthDate(birthDateStr);
+  if (!d || isNaN(d.getTime())) return null;
 
   const today = new Date();
   let age = today.getFullYear() - d.getFullYear();
@@ -61,66 +62,38 @@ export function inferYouthUnitByAge(age: number | null): ScoutUnit {
   return 'institucional';
 }
 
+export const inferUnitByAge = inferYouthUnitByAge;
+
 /**
- * Infers and normalizes member units for a whole batch according to business rules:
- * 1. If batch has fixed unit_scope !== 'mixed', all members receive unit_scope.
- * 2. For mixed batches:
- *    - Members with unit === 'no_scout' remain 'no_scout'.
- *    - Young members with birth_date:
- *      * Age < 11: 'manada'
- *      * Age 11 to 15: 'tropa'
- *      * Age 16 to 18: 'caminantes'
- *      * Age 19 to 21: 'clan'
- *    - Young members without valid birth_date default to 'tropa'.
- *    - Adults (Age > 21 or member_type === 'adult' without young age):
- *      * Determine the most frequent unit among the other members in the batch.
- *      * If tied or only adults exist, default to 'institucional'.
+ * Resolves whether a member is an adult candidate or has a direct youth unit.
  */
-export function inferBatchMemberUnits(
-  members: ScoutMember[],
-  unitScope?: BatchUnitScope
-): ScoutMember[] {
-  if (!members || members.length === 0) return [];
-
-  // Fixed unit scope
-  if (unitScope && unitScope !== 'mixed') {
-    return members.map(m => ({
-      ...m,
-      unit: unitScope as ScoutUnit,
-      status: unitScope === 'no_scout' ? ('active' as const) : m.status
-    }));
+export function resolveMemberYouthUnitOrAdult(member: ScoutMember): {
+  inferredUnit?: ScoutUnit;
+  isAdultCandidate: boolean;
+} {
+  if (member.unit === 'no_scout') {
+    return { inferredUnit: 'no_scout', isAdultCandidate: false };
   }
 
-  // Pass 1: Resolve youth units and identify adult candidates
-  const intermediate: { member: ScoutMember; inferredUnit?: ScoutUnit; isAdultCandidate: boolean }[] = [];
-
-  for (const member of members) {
-    if (member.unit === 'no_scout') {
-      intermediate.push({ member, inferredUnit: 'no_scout', isAdultCandidate: false });
-      continue;
+  const age = calculateAge(member.birth_date);
+  if (age !== null) {
+    if (age <= 21) {
+      return { inferredUnit: inferYouthUnitByAge(age), isAdultCandidate: false };
     }
-
-    const age = calculateAge(member.birth_date);
-
-    if (age !== null && age <= 21) {
-      // Definite youth based on age
-      const unit = inferYouthUnitByAge(age);
-      intermediate.push({ member, inferredUnit: unit, isAdultCandidate: false });
-    } else if (age !== null && age > 21) {
-      // Definite adult based on age > 21
-      intermediate.push({ member, isAdultCandidate: true });
-    } else {
-      // Age is unknown / not provided
-      if (member.member_type === 'adult') {
-        intermediate.push({ member, isAdultCandidate: true });
-      } else {
-        // Default young without birth date to 'tropa'
-        intermediate.push({ member, inferredUnit: 'tropa', isAdultCandidate: false });
-      }
-    }
+    return { isAdultCandidate: true };
   }
 
-  // Pass 2: Calculate most frequent unit among non-adults
+  if (member.member_type === 'adult') {
+    return { isAdultCandidate: true };
+  }
+
+  return { inferredUnit: 'tropa', isAdultCandidate: false };
+}
+
+/**
+ * Computes the mode (most frequent) unit among non-adults in the batch.
+ */
+export function computeBatchModeUnit(youthUnits: (ScoutUnit | undefined)[]): ScoutUnit {
   const unitCounts: Record<'manada' | 'tropa' | 'caminantes' | 'clan', number> = {
     manada: 0,
     tropa: 0,
@@ -128,19 +101,18 @@ export function inferBatchMemberUnits(
     clan: 0
   };
 
-  for (const item of intermediate) {
-    if (item.inferredUnit && item.inferredUnit in unitCounts) {
-      unitCounts[item.inferredUnit as 'manada' | 'tropa' | 'caminantes' | 'clan']++;
+  for (const u of youthUnits) {
+    if (u && u in unitCounts) {
+      unitCounts[u as 'manada' | 'tropa' | 'caminantes' | 'clan']++;
     }
   }
 
+  const validUnits: ('manada' | 'tropa' | 'caminantes' | 'clan')[] = ['manada', 'tropa', 'caminantes', 'clan'];
   let mostFrequentUnit: ScoutUnit = 'institucional';
   let maxCount = 0;
   let isTied = false;
 
-  const youthUnits: ('manada' | 'tropa' | 'caminantes' | 'clan')[] = ['manada', 'tropa', 'caminantes', 'clan'];
-
-  for (const u of youthUnits) {
+  for (const u of validUnits) {
     const count = unitCounts[u];
     if (count > maxCount) {
       maxCount = count;
@@ -151,16 +123,50 @@ export function inferBatchMemberUnits(
     }
   }
 
-  if (isTied || maxCount === 0) {
-    mostFrequentUnit = 'institucional';
+  return (isTied || maxCount === 0) ? 'institucional' : mostFrequentUnit;
+}
+
+/**
+ * Infers single member unit based on batch context.
+ */
+export function inferMemberUnit(
+  member: ScoutMember,
+  inferredUnit: ScoutUnit | undefined,
+  isAdultCandidate: boolean,
+  batchModeUnit: ScoutUnit
+): ScoutUnit {
+  if (isAdultCandidate) {
+    return batchModeUnit;
+  }
+  return inferredUnit || member.unit || 'tropa';
+}
+
+/**
+ * Infers and normalizes member units for a whole batch according to business rules.
+ */
+export function inferBatchMemberUnits(
+  members: ScoutMember[],
+  unitScope?: BatchUnitScope
+): ScoutMember[] {
+  if (!members || members.length === 0) return [];
+
+  if (unitScope && unitScope !== 'mixed') {
+    return members.map(m => ({
+      ...m,
+      unit: unitScope as ScoutUnit,
+      status: unitScope === 'no_scout' ? ('active' as const) : m.status
+    }));
   }
 
-  // Final mapping
-  return intermediate.map(({ member, inferredUnit, isAdultCandidate }) => {
-    const unit: ScoutUnit = isAdultCandidate
-      ? mostFrequentUnit
-      : (inferredUnit || member.unit || 'tropa');
+  const intermediate = members.map(member => ({
+    member,
+    ...resolveMemberYouthUnitOrAdult(member)
+  }));
 
+  const modeUnit = computeBatchModeUnit(intermediate.map(i => i.inferredUnit));
+
+  return intermediate.map(({ member, inferredUnit, isAdultCandidate }) => {
+    const unit = inferMemberUnit(member, inferredUnit, isAdultCandidate, modeUnit);
     return {
       ...member,
       unit,

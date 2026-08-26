@@ -141,7 +141,6 @@ describe('Step2Verification component', () => {
     render(
       <Step2Verification
         {...defaultProps}
-        unitScope="mixed"
         verificationList={list}
       />
     );

@@ -167,6 +167,151 @@ function handleScrapeErrorResult(
   };
 }
 
+function getInitialMemberUnit(
+  explicitUnit: ScoutUnit | undefined,
+  batchUnitScope: BatchUnitScope,
+  type: 'young' | 'adult'
+): ScoutUnit {
+  if (explicitUnit) return explicitUnit;
+  if (batchUnitScope !== 'mixed') return batchUnitScope as ScoutUnit;
+  return type === 'young' ? 'tropa' : 'institucional';
+}
+
+function upsertVerificationItem(
+  list: MemberVerificationResult[],
+  item: MemberVerificationResult
+): MemberVerificationResult[] {
+  const idx = list.findIndex(existing => existing.cedula === item.cedula);
+  if (idx > -1) {
+    const copy = [...list];
+    copy[idx] = item;
+    return copy;
+  }
+  return [...list, item];
+}
+
+function parseCedulaEntries(youngsText: string, adultsText: string) {
+  const youngs = youngsText.split('\n').map(c => c.trim()).filter(Boolean);
+  const adults = adultsText.split('\n').map(c => c.trim()).filter(Boolean);
+  const allCedulas = [
+    ...youngs.map(c => ({ cedula: c, type: 'young' as const })),
+    ...adults.map(c => ({ cedula: c, type: 'adult' as const }))
+  ];
+  const cedulaSet = new Set([...youngs, ...adults]);
+  return { youngs, adults, allCedulas, cedulaSet };
+}
+
+async function saveNoScoutMemberToDb(
+  cedula: string,
+  type: 'young' | 'adult',
+  batchId: number | null,
+  userId?: string
+): Promise<void> {
+  if (!batchId) return;
+  try {
+    await createMember(
+      {
+        identity: cedula,
+        first_names: 'Colaborador',
+        last_names: 'No Scout',
+        birth_date: '1990-01-01',
+        member_type: type,
+        unit: 'no_scout',
+        status: 'active',
+        verified_in_registry: false,
+        batch_id: batchId,
+        user_id: userId
+      },
+      userId
+    );
+  } catch (dbErr) {
+    console.error("Database save failed for no_scout member:", dbErr);
+  }
+}
+
+async function saveUnregisteredMemberToDb(
+  cedula: string,
+  type: 'young' | 'adult',
+  memberUnit: ScoutUnit,
+  batchId: number | null,
+  userId?: string
+): Promise<void> {
+  if (!batchId) return;
+  try {
+    await createMember(
+      {
+        identity: cedula,
+        first_names: 'Usuario',
+        last_names: 'No Registrado',
+        birth_date: '1990-01-01',
+        member_type: type,
+        unit: memberUnit,
+        status: 'pending',
+        verified_in_registry: true,
+        batch_id: batchId,
+        user_id: userId
+      },
+      userId
+    );
+  } catch (dbErr) {
+    console.error("Database save failed for unregistered member:", dbErr);
+  }
+}
+
+async function saveScrapedMemberToDb(
+  cedula: string,
+  res: ScraperMemberDetails,
+  type: 'young' | 'adult',
+  memberUnit: ScoutUnit,
+  batchId: number | null,
+  userId?: string
+): Promise<void> {
+  if (!batchId) return;
+  try {
+    const { first_names, last_names } = splitFullName(res.nombre_completo);
+    const isScrapedActive = res.status?.toLowerCase() === 'activo';
+    await createMember(
+      {
+        identity: cedula,
+        first_names,
+        last_names,
+        birth_date: res.fecha_nacimiento || '1990-01-01',
+        email: res.correo_electronico,
+        phone: res.telefono,
+        member_type: type,
+        unit: memberUnit,
+        status: isScrapedActive ? 'active' : 'pending',
+        verified_in_registry: true,
+        batch_id: batchId,
+        user_id: userId
+      },
+      userId
+    );
+  } catch (dbErr) {
+    console.error("Database save failed for active/inactive member:", dbErr);
+  }
+}
+
+async function syncAndFinalizeStep2Members(
+  batchId: number,
+  youngCedulas: string,
+  adultCedulas: string,
+  batchUnitScope: BatchUnitScope
+): Promise<ScoutMember[]> {
+  const { cedulaSet } = parseCedulaEntries(youngCedulas, adultCedulas);
+  const dbMembers = await getMembersByBatchId(batchId);
+
+  const deletePromises = dbMembers
+    .filter(m => !cedulaSet.has(m.identity))
+    .map(m => deleteMember(m.identity));
+  await Promise.all(deletePromises);
+
+  const members = await getMembersByBatchId(batchId);
+  const normalizedMembers = inferBatchMemberUnits(members, batchUnitScope);
+  await Promise.all(normalizedMembers.map(m => updateMember(m)));
+  return assignBatchRecognitionCodes(normalizedMembers, 'auto');
+}
+
 export const NewBatchWizard: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
@@ -314,71 +459,30 @@ export const NewBatchWizard: React.FC = () => {
 
   // --- Step 2 verification logic ---
   const verifyCedula = async (cedula: string, type: 'young' | 'adult', explicitUnit?: ScoutUnit) => {
-    const memberUnit: ScoutUnit = explicitUnit || (batchUnitScope !== 'mixed' ? (batchUnitScope as ScoutUnit) : (type === 'young' ? 'tropa' : 'institucional'));
+    const memberUnit = getInitialMemberUnit(explicitUnit, batchUnitScope, type);
 
     // If member is 'no_scout', completely bypass Sistema de Registro scraper query and mark as active
     if (memberUnit === 'no_scout') {
-      setVerificationList(prev => {
-        const idx = prev.findIndex(item => item.cedula === cedula);
-        const newItem: MemberVerificationResult = {
-          cedula,
-          name: 'Colaborador No Scout',
-          status: 'Registro válido',
-          type,
-          unit: 'no_scout'
-        };
-        if (idx > -1) {
-          const copy = [...prev];
-          copy[idx] = newItem;
-          return copy;
-        } else {
-          return [...prev, newItem];
-        }
-      });
+      setVerificationList(prev => upsertVerificationItem(prev, {
+        cedula,
+        name: 'Colaborador No Scout',
+        status: 'Registro válido',
+        type,
+        unit: 'no_scout'
+      }));
 
-      if (batchId) {
-        try {
-          await createMember(
-            {
-              identity: cedula,
-              first_names: 'Colaborador',
-              last_names: 'No Scout',
-              birth_date: '1990-01-01',
-              member_type: type,
-              unit: 'no_scout',
-              status: 'active',
-              verified_in_registry: false,
-              batch_id: batchId,
-              user_id: user?.uid
-            },
-            user?.uid
-          );
-        } catch (dbErr) {
-          console.error("Database save failed for no_scout member:", dbErr);
-        }
-      }
-
+      await saveNoScoutMemberToDb(cedula, type, batchId, user?.uid);
       setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
       return;
     }
 
     // 1. Set to Consultando status
-    setVerificationList(prev => {
-      const idx = prev.findIndex(item => item.cedula === cedula);
-      const newItem: MemberVerificationResult = {
-        cedula,
-        status: 'Consultando...',
-        type,
-        unit: memberUnit
-      };
-      if (idx > -1) {
-        const copy = [...prev];
-        copy[idx] = newItem;
-        return copy;
-      } else {
-        return [...prev, newItem];
-      }
-    });
+    setVerificationList(prev => upsertVerificationItem(prev, {
+      cedula,
+      status: 'Consultando...',
+      type,
+      unit: memberUnit
+    }));
 
     let scrapedResult: ScraperMemberDetails | null = null;
     let scrapeError: Error | null = null;
@@ -394,38 +498,13 @@ export const NewBatchWizard: React.FC = () => {
 
       setVerificationList(prev => prev.map(item =>
         item.cedula === cedula
-          ? {
-            cedula,
-            name,
-            status,
-            type,
-            unit: memberUnit
-          }
+          ? { cedula, name, status, type, unit: memberUnit }
           : item
       ));
 
-      // If unregistered, save as pending in Firestore
-      if (isUnregistered && batchId) {
-        try {
-          await createMember(
-            {
-              identity: cedula,
-              first_names: 'Usuario',
-              last_names: 'No Registrado',
-              birth_date: '1990-01-01',
-              member_type: type,
-              unit: memberUnit,
-              status: 'pending',
-              verified_in_registry: true,
-              batch_id: batchId,
-              user_id: user?.uid
-            },
-            user?.uid
-          );
-        } catch (dbErr) {
-          console.error("Database save failed for unregistered member:", dbErr);
-        }
-      } else if (!isUnregistered) {
+      if (isUnregistered) {
+        await saveUnregisteredMemberToDb(cedula, type, memberUnit, batchId, user?.uid);
+      } else {
         setToastMessage(`Error de red al verificar la cédula ${cedula}`);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 4000);
@@ -435,57 +514,20 @@ export const NewBatchWizard: React.FC = () => {
       const isScrapedActive = res.status?.toLowerCase() === 'activo';
       const rowStatus = isScrapedActive ? 'Registro válido' : 'No registrado';
 
-      // Success! Update list with results
       setVerificationList(prev => prev.map(item =>
         item.cedula === cedula
-          ? {
-            cedula,
-            name: res.nombre_completo,
-            status: rowStatus,
-            type,
-            unit: memberUnit,
-            details: res
-          }
+          ? { cedula, name: res.nombre_completo, status: rowStatus, type, unit: memberUnit, details: res }
           : item
       ));
 
-      // Save to Firestore
-      if (batchId) {
-        try {
-          const { first_names, last_names } = splitFullName(res.nombre_completo);
-          await createMember(
-            {
-              identity: cedula,
-              first_names,
-              last_names,
-              birth_date: res.fecha_nacimiento || '1990-01-01',
-              email: res.correo_electronico,
-              phone: res.telefono,
-              member_type: type,
-              unit: memberUnit,
-              status: isScrapedActive ? 'active' : 'pending',
-              verified_in_registry: true,
-              batch_id: batchId,
-              user_id: user?.uid
-            },
-            user?.uid
-          );
-        } catch (dbErr) {
-          console.error("Database save failed for active/inactive member:", dbErr);
-        }
-      }
+      await saveScrapedMemberToDb(cedula, res, type, memberUnit, batchId, user?.uid);
     }
 
     setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
   };
 
   const handleVerify = async () => {
-    const youngs = youngCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
-    const adults = adultCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
-    const allCedulas = [
-      ...youngs.map(c => ({ cedula: c, type: 'young' as const })),
-      ...adults.map(c => ({ cedula: c, type: 'adult' as const }))
-    ];
+    const { allCedulas } = parseCedulaEntries(youngCedulas, adultCedulas);
 
     if (allCedulas.length === 0) {
       alert("Ingrese al menos una cédula para verificar.");
@@ -499,7 +541,6 @@ export const NewBatchWizard: React.FC = () => {
       const isAllNoScout = batchUnitScope === 'no_scout';
 
       if (!isAllNoScout) {
-        // 1. Check if the credentials are saved
         const hasCreds = await hasScraperCredentials();
         if (!hasCreds) {
           setIsVerifying(false);
@@ -507,7 +548,6 @@ export const NewBatchWizard: React.FC = () => {
           return;
         }
 
-        // 2. If saved, invoke the scraper login command first to authenticate
         try {
           await loginScraper();
         } catch (loginErr) {
@@ -518,7 +558,6 @@ export const NewBatchWizard: React.FC = () => {
         }
       }
 
-      // 3. Initiate the parallel verification requests
       setVerifyProgress({ current: 0, total: allCedulas.length });
       const promises = allCedulas.map(item => verifyCedula(item.cedula, item.type));
       await Promise.all(promises);
@@ -531,19 +570,16 @@ export const NewBatchWizard: React.FC = () => {
   };
 
   const handleToggleMemberType = async (cedula: string) => {
-    // 1. Find the current item to determine next type
     const currentItem = verificationList.find(item => item.cedula === cedula);
     if (!currentItem) return;
 
     const originalType = currentItem.type;
     const nextType = originalType === 'young' ? 'adult' as const : 'young' as const;
 
-    // 2. Optimistic UI update
     setVerificationList(prev => prev.map(item =>
       item.cedula === cedula ? { ...item, type: nextType } : item
     ));
 
-    // 3. Perform database update in background
     if (batchId) {
       try {
         const members = await getMembersByBatchId(batchId);
@@ -556,7 +592,6 @@ export const NewBatchWizard: React.FC = () => {
         }
       } catch (err) {
         console.error("Error al actualizar tipo de miembro en DB:", err);
-        // Revert UI to original state
         setVerificationList(prev => prev.map(item =>
           item.cedula === cedula ? { ...item, type: originalType } : item
         ));
@@ -568,35 +603,18 @@ export const NewBatchWizard: React.FC = () => {
   // Move from Step 2 to Step 3
   const handleStep2Continue = async () => {
     if (batchId) {
-      // 1. Get the current active inputs
-      const youngs = youngCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
-      const adults = adultCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
-      const currentInputCedulas = new Set([...youngs, ...adults]);
-
-      // 2. Fetch all members currently stored in the DB for this batch
-      const dbMembers = await getMembersByBatchId(batchId);
-
-      // 3. Delete any members from DB that are NOT in currentInputCedulas
-      const deletePromises = dbMembers
-        .filter(m => !currentInputCedulas.has(m.identity))
-        .map(m => deleteMember(m.identity));
-
-      await Promise.all(deletePromises);
-
-      // 4. Reload the updated members list and infer age-based units
-      const members = await getMembersByBatchId(batchId);
-      const normalizedMembers = inferBatchMemberUnits(members, batchUnitScope);
-      await Promise.all(
-        normalizedMembers.map(m => updateMember(m))
+      const membersWithCodes = await syncAndFinalizeStep2Members(
+        batchId,
+        youngCedulas,
+        adultCedulas,
+        batchUnitScope
       );
-      const membersWithCodes = assignBatchRecognitionCodes(normalizedMembers, 'auto');
       setSavedMembers(membersWithCodes);
       setCurrentStep(3);
     }
   };
 
   const handleFinalizeBatch = () => {
-    // Finalize the batch creation process and head to success screen
     navigate('/lotes/exito', { state: { batchId, name: batchName } });
   };
 
@@ -725,7 +743,6 @@ export const NewBatchWizard: React.FC = () => {
       {currentStep === 2 && (
         <Step2Verification
           batchName={batchName}
-          unitScope={batchUnitScope}
           youngCedulas={youngCedulas}
           setYoungCedulas={setYoungCedulas}
           adultCedulas={adultCedulas}

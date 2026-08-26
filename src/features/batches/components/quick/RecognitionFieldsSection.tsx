@@ -24,6 +24,20 @@ export interface RecognitionFieldsSectionProps {
   errors: Record<string, string>;
 }
 
+function getSelectFieldClass(isDisabled: boolean, hasError: boolean): string {
+  if (isDisabled) {
+    return 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200';
+  }
+  if (hasError) {
+    return 'border-red-300 ring-2 ring-red-500 bg-red-50';
+  }
+  return 'border-primary/20';
+}
+
+function getSelectPlaceholder(isNoScout: boolean, defaultLabel: string): string {
+  return isNoScout ? 'No aplica' : defaultLabel;
+}
+
 export const RecognitionFieldsSection: React.FC<RecognitionFieldsSectionProps> = ({
   recognitionType,
   onRecognitionTypeChange,
@@ -43,6 +57,16 @@ export const RecognitionFieldsSection: React.FC<RecognitionFieldsSectionProps> =
   loadingHierarchy,
   errors
 }) => {
+  const isNoScout = unit === 'no_scout';
+  const isDistrictDisabled = !regionId || regionId === '0' || loadingHierarchy;
+  const isGroupDisabled = !districtId || districtId === '0' || regionId === '0' || loadingHierarchy;
+
+  const districtValue = regionId === '0' ? '0' : districtId;
+  const groupValue = (regionId === '0' || districtId === '0') ? '0' : groupId;
+
+  const districtClass = getSelectFieldClass(isDistrictDisabled, Boolean(errors.districtId));
+  const groupClass = getSelectFieldClass(isGroupDisabled, Boolean(errors.groupId));
+
   return (
     <div data-walkthrough="quick-rec-recognition-section">
       <Card className="shadow-sm border-gray-200">
@@ -82,7 +106,7 @@ export const RecognitionFieldsSection: React.FC<RecognitionFieldsSectionProps> =
           {/* Region */}
           <div className="space-y-1">
             <label htmlFor="quick-region" className="block uppercase text-xs font-bold tracking-wide text-neutral">
-              Región Scout {unit === 'no_scout' ? '(Opcional)' : '*'}
+              Región Scout {isNoScout ? '(Opcional)' : '*'}
             </label>
             <select
               id="quick-region"
@@ -94,7 +118,7 @@ export const RecognitionFieldsSection: React.FC<RecognitionFieldsSectionProps> =
               }`}
               disabled={loadingHierarchy}
             >
-              <option value="">{unit === 'no_scout' ? 'No aplica' : 'Seleccione una región'}</option>
+              <option value="">{getSelectPlaceholder(isNoScout, 'Seleccione una región')}</option>
               <option value="0">No aplica</option>
               {regions.filter((r) => r.id !== 0).map((r) => (
                 <option key={r.id} value={r.id}>
@@ -110,21 +134,17 @@ export const RecognitionFieldsSection: React.FC<RecognitionFieldsSectionProps> =
           {/* District */}
           <div className="space-y-1">
             <label htmlFor="quick-district" className="block uppercase text-xs font-bold tracking-wide text-neutral">
-              Distrito Scout {unit === 'no_scout' ? '(Opcional)' : '*'}
+              Distrito Scout {isNoScout ? '(Opcional)' : '*'}
             </label>
             <select
               id="quick-district"
               aria-label="Distrito Scout"
-              value={regionId === '0' ? '0' : districtId}
+              value={districtValue}
               onChange={(e) => onDistrictChange(e.target.value)}
-              disabled={!regionId || regionId === '0' || loadingHierarchy}
-              className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                (!regionId || regionId === '0')
-                  ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200'
-                  : (errors.districtId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20')
-              }`}
+              disabled={isDistrictDisabled}
+              className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${districtClass}`}
             >
-              <option value="">{unit === 'no_scout' ? 'No aplica' : 'Seleccione un distrito'}</option>
+              <option value="">{getSelectPlaceholder(isNoScout, 'Seleccione un distrito')}</option>
               <option value="0">No aplica</option>
               {filteredDistricts.filter((d) => d.id !== 0).map((d) => (
                 <option key={d.id} value={d.id}>
@@ -140,21 +160,17 @@ export const RecognitionFieldsSection: React.FC<RecognitionFieldsSectionProps> =
           {/* Group */}
           <div className="space-y-1">
             <label htmlFor="quick-group" className="block uppercase text-xs font-bold tracking-wide text-neutral">
-              Grupo Scout {unit === 'no_scout' ? '(Opcional)' : '*'}
+              Grupo Scout {isNoScout ? '(Opcional)' : '*'}
             </label>
             <select
               id="quick-group"
               aria-label="Grupo Scout"
-              value={(regionId === '0' || districtId === '0') ? '0' : groupId}
+              value={groupValue}
               onChange={(e) => onGroupChange(e.target.value)}
-              disabled={!districtId || districtId === '0' || regionId === '0' || loadingHierarchy}
-              className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${
-                (!districtId || districtId === '0' || regionId === '0')
-                  ? 'bg-gray-100 opacity-50 cursor-not-allowed border-gray-200'
-                  : (errors.groupId ? 'border-red-300 ring-2 ring-red-500 bg-red-50' : 'border-primary/20')
-              }`}
+              disabled={isGroupDisabled}
+              className={`w-full rounded-field px-4 transition-all bg-primary/5 border text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px] ${groupClass}`}
             >
-              <option value="">{unit === 'no_scout' ? 'No aplica' : 'Seleccione un grupo scout'}</option>
+              <option value="">{getSelectPlaceholder(isNoScout, 'Seleccione un grupo scout')}</option>
               <option value="0">No aplica</option>
               {filteredGroups.filter((g) => g.id !== 0).map((g) => (
                 <option key={g.id} value={g.id}>

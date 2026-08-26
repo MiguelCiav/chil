@@ -498,7 +498,7 @@ describe('NewBatchWizard full flow', () => {
       expect(screen.getByText('Manada')).toBeInTheDocument();
       // Age 13, 14 -> Tropa, Adult (35) -> Tropa (most frequent)
       const tropaBadges = screen.getAllByText('Tropa');
-      expect(tropaBadges.length).toBe(3);
+      expect(tropaBadges).toHaveLength(3);
     });
   });
 

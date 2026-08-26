@@ -27,6 +27,76 @@ interface Step1OrgProps {
   recognitionTypes?: { id: string; name: string }[];
 }
 
+function getFilteredDistricts(
+  districts: District[],
+  selectedRegionId?: string
+): District[] {
+  if (!selectedRegionId || selectedRegionId === '0') return [];
+  const dists = districts.filter(d => d.id !== 0 && d.region_id === Number(selectedRegionId));
+  return [{ id: 0, name: 'No aplica', region_id: Number(selectedRegionId) }, ...dists];
+}
+
+function getFilteredGroups(
+  groups: ScoutGroup[],
+  selectedDistrictId?: string
+): ScoutGroup[] {
+  if (!selectedDistrictId || selectedDistrictId === '0') return [];
+  const grps = groups.filter(g => g.id !== 0 && g.district_id === Number(selectedDistrictId));
+  return [{ id: 0, name: 'No aplica', district_id: Number(selectedDistrictId) }, ...grps];
+}
+
+function getSelectedRegion(regions: Region[], selectedRegionId?: string): { id: number; name: string } | undefined {
+  if (selectedRegionId === '0') return { id: 0, name: 'No aplica' };
+  return regions.find(r => r.id.toString() === selectedRegionId);
+}
+
+function getSelectedDistrict(districts: District[], selectedDistrictId?: string): { id: number; name: string; region_id: number } | undefined {
+  if (selectedDistrictId === '0') return { id: 0, name: 'No aplica', region_id: 0 };
+  return districts.find(d => d.id.toString() === selectedDistrictId);
+}
+
+function getSelectedGroup(groups: ScoutGroup[], selectedGroupId?: string): { id: number; name: string; district_id: number } | undefined {
+  if (selectedGroupId === '0') return { id: 0, name: 'No aplica', district_id: 0 };
+  return groups.find(g => g.id.toString() === selectedGroupId);
+}
+
+function getRegionDisplayText(selectedRegion?: { name: string }, isNoScout?: boolean): string {
+  if (selectedRegion) return selectedRegion.name;
+  if (isNoScout) return 'No aplica';
+  return 'Seleccione una región';
+}
+
+function getDistrictDisplayText(
+  selectedDistrict?: { name: string },
+  selectedRegionId?: string,
+  isNoScout?: boolean
+): string {
+  if (selectedDistrict) return selectedDistrict.name;
+  if (selectedRegionId === '0' || isNoScout) return 'No aplica';
+  return 'Seleccione un distrito';
+}
+
+function getGroupDisplayText(
+  selectedGroup?: { name: string },
+  selectedDistrictId?: string,
+  selectedRegionId?: string,
+  isNoScout?: boolean
+): string {
+  if (selectedGroup) return selectedGroup.name;
+  if (selectedDistrictId === '0' || selectedRegionId === '0' || isNoScout) return 'No aplica';
+  return 'Seleccione un grupo scout';
+}
+
+function getSelectorButtonClass(isDisabled: boolean, hasError: boolean): string {
+  if (isDisabled) {
+    return 'bg-gray-100 text-neutral/40 border-gray-200 cursor-not-allowed opacity-60';
+  }
+  if (hasError) {
+    return 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900';
+  }
+  return 'border-primary/20 text-neutral hover:border-primary/50';
+}
+
 export const Step1Org: React.FC<Step1OrgProps> = ({
   register,
   setValue,
@@ -48,44 +118,26 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
   const selectedUnitScope = watch('unitScope');
   const isNoScout = selectedUnitScope === 'no_scout';
 
-  const filteredDistricts = React.useMemo(() => {
-    if (!selectedRegionId || selectedRegionId === '0') return [];
-    const dists = districts.filter(d => d.id !== 0 && d.region_id === Number(selectedRegionId));
-    return [{ id: 0, name: 'No aplica', region_id: Number(selectedRegionId) }, ...dists];
-  }, [districts, selectedRegionId]);
+  const filteredDistricts = React.useMemo(
+    () => getFilteredDistricts(districts, selectedRegionId),
+    [districts, selectedRegionId]
+  );
 
-  const filteredGroups = React.useMemo(() => {
-    if (!selectedDistrictId || selectedDistrictId === '0') return [];
-    const grps = groups.filter(g => g.id !== 0 && g.district_id === Number(selectedDistrictId));
-    return [{ id: 0, name: 'No aplica', district_id: Number(selectedDistrictId) }, ...grps];
-  }, [groups, selectedDistrictId]);
+  const filteredGroups = React.useMemo(
+    () => getFilteredGroups(groups, selectedDistrictId),
+    [groups, selectedDistrictId]
+  );
 
-  const selectedRegion = regions.find(r => r.id.toString() === selectedRegionId) || (selectedRegionId === '0' ? { id: 0, name: 'No aplica' } : undefined);
-  const selectedDistrict = districts.find(d => d.id.toString() === selectedDistrictId) || (selectedDistrictId === '0' ? { id: 0, name: 'No aplica', region_id: 0 } : undefined);
-  const selectedGroup = groups.find(g => g.id.toString() === selectedGroupId) || (selectedGroupId === '0' ? { id: 0, name: 'No aplica', district_id: 0 } : undefined);
+  const selectedRegion = getSelectedRegion(regions, selectedRegionId);
+  const selectedDistrict = getSelectedDistrict(districts, selectedDistrictId);
+  const selectedGroup = getSelectedGroup(groups, selectedGroupId);
 
   const isDistrictDisabled = !selectedRegionId || selectedRegionId === '0' || loadingHierarchy;
   const isGroupDisabled = !selectedDistrictId || selectedDistrictId === '0' || selectedRegionId === '0' || loadingHierarchy;
 
-  const getDistrictButtonClass = () => {
-    if (isDistrictDisabled) {
-      return 'bg-gray-100 text-neutral/40 border-gray-200 cursor-not-allowed opacity-60';
-    }
-    if (errors.districtId) {
-      return 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900';
-    }
-    return 'border-primary/20 text-neutral hover:border-primary/50';
-  };
-
-  const getGroupButtonClass = () => {
-    if (isGroupDisabled) {
-      return 'bg-gray-100 text-neutral/40 border-gray-200 cursor-not-allowed opacity-60';
-    }
-    if (errors.groupId) {
-      return 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900';
-    }
-    return 'border-primary/20 text-neutral hover:border-primary/50';
-  };
+  const districtBtnClass = getSelectorButtonClass(isDistrictDisabled, Boolean(errors.districtId));
+  const groupBtnClass = getSelectorButtonClass(isGroupDisabled, Boolean(errors.groupId));
+  const regionBtnClass = getSelectorButtonClass(loadingHierarchy, Boolean(errors.regionId));
 
   return (
     <div className="space-y-6">
@@ -123,14 +175,10 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
               type="button"
               id="region-selector"
               onClick={() => setIsRegionModalOpen(true)}
-              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${
-                errors.regionId
-                  ? 'border-red-300 ring-2 ring-red-500 bg-red-50 text-red-900'
-                  : 'border-primary/20 text-neutral hover:border-primary/50'
-              }`}
+              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${regionBtnClass}`}
               disabled={loadingHierarchy}
             >
-              <span className="truncate">{selectedRegion ? selectedRegion.name : (isNoScout ? 'No aplica' : 'Seleccione una región')}</span>
+              <span className="truncate">{getRegionDisplayText(selectedRegion, isNoScout)}</span>
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${loadingHierarchy ? 'text-neutral/20' : 'text-primary/70'}`} />
             </button>
             {errors.regionId && (
@@ -151,11 +199,11 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
                   setIsDistrictModalOpen(true);
                 }
               }}
-              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${getDistrictButtonClass()}`}
+              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${districtBtnClass}`}
               disabled={isDistrictDisabled}
             >
               <span className="truncate">
-                {selectedDistrict ? selectedDistrict.name : (selectedRegionId === '0' || isNoScout ? 'No aplica' : 'Seleccione un distrito')}
+                {getDistrictDisplayText(selectedDistrict, selectedRegionId, isNoScout)}
               </span>
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isDistrictDisabled ? 'text-neutral/20' : 'text-primary/70'}`} />
             </button>
@@ -177,11 +225,11 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
                   setIsGroupModalOpen(true);
                 }
               }}
-              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${getGroupButtonClass()}`}
+              className={`w-full rounded-field px-4 text-left transition-all bg-primary/5 border text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary h-[46px] ${groupBtnClass}`}
               disabled={isGroupDisabled}
             >
               <span className="truncate">
-                {selectedGroup ? selectedGroup.name : (selectedDistrictId === '0' || selectedRegionId === '0' || isNoScout ? 'No aplica' : 'Seleccione un grupo scout')}
+                {getGroupDisplayText(selectedGroup, selectedDistrictId, selectedRegionId, isNoScout)}
               </span>
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isGroupDisabled ? 'text-neutral/20' : 'text-primary/70'}`} />
             </button>

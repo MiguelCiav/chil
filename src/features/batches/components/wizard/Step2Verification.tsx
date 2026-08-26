@@ -5,11 +5,10 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Field } from '../../../../components/Field';
 import { Table } from '../../../../components/Table';
-import { MemberVerificationResult, ScoutUnit, BatchUnitScope } from '../../types';
+import { MemberVerificationResult, ScoutUnit } from '../../types';
 
 interface Step2VerificationProps {
   readonly batchName: string;
-  readonly unitScope?: BatchUnitScope;
   readonly youngCedulas: string;
   readonly setYoungCedulas: (val: string) => void;
   readonly adultCedulas: string;
@@ -20,7 +19,6 @@ interface Step2VerificationProps {
   readonly handleVerify: () => void;
   readonly verifyCedula: (cedula: string, type: 'young' | 'adult', unit?: ScoutUnit) => void;
   readonly handleToggleMemberType: (cedula: string) => void;
-  readonly handleUpdateMemberUnit?: (cedula: string, unit: ScoutUnit) => void;
   readonly handleStep2Continue: () => void;
   readonly onBack: () => void;
 }
