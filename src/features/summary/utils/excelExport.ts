@@ -37,8 +37,11 @@ export function formatSummaryRowForExport(row: SummaryRowData): string[] {
 }
 
 function escapeCsvField(val: unknown): string {
-  const str = val === null || val === undefined ? '' : String(val);
-  return `"${str.replace(/"/g, '""')}"`;
+  if (val === null || val === undefined) {
+    return '""';
+  }
+  const str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+  return `"${str.replaceAll('"', '""')}"`;
 }
 
 export function generateSummaryCsv(data: SummaryRowData[]): string {

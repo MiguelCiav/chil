@@ -19,7 +19,8 @@ import {
 import {
   getRecognitionTypeById,
   saveCertificateTemplate,
-  processBackgroundImageFile
+  processBackgroundImageFile,
+  ProcessedBackgroundResult
 } from '../api';
 import { useCanvasScale, useCanvasDrag } from '../hooks';
 import { DesignerHeader, DesignerCanvas, DesignerSidebar } from './designer';
@@ -74,6 +75,81 @@ const CERTIFICATE_DESIGNER_TOUR_STEPS: WalkthroughStep[] = [
     placement: 'bottom'
   }
 ];
+
+function buildDefaultField(def: (typeof AVAILABLE_TEMPLATE_FIELDS)[number]): RecognitionFieldConfig {
+  return {
+    id: `field-${def.field_key}`,
+    field_key: def.field_key,
+    label: def.label,
+    x: def.default_x,
+    y: def.default_y,
+    font_family: def.default_font_family,
+    font_size: def.default_font_size,
+    font_weight: def.default_font_weight,
+    color: def.default_color,
+    align: def.default_align
+  };
+}
+
+function buildDefaultTemplateFields(): RecognitionFieldConfig[] {
+  return AVAILABLE_TEMPLATE_FIELDS.map(buildDefaultField);
+}
+
+function normalizeLoadedTemplate(template?: Partial<CertificateTemplate> | null): CertificateTemplate {
+  if (template && Array.isArray(template.fields)) {
+    const pageWidth = template.page_width || 297;
+    const pageHeight = template.page_height || 210;
+    const aspectRatio =
+      template.aspect_ratio ||
+      (template.page_width && template.page_height ? template.page_width / template.page_height : 297 / 210);
+
+    return {
+      ...template,
+      background_url: template.background_url || '',
+      page_width: pageWidth,
+      page_height: pageHeight,
+      aspect_ratio: aspectRatio,
+      orientation: template.orientation || 'landscape',
+      fields: template.fields
+    };
+  }
+
+  return {
+    background_url: '',
+    page_width: 297,
+    page_height: 210,
+    aspect_ratio: 297 / 210,
+    orientation: 'landscape',
+    fields: buildDefaultTemplateFields()
+  };
+}
+
+function getMissingTemplateFields(currentFields: RecognitionFieldConfig[]): RecognitionFieldConfig[] {
+  const currentKeys = new Set(currentFields.map((f) => f.field_key));
+  return AVAILABLE_TEMPLATE_FIELDS.filter((def) => !currentKeys.has(def.field_key)).map(buildDefaultField);
+}
+
+function extractBackgroundTemplatePatch(
+  result: ProcessedBackgroundResult | string
+): Partial<CertificateTemplate> {
+  if (typeof result === 'string') {
+    return {
+      background_url: result,
+      page_width: 297,
+      page_height: 210,
+      aspect_ratio: Math.round((297 / 210) * 1000) / 1000,
+      orientation: 'landscape'
+    };
+  }
+
+  return {
+    background_url: result.dataUrl,
+    page_width: result.width,
+    page_height: result.height,
+    aspect_ratio: result.aspectRatio,
+    orientation: result.orientation
+  };
+}
 
 export const CertificateDesigner: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -146,51 +222,13 @@ export const CertificateDesigner: React.FC = () => {
       setIsLoading(true);
       try {
         const item = await getRecognitionTypeById(id);
-        if (isMounted) {
-          if (item) {
-            setRecognition(item);
-            if (item.template && Array.isArray(item.template.fields)) {
-              setTemplate({
-                ...item.template,
-                page_width: item.template.page_width || 297,
-                page_height: item.template.page_height || 210,
-                aspect_ratio:
-                  item.template.aspect_ratio ||
-                  (item.template.page_width && item.template.page_height
-                    ? item.template.page_width / item.template.page_height
-                    : 297 / 210),
-                orientation: item.template.orientation || 'landscape'
-              });
-              if (item.template.fields.length > 0) {
-                setSelectedFieldId(item.template.fields[0].id);
-              }
-            } else {
-              // Initialize default template with standard fields
-              const initialFields: RecognitionFieldConfig[] = AVAILABLE_TEMPLATE_FIELDS.map((def) => ({
-                id: `field-${def.field_key}`,
-                field_key: def.field_key,
-                label: def.label,
-                x: def.default_x,
-                y: def.default_y,
-                font_family: def.default_font_family,
-                font_size: def.default_font_size,
-                font_weight: def.default_font_weight,
-                color: def.default_color,
-                align: def.default_align
-              }));
-              setTemplate({
-                background_url: '',
-                page_width: 297,
-                page_height: 210,
-                aspect_ratio: 297 / 210,
-                orientation: 'landscape',
-                fields: initialFields
-              });
-              if (initialFields.length > 0) {
-                setSelectedFieldId(initialFields[0].id);
-              }
-            }
-          }
+        if (!isMounted || !item) return;
+
+        setRecognition(item);
+        const normalized = normalizeLoadedTemplate(item.template);
+        setTemplate(normalized);
+        if (normalized.fields.length > 0) {
+          setSelectedFieldId(normalized.fields[0].id);
         }
       } catch (err) {
         console.error('Error loading recognition:', err);
@@ -222,19 +260,7 @@ export const CertificateDesigner: React.FC = () => {
       return;
     }
 
-    const newField: RecognitionFieldConfig = {
-      id: `field-${fieldKey}`,
-      field_key: fieldKey,
-      label: def.label,
-      x: def.default_x,
-      y: def.default_y,
-      font_family: def.default_font_family,
-      font_size: def.default_font_size,
-      font_weight: def.default_font_weight,
-      color: def.default_color,
-      align: def.default_align
-    };
-
+    const newField = buildDefaultField(def);
     setTemplate((prev) => ({
       ...prev,
       fields: [...prev.fields, newField]
@@ -259,49 +285,20 @@ export const CertificateDesigner: React.FC = () => {
   };
 
   const handleAddAllFields = () => {
-    const currentKeys = new Set(template.fields.map((f) => f.field_key));
-    const toAdd: RecognitionFieldConfig[] = AVAILABLE_TEMPLATE_FIELDS.filter(
-      (def) => !currentKeys.has(def.field_key)
-    ).map((def) => ({
-      id: `field-${def.field_key}`,
-      field_key: def.field_key,
-      label: def.label,
-      x: def.default_x,
-      y: def.default_y,
-      font_family: def.default_font_family,
-      font_size: def.default_font_size,
-      font_weight: def.default_font_weight,
-      color: def.default_color,
-      align: def.default_align
-    }));
-
+    const toAdd = getMissingTemplateFields(template.fields);
     if (toAdd.length === 0) return;
 
     setTemplate((prev) => ({
       ...prev,
       fields: [...prev.fields, ...toAdd]
     }));
-    if (toAdd.length > 0) {
-      setSelectedFieldId(toAdd[0].id);
-      setActiveSidebarTab('properties');
-    }
+    setSelectedFieldId(toAdd[0].id);
+    setActiveSidebarTab('properties');
     showNotification(`Se añadieron ${toAdd.length} campos a la plantilla.`);
   };
 
   const handleResetFields = () => {
-    const defaultFields: RecognitionFieldConfig[] = AVAILABLE_TEMPLATE_FIELDS.map((def) => ({
-      id: `field-${def.field_key}`,
-      field_key: def.field_key,
-      label: def.label,
-      x: def.default_x,
-      y: def.default_y,
-      font_family: def.default_font_family,
-      font_size: def.default_font_size,
-      font_weight: def.default_font_weight,
-      color: def.default_color,
-      align: def.default_align
-    }));
-
+    const defaultFields = buildDefaultTemplateFields();
     setTemplate((prev) => ({
       ...prev,
       fields: defaultFields
@@ -328,21 +325,8 @@ export const CertificateDesigner: React.FC = () => {
     setIsUploadingBg(true);
     try {
       const result = await processBackgroundImageFile(file);
-      const background_url = typeof result === 'string' ? result : result.dataUrl;
-      const page_width = typeof result === 'string' ? 297 : result.width;
-      const page_height = typeof result === 'string' ? 210 : result.height;
-      const aspect_ratio =
-        typeof result === 'string' ? Math.round((297 / 210) * 1000) / 1000 : result.aspectRatio;
-      const orientation = typeof result === 'string' ? 'landscape' : result.orientation;
-
-      setTemplate((prev) => ({
-        ...prev,
-        background_url,
-        page_width,
-        page_height,
-        aspect_ratio,
-        orientation
-      }));
+      const bgPatch = extractBackgroundTemplatePatch(result);
+      setTemplate((prev) => ({ ...prev, ...bgPatch }));
       showNotification('Imagen de fondo cargada y optimizada exitosamente.');
     } catch (err) {
       console.error('Error uploading background image:', err);

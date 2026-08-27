@@ -32,7 +32,7 @@ export async function processBackgroundImageFile(
           orientation: 'landscape'
         });
       };
-      reader.onerror = (err) => reject(err);
+      reader.onerror = (err) => reject(new Error(String(err)));
       reader.readAsDataURL(file);
       return;
     }
@@ -128,7 +128,7 @@ export async function processBackgroundImageFile(
           ctx.drawImage(img, 0, 0, width, height);
           try {
             const webpData = canvas.toDataURL('image/webp', 0.88);
-            if (webpData && webpData.startsWith('data:image/webp')) {
+            if (webpData?.startsWith('data:image/webp')) {
               resolve({
                 dataUrl: webpData,
                 width: naturalWidth,
@@ -190,7 +190,7 @@ export async function processBackgroundImageFile(
         });
       }
     };
-    reader.onerror = (err) => reject(err);
+    reader.onerror = (err) => reject(new Error(String(err)));
     reader.readAsDataURL(file);
   });
 }

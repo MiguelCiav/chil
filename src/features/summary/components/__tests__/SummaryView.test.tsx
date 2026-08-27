@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { SummaryView } from '../SummaryView';
@@ -213,33 +213,25 @@ describe('SummaryView component', () => {
     const searchInput = screen.getByLabelText(/Búsqueda global/i);
 
     // 1. Search by first name
-    act(() => {
-      fireEvent.change(searchInput, { target: { value: 'Beatriz' } });
-    });
+    fireEvent.change(searchInput, { target: { value: 'Beatriz' } });
     expect(screen.getByText('V-1002')).toBeInTheDocument();
     expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
     expect(screen.queryByText('V-2001')).not.toBeInTheDocument();
     expect(screen.getByText(/Mostrando 1 de 1 registros totales/i)).toBeInTheDocument();
 
     // 2. Search by cédula
-    act(() => {
-      fireEvent.change(searchInput, { target: { value: 'V-2001' } });
-    });
+    fireEvent.change(searchInput, { target: { value: 'V-2001' } });
     expect(screen.getByText('Carlos')).toBeInTheDocument();
     expect(screen.queryByText('Ana María')).not.toBeInTheDocument();
 
     // 3. Search by recognition code
-    act(() => {
-      fireEvent.change(searchInput, { target: { value: 'SOL-001' } });
-    });
+    fireEvent.change(searchInput, { target: { value: 'SOL-001' } });
     expect(screen.getByText('Ana María')).toBeInTheDocument();
     expect(screen.queryByText('Carlos')).not.toBeInTheDocument();
 
     // Clear search with clear button
     const clearBtn = screen.getByLabelText(/Limpiar búsqueda/i);
-    act(() => {
-      fireEvent.click(clearBtn);
-    });
+    fireEvent.click(clearBtn);
     expect(screen.getByText('V-1001')).toBeInTheDocument();
     expect(screen.getByText('V-2001')).toBeInTheDocument();
   });
@@ -258,17 +250,13 @@ describe('SummaryView component', () => {
     const recSelect = screen.getByLabelText(/Filtrar por reconocimiento/i);
 
     // Filter by Go Solar
-    act(() => {
-      fireEvent.change(recSelect, { target: { value: 'sct-go-solar' } });
-    });
+    fireEvent.change(recSelect, { target: { value: 'sct-go-solar' } });
     expect(screen.getByText('V-1001')).toBeInTheDocument();
     expect(screen.getByText('V-1002')).toBeInTheDocument();
     expect(screen.queryByText('V-2001')).not.toBeInTheDocument();
 
     // Filter by Insignia de Madera
-    act(() => {
-      fireEvent.change(recSelect, { target: { value: 'sct-wood-badge' } });
-    });
+    fireEvent.change(recSelect, { target: { value: 'sct-wood-badge' } });
     expect(screen.getByText('V-2001')).toBeInTheDocument();
     expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
     expect(screen.queryByText('V-1002')).not.toBeInTheDocument();
@@ -288,24 +276,18 @@ describe('SummaryView component', () => {
     const regionSelect = screen.getByLabelText(/Filtrar por región/i);
 
     // Select Región Andina (id 2)
-    act(() => {
-      fireEvent.change(regionSelect, { target: { value: '2' } });
-    });
+    fireEvent.change(regionSelect, { target: { value: '2' } });
     expect(screen.getByText('V-2001')).toBeInTheDocument();
     expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
 
     // Select District Norte (id 20)
     const districtSelect = screen.getByLabelText(/Filtrar por distrito/i);
-    act(() => {
-      fireEvent.change(districtSelect, { target: { value: '20' } });
-    });
+    fireEvent.change(districtSelect, { target: { value: '20' } });
     expect(screen.getByText('V-2001')).toBeInTheDocument();
 
     // Select Group Scouts 45 (id 200)
     const groupSelect = screen.getByLabelText(/Filtrar por grupo/i);
-    act(() => {
-      fireEvent.change(groupSelect, { target: { value: '200' } });
-    });
+    fireEvent.change(groupSelect, { target: { value: '200' } });
     expect(screen.getByText('V-2001')).toBeInTheDocument();
   });
 
@@ -323,17 +305,13 @@ describe('SummaryView component', () => {
     const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
 
     // Select Jóvenes
-    act(() => {
-      fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
-    });
+    fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
     expect(screen.getByText('V-1001')).toBeInTheDocument();
     expect(screen.getByText('V-2001')).toBeInTheDocument();
     expect(screen.queryByText('V-1002')).not.toBeInTheDocument();
 
     // Select Adultos
-    act(() => {
-      fireEvent.change(memberTypeSelect, { target: { value: 'adult' } });
-    });
+    fireEvent.change(memberTypeSelect, { target: { value: 'adult' } });
     expect(screen.getByText('V-1002')).toBeInTheDocument();
     expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
     expect(screen.queryByText('V-2001')).not.toBeInTheDocument();
@@ -353,27 +331,21 @@ describe('SummaryView component', () => {
     const statusSelect = screen.getByLabelText(/Filtrar por estatus/i);
 
     // Select Registro Válido (active)
-    act(() => {
-      fireEvent.change(statusSelect, { target: { value: 'active' } });
-    });
+    fireEvent.change(statusSelect, { target: { value: 'active' } });
     expect(screen.getByText('V-1001')).toBeInTheDocument();
     expect(screen.getByText('V-2001')).toBeInTheDocument();
     expect(screen.queryByText('V-1002')).not.toBeInTheDocument();
     expect(screen.queryByText('V-1003')).not.toBeInTheDocument();
 
     // Select Emisión Excepcional (exceptional)
-    act(() => {
-      fireEvent.change(statusSelect, { target: { value: 'exceptional' } });
-    });
+    fireEvent.change(statusSelect, { target: { value: 'exceptional' } });
     expect(screen.getByText('V-1003')).toBeInTheDocument();
     expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
     expect(screen.queryByText('V-1002')).not.toBeInTheDocument();
     expect(screen.queryByText('V-2001')).not.toBeInTheDocument();
 
     // Select Registro Inválido (pending)
-    act(() => {
-      fireEvent.change(statusSelect, { target: { value: 'pending' } });
-    });
+    fireEvent.change(statusSelect, { target: { value: 'pending' } });
     expect(screen.getByText('V-1002')).toBeInTheDocument();
     expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
     expect(screen.queryByText('V-1003')).not.toBeInTheDocument();
@@ -394,22 +366,16 @@ describe('SummaryView component', () => {
     const periodSelect = screen.getByLabelText(/Filtrar por período/i);
 
     // Predefined period: Este Año
-    act(() => {
-      fireEvent.change(periodSelect, { target: { value: 'this-year' } });
-    });
+    fireEvent.change(periodSelect, { target: { value: 'this-year' } });
     expect(screen.getByText('V-1001')).toBeInTheDocument();
 
     // Custom date range
-    act(() => {
-      fireEvent.change(periodSelect, { target: { value: 'custom' } });
-    });
+    fireEvent.change(periodSelect, { target: { value: 'custom' } });
     const startInput = screen.getByLabelText(/Fecha inicio personalizado/i);
     const endInput = screen.getByLabelText(/Fecha fin personalizado/i);
 
-    act(() => {
-      fireEvent.change(startInput, { target: { value: '2026-08-20' } });
-      fireEvent.change(endInput, { target: { value: '2026-08-20' } });
-    });
+    fireEvent.change(startInput, { target: { value: '2026-08-20' } });
+    fireEvent.change(endInput, { target: { value: '2026-08-20' } });
 
     // Batch 101 is on 2026-08-20 (V-1001, V-1002), batch 102 is on 2026-08-21 (V-2001)
     expect(screen.getByText('V-1001')).toBeInTheDocument();
@@ -430,16 +396,12 @@ describe('SummaryView component', () => {
 
     // Apply a search term
     const searchInput = screen.getByLabelText(/Búsqueda global/i);
-    act(() => {
-      fireEvent.change(searchInput, { target: { value: 'Beatriz' } });
-    });
+    fireEvent.change(searchInput, { target: { value: 'Beatriz' } });
     expect(screen.queryByText('V-1001')).not.toBeInTheDocument();
 
     // Click Limpiar filtros
     const resetBtn = screen.getByLabelText(/Limpiar todos los filtros/i);
-    act(() => {
-      fireEvent.click(resetBtn);
-    });
+    fireEvent.click(resetBtn);
 
     // All rows should be back
     expect(screen.getByText('V-1001')).toBeInTheDocument();
@@ -460,15 +422,11 @@ describe('SummaryView component', () => {
 
     // Filter to young members only
     const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
-    act(() => {
-      fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
-    });
+    fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
 
     // Click Export Excel (now showing Descargar filtrados)
     const exportBtn = screen.getByRole('button', { name: /Descargar Excel/i });
-    act(() => {
-      fireEvent.click(exportBtn);
-    });
+    fireEvent.click(exportBtn);
 
     expect(excelExportModule.exportToExcel).toHaveBeenCalledTimes(1);
     expect(excelExportModule.exportToExcel).toHaveBeenCalledWith(
@@ -494,15 +452,11 @@ describe('SummaryView component', () => {
 
     // Filter to young members only
     const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
-    act(() => {
-      fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
-    });
+    fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
 
     // Click "Descargar todo"
     const exportAllBtn = screen.getByRole('button', { name: /Descargar todo/i });
-    act(() => {
-      fireEvent.click(exportAllBtn);
-    });
+    fireEvent.click(exportAllBtn);
 
     expect(excelExportModule.exportToExcel).toHaveBeenCalledTimes(1);
     expect(excelExportModule.exportToExcel).toHaveBeenCalledWith(
@@ -528,9 +482,7 @@ describe('SummaryView component', () => {
     });
 
     const searchInput = screen.getByLabelText(/Búsqueda global/i);
-    act(() => {
-      fireEvent.change(searchInput, { target: { value: 'NonExistentPersonXYZ' } });
-    });
+    fireEvent.change(searchInput, { target: { value: 'NonExistentPersonXYZ' } });
 
     expect(screen.getByText('No se encontraron registros de reconocimientos.')).toBeInTheDocument();
     expect(
@@ -564,27 +516,21 @@ describe('SummaryView component', () => {
 
     // Change page size to 10
     const pageSizeSelect = screen.getByLabelText(/Selector de filas por página/i);
-    act(() => {
-      fireEvent.change(pageSizeSelect, { target: { value: '10' } });
-    });
+    fireEvent.change(pageSizeSelect, { target: { value: '10' } });
 
     expect(screen.getByText(/Mostrando 10 de 30 registros totales/i)).toBeInTheDocument();
     expect(screen.getByText('Página 1 de 3')).toBeInTheDocument();
 
     // Navigate to next page
     const nextBtn = screen.getByLabelText(/Página siguiente/i);
-    act(() => {
-      fireEvent.click(nextBtn);
-    });
+    fireEvent.click(nextBtn);
 
     expect(screen.getByText('Página 2 de 3')).toBeInTheDocument();
     expect(screen.getByText('Persona 11')).toBeInTheDocument();
 
     // Navigate back to previous page
     const prevBtn = screen.getByLabelText(/Página anterior/i);
-    act(() => {
-      fireEvent.click(prevBtn);
-    });
+    fireEvent.click(prevBtn);
 
     expect(screen.getByText('Página 1 de 3')).toBeInTheDocument();
     expect(screen.getByText('Persona 1')).toBeInTheDocument();
@@ -646,18 +592,14 @@ describe('SummaryView component', () => {
 
     // Filter by Manada
     const unitFilter = screen.getByLabelText(/Filtrar por unidad/i);
-    act(() => {
-      fireEvent.change(unitFilter, { target: { value: 'manada' } });
-    });
+    fireEvent.change(unitFilter, { target: { value: 'manada' } });
 
     expect(screen.getByText('Ana María')).toBeInTheDocument();
     expect(screen.queryByText('Carlos')).not.toBeInTheDocument();
     expect(screen.queryByText('Pedro')).not.toBeInTheDocument();
 
     // Filter by No Scout
-    act(() => {
-      fireEvent.change(unitFilter, { target: { value: 'no_scout' } });
-    });
+    fireEvent.change(unitFilter, { target: { value: 'no_scout' } });
 
     expect(screen.getByText('Pedro')).toBeInTheDocument();
     expect(screen.queryByText('Ana María')).not.toBeInTheDocument();

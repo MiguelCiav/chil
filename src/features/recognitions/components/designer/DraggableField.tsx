@@ -13,6 +13,24 @@ export interface DraggableFieldProps {
   onSelect: (fieldId: string) => void;
 }
 
+function getFieldClass(isPreviewMode: boolean, isSelected: boolean): string {
+  if (isPreviewMode) {
+    return 'cursor-default';
+  }
+  if (isSelected) {
+    return 'ring-2 ring-primary ring-offset-2 ring-offset-white bg-primary/10 rounded cursor-grab active:cursor-grabbing shadow-lg';
+  }
+  return 'hover:ring-1 hover:ring-primary/50 hover:bg-primary/5 rounded cursor-pointer';
+}
+
+function getFieldFontWeight(fontWeight?: string): number {
+  return fontWeight === 'bold' ? 700 : 400;
+}
+
+function getFieldFontStyle(fontWeight?: string): 'italic' | 'normal' {
+  return fontWeight === 'italic' ? 'italic' : 'normal';
+}
+
 export const DraggableField: React.FC<DraggableFieldProps> = ({
   field,
   isSelected,
@@ -27,10 +45,15 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
     Math.round(field.font_size * fontScale * 100) / 100
   );
 
+  const fieldTitle = isPreviewMode ? undefined : `${field.label} (${field.x}%, ${field.y}%)`;
+  const fieldPadding = isPreviewMode ? '0px' : '2px 6px';
+
   return (
     <div
       role="button"
-      tabIndex={0}
+      tabIndex={isPreviewMode ? -1 : 0}
+      aria-label={field.label}
+      aria-pressed={isSelected}
       onPointerDown={(e) => onPointerDown(e, field.id)}
       onClick={(e) => {
         e.stopPropagation();
@@ -46,27 +69,21 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
           }
         }
       }}
-      className={`absolute z-10 select-none transition-shadow ${
-        isPreviewMode
-          ? 'cursor-default'
-          : isSelected
-          ? 'ring-2 ring-primary ring-offset-2 ring-offset-white bg-primary/10 rounded cursor-grab active:cursor-grabbing shadow-lg'
-          : 'hover:ring-1 hover:ring-primary/50 hover:bg-primary/5 rounded cursor-pointer'
-      }`}
+      className={`absolute z-10 select-none transition-shadow ${getFieldClass(isPreviewMode, isSelected)}`}
       style={{
         left: `${field.x}%`,
         top: `${field.y}%`,
         transform: getAlignTransform(field.align),
         fontFamily: getFontFamilyStyle(field.font_family),
         fontSize: `${displayFontSizePx}px`,
-        fontWeight: field.font_weight === 'bold' ? 700 : 400,
-        fontStyle: field.font_weight === 'italic' ? 'italic' : 'normal',
+        fontWeight: getFieldFontWeight(field.font_weight),
+        fontStyle: getFieldFontStyle(field.font_weight),
         color: field.color,
         textAlign: field.align,
-        padding: isPreviewMode ? '0px' : '2px 6px',
+        padding: fieldPadding,
         whiteSpace: 'nowrap'
       }}
-      title={!isPreviewMode ? `${field.label} (${field.x}%, ${field.y}%)` : undefined}
+      title={fieldTitle}
     >
       {/* Floating Position Badge when Selected */}
       {isSelected && (

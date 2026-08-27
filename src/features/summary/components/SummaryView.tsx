@@ -58,55 +58,156 @@ function formatBatchCode(batchId: number, created_at?: string): string {
   return `LT-${year}-${String(batchId).padStart(3, '0')}`;
 }
 
-function matchesDateRange(createdAt: string, period: string, startDate: string, endDate: string): boolean {
-  if (!createdAt) return false;
-  const itemDate = new Date(createdAt);
-  if (Number.isNaN(itemDate.getTime())) return false;
+function matchesCustomDateRange(itemDate: Date, startDate: string, endDate: string): boolean {
+  if (startDate && endDate) {
+    const sDate = new Date(`${startDate}T00:00:00.000`);
+    const eDate = new Date(`${endDate}T23:59:59.999`);
+    return itemDate >= sDate && itemDate <= eDate;
+  }
+  if (startDate) {
+    const sDate = new Date(`${startDate}T00:00:00.000`);
+    return itemDate >= sDate;
+  }
+  if (endDate) {
+    const eDate = new Date(`${endDate}T23:59:59.999`);
+    return itemDate <= eDate;
+  }
+  return true;
+}
 
+function matchesRelativePeriod(itemDate: Date, period: string): boolean {
   const now = new Date();
-
-  if (period === 'all') return true;
-
   if (period === 'this-year') {
     return itemDate.getFullYear() === now.getFullYear();
   }
-
   if (period === 'this-month') {
     return (
       itemDate.getFullYear() === now.getFullYear() &&
       itemDate.getMonth() === now.getMonth()
     );
   }
-
   if (period === 'last-30') {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
     return itemDate >= thirtyDaysAgo && itemDate <= now;
   }
-
   if (period === 'last-90') {
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
     ninetyDaysAgo.setHours(0, 0, 0, 0);
     return itemDate >= ninetyDaysAgo && itemDate <= now;
   }
+  return true;
+}
 
+function matchesDateRange(createdAt: string, period: string, startDate: string, endDate: string): boolean {
+  if (!createdAt) return false;
+  const itemDate = new Date(createdAt);
+  if (Number.isNaN(itemDate.getTime())) return false;
+
+  if (period === 'all') return true;
   if (period === 'custom') {
-    if (startDate && endDate) {
-      const sDate = new Date(`${startDate}T00:00:00.000`);
-      const eDate = new Date(`${endDate}T23:59:59.999`);
-      return itemDate >= sDate && itemDate <= eDate;
-    }
-    if (startDate) {
-      const sDate = new Date(`${startDate}T00:00:00.000`);
-      return itemDate >= sDate;
-    }
-    if (endDate) {
-      const eDate = new Date(`${endDate}T23:59:59.999`);
-      return itemDate <= eDate;
-    }
+    return matchesCustomDateRange(itemDate, startDate, endDate);
+  }
+  return matchesRelativePeriod(itemDate, period);
+}
+
+function matchesSummarySearchTerm(row: SummaryRowData, term: string): boolean {
+  if (!term) return true;
+  const cleanTerm = term.toLowerCase();
+  return (
+    row.fullName.toLowerCase().includes(cleanTerm) ||
+    row.identity.toLowerCase().includes(cleanTerm) ||
+    row.batchCode.toLowerCase().includes(cleanTerm) ||
+    String(row.batchId).includes(cleanTerm) ||
+    row.recognitionName.toLowerCase().includes(cleanTerm) ||
+    row.recognitionCode.toLowerCase().includes(cleanTerm) ||
+    row.regionName.toLowerCase().includes(cleanTerm) ||
+    row.districtName.toLowerCase().includes(cleanTerm) ||
+    row.groupName.toLowerCase().includes(cleanTerm) ||
+    row.unitLabel.toLowerCase().includes(cleanTerm) ||
+    row.memberTypeLabel.toLowerCase().includes(cleanTerm) ||
+    row.statusLabel.toLowerCase().includes(cleanTerm)
+  );
+}
+
+interface SummaryFilterOptions {
+  searchTerm: string;
+  selectedRecognition: string;
+  selectedRegion: string;
+  selectedDistrict: string;
+  selectedGroup: string;
+  selectedUnit: string;
+  selectedMemberType: 'all' | 'young' | 'adult';
+  selectedStatus: 'all' | 'active' | 'pending' | 'exceptional';
+  selectedDatePeriod: 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';
+  customStartDate: string;
+  customEndDate: string;
+  regions: Region[];
+  districts: District[];
+  groups: ScoutGroup[];
+}
+
+function matchesRecognitionFilter(row: SummaryRowData, selectedRecognition: string): boolean {
+  if (!selectedRecognition) return true;
+  return (
+    row.recognitionId === selectedRecognition ||
+    row.recognitionName.toLowerCase() === selectedRecognition.toLowerCase()
+  );
+}
+
+function matchesHierarchyFilters(
+  row: SummaryRowData,
+  filters: Pick<SummaryFilterOptions, 'selectedRegion' | 'selectedDistrict' | 'selectedGroup' | 'regions' | 'districts' | 'groups'>
+): boolean {
+  const { selectedRegion, selectedDistrict, selectedGroup, regions, districts, groups } = filters;
+
+  if (selectedRegion) {
+    const regionObj = regions.find(r => String(r.id) === selectedRegion);
+    if (regionObj && row.regionName !== regionObj.name) return false;
+  }
+
+  if (selectedDistrict) {
+    const districtObj = districts.find(d => String(d.id) === selectedDistrict);
+    if (districtObj && row.districtName !== districtObj.name) return false;
+  }
+
+  if (selectedGroup) {
+    const groupObj = groups.find(g => String(g.id) === selectedGroup);
+    if (groupObj && row.groupName !== groupObj.name) return false;
   }
 
   return true;
+}
+
+function matchesSummaryFilters(row: SummaryRowData, options: SummaryFilterOptions): boolean {
+  if (!matchesSummarySearchTerm(row, options.searchTerm.trim())) {
+    return false;
+  }
+  if (!matchesRecognitionFilter(row, options.selectedRecognition)) {
+    return false;
+  }
+  if (!matchesHierarchyFilters(row, options)) {
+    return false;
+  }
+  if (options.selectedUnit && row.unit !== options.selectedUnit) {
+    return false;
+  }
+  if (options.selectedMemberType !== 'all' && row.memberType !== options.selectedMemberType) {
+    return false;
+  }
+  if (options.selectedStatus !== 'all' && row.status !== options.selectedStatus) {
+    return false;
+  }
+  if (options.selectedDatePeriod !== 'all') {
+    if (!matchesDateRange(row.rawDate, options.selectedDatePeriod, options.customStartDate, options.customEndDate)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function getFilteredSummaryRows(rows: SummaryRowData[], options: SummaryFilterOptions): SummaryRowData[] {
+  return rows.filter(row => matchesSummaryFilters(row, options));
 }
 
 function renderSummaryTableRows(
@@ -289,75 +390,21 @@ export const SummaryView: React.FC = () => {
 
   // Apply All Filters
   const filteredData = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-
-    return flatData.filter(row => {
-      // 1. Global Search term across all key fields
-      if (term) {
-        const matchesTerm =
-          row.fullName.toLowerCase().includes(term) ||
-          row.identity.toLowerCase().includes(term) ||
-          row.batchCode.toLowerCase().includes(term) ||
-          String(row.batchId).includes(term) ||
-          row.recognitionName.toLowerCase().includes(term) ||
-          row.recognitionCode.toLowerCase().includes(term) ||
-          row.regionName.toLowerCase().includes(term) ||
-          row.districtName.toLowerCase().includes(term) ||
-          row.groupName.toLowerCase().includes(term) ||
-          row.unitLabel.toLowerCase().includes(term) ||
-          row.memberTypeLabel.toLowerCase().includes(term) ||
-          row.statusLabel.toLowerCase().includes(term);
-
-        if (!matchesTerm) return false;
-      }
-
-      // 2. Recognition filter
-      if (selectedRecognition) {
-        const matchesRec =
-          row.recognitionId === selectedRecognition ||
-          row.recognitionName.toLowerCase() === selectedRecognition.toLowerCase();
-        if (!matchesRec) return false;
-      }
-
-      // 3. Hierarchy filters
-      if (selectedRegion) {
-        const regionObj = regions.find(r => String(r.id) === selectedRegion);
-        if (regionObj && row.regionName !== regionObj.name) return false;
-      }
-
-      if (selectedDistrict) {
-        const districtObj = districts.find(d => String(d.id) === selectedDistrict);
-        if (districtObj && row.districtName !== districtObj.name) return false;
-      }
-
-      if (selectedGroup) {
-        const groupObj = groups.find(g => String(g.id) === selectedGroup);
-        if (groupObj && row.groupName !== groupObj.name) return false;
-      }
-
-      // 4. Unit filter
-      if (selectedUnit && row.unit !== selectedUnit) {
-        return false;
-      }
-
-      // 5. Member Type filter
-      if (selectedMemberType !== 'all' && row.memberType !== selectedMemberType) {
-        return false;
-      }
-
-      // 6. Status filter
-      if (selectedStatus !== 'all' && row.status !== selectedStatus) {
-        return false;
-      }
-
-      // 7. Date Range filter
-      if (selectedDatePeriod !== 'all') {
-        if (!matchesDateRange(row.rawDate, selectedDatePeriod, customStartDate, customEndDate)) {
-          return false;
-        }
-      }
-
-      return true;
+    return getFilteredSummaryRows(flatData, {
+      searchTerm,
+      selectedRecognition,
+      selectedRegion,
+      selectedDistrict,
+      selectedGroup,
+      selectedUnit,
+      selectedMemberType,
+      selectedStatus,
+      selectedDatePeriod,
+      customStartDate,
+      customEndDate,
+      regions,
+      districts,
+      groups
     });
   }, [
     flatData,

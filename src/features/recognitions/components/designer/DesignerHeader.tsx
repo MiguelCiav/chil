@@ -16,6 +16,12 @@ export interface DesignerHeaderProps {
   onStartTour?: () => void;
 }
 
+function getUploadButtonText(isUploadingBg: boolean, hasBackground: boolean): string {
+  if (isUploadingBg) return 'Subiendo...';
+  if (hasBackground) return 'Cambiar Fondo';
+  return 'Subir Fondo';
+}
+
 export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
   recognitionName,
   isPreviewMode,
@@ -101,11 +107,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
           disabled={isUploadingBg}
           icon={<Upload size={15} />}
         >
-          {isUploadingBg
-            ? 'Subiendo...'
-            : hasBackground
-            ? 'Cambiar Fondo'
-            : 'Subir Fondo'}
+          {getUploadButtonText(isUploadingBg, hasBackground)}
         </Button>
 
         {/* Save Template Primary Button */}

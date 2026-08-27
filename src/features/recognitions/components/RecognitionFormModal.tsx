@@ -19,6 +19,12 @@ interface RecognitionFormModalProps {
   onSuccess: (saved: RecognitionType, isEdit: boolean) => void;
 }
 
+function getSubmitButtonText(loading: boolean, isEdit: boolean): string {
+  if (loading) return 'Guardando...';
+  if (isEdit) return 'Guardar Cambios';
+  return 'Crear Reconocimiento';
+}
+
 export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
   isOpen,
   onClose,
@@ -134,7 +140,7 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
             variant="primary"
             disabled={loading}
           >
-            {loading ? 'Guardando...' : isEdit ? 'Guardar Cambios' : 'Crear Reconocimiento'}
+            {getSubmitButtonText(loading, isEdit)}
           </Button>
         </ModalFooter>
       </form>

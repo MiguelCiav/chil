@@ -126,6 +126,155 @@ export function getNormalizedPageDimensions(
   };
 }
 
+function drawStandardScoutBorder(doc: jsPDF, width: number, height: number): void {
+  // Outer border
+  doc.setDrawColor(27, 122, 55); // Scout Green #1b7a37
+  doc.setLineWidth(1.2);
+  doc.rect(10, 10, width - 20, height - 20);
+
+  // Inner border
+  doc.setDrawColor(140, 78, 55); // Terracotta #8c4e37
+  doc.setLineWidth(0.4);
+  doc.rect(13, 13, width - 26, height - 26);
+
+  // Decorative corner markers
+  doc.setDrawColor(27, 122, 55);
+  doc.setLineWidth(0.8);
+  doc.line(10, 18, 18, 10);
+  doc.line(width - 10, 18, width - 18, 10);
+  doc.line(10, height - 18, 18, height - 10);
+  doc.line(width - 10, height - 18, width - 18, height - 10);
+
+  // Official Header
+  doc.setFont('times', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(27, 122, 55);
+  doc.text('ASOCIACIÓN DE SCOUTS DE VENEZUELA', width / 2, 24, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text('CERTIFICADO OFICIAL DE RECONOCIMIENTO', width / 2, 30, { align: 'center' });
+
+  // Watermark footer info
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(160, 160, 160);
+  doc.text('Fondo Estándar Scout', 16, height - 14);
+  doc.text(`Formato ${width} × ${height} mm`, width - 16, height - 14, { align: 'right' });
+}
+
+function getImageFormatFromUrl(url: string): string {
+  if (url.startsWith('data:image/png')) return 'PNG';
+  if (url.startsWith('data:image/jpeg') || url.startsWith('data:image/jpg')) return 'JPEG';
+  return 'WEBP';
+}
+
+function drawCertificateBackground(
+  doc: jsPDF,
+  backgroundUrl: string | undefined,
+  width: number,
+  height: number
+): void {
+  if (backgroundUrl && backgroundUrl.trim().length > 0) {
+    const format = getImageFormatFromUrl(backgroundUrl);
+    doc.addImage(backgroundUrl, format, 0, 0, width, height);
+  } else {
+    drawStandardScoutBorder(doc, width, height);
+  }
+}
+
+function resolveHierarchyName(id?: number, list?: Array<{ id: number; name: string }>): string {
+  if (!id || id === 0) return '-';
+  const found = list?.find(item => item.id === id)?.name;
+  if (!found || found.toLowerCase() === 'no aplica') return '-';
+  return found;
+}
+
+/**
+ * Interpolates certificate variables into mapped text key-values.
+ */
+export function interpolateCertificateVariables(params: {
+  member: ScoutMember;
+  batch: Batch;
+  recognition?: RecognitionType | null;
+  hierarchy?: HierarchyData;
+}): Record<RecognitionFieldKey, string> {
+  const { member, batch, recognition, hierarchy } = params;
+  const regionName = resolveHierarchyName(batch.region_id, hierarchy?.regions);
+  const districtName = resolveHierarchyName(batch.district_id, hierarchy?.districts);
+  const groupName = resolveHierarchyName(batch.group_id, hierarchy?.groups);
+  const recognitionName = recognition?.name || batch.recognition_type || 'Reconocimiento Scout';
+  const issueDate = formatIssueDate(batch.created_at);
+  const last4 = member.identity.length >= 4 ? member.identity.slice(-4) : member.identity;
+  const recognitionCode =
+    member.recognition_code || `REC-${String(batch.id).padStart(3, '0')}-${last4}`;
+
+  return {
+    full_name: `${member.first_names} ${member.last_names}`.trim(),
+    identity: member.identity,
+    recognition_name: recognitionName,
+    region: regionName,
+    district: districtName,
+    group: groupName,
+    unit: getUnitLabel(member.unit),
+    issue_date: issueDate,
+    recognition_code: recognitionCode
+  };
+}
+
+export function resolveFieldsToRender(template?: CertificateTemplate): RecognitionFieldConfig[] {
+  if (template?.fields && template.fields.length > 0) {
+    return template.fields;
+  }
+  return AVAILABLE_TEMPLATE_FIELDS.map(def => ({
+    id: `field-${def.field_key}`,
+    field_key: def.field_key,
+    label: def.label,
+    x: def.default_x,
+    y: def.default_y,
+    font_family: def.default_font_family,
+    font_size: def.default_font_size,
+    font_weight: def.default_font_weight,
+    color: def.default_color,
+    align: def.default_align
+  }));
+}
+
+function getFontFamily(fontFamily?: string): 'times' | 'courier' | 'helvetica' {
+  if (fontFamily === 'times') return 'times';
+  if (fontFamily === 'courier') return 'courier';
+  return 'helvetica';
+}
+
+function getFontWeight(fontWeight?: string): 'bold' | 'italic' | 'normal' {
+  if (fontWeight === 'bold') return 'bold';
+  if (fontWeight === 'italic') return 'italic';
+  return 'normal';
+}
+
+function drawSingleField(
+  doc: jsPDF,
+  field: RecognitionFieldConfig,
+  value: string,
+  width: number,
+  height: number
+): void {
+  const x = Math.round(((field.x / 100) * width) * 100) / 100;
+  const y = Math.round(((field.y / 100) * height) * 100) / 100;
+
+  doc.setFont(getFontFamily(field.font_family), getFontWeight(field.font_weight));
+  doc.setFontSize(field.font_size);
+
+  const { r, g, b } = hexToRgb(field.color);
+  doc.setTextColor(r, g, b);
+
+  doc.text(value, x, y, {
+    align: field.align,
+    baseline: 'middle'
+  });
+}
+
 /**
  * Renders a single certificate page onto a jsPDF document instance.
  */
@@ -146,139 +295,30 @@ export function renderCertificatePage(
   const width = options.width ?? normalized.width;
   const height = options.height ?? normalized.height;
 
-  // 1. Background layer
-  if (template?.background_url && template.background_url.trim().length > 0) {
-    let format: string = 'WEBP';
-    if (template.background_url.startsWith('data:image/png')) {
-      format = 'PNG';
-    } else if (
-      template.background_url.startsWith('data:image/jpeg') ||
-      template.background_url.startsWith('data:image/jpg')
-    ) {
-      format = 'JPEG';
-    } else if (template.background_url.startsWith('data:image/webp')) {
-      format = 'WEBP';
-    }
-    doc.addImage(template.background_url, format, 0, 0, width, height);
-  } else {
-    // Official Scout Certificate standard border & watermark layout
-    // Outer border
-    doc.setDrawColor(27, 122, 55); // Scout Green #1b7a37
-    doc.setLineWidth(1.2);
-    doc.rect(10, 10, width - 20, height - 20);
+  drawCertificateBackground(doc, template?.background_url, width, height);
 
-    // Inner border
-    doc.setDrawColor(140, 78, 55); // Terracotta #8c4e37
-    doc.setLineWidth(0.4);
-    doc.rect(13, 13, width - 26, height - 26);
+  const valuesMap = interpolateCertificateVariables({ member, batch, recognition, hierarchy });
+  const fieldsToRender = resolveFieldsToRender(template);
 
-    // Decorative corner markers
-    doc.setDrawColor(27, 122, 55);
-    doc.setLineWidth(0.8);
-    doc.line(10, 18, 18, 10);
-    doc.line(width - 10, 18, width - 18, 10);
-    doc.line(10, height - 18, 18, height - 10);
-    doc.line(width - 10, height - 18, width - 18, height - 10);
-
-    // Official Header
-    doc.setFont('times', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(27, 122, 55);
-    doc.text('ASOCIACIÓN DE SCOUTS DE VENEZUELA', width / 2, 24, { align: 'center' });
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text('CERTIFICADO OFICIAL DE RECONOCIMIENTO', width / 2, 30, { align: 'center' });
-
-    // Watermark footer info
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(160, 160, 160);
-    doc.text('Fondo Estándar Scout', 16, height - 14);
-    doc.text(`Formato ${width} × ${height} mm`, width - 16, height - 14, { align: 'right' });
-  }
-
-  // 2. Resolve variable values
-  const rawRegion = hierarchy?.regions.find(r => r.id === batch.region_id)?.name;
-  const regionName = (!batch.region_id || batch.region_id === 0 || rawRegion?.toLowerCase() === 'no aplica') ? '-' : (rawRegion || '-');
-
-  const rawDistrict = hierarchy?.districts.find(d => d.id === batch.district_id)?.name;
-  const districtName = (!batch.district_id || batch.district_id === 0 || rawDistrict?.toLowerCase() === 'no aplica') ? '-' : (rawDistrict || '-');
-
-  const rawGroup = hierarchy?.groups.find(g => g.id === batch.group_id)?.name;
-  const groupName = (!batch.group_id || batch.group_id === 0 || rawGroup?.toLowerCase() === 'no aplica') ? '-' : (rawGroup || '-');
-  const recognitionName =
-    recognition?.name ||
-    batch.recognition_type ||
-    'Reconocimiento Scout';
-  const issueDate = formatIssueDate(batch.created_at);
-  const last4 = member.identity.length >= 4 ? member.identity.slice(-4) : member.identity;
-  const recognitionCode =
-    member.recognition_code ||
-    `REC-${String(batch.id).padStart(3, '0')}-${last4}`;
-
-  const valuesMap: Record<RecognitionFieldKey, string> = {
-    full_name: `${member.first_names} ${member.last_names}`.trim(),
-    identity: member.identity,
-    recognition_name: recognitionName,
-    region: regionName,
-    district: districtName,
-    group: groupName,
-    unit: getUnitLabel(member.unit),
-    issue_date: issueDate,
-    recognition_code: recognitionCode
-  };
-
-  // 3. Resolve fields config
-  const fieldsToRender: RecognitionFieldConfig[] =
-    template?.fields && template.fields.length > 0
-      ? template.fields
-      : AVAILABLE_TEMPLATE_FIELDS.map(def => ({
-          id: `field-${def.field_key}`,
-          field_key: def.field_key,
-          label: def.label,
-          x: def.default_x,
-          y: def.default_y,
-          font_family: def.default_font_family,
-          font_size: def.default_font_size,
-          font_weight: def.default_font_weight,
-          color: def.default_color,
-          align: def.default_align
-        }));
-
-  // 4. Draw interpolated text fields
   for (const field of fieldsToRender) {
     const value = valuesMap[field.field_key];
-    if (value === undefined || value === null) continue;
-
-    const x = Math.round(((field.x / 100) * width) * 100) / 100;
-    const y = Math.round(((field.y / 100) * height) * 100) / 100;
-
-    const fontFamily =
-      field.font_family === 'times'
-        ? 'times'
-        : field.font_family === 'courier'
-        ? 'courier'
-        : 'helvetica';
-    const fontWeight =
-      field.font_weight === 'bold'
-        ? 'bold'
-        : field.font_weight === 'italic'
-        ? 'italic'
-        : 'normal';
-
-    doc.setFont(fontFamily, fontWeight);
-    doc.setFontSize(field.font_size);
-
-    const { r, g, b } = hexToRgb(field.color);
-    doc.setTextColor(r, g, b);
-
-    doc.text(value, x, y, {
-      align: field.align,
-      baseline: 'middle'
-    });
+    if (value !== undefined && value !== null) {
+      drawSingleField(doc, field, value, width, height);
+    }
   }
+}
+
+async function resolvePdfContext(
+  batch: Batch,
+  recognition?: RecognitionType | null,
+  hierarchy?: HierarchyData
+): Promise<{ resolvedRecognition?: RecognitionType | null; resolvedHierarchy: HierarchyData }> {
+  const resolvedHierarchy = hierarchy || (await getHierarchyData());
+  let resolvedRecognition = recognition;
+  if (resolvedRecognition === undefined && batch.recognition_type) {
+    resolvedRecognition = await getRecognitionTypeById(batch.recognition_type);
+  }
+  return { resolvedRecognition, resolvedHierarchy };
 }
 
 /**
@@ -288,12 +328,7 @@ export async function generateSingleCertificatePdf(
   params: SingleCertificateParams
 ): Promise<jsPDF> {
   const { member, batch, recognition, hierarchy } = params;
-
-  const resolvedHierarchy = hierarchy || (await getHierarchyData());
-  let resolvedRecognition = recognition;
-  if (resolvedRecognition === undefined && batch.recognition_type) {
-    resolvedRecognition = await getRecognitionTypeById(batch.recognition_type);
-  }
+  const { resolvedRecognition, resolvedHierarchy } = await resolvePdfContext(batch, recognition, hierarchy);
 
   const template = resolvedRecognition?.template;
   const { width, height, orientation } = getNormalizedPageDimensions(template);
@@ -343,14 +378,12 @@ export async function generateBatchCertificatesPdf(
 
   const eligibleMembers = members.filter(m => m.status === 'active' || m.status === 'exceptional');
   if (eligibleMembers.length === 0) {
-    throw new Error('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos');
+    throw new Error(
+      'No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos'
+    );
   }
 
-  const resolvedHierarchy = hierarchy || (await getHierarchyData());
-  let resolvedRecognition = recognition;
-  if (resolvedRecognition === undefined && batch.recognition_type) {
-    resolvedRecognition = await getRecognitionTypeById(batch.recognition_type);
-  }
+  const { resolvedRecognition, resolvedHierarchy } = await resolvePdfContext(batch, recognition, hierarchy);
 
   const template = resolvedRecognition?.template;
   const { width, height, orientation } = getNormalizedPageDimensions(template);

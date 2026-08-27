@@ -134,7 +134,7 @@ describe('excelExport utility', () => {
     const csv = generateSummaryCsv([]);
     expect(csv.startsWith('\uFEFF')).toBe(true);
     const lines = csv.replace('\uFEFF', '').split('\r\n');
-    expect(lines.length).toBe(1);
+    expect(lines).toHaveLength(1);
     expect(lines[0]).toBe(
       '"Fecha de Emisión","Lote","Reconocimiento","Cédula","Nombres","Apellidos","Unidad","Tipo","Estatus","Justificación Excepcional","Código de Reconocimiento","Región","Distrito","Grupo"'
     );

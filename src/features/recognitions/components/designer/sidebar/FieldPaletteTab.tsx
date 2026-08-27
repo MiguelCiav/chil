@@ -18,6 +18,16 @@ export interface FieldPaletteTabProps {
   onResetFields: () => void;
 }
 
+function getFieldItemClassName(isSelected: boolean, isPlaced: boolean): string {
+  if (isSelected) {
+    return 'bg-primary/10 border-primary text-primary font-bold';
+  }
+  if (isPlaced) {
+    return 'bg-gray-50 border-gray-200 text-neutral/80 hover:bg-gray-100';
+  }
+  return 'bg-white border-dashed border-gray-300 text-neutral/60 hover:border-primary/40 hover:bg-primary/5';
+}
+
 export const FieldPaletteTab: React.FC<FieldPaletteTabProps> = ({
   fields,
   selectedFieldId,
@@ -47,18 +57,15 @@ export const FieldPaletteTab: React.FC<FieldPaletteTabProps> = ({
           {AVAILABLE_TEMPLATE_FIELDS.map((def) => {
             const placedField = fields.find((f) => f.field_key === def.field_key);
             const isPlaced = !!placedField;
-            const isSelected = placedField && placedField.id === selectedFieldId;
+            const isSelected = placedField?.id === selectedFieldId;
 
             return (
               <div
                 key={def.field_key}
-                className={`flex items-center justify-between p-2 rounded-xl text-xs transition-all border ${
-                  isSelected
-                    ? 'bg-primary/10 border-primary text-primary font-bold'
-                    : isPlaced
-                    ? 'bg-gray-50 border-gray-200 text-neutral/80 hover:bg-gray-100'
-                    : 'bg-white border-dashed border-gray-300 text-neutral/60 hover:border-primary/40 hover:bg-primary/5'
-                }`}
+                className={`flex items-center justify-between p-2 rounded-xl text-xs transition-all border ${getFieldItemClassName(
+                  Boolean(isSelected),
+                  isPlaced
+                )}`}
               >
                 <button
                   type="button"
