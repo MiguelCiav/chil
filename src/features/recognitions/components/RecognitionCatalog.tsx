@@ -63,6 +63,14 @@ function renderRecognitionDateCell(dateStr?: string) {
   return <span className="text-xs text-neutral/60">{formatCreationDate(dateStr)}</span>;
 }
 
+function renderRecognitionNameCellDef({ row }: { row: Row<RecognitionType> }) {
+  return renderRecognitionNameCell(row.original);
+}
+
+function renderRecognitionDateCellDef({ getValue }: { getValue: () => unknown }) {
+  return renderRecognitionDateCell(getValue() as string);
+}
+
 interface RecognitionActionsCellProps {
   item: RecognitionType;
   onNavigateTemplate: (id: string) => void;
@@ -304,12 +312,12 @@ export const RecognitionCatalog: React.FC = () => {
       {
         accessorKey: 'name',
         header: 'Nombre',
-        cell: ({ row }) => renderRecognitionNameCell(row.original)
+        cell: renderRecognitionNameCellDef
       },
       {
         accessorKey: 'created_at',
         header: 'Fecha de Creación',
-        cell: ({ getValue }) => renderRecognitionDateCell(getValue<string>())
+        cell: renderRecognitionDateCellDef
       },
       {
         id: 'actions',

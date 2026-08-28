@@ -21,7 +21,8 @@ export function generateRecognitionId(name: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // remove accents
-    .replace(/[^a-z0-9-]+/g, '-') // replace non-alphanumeric with hyphen
+    .replace(/[^a-z0-9_-]/g, '-') // replace non-alphanumeric with hyphen
+    .replace(/-+/g, '-') // collapse consecutive hyphens
     .replace(/^-+|-+$/g, ''); // trim leading/trailing hyphens
 
   return `sct-${normalized || 'custom'}`;
@@ -44,8 +45,8 @@ export async function getAllRecognitionTypes(userId?: string): Promise<Recogniti
       const data = d.data() as Omit<RecognitionType, 'id'>;
       return {
         id: d.id,
-        name: data.name ? data.name : d.id,
-        created_at: data.created_at ? data.created_at : new Date().toISOString(),
+        name: data.name || d.id,
+        created_at: data.created_at || new Date().toISOString(),
         ...(data.user_id ? { user_id: data.user_id } : {}),
         ...(data.template ? { template: data.template } : {})
       };
@@ -69,8 +70,8 @@ export async function getRecognitionTypeById(id: string): Promise<RecognitionTyp
     const data = snap.data() as Omit<RecognitionType, 'id'>;
     return {
       id: snap.id,
-      name: data.name ? data.name : snap.id,
-      created_at: data.created_at ? data.created_at : new Date().toISOString(),
+      name: data.name || snap.id,
+      created_at: data.created_at || new Date().toISOString(),
       ...(data.user_id ? { user_id: data.user_id } : {}),
       ...(data.template ? { template: data.template } : {})
     };

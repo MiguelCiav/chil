@@ -65,7 +65,7 @@ async function loadFallbackBatch(): Promise<{ batch: Batch | null; members: Scou
   }
 
   if (batches.length > 0) {
-    const lastBatch = batches[batches.length - 1];
+    const lastBatch = batches.at(-1)!;
     const lastBatchMembers = await getMembersByBatchId(lastBatch.id);
     return { batch: lastBatch, members: lastBatchMembers };
   }

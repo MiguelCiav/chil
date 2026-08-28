@@ -58,6 +58,10 @@ import {
 } from '../types';
 import { useAuth } from '../../auth';
 
+export type FilterType = 'date' | 'region' | 'district' | 'group' | 'recognition';
+export type DateFilterMode = 'predefined' | 'range' | 'specific';
+export type PredefinedPeriod = 'this-year' | 'this-month' | 'last-30' | 'last-90';
+
 interface BatchRowData {
   id: number;
   batch: Batch;
@@ -221,7 +225,7 @@ function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip
 }
 
 function getFilterLabelAndValue(
-  filterType: 'date' | 'region' | 'district' | 'group' | 'recognition',
+  filterType: FilterType,
   filterValue: string,
   hierarchy: { regions: Region[]; districts: District[]; groups: ScoutGroup[] },
   recognitionTypes: RecognitionType[]
@@ -257,8 +261,8 @@ function getFilterLabelAndValue(
 }
 
 function isApplyFilterDisabled(
-  newFilterType: 'date' | 'region' | 'district' | 'group' | 'recognition',
-  dateFilterMode: 'predefined' | 'range' | 'specific',
+  newFilterType: FilterType,
+  dateFilterMode: DateFilterMode,
   datePredefinedValue: string,
   dateRangeStart: string,
   dateRangeEnd: string,
@@ -271,6 +275,118 @@ function isApplyFilterDisabled(
     return !dateSpecificValue;
   }
   return !newFilterValue;
+}
+
+function renderBatchDateCell(info: { getValue: () => unknown }) {
+  return <span className="font-medium text-neutral">{info.getValue() as string}</span>;
+}
+
+function renderBatchRegionCell(info: { getValue: () => unknown }) {
+  return <span className="font-normal text-neutral/80">{info.getValue() as string}</span>;
+}
+
+function renderBatchDistrictCell(info: { getValue: () => unknown }) {
+  return <span className="font-normal text-neutral/80">{info.getValue() as string}</span>;
+}
+
+function renderBatchGroupCell(info: { getValue: () => unknown }) {
+  return <span className="font-semibold text-neutral">{info.getValue() as string}</span>;
+}
+
+function renderBatchRecognitionCell(info: { getValue: () => unknown }) {
+  const name = info.getValue() as string;
+  const style = getRecognitionBadgeStyle(name);
+  return (
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${style.pillClass}`}>
+      {name}
+    </span>
+  );
+}
+
+function renderBatchMembersCell(info: { getValue: () => unknown }) {
+  return (
+    <span className="font-medium text-neutral">{info.getValue() as number} Miembros</span>
+  );
+}
+
+interface BatchActionsCellProps {
+  row: Row<BatchRowData>;
+  table: ReturnType<typeof useReactTable<BatchRowData>>;
+  openActionMenuId: number | null;
+  setOpenActionMenuId: React.Dispatch<React.SetStateAction<number | null>>;
+  navigate: ReturnType<typeof useNavigate>;
+  handleDownloadPDF: (batchId: number) => void;
+  handleDeleteClick: (rowData: BatchRowData) => void;
+  downloadingId: number | null;
+}
+
+function renderBatchActionsCell(props: BatchActionsCellProps) {
+  const {
+    row,
+    table,
+    openActionMenuId,
+    setOpenActionMenuId,
+    navigate,
+    handleDownloadPDF,
+    handleDeleteClick,
+    downloadingId
+  } = props;
+  const rowData = row.original;
+  const isMenuOpen = openActionMenuId === rowData.id;
+  const totalRows = table.getRowModel().rows.length;
+  const isNearBottom = (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
+  const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
+
+  return (
+    <div className="relative inline-block font-sans">
+      <button
+        type="button"
+        onClick={() => setOpenActionMenuId(isMenuOpen ? null : rowData.id)}
+        className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
+        aria-label={`Acciones del lote ${rowData.id}`}
+        title="Acciones"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+
+      {isMenuOpen && (
+        <div className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
+          <button
+            type="button"
+            onClick={() => {
+              setOpenActionMenuId(null);
+              navigate(`/lotes/${rowData.id}`);
+            }}
+            className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+          >
+            <FileText className="w-3.5 h-3.5 text-primary" />
+            Ver detalle
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpenActionMenuId(null);
+              handleDownloadPDF(rowData.id);
+            }}
+            disabled={downloadingId === rowData.id}
+            className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50"
+          >
+            <Download className="w-3.5 h-3.5 text-primary" />
+            {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (PDF)'}
+          </button>
+          <div className="border-t border-gray-100 my-1" />
+          <button
+            type="button"
+            onClick={() => handleDeleteClick(rowData)}
+            className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-600" />
+            Eliminar lote
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function renderBatchTableRows(
@@ -360,11 +476,11 @@ export const BatchList: React.FC = () => {
     { id: 'date-this-year', type: 'date', label: 'Fecha', value: 'Este Año' }
   ]);
   const [isAddFilterModalOpen, setIsAddFilterModalOpen] = useState(false);
-  const [newFilterType, setNewFilterType] = useState<'date' | 'region' | 'district' | 'group' | 'recognition'>('region');
+  const [newFilterType, setNewFilterType] = useState<FilterType>('region');
   const [newFilterValue, setNewFilterValue] = useState<string>('');
 
   // Date filter mode & values for Add Filter modal
-  const [dateFilterMode, setDateFilterMode] = useState<'predefined' | 'range' | 'specific'>('predefined');
+  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('predefined');
   const [datePredefinedValue, setDatePredefinedValue] = useState<string>('Este Año');
   const [dateRangeStart, setDateRangeStart] = useState<string>('');
   const [dateRangeEnd, setDateRangeEnd] = useState<string>('');
@@ -543,107 +659,47 @@ export const BatchList: React.FC = () => {
     {
       accessorKey: 'formattedDate',
       header: 'FECHA DE EMISIÓN',
-      cell: info => <span className="font-medium text-neutral">{info.getValue() as string}</span>
+      cell: renderBatchDateCell
     },
     {
       accessorKey: 'regionName',
       header: 'REGIÓN',
-      cell: info => <span className="font-normal text-neutral/80">{info.getValue() as string}</span>
+      cell: renderBatchRegionCell
     },
     {
       accessorKey: 'districtName',
       header: 'DISTRITO',
-      cell: info => <span className="font-normal text-neutral/80">{info.getValue() as string}</span>
+      cell: renderBatchDistrictCell
     },
     {
       accessorKey: 'groupName',
       header: 'GRUPO',
-      cell: info => (
-        <span className="font-semibold text-neutral">{info.getValue() as string}</span>
-      )
+      cell: renderBatchGroupCell
     },
     {
       accessorKey: 'recognitionName',
       header: 'RECONOCIMIENTO',
-      cell: info => {
-        const name = info.getValue() as string;
-        const style = getRecognitionBadgeStyle(name);
-        return (
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${style.pillClass}`}>
-            {name}
-          </span>
-        );
-      }
+      cell: renderBatchRecognitionCell
     },
     {
       accessorKey: 'memberCount',
       header: 'CANTIDAD',
-      cell: info => (
-        <span className="font-medium text-neutral">{info.getValue() as number} Miembros</span>
-      )
+      cell: renderBatchMembersCell
     },
     {
       id: 'actions',
       header: 'ACCIONES',
-      cell: ({ row, table }) => {
-        const rowData = row.original;
-        const isMenuOpen = openActionMenuId === rowData.id;
-        const totalRows = table.getRowModel().rows.length;
-        const isNearBottom = (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
-        const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
-
-        return (
-          <div className="relative inline-block font-sans">
-            {/* Acciones 3-Dots Dropdown Button */}
-            <button
-              type="button"
-              onClick={() => setOpenActionMenuId(isMenuOpen ? null : rowData.id)}
-              className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
-              aria-label={`Acciones del lote ${rowData.id}`}
-              title="Acciones"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-
-            {isMenuOpen && (
-              <div className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpenActionMenuId(null);
-                    navigate(`/lotes/${rowData.id}`);
-                  }}
-                  className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-                >
-                  <FileText className="w-3.5 h-3.5 text-primary" />
-                  Ver detalle
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpenActionMenuId(null);
-                    handleDownloadPDF(rowData.id);
-                  }}
-                  disabled={downloadingId === rowData.id}
-                  className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Download className="w-3.5 h-3.5 text-primary" />
-                  {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (PDF)'}
-                </button>
-                <div className="border-t border-gray-100 my-1" />
-                <button
-                  type="button"
-                  onClick={() => handleDeleteClick(rowData)}
-                  className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
-                  Eliminar lote
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      }
+      cell: ({ row, table }) =>
+        renderBatchActionsCell({
+          row,
+          table,
+          openActionMenuId,
+          setOpenActionMenuId,
+          navigate,
+          handleDownloadPDF,
+          handleDeleteClick,
+          downloadingId
+        })
     }
   ], [openActionMenuId, downloadingId, navigate, handleDownloadPDF, handleDeleteClick]);
 

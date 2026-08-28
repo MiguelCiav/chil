@@ -77,7 +77,8 @@ export function slugify(text: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
     .replace(/^_+|_+$/g, '');
 }
 

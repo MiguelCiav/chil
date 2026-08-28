@@ -75,24 +75,46 @@ export function buildAvailableDistricts(districts: District[], regionId?: string
   return districts.filter(d => String(d.region_id) === regionId);
 }
 
+function matchesBatchCriteria(b: Batch, filters: StatisticsFilterState): boolean {
+  if (filters.period !== 'all' && !matchesDateRange(b.created_at ?? '', filters.period, filters.startDate, filters.endDate)) {
+    return false;
+  }
+  if (filters.recognitionId && b.recognition_type !== filters.recognitionId) {
+    return false;
+  }
+  if (filters.regionId && String(b.region_id) !== filters.regionId) {
+    return false;
+  }
+  if (filters.districtId && String(b.district_id) !== filters.districtId) {
+    return false;
+  }
+  return true;
+}
+
 export function filterBatchesByCriteria(batches: Batch[], filters: StatisticsFilterState): Batch[] {
-  return batches.filter(b => {
-    if (filters.period !== 'all') {
-      if (!matchesDateRange(b.created_at ?? '', filters.period, filters.startDate, filters.endDate)) {
-        return false;
-      }
-    }
-    if (filters.recognitionId && b.recognition_type !== filters.recognitionId) {
+  return batches.filter(b => matchesBatchCriteria(b, filters));
+}
+
+function matchesMemberCriteria(m: ScoutMember, batch: Batch | undefined, filters: StatisticsFilterState): boolean {
+  if (filters.period !== 'all') {
+    const batchCreatedAt = batch?.created_at ?? '';
+    if (!matchesDateRange(batchCreatedAt, filters.period, filters.startDate, filters.endDate)) {
       return false;
     }
-    if (filters.regionId && String(b.region_id) !== filters.regionId) {
-      return false;
-    }
-    if (filters.districtId && String(b.district_id) !== filters.districtId) {
-      return false;
-    }
-    return true;
-  });
+  }
+  if (filters.recognitionId && batch?.recognition_type !== filters.recognitionId) {
+    return false;
+  }
+  if (filters.regionId && String(batch?.region_id) !== filters.regionId) {
+    return false;
+  }
+  if (filters.districtId && String(batch?.district_id) !== filters.districtId) {
+    return false;
+  }
+  if (filters.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) {
+    return false;
+  }
+  return true;
 }
 
 export function filterMembersByCriteria(
@@ -100,39 +122,7 @@ export function filterMembersByCriteria(
   batchMap: Map<number, Batch>,
   filters: StatisticsFilterState
 ): ScoutMember[] {
-  return members.filter(m => {
-    const batch = m.batch_id ? batchMap.get(m.batch_id) : undefined;
-
-    // 1. Date filter on batch created_at
-    if (filters.period !== 'all') {
-      const batchCreatedAt = batch?.created_at ?? '';
-      if (!matchesDateRange(batchCreatedAt, filters.period, filters.startDate, filters.endDate)) {
-        return false;
-      }
-    }
-
-    // 2. Recognition filter
-    if (filters.recognitionId && batch?.recognition_type !== filters.recognitionId) {
-      return false;
-    }
-
-    // 3. Region filter
-    if (filters.regionId && String(batch?.region_id) !== filters.regionId) {
-      return false;
-    }
-
-    // 4. District filter
-    if (filters.districtId && String(batch?.district_id) !== filters.districtId) {
-      return false;
-    }
-
-    // 5. Member type filter
-    if (filters.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) {
-      return false;
-    }
-
-    return true;
-  });
+  return members.filter(m => matchesMemberCriteria(m, m.batch_id ? batchMap.get(m.batch_id) : undefined, filters));
 }
 
 export function determineTargetYears(

@@ -125,7 +125,30 @@ export function drawReportHeader(
   return y;
 }
 
-function drawKpiDiplomasBox(doc: jsPDF, stats: StatisticsDataset, hasYoY: boolean, yoy: YoYComparisonData | undefined, x: number, y: number, w: number, h: number): void {
+export interface KpiBoxParams {
+  doc: jsPDF;
+  stats: StatisticsDataset;
+  hasYoY?: boolean;
+  yoy?: YoYComparisonData;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface MonthlyBarParams {
+  doc: jsPDF;
+  item: { currentCount: number; previousCount: number; label: string };
+  idx: number;
+  maxMonthlyVal: number;
+  slotW: number;
+  barW: number;
+  chartHeight: number;
+  chartBottomY: number;
+}
+
+function drawKpiDiplomasBox(params: KpiBoxParams): void {
+  const { doc, stats, hasYoY, yoy, x, y, w, h } = params;
   doc.setFillColor(240, 248, 255);
   doc.setDrawColor(180, 215, 245);
   doc.roundedRect(x, y, w, h, 2, 2, 'FD');
@@ -147,7 +170,8 @@ function drawKpiDiplomasBox(doc: jsPDF, stats: StatisticsDataset, hasYoY: boolea
   }
 }
 
-function drawKpiBatchesBox(doc: jsPDF, stats: StatisticsDataset, hasYoY: boolean, yoy: YoYComparisonData | undefined, x: number, y: number, w: number, h: number): void {
+function drawKpiBatchesBox(params: KpiBoxParams): void {
+  const { doc, stats, hasYoY, yoy, x, y, w, h } = params;
   doc.setFillColor(255, 251, 235);
   doc.setDrawColor(254, 240, 138);
   doc.roundedRect(x, y, w, h, 2, 2, 'FD');
@@ -201,7 +225,8 @@ function drawKpiTerritoryBox(doc: jsPDF, stats: StatisticsDataset, x: number, y:
   doc.text(`en ${stats.kpis.activeDistrictsCount} distritos y ${stats.kpis.activeGroupsCount} grupos`, x + 3, y + 15.5);
 }
 
-function drawKpiDemographicsBox(doc: jsPDF, stats: StatisticsDataset, hasYoY: boolean, yoy: YoYComparisonData | undefined, x: number, y: number, w: number, h: number): void {
+function drawKpiDemographicsBox(params: KpiBoxParams): void {
+  const { doc, stats, hasYoY, yoy, x, y, w, h } = params;
   doc.setFillColor(240, 249, 255);
   doc.setDrawColor(186, 230, 253);
   doc.roundedRect(x, y, w, h, 2, 2, 'FD');
@@ -244,15 +269,15 @@ export function drawKpiSummaryBoxes(
   const boxH = 18;
 
   // Row 1
-  drawKpiDiplomasBox(doc, stats, hasYoY, yoy, MARGIN, y, boxW3, boxH);
-  drawKpiBatchesBox(doc, stats, hasYoY, yoy, MARGIN + boxW3 + 3, y, boxW3, boxH);
+  drawKpiDiplomasBox({ doc, stats, hasYoY, yoy, x: MARGIN, y, w: boxW3, h: boxH });
+  drawKpiBatchesBox({ doc, stats, hasYoY, yoy, x: MARGIN + boxW3 + 3, y, w: boxW3, h: boxH });
   drawKpiTopRecognitionBox(doc, stats, MARGIN + 2 * (boxW3 + 3), y, boxW3, boxH);
 
   y += boxH + 3;
 
   // Row 2
   drawKpiTerritoryBox(doc, stats, MARGIN, y, boxW2, boxH);
-  drawKpiDemographicsBox(doc, stats, hasYoY, yoy, MARGIN + boxW2 + 4, y, boxW2, boxH);
+  drawKpiDemographicsBox({ doc, stats, hasYoY, yoy, x: MARGIN + boxW2 + 4, y, w: boxW2, h: boxH });
 
   y += boxH + 8;
   return y;
@@ -814,16 +839,8 @@ function drawMonthlyTableStandard(doc: jsPDF, stats: StatisticsDataset, startY: 
   return y;
 }
 
-function drawYoYMonthlyBar(
-  doc: jsPDF,
-  item: { currentCount: number; previousCount: number; label: string },
-  idx: number,
-  maxMonthlyVal: number,
-  slotW: number,
-  barW: number,
-  chartHeight: number,
-  chartBottomY: number
-): void {
+function drawYoYMonthlyBar(params: MonthlyBarParams): void {
+  const { doc, item, idx, maxMonthlyVal, slotW, barW, chartHeight, chartBottomY } = params;
   const barHCurr = maxMonthlyVal > 0 ? (item.currentCount / maxMonthlyVal) * (chartHeight - 8) : 0;
   const barHPrev = maxMonthlyVal > 0 ? (item.previousCount / maxMonthlyVal) * (chartHeight - 8) : 0;
 
@@ -905,7 +922,16 @@ function drawMonthlyChartYoY(doc: jsPDF, stats: StatisticsDataset, startY: numbe
   const barW = Math.max((slotW - 3) / 2, 2.5);
 
   yoy.monthly.forEach((item, idx) => {
-    drawYoYMonthlyBar(doc, item, idx, maxMonthlyVal, slotW, barW, chartHeight, chartBottomY);
+    drawYoYMonthlyBar({
+      doc,
+      item,
+      idx,
+      maxMonthlyVal,
+      slotW,
+      barW,
+      chartHeight,
+      chartBottomY
+    });
   });
 
   return chartBottomY + 14;

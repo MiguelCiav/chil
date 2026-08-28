@@ -40,7 +40,7 @@ function escapeCsvField(val: unknown): string {
   if (val === null || val === undefined) {
     return '""';
   }
-  const str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+  const str = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val ?? '');
   return `"${str.replaceAll('"', '""')}"`;
 }
 

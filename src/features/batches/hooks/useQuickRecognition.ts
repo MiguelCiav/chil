@@ -431,6 +431,14 @@ export function useQuickRecognition() {
     });
   }, []);
 
+function getScraperErrorMessage(err: unknown): string {
+  const errorMsg = err instanceof Error ? err.message : String(err);
+  if (errorMsg.includes('No registrado')) {
+    return 'Usuario no registrado en Sistema de Registro.';
+  }
+  return 'Error al consultar Sistema de Registro.';
+}
+
   // Scraper Lookup
   const handleConsult = useCallback(async () => {
     const cleanCedula = identity.trim();
@@ -470,14 +478,9 @@ export function useQuickRecognition() {
         setScraperMsg('No se encontraron datos en Sistema de Registro.');
       }
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
       setScraperStatus('error');
       setVerifiedCedula(null);
-      if (errorMsg.includes('No registrado')) {
-        setScraperMsg('Usuario no registrado en Sistema de Registro.');
-      } else {
-        setScraperMsg('Error al consultar Sistema de Registro.');
-      }
+      setScraperMsg(getScraperErrorMessage(err));
     } finally {
       setIsSearchingScraper(false);
     }

@@ -99,7 +99,7 @@ export const FieldPaletteTab: React.FC<FieldPaletteTabProps> = ({
           {AVAILABLE_TEMPLATE_FIELDS.map((def) => {
             const placedField = fields.find((f) => f.field_key === def.field_key);
             const isPlaced = placedField !== undefined;
-            const isSelected = placedField !== undefined && placedField.id === selectedFieldId;
+            const isSelected = placedField?.id === selectedFieldId;
 
             return (
               <div

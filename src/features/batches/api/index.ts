@@ -218,7 +218,7 @@ function generateSecureBatchId(): number {
 
 export async function createBatch(params: BatchCreationParams, userId?: string): Promise<Batch> {
   const numericId = generateSecureBatchId();
-  const targetUserId = params.user_id ?? (userId !== undefined ? userId : (auth.currentUser?.uid ?? ''));
+  const targetUserId = params.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const newBatch: Batch = {
     id: numericId,
     comment: params.comment ?? '',
@@ -241,7 +241,7 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
   const batchRef = doc(db, "batches", String(id));
   const docSnap = await getDoc(batchRef);
   const existingData = docSnap.exists() ? (docSnap.data() as Batch) : null;
-  const targetUserId = params.user_id ?? (userId !== undefined ? userId : (existingData?.user_id ?? auth.currentUser?.uid ?? ''));
+  const targetUserId = params.user_id ?? userId ?? existingData?.user_id ?? auth.currentUser?.uid ?? '';
 
   const updatedBatch: Batch = {
     id,
@@ -292,7 +292,7 @@ export async function getMemberStatus(cedula: string): Promise<ScraperMemberDeta
 }
 
 export async function createMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
-  const targetUserId = member.user_id ?? (userId !== undefined ? userId : (auth.currentUser?.uid ?? ''));
+  const targetUserId = member.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const newMember: ScoutMember = {
     ...member,
     ...(targetUserId ? { user_id: targetUserId } : {})
@@ -303,7 +303,7 @@ export async function createMember(member: ScoutMember, userId?: string): Promis
 }
 
 export async function updateMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
-  const targetUserId = member.user_id ?? (userId !== undefined ? userId : (auth.currentUser?.uid ?? ''));
+  const targetUserId = member.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const updatedMember: ScoutMember = {
     ...member,
     ...(targetUserId ? { user_id: targetUserId } : {})
@@ -339,7 +339,7 @@ export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[
 }
 
 export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
-  const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid ?? '');
+  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
   if (!targetUserId) {
     return [];
   }
@@ -363,7 +363,7 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
 }
 
 export async function getAllBatches(userId?: string): Promise<Batch[]> {
-  const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid ?? '');
+  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
   if (!targetUserId) {
     return [];
   }
@@ -421,7 +421,7 @@ export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
     `"${m.first_names ?? ''}"`,
     `"${m.last_names ?? ''}"`,
     `"${m.member_type === 'young' ? 'Joven' : 'Adulto'}"`,
-    `"${m.status === 'active' ? 'Registro Válido' : m.status === 'exceptional' ? 'Emisión Excepcional' : 'No registrado'}"`,
+    `"${getReportMemberStatusText(m.status)}"`,
     `"${m.recognition_code ?? '-'}"`,
     `"${m.birth_date ?? '-'}"`,
     `"${m.email ?? ''}"`,

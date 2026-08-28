@@ -57,9 +57,9 @@ export const UserProfileMenu: React.FC = () => {
 
   if (!user) return null;
 
-  const initials = getInitials(user?.displayName, user?.email);
-  const displayName = user?.displayName || 'Usuario Scout';
-  const email = user?.email || '';
+  const initials = getInitials(user.displayName, user.email);
+  const displayName = user.displayName ?? 'Usuario Scout';
+  const email = user.email ?? '';
 
   const handleLogout = async () => {
     setIsOpen(false);
@@ -81,7 +81,7 @@ export const UserProfileMenu: React.FC = () => {
         aria-haspopup="true"
         aria-label="Menú de usuario"
       >
-        {user?.photoURL ? (
+        {user.photoURL ? (
           <img
             src={user.photoURL}
             alt={displayName}

@@ -317,6 +317,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
               <input
                 type="text"
                 placeholder="Buscar por nombre o cédula..."
+                aria-label="Buscar por nombre o cédula"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-primary/20 bg-primary/5 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm transition-all"

@@ -312,6 +312,136 @@ function renderUnitBadgeCell(unit?: string) {
   );
 }
 
+function renderIssueDateCell(info: { getValue: () => unknown }) {
+  return <span className="font-medium text-neutral">{info.getValue() as string}</span>;
+}
+
+function renderBatchCodeCell(info: { getValue: () => unknown }) {
+  return (
+    <span className="font-mono text-xs font-semibold text-primary">
+      {info.getValue() as string}
+    </span>
+  );
+}
+
+function renderRecognitionCell(info: { getValue: () => unknown }) {
+  return renderRecognitionBadge(info.getValue() as string);
+}
+
+function renderIdentityCell(info: { getValue: () => unknown }) {
+  return (
+    <span className="font-mono font-medium text-neutral">{info.getValue() as string}</span>
+  );
+}
+
+function renderFirstNameCell(info: { getValue: () => unknown }) {
+  return <span className="text-neutral font-medium">{info.getValue() as string}</span>;
+}
+
+function renderLastNameCell(info: { getValue: () => unknown }) {
+  return <span className="text-neutral">{info.getValue() as string}</span>;
+}
+
+function renderUnitCell({ row }: { row: Row<SummaryRowData> }) {
+  return renderUnitBadgeCell(row.original.unit);
+}
+
+function renderMemberTypeCell(info: { getValue: () => unknown }) {
+  return (
+    <span className="text-neutral/80">{info.getValue() as string}</span>
+  );
+}
+
+function renderStatusCell({ row }: { row: Row<SummaryRowData> }) {
+  return renderStatusBadge(row.original.status);
+}
+
+function renderRecognitionCodeCell(info: { getValue: () => unknown }) {
+  return (
+    <span className="font-mono text-xs text-neutral/80 font-medium">{info.getValue() as string}</span>
+  );
+}
+
+function renderRegionCell(info: { getValue: () => unknown }) {
+  return <span className="text-neutral/80">{info.getValue() as string}</span>;
+}
+
+function renderDistrictCell(info: { getValue: () => unknown }) {
+  return <span className="text-neutral/80">{info.getValue() as string}</span>;
+}
+
+function renderGroupCell(info: { getValue: () => unknown }) {
+  return <span className="font-semibold text-neutral">{info.getValue() as string}</span>;
+}
+
+const SUMMARY_COLUMNS: ColumnDef<SummaryRowData>[] = [
+  {
+    accessorKey: 'issueDate',
+    header: 'FECHA',
+    cell: renderIssueDateCell
+  },
+  {
+    accessorKey: 'batchCode',
+    header: 'LOTE',
+    cell: renderBatchCodeCell
+  },
+  {
+    accessorKey: 'recognitionName',
+    header: 'RECONOCIMIENTO',
+    cell: renderRecognitionCell
+  },
+  {
+    accessorKey: 'identity',
+    header: 'CÉDULA',
+    cell: renderIdentityCell
+  },
+  {
+    accessorKey: 'firstName',
+    header: 'NOMBRE',
+    cell: renderFirstNameCell
+  },
+  {
+    accessorKey: 'lastName',
+    header: 'APELLIDO',
+    cell: renderLastNameCell
+  },
+  {
+    accessorKey: 'unitLabel',
+    header: 'UNIDAD',
+    cell: renderUnitCell
+  },
+  {
+    accessorKey: 'memberTypeLabel',
+    header: 'TIPO',
+    cell: renderMemberTypeCell
+  },
+  {
+    accessorKey: 'status',
+    header: 'ESTATUS',
+    cell: renderStatusCell
+  },
+  {
+    accessorKey: 'recognitionCode',
+    header: 'CÓDIGO REC.',
+    cell: renderRecognitionCodeCell
+  },
+  {
+    accessorKey: 'regionName',
+    header: 'REGIÓN',
+    cell: renderRegionCell
+  },
+  {
+    accessorKey: 'districtName',
+    header: 'DISTRITO',
+    cell: renderDistrictCell
+  },
+  {
+    accessorKey: 'groupName',
+    header: 'GRUPO',
+    cell: renderGroupCell
+  }
+];
+
 export const SummaryView: React.FC = () => {
   const { user } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -535,84 +665,7 @@ export const SummaryView: React.FC = () => {
     setTimeout(() => setShowToast(false), 4000);
   };
 
-  // TanStack Table Column Definitions (12 columns)
-  const columns = useMemo<ColumnDef<SummaryRowData>[]>(() => [
-    {
-      accessorKey: 'issueDate',
-      header: 'FECHA',
-      cell: info => <span className="font-medium text-neutral">{info.getValue() as string}</span>
-    },
-    {
-      accessorKey: 'batchCode',
-      header: 'LOTE',
-      cell: info => (
-        <span className="font-mono text-xs font-semibold text-primary">
-          {info.getValue() as string}
-        </span>
-      )
-    },
-    {
-      accessorKey: 'recognitionName',
-      header: 'RECONOCIMIENTO',
-      cell: info => renderRecognitionBadge(info.getValue() as string)
-    },
-    {
-      accessorKey: 'identity',
-      header: 'CÉDULA',
-      cell: info => (
-        <span className="font-mono font-medium text-neutral">{info.getValue() as string}</span>
-      )
-    },
-    {
-      accessorKey: 'firstName',
-      header: 'NOMBRE',
-      cell: info => <span className="text-neutral font-medium">{info.getValue() as string}</span>
-    },
-    {
-      accessorKey: 'lastName',
-      header: 'APELLIDO',
-      cell: info => <span className="text-neutral">{info.getValue() as string}</span>
-    },
-    {
-      accessorKey: 'unitLabel',
-      header: 'UNIDAD',
-      cell: ({ row }) => renderUnitBadgeCell(row.original.unit)
-    },
-    {
-      accessorKey: 'memberTypeLabel',
-      header: 'TIPO',
-      cell: info => (
-        <span className="text-neutral/80">{info.getValue() as string}</span>
-      )
-    },
-    {
-      accessorKey: 'status',
-      header: 'ESTATUS',
-      cell: ({ row }) => renderStatusBadge(row.original.status)
-    },
-    {
-      accessorKey: 'recognitionCode',
-      header: 'CÓDIGO REC.',
-      cell: info => (
-        <span className="font-mono text-xs text-neutral/80 font-medium">{info.getValue() as string}</span>
-      )
-    },
-    {
-      accessorKey: 'regionName',
-      header: 'REGIÓN',
-      cell: info => <span className="text-neutral/80">{info.getValue() as string}</span>
-    },
-    {
-      accessorKey: 'districtName',
-      header: 'DISTRITO',
-      cell: info => <span className="text-neutral/80">{info.getValue() as string}</span>
-    },
-    {
-      accessorKey: 'groupName',
-      header: 'GRUPO',
-      cell: info => <span className="font-semibold text-neutral">{info.getValue() as string}</span>
-    }
-  ], []);
+  const columns = SUMMARY_COLUMNS;
 
   const table = useReactTable({
     data: filteredData,
