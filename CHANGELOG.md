@@ -1,5 +1,95 @@
 # chil
 
+## 0.11.0
+
+### Minor Changes
+
+- c765a46: Implement official Public Landing Page feature (`src/features/landing/`) and public routing integration:
+  - Public Landing Page Components (`src/features/landing/components/`):
+    - `HeroSection.tsx`: Scout branding with Chil logo, headline (_Chil — Sistema de Emisión y Control de Reconocimientos Scouts_), impactful subtitle, primary CTA (_🚀 Comenzar Ahora / Registrarse_ ➔ `/registro`), secondary CTA (_🔐 Iniciar Sesión_ ➔ `/login`), quick action link (_⚡ Conoce la Emisión Rápida_ ➔ `#emision-rapida`), and high-fidelity visual mock certificate preview card with Scout metadata badges (`V-12.345.678`, `Tropa Scout`, `REC-8F3A2B`).
+    - `FeatureGridSection.tsx`: 6 core capability cards showcasing Emisión Rápida, Lotes Masivos, Diseñador de Plantillas, Unidades Scouts & No Scout / Agradecimientos, Analítica Territorial & YoY, and Aislamiento Multi-Tenant.
+    - `WorkflowSection.tsx`: 3-step intuitive workflow (_1. Configurar_, _2. Verificar_, _3. Emitir_) highlighting streamlined issuance flow.
+    - `LandingFooter.tsx`: Public footer with copyright, scout motto (_Siempre Listos para Servir ⚜️_), and platform navigation links.
+    - `LandingPage.tsx`: Main responsive orchestrator assembling all landing subcomponents.
+  - Routing & Navigation Integration:
+    - `src/App.tsx`: Added public root route `/` rendering `<LandingPage />` for unauthenticated visitors and redirecting authenticated users to `/lotes`. Added public `/inicio` route.
+    - `src/components/Navbar.tsx`: Updated Chil brand logo to link to `/` (Landing Page) when unauthenticated and `/lotes` when authenticated.
+  - Tests & Quality Gate:
+    - Comprehensive unit test suite `src/features/landing/components/__tests__/LandingPage.test.tsx` verifying Hero, Capability Cards, Workflow, Scout Values, Footer, and unauthenticated/authenticated navigation behavior.
+    - Updated `src/components/__tests__/Navbar.test.tsx` for logo routing behavior.
+- 91924c5: Implement Visual Standardization Plan (Plan Maestro de Estandarización Visual) across all application modules:
+  - Axis 1: Standardize Module Headers & Typography Hierarchy:
+    - Title (`<h1>`): `text-2xl sm:text-3xl font-black text-neutral tracking-tight`
+    - Subtitle (`<p>`): `text-xs sm:text-sm text-neutral/70 mt-1`
+    - Header Container: `flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2`
+    - Applied uniformly across `QuickRecognition`, `NewBatchWizard`, `BatchList`, `BatchDetail`, `RecognitionCatalog`, `SummaryView`, `StatisticsDashboard`, and `SuccessPage`.
+  - Axis 2: Standardize Container Widths & Margins:
+    - Standardized main view page container width to `max-w-7xl mx-auto space-y-6 font-sans py-2` (and `space-y-8` for wizard and success views) across all core feature pages.
+  - Axis 3: Standardize Tables (Design System Table Tokens):
+    - Standardized table tokens matching design system across `Table.tsx`, `BatchList.tsx`, `BatchDetail.tsx` (members table), `SuccessPage.tsx` (summary table), `SummaryView.tsx` (master summary table), `RegionSummaryTable.tsx`, and `DistrictSummaryTable.tsx`:
+      - Container: `w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm`
+      - Element: `w-full text-left border-collapse`
+      - Thead row: `bg-primary/10 border-b border-primary/20`
+      - Header cells `<th>`: `px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider`
+      - Tbody: `divide-y divide-gray-100 bg-white`
+      - Rows `<tr>`: `hover:bg-primary/5 transition-colors bg-white`
+      - Cells `<td>`: `px-6 py-4 text-sm text-neutral whitespace-nowrap`
+      - Footer: `px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-between text-xs font-semibold text-neutral/60`
+  - Axis 4: Standardize Buttons & Font Scale:
+    - Updated `Button.tsx` with Design System token scale (`sm: text-xs`, `md: text-sm`, `lg: text-sm sm:text-base`) and `font-semibold transition-all rounded-xl`.
+    - Cleaned up arbitrary button font-size and class overrides across components.
+- 653e834: Implement reusable Walkthroughs & Interactive Guide Engine (Motor de Guías Interactivas), autoStart configuration, and comprehensive tours across all core modules:
+  - Core Walkthrough Engine (`src/components/walkthrough/`):
+    - `types.ts`: Define `WalkthroughPlacement`, `WalkthroughStep`, and `TourConfig` types, including optional `autoStart?: boolean` (default `true`).
+    - `useWalkthrough.ts`: Custom hook managing tour lifecycle (`isOpen`, `currentStepIndex`, `currentStep`, `targetRect`), first-time auto-start with per-user `localStorage` persistence (`chil_tour_${tourId}_${userId}`), auto-start control (`autoStart !== false`), dynamic DOM measurement & smooth viewport scrolling, window resize/scroll listeners, and keyboard navigation (`Escape`, `ArrowRight`, `Enter`, `ArrowLeft`).
+    - `WalkthroughDialog.tsx`: Game-like narrative dialog card with step counter badges, narrative explanations, viewport boundary collision checks, and control buttons (`Omitir guía`, `◀ Anterior`, `Siguiente ▶` / `¡Entendido!`).
+    - `WalkthroughOverlay.tsx`: Full-screen SVG mask backdrop with spotlight rectangle cutout, glowing animated target highlight border, and dynamic SVG dashed connector line with target anchor dot.
+    - `WalkthroughHelpButton.tsx`: Accessible interactive `?` help button triggering module guides on demand.
+    - `index.ts`: Public module exports for components, hooks, and types.
+  - Module 1 Integration: Listado de Lotes (`src/features/batches/components/BatchList.tsx`):
+    - Added `data-walkthrough` selectors for Header (`batch-list-header`), Actions (`batch-list-actions`), Filters (`batch-list-filters`), and Table (`batch-list-table`).
+    - Implemented 4-step interactive guided tour for batch management and recognition downloads with `autoStart: false`.
+    - Mounted `WalkthroughHelpButton` and `WalkthroughOverlay`.
+  - Module 2 Integration: Emisión Rápida (`src/features/batches/components/QuickRecognition.tsx`):
+    - Added `data-walkthrough` selectors for Header (`quick-rec-header`), Recognition fields section (`quick-rec-recognition-section`), Recipient fields section (`quick-rec-recipient-section`), and Action buttons (`quick-rec-actions-section`).
+    - Implemented 4-step interactive guided tour (`QUICK_RECOGNITION_TOUR_STEPS`) covering single-step emission, recognition type/location, recipient data lookup, and immediate code generation/download with `autoStart: true`.
+    - Mounted `WalkthroughHelpButton` and `WalkthroughOverlay`.
+  - Module 3 Integration: Nuevo Lote - Wizard de 3 Pasos (`src/features/batches/components/NewBatchWizard.tsx`):
+    - Added `data-walkthrough` selectors for Header (`wizard-header`), Stepper (`wizard-stepper`), Step container (`wizard-step-container`), and Navigation buttons (`wizard-navigation-buttons`).
+    - Implemented 4-step interactive guided tour (`NEW_BATCH_WIZARD_TOUR_STEPS`) explaining header objective, 3-step progress flow, metadata/unit scope configuration, and step navigation with `autoStart: true`.
+    - Mounted `WalkthroughHelpButton` in the header and `WalkthroughOverlay`.
+  - Module 4 Integration: Detalle del Lote (`src/features/batches/components/BatchDetail.tsx`):
+    - Added `data-walkthrough` selectors for Header card (`batch-detail-header`), Summary cards (`batch-detail-summary-cards`), Members table (`batch-detail-members-table`), and Member row actions (`batch-detail-table-actions`).
+    - Implemented 4-step interactive guided tour (`BATCH_DETAIL_TOUR_STEPS`) explaining batch details & PDF actions, demographic/structure summaries & observations, member list & badges, and individual actions/exceptional cases with `autoStart: false`.
+    - Mounted `WalkthroughHelpButton` next to main title in header and `WalkthroughOverlay`.
+  - Module 5 Integration: Diseñador Visual de Plantillas (`src/features/recognitions/components/CertificateDesigner.tsx`):
+    - Added `data-walkthrough` selectors for Header bar (`designer-header`), Canvas area (`designer-canvas`), Upload background button (`designer-background-btn`), Sidebar tabs/panel (`designer-sidebar`), Edit/Preview mode switcher (`designer-mode-switch`), and Save template button (`designer-save-btn`).
+    - Implemented comprehensive 6-step interactive guided tour (`CERTIFICATE_DESIGNER_TOUR_STEPS`) explaining template objectives, WYSIWYG 1:1 canvas, custom background graphic upload, dynamic variable palette and drag-and-drop, realistic scout test data preview mode, and secure cloud template persistence.
+    - Mounted `WalkthroughHelpButton` in `DesignerHeader.tsx` and `WalkthroughOverlay` in `CertificateDesigner.tsx`.
+  - Test Suites & Quality Gate:
+    - Unit tests for `useWalkthrough` (including `autoStart: false` behavior), `WalkthroughOverlay`, `WalkthroughDialog`, `WalkthroughHelpButton`, `BatchList`, `QuickRecognition`, `NewBatchWizard`, `BatchDetail`, `DesignerHeader`, `DesignerCanvas`, `DesignerSidebar`, and `CertificateDesigner` walkthrough flow.
+- 5ec6220: Implement conditional Year-over-Year (YoY) comparison across the Statistics Dashboard, calculation utilities, table components, and executive PDF exporter:
+  - Pure Statistical Logic & Calculators (`src/features/statistics/utils/statsCalculators.ts`):
+    - `calculatePercentChange`: Computes percentage variation between current and previous periods with division-by-zero protection.
+    - `partitionDataByYear`: Filters and partitions batch and member datasets across current and prior comparative years.
+    - `calculateYoYComparison`: Computes comprehensive YoY metrics for KPIs, Regions, Districts, Scout Units, Demographics (Jóvenes vs Adultos), and Monthly Trends.
+  - Reusable UI Components:
+    - `YoYVariationBadge`: Renders color-coded indicator badges displaying positive (+green), negative (-red), and neutral (=slate) absolute and percentage variations.
+  - Dashboard & Section Components (`src/features/statistics/components/`):
+    - `StatKpiGrid`: Displays subtle YoY variation badges below Total Reconocimientos, Total Lotes, and Demografía metrics.
+    - `RegionSummaryTable`: Conditionally renders comparative columns (`Total (${currentYear})`, `Año Anterior (${previousYear})`, `Variación`, `% del Total`).
+    - `DistrictSummaryTable`: Conditionally renders comparative columns (`Región`, `Distrito`, `Total (${currentYear})`, `Año Anterior (${previousYear})`, `Variación`, `% del Total`).
+    - `UnitDistributionCard`: Conditionally renders comparative columns for all Scout Units and Institutional categories.
+    - `DemographicsDonut`: Adds comparative demographic table comparing current vs prior year metrics for young and adult members.
+    - `MonthlyTrendChart`: Integrates dual-bar comparative SVG chart (current vs prior year) with chart legend, interactive tooltips, and comparative summary table.
+    - Fallback Handling: Automatically falls back to standard single-year table views when historical data for the prior year is unavailable.
+  - Executive PDF Report Exporter (`src/features/statistics/utils/statsPdfExport.ts`):
+    - Generates comparative header subtitle `Reporte Comparativo Anual (${previousYear} vs ${currentYear})` when YoY data is present.
+    - Generates multi-column comparative tables across Region, District, Unit, Demographics, and Monthly sections.
+    - Draws comparative dual-bar vector histogram chart for monthly trend comparison.
+  - Test Suites & Quality Gate:
+    - Added unit test suites covering YoY calculations, PDF generator, hook updates, badge component, and multi-year dashboard integration.
+
 ## 0.10.0
 
 ### Minor Changes
