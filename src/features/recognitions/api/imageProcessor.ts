@@ -32,7 +32,10 @@ export async function processBackgroundImageFile(
           orientation: 'landscape'
         });
       };
-      reader.onerror = (err) => reject(new Error(String(err instanceof Error ? err.message : err)));
+      reader.onerror = (err) => {
+        const errorMsg = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Error al procesar la imagen');
+        reject(new Error(errorMsg));
+      };
       reader.readAsDataURL(file);
       return;
     }
@@ -190,7 +193,10 @@ export async function processBackgroundImageFile(
         });
       }
     };
-    reader.onerror = (err) => reject(new Error(String(err instanceof Error ? err.message : err)));
+    reader.onerror = (err) => {
+      const errorMsg = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Error al procesar la imagen');
+      reject(new Error(errorMsg));
+    };
     reader.readAsDataURL(file);
   });
 }

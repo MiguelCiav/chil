@@ -269,6 +269,10 @@ export const RecognitionCatalog: React.FC = () => {
     setIsFormModalOpen(true);
   };
 
+  const handleCloseFormModal = () => {
+    setIsFormModalOpen(false);
+  };
+
   const handleOpenEditModal = (recognition: RecognitionType) => {
     setEditingRecognition(recognition);
     setIsFormModalOpen(true);
@@ -277,6 +281,10 @@ export const RecognitionCatalog: React.FC = () => {
   const handleOpenDeleteModal = (recognition: RecognitionType) => {
     setDeletingRecognition(recognition);
     setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
   };
 
   const handleCreateSuccess = (saved: RecognitionType) => {
@@ -292,11 +300,11 @@ export const RecognitionCatalog: React.FC = () => {
   const handleDeleteSuccess = (deletedId: string) => {
     const deleted = recognitions.find(r => r.id === deletedId);
     setRecognitions(prev => prev.filter(r => r.id !== deletedId));
-    triggerToast(
-      deleted
-        ? `Reconocimiento "${deleted.name}" eliminado exitosamente.`
-        : 'Reconocimiento eliminado exitosamente.'
-    );
+    if (deleted) {
+      triggerToast(`Reconocimiento "${deleted.name}" eliminado exitosamente.`);
+    } else {
+      triggerToast('Reconocimiento eliminado exitosamente.');
+    }
   };
 
   const columns = useMemo<ColumnDef<RecognitionType>[]>(
@@ -476,7 +484,7 @@ export const RecognitionCatalog: React.FC = () => {
       {/* Modals */}
       <RecognitionFormModal
         isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        onClose={handleCloseFormModal}
         recognition={editingRecognition}
         onCreateSuccess={handleCreateSuccess}
         onEditSuccess={handleEditSuccess}
@@ -484,7 +492,7 @@ export const RecognitionCatalog: React.FC = () => {
 
       <RecognitionDeleteModal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        onClose={handleCloseDeleteModal}
         recognition={deletingRecognition}
         onSuccess={handleDeleteSuccess}
       />

@@ -16,7 +16,7 @@ import {
 import { Card, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
 import { Table } from '../../../components/Table';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, CellContext } from '@tanstack/react-table';
 
 import { getBatchById, getMembersByBatchId, getHierarchyData, generateBatchReport } from '../api';
 import { Batch, ScoutMember } from '../types';
@@ -72,16 +72,16 @@ async function loadFallbackBatch(): Promise<{ batch: Batch | null; members: Scou
   return { batch: null, members: [] };
 }
 
-function renderSuccessIdentityCell(info: { getValue: () => unknown }) {
+function renderSuccessIdentityCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   return <span className="font-mono text-xs sm:text-sm text-neutral/80">{info.getValue() as string}</span>;
 }
 
-function renderSuccessNameCell(info: { row: { original: ScoutMember } }) {
+function renderSuccessNameCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const rowData = info.row.original;
   return <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>;
 }
 
-function renderSuccessTypeCell(info: { getValue: () => unknown }) {
+function renderSuccessTypeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const val = info.getValue() as 'young' | 'adult';
   return (
     <span className="text-neutral/70 font-medium text-sm">
@@ -90,30 +90,33 @@ function renderSuccessTypeCell(info: { getValue: () => unknown }) {
   );
 }
 
-function renderSuccessStatusCell(info: { getValue: () => unknown }) {
+function renderSuccessStatusCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const val = info.getValue() as 'active' | 'pending' | 'exceptional';
   if (val === 'active') {
     return (
       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />Registro Válido
+        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
+        <span>Registro Válido</span>
       </span>
     );
   }
   if (val === 'exceptional') {
     return (
       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />Emisión Excepcional
+        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
+        <span>Emisión Excepcional</span>
       </span>
     );
   }
   return (
     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />Registro Inválido
+      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
+      <span>Registro Inválido</span>
     </span>
   );
 }
 
-function renderSuccessCodeCell(info: { row: { original: ScoutMember } }) {
+function renderSuccessCodeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const rowData = info.row.original;
   const code = rowData.recognition_code || '-';
   return (
@@ -123,7 +126,7 @@ function renderSuccessCodeCell(info: { row: { original: ScoutMember } }) {
   );
 }
 
-function renderSuccessActionsCell(onNavigateToBatch: () => void) {
+function renderSuccessActionsCell(onNavigateToBatch: () => void): React.ReactNode {
   return (
     <div className="flex gap-2">
       <button

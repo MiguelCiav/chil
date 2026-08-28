@@ -130,22 +130,43 @@ function matchesSummarySearchTerm(row: SummaryRowData, term: string): boolean {
   );
 }
 
-interface SummaryFilterOptions {
+export type MemberTypeFilter = 'all' | 'young' | 'adult';
+export type RegistryStatusFilter = 'all' | 'active' | 'pending' | 'exceptional';
+export type DatePeriodFilter = 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';
+
+export interface SummaryFilterOptions {
   searchTerm: string;
   selectedRecognition: string;
   selectedRegion: string;
   selectedDistrict: string;
   selectedGroup: string;
   selectedUnit: string;
-  selectedMemberType: 'all' | 'young' | 'adult';
-  selectedStatus: 'all' | 'active' | 'pending' | 'exceptional';
-  selectedDatePeriod: 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';
+  selectedMemberType: MemberTypeFilter;
+  selectedStatus: RegistryStatusFilter;
+  selectedDatePeriod: DatePeriodFilter;
   customStartDate: string;
   customEndDate: string;
   regions: Region[];
   districts: District[];
   groups: ScoutGroup[];
 }
+
+const DEFAULT_SUMMARY_FILTERS: SummaryFilterOptions = {
+  searchTerm: '',
+  selectedRecognition: '',
+  selectedRegion: '',
+  selectedDistrict: '',
+  selectedGroup: '',
+  selectedUnit: '',
+  selectedMemberType: 'all',
+  selectedStatus: 'all',
+  selectedDatePeriod: 'all',
+  customStartDate: '',
+  customEndDate: '',
+  regions: [],
+  districts: [],
+  groups: []
+};
 
 function matchesRecognitionFilter(row: SummaryRowData, selectedRecognition: string): boolean {
   if (!selectedRecognition) return true;
@@ -206,7 +227,10 @@ function matchesSummaryFilters(row: SummaryRowData, options: SummaryFilterOption
   return true;
 }
 
-function getFilteredSummaryRows(rows: SummaryRowData[], options: SummaryFilterOptions): SummaryRowData[] {
+function getFilteredSummaryRows(
+  rows: SummaryRowData[],
+  options: SummaryFilterOptions = DEFAULT_SUMMARY_FILTERS
+): SummaryRowData[] {
   return rows.filter(row => matchesSummaryFilters(row, options));
 }
 
@@ -265,11 +289,10 @@ function getMemberTypeLabel(memberType: 'young' | 'adult'): 'Joven' | 'Adulto' {
   return memberType === 'young' ? 'Joven' : 'Adulto';
 }
 
-function resolveHierarchyName(id?: number, rawName?: string): string {
+function resolveHierarchyName(id?: number, rawName: string = '-'): string {
   if (!id || id === 0) return '-';
-  const name = rawName ?? '-';
-  if (name.toLowerCase() === 'no aplica') return '-';
-  return name;
+  if (rawName.toLowerCase() === 'no aplica') return '-';
+  return rawName;
 }
 
 function renderStatusBadge(status: 'active' | 'pending' | 'exceptional') {
@@ -459,11 +482,9 @@ export const SummaryView: React.FC = () => {
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedUnit, setSelectedUnit] = useState('');
-  const [selectedMemberType, setSelectedMemberType] = useState<'all' | 'young' | 'adult'>('all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'pending' | 'exceptional'>('all');
-  const [selectedDatePeriod, setSelectedDatePeriod] = useState<
-    'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom'
-  >('all');
+  const [selectedMemberType, setSelectedMemberType] = useState<MemberTypeFilter>('all');
+  const [selectedStatus, setSelectedStatus] = useState<RegistryStatusFilter>('all');
+  const [selectedDatePeriod, setSelectedDatePeriod] = useState<DatePeriodFilter>('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
@@ -567,7 +588,8 @@ export const SummaryView: React.FC = () => {
       return groups.filter(g => String(g.district_id) === selectedDistrict);
     }
     if (selectedRegion) {
-      const regionDistrictIds = new Set(districts.filter(d => String(d.region_id) === selectedRegion).map(d => d.id));
+      const regionDistricts = districts.filter(d => String(d.region_id) === selectedRegion);
+      const regionDistrictIds = new Set(regionDistricts.map(d => d.id));
       return groups.filter(g => regionDistrictIds.has(g.district_id));
     }
     return groups;

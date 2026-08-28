@@ -94,6 +94,14 @@ export function validateQuickRecognitionFields(params: QuickRecognitionValidatio
   return errors;
 }
 
+export function getScraperErrorMessage(err: unknown): string {
+  const errorMsg = err instanceof Error ? err.message : String(err);
+  if (errorMsg.includes('No registrado')) {
+    return 'Usuario no registrado en Sistema de Registro.';
+  }
+  return 'Error al consultar Sistema de Registro.';
+}
+
 export function resolveQuickRecognitionType(
   recognitionType: string,
   availableRecognitionTypes: (RecognitionType | { id: string; name: string })[]
@@ -430,14 +438,6 @@ export function useQuickRecognition() {
       return prev;
     });
   }, []);
-
-function getScraperErrorMessage(err: unknown): string {
-  const errorMsg = err instanceof Error ? err.message : String(err);
-  if (errorMsg.includes('No registrado')) {
-    return 'Usuario no registrado en Sistema de Registro.';
-  }
-  return 'Error al consultar Sistema de Registro.';
-}
 
   // Scraper Lookup
   const handleConsult = useCallback(async () => {

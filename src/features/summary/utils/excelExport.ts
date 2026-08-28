@@ -40,8 +40,8 @@ function escapeCsvField(val: unknown): string {
   if (val === null || val === undefined) {
     return '""';
   }
-  const str = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val ?? '');
-  return `"${str.replaceAll('"', '""')}"`;
+  const stringValue = typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val ?? '');
+  return `"${stringValue.replaceAll('"', '""')}"`;
 }
 
 export function generateSummaryCsv(data: SummaryRowData[]): string {

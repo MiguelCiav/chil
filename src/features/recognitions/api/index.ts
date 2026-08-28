@@ -23,7 +23,7 @@ export function generateRecognitionId(name: string): string {
     .replace(/[\u0300-\u036f]/g, '') // remove accents
     .replace(/[^a-z0-9_-]/g, '-') // replace non-alphanumeric with hyphen
     .replace(/-+/g, '-') // collapse consecutive hyphens
-    .replace(/^-+|-+$/g, ''); // trim leading/trailing hyphens
+    .replace(/^-|-$/g, ''); // trim leading/trailing hyphens
 
   return `sct-${normalized || 'custom'}`;
 }

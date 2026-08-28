@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ColumnDef,
+  CellContext,
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
@@ -97,7 +98,7 @@ const BATCH_DETAIL_TOUR_STEPS: WalkthroughStep[] = [
   }
 ];
 
-function renderMemberIdentityCell(info: { getValue: () => unknown }) {
+function renderMemberIdentityCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   return (
     <span className="font-mono text-xs sm:text-sm text-neutral/80">
       {info.getValue() as string}
@@ -105,7 +106,7 @@ function renderMemberIdentityCell(info: { getValue: () => unknown }) {
   );
 }
 
-function renderMemberNameCell(info: { row: { original: ScoutMember } }) {
+function renderMemberNameCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const rowData = info.row.original;
   return (
     <span className="font-bold text-neutral">
@@ -114,7 +115,7 @@ function renderMemberNameCell(info: { row: { original: ScoutMember } }) {
   );
 }
 
-function renderMemberUnitCell(info: { getValue: () => unknown }) {
+function renderMemberUnitCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const unit = info.getValue() as ScoutUnit | undefined;
   const badge = getUnitBadge(unit);
   return (
@@ -126,7 +127,7 @@ function renderMemberUnitCell(info: { getValue: () => unknown }) {
   );
 }
 
-function renderMemberTypeCell(info: { getValue: () => unknown }) {
+function renderMemberTypeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const val = info.getValue() as 'young' | 'adult';
   return (
     <span className="text-neutral/70 font-medium text-sm">
@@ -135,30 +136,33 @@ function renderMemberTypeCell(info: { getValue: () => unknown }) {
   );
 }
 
-function renderMemberStatusCell(info: { getValue: () => unknown }) {
+function renderMemberStatusCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const val = info.getValue() as MemberStatus;
   if (val === 'active') {
     return (
       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />Registro Válido
+        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
+        <span>Registro Válido</span>
       </span>
     );
   }
   if (val === 'exceptional') {
     return (
       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />Emisión Excepcional
+        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
+        <span>Emisión Excepcional</span>
       </span>
     );
   }
   return (
     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />Registro Inválido
+      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
+      <span>Registro Inválido</span>
     </span>
   );
 }
 
-function renderMemberCodeCell(info: { getValue: () => unknown; row: { original: ScoutMember } }) {
+function renderMemberCodeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   const rowData = info.row.original;
   const code =
     (info.getValue() as string) ||
