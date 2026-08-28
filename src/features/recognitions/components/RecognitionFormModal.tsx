@@ -16,7 +16,9 @@ interface RecognitionFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   recognition?: RecognitionType | null;
-  onSuccess: (saved: RecognitionType, isEdit: boolean) => void;
+  onSuccess?: (saved: RecognitionType, isEdit?: boolean) => void;
+  onCreateSuccess?: (saved: RecognitionType) => void;
+  onEditSuccess?: (saved: RecognitionType) => void;
 }
 
 function getSubmitButtonText(loading: boolean, isEdit: boolean): string {
@@ -29,7 +31,9 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
   isOpen,
   onClose,
   recognition,
-  onSuccess
+  onSuccess,
+  onCreateSuccess,
+  onEditSuccess
 }) => {
   const { user } = useAuth();
   const isEdit = Boolean(recognition);
@@ -81,7 +85,8 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
           },
           user?.uid
         );
-        onSuccess(updated, true);
+        onEditSuccess?.(updated);
+        onSuccess?.(updated, true);
       } else {
         const created = await createRecognitionType(
           {
@@ -89,7 +94,8 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
           },
           user?.uid
         );
-        onSuccess(created, false);
+        onCreateSuccess?.(created);
+        onSuccess?.(created, false);
       }
       onClose();
     } catch (err) {

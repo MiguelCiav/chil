@@ -192,7 +192,8 @@ function drawKpiBatchesBox(params: KpiBoxParams): void {
   }
 }
 
-function drawKpiTopRecognitionBox(doc: jsPDF, stats: StatisticsDataset, x: number, y: number, w: number, h: number): void {
+function drawKpiTopRecognitionBox(params: KpiBoxParams): void {
+  const { doc, stats, x, y, w, h } = params;
   doc.setFillColor(240, 253, 244);
   doc.setDrawColor(187, 247, 208);
   doc.roundedRect(x, y, w, h, 2, 2, 'FD');
@@ -209,7 +210,8 @@ function drawKpiTopRecognitionBox(doc: jsPDF, stats: StatisticsDataset, x: numbe
   doc.text(`${stats.kpis.topRecognitionCount ?? 0} emitidos`, x + 3, y + 15.5);
 }
 
-function drawKpiTerritoryBox(doc: jsPDF, stats: StatisticsDataset, x: number, y: number, w: number, h: number): void {
+function drawKpiTerritoryBox(params: KpiBoxParams): void {
+  const { doc, stats, x, y, w, h } = params;
   doc.setFillColor(245, 243, 255);
   doc.setDrawColor(221, 214, 254);
   doc.roundedRect(x, y, w, h, 2, 2, 'FD');
@@ -271,12 +273,12 @@ export function drawKpiSummaryBoxes(
   // Row 1
   drawKpiDiplomasBox({ doc, stats, hasYoY, yoy, x: MARGIN, y, w: boxW3, h: boxH });
   drawKpiBatchesBox({ doc, stats, hasYoY, yoy, x: MARGIN + boxW3 + 3, y, w: boxW3, h: boxH });
-  drawKpiTopRecognitionBox(doc, stats, MARGIN + 2 * (boxW3 + 3), y, boxW3, boxH);
+  drawKpiTopRecognitionBox({ doc, stats, hasYoY, yoy, x: MARGIN + 2 * (boxW3 + 3), y, w: boxW3, h: boxH });
 
   y += boxH + 3;
 
   // Row 2
-  drawKpiTerritoryBox(doc, stats, MARGIN, y, boxW2, boxH);
+  drawKpiTerritoryBox({ doc, stats, hasYoY, yoy, x: MARGIN, y, w: boxW2, h: boxH });
   drawKpiDemographicsBox({ doc, stats, hasYoY, yoy, x: MARGIN + boxW2 + 4, y, w: boxW2, h: boxH });
 
   y += boxH + 8;

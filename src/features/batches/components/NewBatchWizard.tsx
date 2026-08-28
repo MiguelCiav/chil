@@ -117,6 +117,7 @@ const step1Schema = z
   );
 
 type Step1FormData = z.infer<typeof step1Schema>;
+
 function splitFullName(name: string): { first_names: string; last_names: string } {
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 4) {

@@ -567,8 +567,8 @@ export const SummaryView: React.FC = () => {
       return groups.filter(g => String(g.district_id) === selectedDistrict);
     }
     if (selectedRegion) {
-      const regionDistrictIds = districts.filter(d => String(d.region_id) === selectedRegion).map(d => d.id);
-      return groups.filter(g => regionDistrictIds.includes(g.district_id));
+      const regionDistrictIds = new Set(districts.filter(d => String(d.region_id) === selectedRegion).map(d => d.id));
+      return groups.filter(g => regionDistrictIds.has(g.district_id));
     }
     return groups;
   }, [groups, districts, selectedRegion, selectedDistrict]);

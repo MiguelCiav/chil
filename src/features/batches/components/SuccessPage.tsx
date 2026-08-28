@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   CheckCircle2,
@@ -72,6 +72,107 @@ async function loadFallbackBatch(): Promise<{ batch: Batch | null; members: Scou
   return { batch: null, members: [] };
 }
 
+function renderSuccessIdentityCell(info: { getValue: () => unknown }) {
+  return <span className="font-mono text-xs sm:text-sm text-neutral/80">{info.getValue() as string}</span>;
+}
+
+function renderSuccessNameCell(info: { row: { original: ScoutMember } }) {
+  const rowData = info.row.original;
+  return <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>;
+}
+
+function renderSuccessTypeCell(info: { getValue: () => unknown }) {
+  const val = info.getValue() as 'young' | 'adult';
+  return (
+    <span className="text-neutral/70 font-medium text-sm">
+      {val === 'young' ? 'Joven' : 'Adulto'}
+    </span>
+  );
+}
+
+function renderSuccessStatusCell(info: { getValue: () => unknown }) {
+  const val = info.getValue() as 'active' | 'pending' | 'exceptional';
+  if (val === 'active') {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />Registro Válido
+      </span>
+    );
+  }
+  if (val === 'exceptional') {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />Emisión Excepcional
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />Registro Inválido
+    </span>
+  );
+}
+
+function renderSuccessCodeCell(info: { row: { original: ScoutMember } }) {
+  const rowData = info.row.original;
+  const code = rowData.recognition_code || '-';
+  return (
+    <span className="font-mono text-xs sm:text-sm font-semibold text-primary">
+      {code}
+    </span>
+  );
+}
+
+function renderSuccessActionsCell(onNavigateToBatch: () => void) {
+  return (
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={onNavigateToBatch}
+        className="p-1.5 border border-gray-200 hover:border-primary text-neutral hover:text-primary rounded-lg transition-all"
+        title="Vista previa"
+      >
+        <Eye size={15} />
+      </button>
+    </div>
+  );
+}
+
+function createSuccessColumns(onNavigateToBatch: () => void): ColumnDef<ScoutMember>[] {
+  return [
+    {
+      accessorKey: 'identity',
+      header: 'CÉDULA',
+      cell: renderSuccessIdentityCell
+    },
+    {
+      accessorKey: 'name',
+      header: 'NOMBRE COMPLETO',
+      cell: renderSuccessNameCell
+    },
+    {
+      accessorKey: 'member_type',
+      header: 'TIPO',
+      cell: renderSuccessTypeCell
+    },
+    {
+      accessorKey: 'status',
+      header: 'ESTATUS',
+      cell: renderSuccessStatusCell
+    },
+    {
+      accessorKey: 'recognition_code',
+      header: 'CÓDIGO REC.',
+      cell: renderSuccessCodeCell
+    },
+    {
+      id: 'actions',
+      header: 'ACCIONES',
+      cell: () => renderSuccessActionsCell(onNavigateToBatch)
+    }
+  ];
+}
+
 export const SuccessPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,6 +186,12 @@ export const SuccessPage: React.FC = () => {
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  // Columns for Resumen del Lote
+  const columns = useMemo(
+    () => createSuccessColumns(() => navigate(`/lotes/${batch?.id}`)),
+    [navigate, batch?.id]
+  );
 
   useEffect(() => {
     const loadBatchData = async () => {
@@ -184,99 +291,6 @@ export const SuccessPage: React.FC = () => {
     pending: members.filter(m => m.status === 'pending').length
   };
 
-  // Columns for Resumen del Lote
-  const columns: ColumnDef<ScoutMember>[] = [
-    {
-      accessorKey: 'identity',
-      header: 'CÉDULA',
-      cell: (info) => (
-        <span className="font-mono text-xs sm:text-sm text-neutral/80">{info.getValue() as string}</span>
-      )
-    },
-    {
-      accessorKey: 'name',
-      header: 'NOMBRE COMPLETO',
-      cell: (info) => {
-        const rowData = info.row.original;
-        return (
-          <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>
-        );
-      }
-    },
-    {
-      accessorKey: 'member_type',
-      header: 'TIPO',
-      cell: (info) => {
-        const val = info.getValue() as 'young' | 'adult';
-        return (
-          <span className="text-neutral/70 font-medium text-sm">
-            {val === 'young' ? 'Joven' : 'Adulto'}
-          </span>
-        );
-      }
-    },
-    {
-      accessorKey: 'status',
-      header: 'ESTATUS',
-      cell: (info) => {
-        const val = info.getValue() as 'active' | 'pending' | 'exceptional';
-        if (val === 'active') {
-          return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
-              Registro Válido
-            </span>
-          );
-        }
-        if (val === 'exceptional') {
-          return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
-              Emisión Excepcional
-            </span>
-          );
-        }
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
-            Registro Inválido
-          </span>
-        );
-      }
-    },
-    {
-      accessorKey: 'recognition_code',
-      header: 'CÓDIGO REC.',
-      cell: (info) => {
-        const rowData = info.row.original;
-        const code = rowData.recognition_code || '-';
-        return (
-          <span className="font-mono text-xs sm:text-sm font-semibold text-primary">
-            {code}
-          </span>
-        );
-      }
-    },
-    {
-      id: 'actions',
-      header: 'ACCIONES',
-      cell: () => {
-        return (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => navigate(`/lotes/${batch.id}`)}
-              className="p-1.5 border border-gray-200 hover:border-primary text-neutral hover:text-primary rounded-lg transition-all"
-              title="Vista previa"
-            >
-              <Eye size={15} />
-            </button>
-          </div>
-        );
-      }
-    }
-  ];
-
   const eligibleCount = members.filter(m => m.status === 'active' || m.status === 'exceptional').length;
 
   return (
@@ -298,9 +312,9 @@ export const SuccessPage: React.FC = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">¡Lote Generado Exitosamente!</h1>
           <p className="text-xs sm:text-sm text-neutral/70 mt-1">
-            El lote{' '}
-            <span className="text-primary font-bold">#{batch?.id}</span>{' '}
-            está listo para ser procesado.
+            {'El lote '}
+            <span className="text-primary font-bold">#{batch?.id}</span>
+            {' está listo para ser procesado.'}
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-3 pt-3">

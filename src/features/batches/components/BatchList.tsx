@@ -432,6 +432,60 @@ function renderBatchTableRows(
   });
 }
 
+interface BatchListColumnsParams {
+  openActionMenuId: number | null;
+  setOpenActionMenuId: React.Dispatch<React.SetStateAction<number | null>>;
+  navigate: ReturnType<typeof useNavigate>;
+  handleDownloadPDF: (batchId: number) => void;
+  handleDeleteClick: (rowData: BatchRowData) => void;
+  downloadingId: number | null;
+}
+
+function createBatchListColumns(params: BatchListColumnsParams): ColumnDef<BatchRowData>[] {
+  return [
+    {
+      accessorKey: 'formattedDate',
+      header: 'FECHA DE EMISIÓN',
+      cell: renderBatchDateCell
+    },
+    {
+      accessorKey: 'regionName',
+      header: 'REGIÓN',
+      cell: renderBatchRegionCell
+    },
+    {
+      accessorKey: 'districtName',
+      header: 'DISTRITO',
+      cell: renderBatchDistrictCell
+    },
+    {
+      accessorKey: 'groupName',
+      header: 'GRUPO',
+      cell: renderBatchGroupCell
+    },
+    {
+      accessorKey: 'recognitionName',
+      header: 'RECONOCIMIENTO',
+      cell: renderBatchRecognitionCell
+    },
+    {
+      accessorKey: 'memberCount',
+      header: 'CANTIDAD',
+      cell: renderBatchMembersCell
+    },
+    {
+      id: 'actions',
+      header: 'ACCIONES',
+      cell: ({ row, table }) =>
+        renderBatchActionsCell({
+          row,
+          table,
+          ...params
+        })
+    }
+  ];
+}
+
 export const BatchList: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -655,53 +709,18 @@ export const BatchList: React.FC = () => {
   }, [tableData, activeFilters]);
 
   // TanStack Table columns definition
-  const columns = useMemo<ColumnDef<BatchRowData>[]>(() => [
-    {
-      accessorKey: 'formattedDate',
-      header: 'FECHA DE EMISIÓN',
-      cell: renderBatchDateCell
-    },
-    {
-      accessorKey: 'regionName',
-      header: 'REGIÓN',
-      cell: renderBatchRegionCell
-    },
-    {
-      accessorKey: 'districtName',
-      header: 'DISTRITO',
-      cell: renderBatchDistrictCell
-    },
-    {
-      accessorKey: 'groupName',
-      header: 'GRUPO',
-      cell: renderBatchGroupCell
-    },
-    {
-      accessorKey: 'recognitionName',
-      header: 'RECONOCIMIENTO',
-      cell: renderBatchRecognitionCell
-    },
-    {
-      accessorKey: 'memberCount',
-      header: 'CANTIDAD',
-      cell: renderBatchMembersCell
-    },
-    {
-      id: 'actions',
-      header: 'ACCIONES',
-      cell: ({ row, table }) =>
-        renderBatchActionsCell({
-          row,
-          table,
-          openActionMenuId,
-          setOpenActionMenuId,
-          navigate,
-          handleDownloadPDF,
-          handleDeleteClick,
-          downloadingId
-        })
-    }
-  ], [openActionMenuId, downloadingId, navigate, handleDownloadPDF, handleDeleteClick]);
+  const columns = useMemo(
+    () =>
+      createBatchListColumns({
+        openActionMenuId,
+        setOpenActionMenuId,
+        navigate,
+        handleDownloadPDF,
+        handleDeleteClick,
+        downloadingId
+      }),
+    [openActionMenuId, downloadingId, navigate, handleDownloadPDF, handleDeleteClick]
+  );
 
   const table = useReactTable({
     data: filteredData,

@@ -289,14 +289,6 @@ export const RecognitionCatalog: React.FC = () => {
     triggerToast(`Reconocimiento "${saved.name}" actualizado exitosamente.`);
   };
 
-  const handleFormSuccess = (saved: RecognitionType, isEdit: boolean) => {
-    if (isEdit) {
-      handleEditSuccess(saved);
-    } else {
-      handleCreateSuccess(saved);
-    }
-  };
-
   const handleDeleteSuccess = (deletedId: string) => {
     const deleted = recognitions.find(r => r.id === deletedId);
     setRecognitions(prev => prev.filter(r => r.id !== deletedId));
@@ -486,7 +478,8 @@ export const RecognitionCatalog: React.FC = () => {
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
         recognition={editingRecognition}
-        onSuccess={handleFormSuccess}
+        onCreateSuccess={handleCreateSuccess}
+        onEditSuccess={handleEditSuccess}
       />
 
       <RecognitionDeleteModal

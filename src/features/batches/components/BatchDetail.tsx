@@ -5,7 +5,8 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
-  flexRender
+  flexRender,
+  Row
 } from '@tanstack/react-table';
 import {
   Download,
@@ -95,6 +96,218 @@ const BATCH_DETAIL_TOUR_STEPS: WalkthroughStep[] = [
     placement: 'left'
   }
 ];
+
+function renderMemberIdentityCell(info: { getValue: () => unknown }) {
+  return (
+    <span className="font-mono text-xs sm:text-sm text-neutral/80">
+      {info.getValue() as string}
+    </span>
+  );
+}
+
+function renderMemberNameCell(info: { row: { original: ScoutMember } }) {
+  const rowData = info.row.original;
+  return (
+    <span className="font-bold text-neutral">
+      {rowData.first_names} {rowData.last_names}
+    </span>
+  );
+}
+
+function renderMemberUnitCell(info: { getValue: () => unknown }) {
+  const unit = info.getValue() as ScoutUnit | undefined;
+  const badge = getUnitBadge(unit);
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}
+    >
+      {badge.label}
+    </span>
+  );
+}
+
+function renderMemberTypeCell(info: { getValue: () => unknown }) {
+  const val = info.getValue() as 'young' | 'adult';
+  return (
+    <span className="text-neutral/70 font-medium text-sm">
+      {val === 'young' ? 'Joven' : 'Adulto'}
+    </span>
+  );
+}
+
+function renderMemberStatusCell(info: { getValue: () => unknown }) {
+  const val = info.getValue() as MemberStatus;
+  if (val === 'active') {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />Registro Válido
+      </span>
+    );
+  }
+  if (val === 'exceptional') {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />Emisión Excepcional
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />Registro Inválido
+    </span>
+  );
+}
+
+function renderMemberCodeCell(info: { getValue: () => unknown; row: { original: ScoutMember } }) {
+  const rowData = info.row.original;
+  const code =
+    (info.getValue() as string) ||
+    (rowData.status === 'active' || rowData.status === 'exceptional'
+      ? `REC-${rowData.identity.slice(-4)}`
+      : '-');
+  return <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>;
+}
+
+interface MemberActionsCellProps {
+  row: Row<ScoutMember>;
+  table: ReturnType<typeof useReactTable<ScoutMember>>;
+  activeMenuMemberId: string | null;
+  setActiveMenuMemberId: React.Dispatch<React.SetStateAction<string | null>>;
+  setViewingMember: (member: ScoutMember) => void;
+  handleEditClick: (member: ScoutMember) => void;
+  handleDownloadSingleRecognition: (member: ScoutMember) => void;
+}
+
+function renderMemberActionsCell(props: MemberActionsCellProps) {
+  const {
+    row,
+    table,
+    activeMenuMemberId,
+    setActiveMenuMemberId,
+    setViewingMember,
+    handleEditClick,
+    handleDownloadSingleRecognition
+  } = props;
+  const rowData = row.original;
+  const isMenuOpen = activeMenuMemberId === rowData.identity;
+  const totalRows = table.getRowModel().rows.length;
+  const isNearBottom =
+    (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
+  const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
+
+  return (
+    <div
+      data-walkthrough="batch-detail-table-actions"
+      className="flex items-center gap-2 relative"
+    >
+      {/* Quick View Eye Icon Button */}
+      <button
+        type="button"
+        onClick={() => setViewingMember(rowData)}
+        className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+        title="Ver detalle del miembro"
+        aria-label={`Ver detalle de ${rowData.first_names} ${rowData.last_names}`}
+      >
+        <Eye className="w-4 h-4" />
+      </button>
+
+      {/* Actions 3-Dots Menu */}
+      <div className="relative inline-block">
+        <button
+          type="button"
+          onClick={() => setActiveMenuMemberId(isMenuOpen ? null : rowData.identity)}
+          className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
+          aria-label={`Opciones de ${rowData.first_names} ${rowData.last_names}`}
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
+
+        {isMenuOpen && (
+          <div
+            className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}
+          >
+            <button
+              type="button"
+              onClick={() => handleEditClick(rowData)}
+              className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-primary" />
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMenuMemberId(null);
+                setViewingMember(rowData);
+              }}
+              className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+            >
+              <Eye className="w-3.5 h-3.5 text-primary" />
+              Ver Ficha
+            </button>
+            {(rowData.status === 'active' || rowData.status === 'exceptional') && (
+              <button
+                type="button"
+                onClick={() => handleDownloadSingleRecognition(rowData)}
+                className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+              >
+                <Award className="w-3.5 h-3.5 text-primary" />
+                Descargar Reconocimiento (PDF)
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function createBatchDetailColumns(
+  actionsProps: Omit<MemberActionsCellProps, 'row' | 'table'>
+): ColumnDef<ScoutMember>[] {
+  return [
+    {
+      accessorKey: 'identity',
+      header: 'CÉDULA',
+      cell: renderMemberIdentityCell
+    },
+    {
+      accessorKey: 'name',
+      header: 'NOMBRE',
+      cell: renderMemberNameCell
+    },
+    {
+      accessorKey: 'unit',
+      header: 'UNIDAD',
+      cell: renderMemberUnitCell
+    },
+    {
+      accessorKey: 'member_type',
+      header: 'TIPO',
+      cell: renderMemberTypeCell
+    },
+    {
+      accessorKey: 'status',
+      header: 'ESTATUS',
+      cell: renderMemberStatusCell
+    },
+    {
+      accessorKey: 'recognition_code',
+      header: 'CÓDIGO REC.',
+      cell: renderMemberCodeCell
+    },
+    {
+      id: 'actions',
+      header: 'ACCIONES',
+      cell: ({ row, table }) =>
+        renderMemberActionsCell({
+          row,
+          table,
+          ...actionsProps
+        })
+    }
+  ];
+}
 
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -305,177 +518,15 @@ export const BatchDetail: React.FC = () => {
   }, [members, searchQuery]);
 
   // TanStack Table columns
-  const columns = useMemo<ColumnDef<ScoutMember>[]>(
-    () => [
-      {
-        accessorKey: 'identity',
-        header: 'CÉDULA',
-        cell: (info) => (
-          <span className="font-mono text-xs sm:text-sm text-neutral/80">
-            {info.getValue() as string}
-          </span>
-        )
-      },
-      {
-        accessorKey: 'name',
-        header: 'NOMBRE',
-        cell: (info) => {
-          const rowData = info.row.original;
-          return (
-            <span className="font-bold text-neutral">
-              {rowData.first_names} {rowData.last_names}
-            </span>
-          );
-        }
-      },
-      {
-        accessorKey: 'unit',
-        header: 'UNIDAD',
-        cell: (info) => {
-          const unit = info.getValue() as ScoutUnit | undefined;
-          const badge = getUnitBadge(unit);
-          return (
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}
-            >
-              {badge.label}
-            </span>
-          );
-        }
-      },
-      {
-        accessorKey: 'member_type',
-        header: 'TIPO',
-        cell: (info) => {
-          const val = info.getValue() as 'young' | 'adult';
-          return (
-            <span className="text-neutral/70 font-medium text-sm">
-              {val === 'young' ? 'Joven' : 'Adulto'}
-            </span>
-          );
-        }
-      },
-      {
-        accessorKey: 'status',
-        header: 'ESTATUS',
-        cell: (info) => {
-          const val = info.getValue() as MemberStatus;
-          if (val === 'active') {
-            return (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
-                Registro Válido
-              </span>
-            );
-          }
-          if (val === 'exceptional') {
-            return (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
-                Emisión Excepcional
-              </span>
-            );
-          }
-          return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
-              Registro Inválido
-            </span>
-          );
-        }
-      },
-      {
-        accessorKey: 'recognition_code',
-        header: 'CÓDIGO REC.',
-        cell: (info) => {
-          const rowData = info.row.original;
-          const code =
-            (info.getValue() as string) ||
-            (rowData.status === 'active' || rowData.status === 'exceptional'
-              ? `REC-${rowData.identity.slice(-4)}`
-              : '-');
-          return <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>;
-        }
-      },
-      {
-        id: 'actions',
-        header: 'ACCIONES',
-        cell: ({ row, table }) => {
-          const rowData = row.original;
-          const isMenuOpen = activeMenuMemberId === rowData.identity;
-          const totalRows = table.getRowModel().rows.length;
-          const isNearBottom =
-            (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
-          const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
-
-          return (
-            <div
-              data-walkthrough="batch-detail-table-actions"
-              className="flex items-center gap-2 relative"
-            >
-              {/* Quick View Eye Icon Button */}
-              <button
-                type="button"
-                onClick={() => setViewingMember(rowData)}
-                className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                title="Ver detalle del miembro"
-                aria-label={`Ver detalle de ${rowData.first_names} ${rowData.last_names}`}
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-
-              {/* Actions 3-Dots Menu */}
-              <div className="relative inline-block">
-                <button
-                  type="button"
-                  onClick={() => setActiveMenuMemberId(isMenuOpen ? null : rowData.identity)}
-                  className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
-                  aria-label={`Opciones de ${rowData.first_names} ${rowData.last_names}`}
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-
-                {isMenuOpen && (
-                  <div
-                    className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleEditClick(rowData)}
-                      className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-primary" />
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveMenuMemberId(null);
-                        setViewingMember(rowData);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-primary" />
-                      Ver Ficha
-                    </button>
-                    {(rowData.status === 'active' || rowData.status === 'exceptional') && (
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadSingleRecognition(rowData)}
-                        className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-                      >
-                        <Award className="w-3.5 h-3.5 text-primary" />
-                        Descargar Reconocimiento (PDF)
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        }
-      }
-    ],
+  const columns = useMemo(
+    () =>
+      createBatchDetailColumns({
+        activeMenuMemberId,
+        setActiveMenuMemberId,
+        setViewingMember,
+        handleEditClick,
+        handleDownloadSingleRecognition
+      }),
     [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition]
   );
 

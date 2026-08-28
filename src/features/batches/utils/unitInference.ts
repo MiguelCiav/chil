@@ -1,4 +1,12 @@
-import { ScoutMember, ScoutUnit, BatchUnitScope } from '../types';
+import { ScoutMember, ScoutUnit, BatchUnitScope, District } from '../types';
+
+export function filterStep2MembersByHierarchy<T extends { district_id?: number }>(
+  members: T[],
+  regionDistricts: District[]
+): T[] {
+  const regionDistrictIds = new Set(regionDistricts.map(d => d.id));
+  return members.filter(m => m.district_id !== undefined && regionDistrictIds.has(m.district_id));
+}
 
 export type YouthScoutUnit = 'manada' | 'tropa' | 'caminantes' | 'clan';
 

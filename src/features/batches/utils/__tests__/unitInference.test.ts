@@ -133,4 +133,23 @@ describe('unitInference utility', () => {
       expect(result[0].status).toBe('active');
     });
   });
+
+  describe('filterStep2MembersByHierarchy', () => {
+    it('filters members based on district IDs of the given region using Set lookup', async () => {
+      const { filterStep2MembersByHierarchy } = await import('../unitInference');
+      const districts = [
+        { id: 101, name: 'Distrito 1', region_id: 1 },
+        { id: 102, name: 'Distrito 2', region_id: 1 }
+      ];
+      const members = [
+        { identity: '1', district_id: 101 },
+        { identity: '2', district_id: 999 },
+        { identity: '3', district_id: 102 },
+        { identity: '4' }
+      ];
+      const filtered = filterStep2MembersByHierarchy(members, districts);
+      expect(filtered).toHaveLength(2);
+      expect(filtered.map(m => m.identity)).toEqual(['1', '3']);
+    });
+  });
 });

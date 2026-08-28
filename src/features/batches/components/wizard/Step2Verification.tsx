@@ -113,10 +113,12 @@ const NameCell: React.FC<{ readonly value: string }> = ({ value }) => (
   <span className="text-neutral/80">{value || 'Pendiente...'}</span>
 );
 
+export type Step2MemberColumnDef = ColumnDef<MemberVerificationResult>;
+
 const createStep2Columns = (
   verifyCedula: (cedula: string, type: 'young' | 'adult', unit?: ScoutUnit) => void,
   handleToggleMemberType: (cedula: string) => void
-): ColumnDef<MemberVerificationResult>[] => [
+): Step2MemberColumnDef[] => [
   {
     accessorKey: 'cedula',
     header: 'Cédula',
