@@ -26,16 +26,29 @@ interface TrendBarMetrics {
   singleBarH: number;
 }
 
-function calculateTrendBarMetrics(
-  idx: number,
-  slotWidth: number,
-  chartHeight: number,
-  paddingLeft: number,
-  paddingTop: number,
-  maxVal: number,
-  currentCount: number,
-  previousCount: number = 0
-): TrendBarMetrics {
+export interface TrendBarMetricsParams {
+  idx: number;
+  slotWidth: number;
+  chartHeight: number;
+  paddingLeft: number;
+  paddingTop: number;
+  maxVal: number;
+  currentCount: number;
+  previousCount?: number;
+}
+
+function calculateTrendBarMetrics(params: TrendBarMetricsParams): TrendBarMetrics {
+  const {
+    idx,
+    slotWidth,
+    chartHeight,
+    paddingLeft,
+    paddingTop,
+    maxVal,
+    currentCount,
+    previousCount = 0
+  } = params;
+
   const slotX = paddingLeft + idx * slotWidth;
   const xCenter = slotX + slotWidth / 2;
   const singleBarWidth = Math.max(slotWidth * 0.55, 14);
@@ -621,16 +634,16 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
           {/* Dual or Single Month Bars */}
           {hasYoY && yoy ? (
             yoy.monthly.map((item, idx) => {
-              const metrics = calculateTrendBarMetrics(
+              const metrics = calculateTrendBarMetrics({
                 idx,
                 slotWidth,
                 chartHeight,
                 paddingLeft,
                 paddingTop,
                 maxVal,
-                item.currentCount,
-                item.previousCount
-              );
+                currentCount: item.currentCount,
+                previousCount: item.previousCount
+              });
               return (
                 <MonthlyTrendDualBar
                   key={item.label}
@@ -649,15 +662,15 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
             })
           ) : (
             data.map((item, idx) => {
-              const metrics = calculateTrendBarMetrics(
+              const metrics = calculateTrendBarMetrics({
                 idx,
                 slotWidth,
                 chartHeight,
                 paddingLeft,
                 paddingTop,
                 maxVal,
-                item.totalCount
-              );
+                currentCount: item.totalCount
+              });
               return (
                 <MonthlyTrendSingleBar
                   key={item.monthKey}

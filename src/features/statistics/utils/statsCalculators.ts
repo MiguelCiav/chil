@@ -175,16 +175,30 @@ function buildYoYRegionComparison(
   });
 }
 
+export interface BuildYoYDistrictComparisonOptions {
+  currentMembers: ScoutMember[];
+  previousMembers: ScoutMember[];
+  currentBatchMap: Map<number, Batch>;
+  previousBatchMap: Map<number, Batch>;
+  regions: Region[];
+  districts: District[];
+  currentMembersCount: number;
+  previousMembersCount: number;
+}
+
 function buildYoYDistrictComparison(
-  currentMembers: ScoutMember[],
-  previousMembers: ScoutMember[],
-  currentBatchMap: Map<number, Batch>,
-  previousBatchMap: Map<number, Batch>,
-  regions: Region[],
-  districts: District[],
-  currentMembersCount: number,
-  previousMembersCount: number
+  options: BuildYoYDistrictComparisonOptions
 ): YoYDistrictItem[] {
+  const {
+    currentMembers,
+    previousMembers,
+    currentBatchMap,
+    previousBatchMap,
+    regions,
+    districts,
+    currentMembersCount,
+    previousMembersCount
+  } = options;
   const currentDistrictCounts = new Map<number, number>();
   currentMembers.forEach(m => {
     if (m.batch_id && currentBatchMap.has(m.batch_id)) {
@@ -433,7 +447,7 @@ export function calculateYoYComparison(options: CalculateYoYOptions): YoYCompari
   );
 
   // 5. District Comparison
-  const yoyDistricts = buildYoYDistrictComparison(
+  const yoyDistricts = buildYoYDistrictComparison({
     currentMembers,
     previousMembers,
     currentBatchMap,
@@ -442,7 +456,7 @@ export function calculateYoYComparison(options: CalculateYoYOptions): YoYCompari
     districts,
     currentMembersCount,
     previousMembersCount
-  );
+  });
 
   // 6. Unit Comparison
   const yoyUnits = buildYoYUnitComparison(

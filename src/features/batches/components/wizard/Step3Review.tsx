@@ -244,12 +244,12 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   onChange={() => handleModeChange('auto')}
                   className="mt-0.5 text-primary focus:ring-primary accent-primary"
                 />
-                <div className="text-xs">
-                  <div className="font-bold text-neutral">Generar automáticamente</div>
-                  <div className="text-neutral/50 mt-0.5">
+                <span className="text-xs">
+                  <span className="block font-bold text-neutral">Generar automáticamente</span>
+                  <span className="block text-neutral/50 mt-0.5">
                     Genera hashes únicos alfanuméricos como <span className="font-mono font-semibold text-primary">REC-A8F2</span> para todos los scouts activos.
-                  </div>
-                </div>
+                  </span>
+                </span>
               </label>
 
               <label
@@ -269,12 +269,12 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   onChange={() => handleModeChange('manual')}
                   className="mt-0.5 text-primary focus:ring-primary accent-primary"
                 />
-                <div className="text-xs">
-                  <div className="font-bold text-neutral">Ingreso manual</div>
-                  <div className="text-neutral/50 mt-0.5">
+                <span className="text-xs">
+                  <span className="block font-bold text-neutral">Ingreso manual</span>
+                  <span className="block text-neutral/50 mt-0.5">
                     Permite escribir o personalizar los números de certificado oficiales para cada scout en la tabla.
-                  </div>
-                </div>
+                  </span>
+                </span>
               </label>
             </div>
           </div>
@@ -347,9 +347,12 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
                     {member.status === 'active' || member.status === 'exceptional' ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold text-neutral/60 tracking-wider uppercase whitespace-nowrap">
+                        <label
+                          htmlFor={`rec-code-${member.identity}`}
+                          className="text-[11px] font-bold text-neutral/60 tracking-wider uppercase whitespace-nowrap cursor-pointer"
+                        >
                           CÓDIGO:
-                        </span>
+                        </label>
                         <input
                           id={`rec-code-${member.identity}`}
                           type="text"

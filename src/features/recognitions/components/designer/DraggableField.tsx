@@ -48,28 +48,47 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
   const fieldTitle = isPreviewMode ? undefined : `${field.label} (${field.x}%, ${field.y}%)`;
   const fieldPadding = isPreviewMode ? '0px' : '2px 6px';
 
+  if (isPreviewMode) {
+    return (
+      <div
+        className="absolute z-10 select-none cursor-default"
+        style={{
+          left: `${field.x}%`,
+          top: `${field.y}%`,
+          transform: getAlignTransform(field.align),
+          fontFamily: getFontFamilyStyle(field.font_family),
+          fontSize: `${displayFontSizePx}px`,
+          fontWeight: getFieldFontWeight(field.font_weight),
+          fontStyle: getFieldFontStyle(field.font_weight),
+          color: field.color,
+          textAlign: field.align,
+          padding: fieldPadding,
+          whiteSpace: 'nowrap'
+        }}
+      >
+        {displayText}
+      </div>
+    );
+  }
+
   return (
-    <div
-      role="button"
-      tabIndex={isPreviewMode ? -1 : 0}
+    <button
+      type="button"
+      tabIndex={0}
       aria-label={field.label}
       aria-pressed={isSelected}
-      onPointerDown={(e) => onPointerDown(e, field.id)}
+      onPointerDown={(e) => onPointerDown(e as unknown as React.PointerEvent<HTMLDivElement>, field.id)}
       onClick={(e) => {
         e.stopPropagation();
-        if (!isPreviewMode) {
-          onSelect(field.id);
-        }
+        onSelect(field.id);
       }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          if (!isPreviewMode) {
-            onSelect(field.id);
-          }
+          onSelect(field.id);
         }
       }}
-      className={`absolute z-10 select-none transition-shadow ${getFieldClass(isPreviewMode, isSelected)}`}
+      className={`absolute z-10 select-none transition-shadow border-0 outline-hidden ${getFieldClass(false, isSelected)}`}
       style={{
         left: `${field.x}%`,
         top: `${field.y}%`,
@@ -87,15 +106,15 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
     >
       {/* Floating Position Badge when Selected */}
       {isSelected && (
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow whitespace-nowrap flex items-center gap-1 pointer-events-none">
+        <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow whitespace-nowrap flex items-center gap-1 pointer-events-none">
           <Move className="w-2.5 h-2.5" />
           <span>
             {field.label} ({field.x}%, {field.y}%)
           </span>
-        </div>
+        </span>
       )}
 
       {displayText}
-    </div>
+    </button>
   );
 };

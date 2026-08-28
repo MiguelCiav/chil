@@ -136,7 +136,7 @@ export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
   onPositionChange,
   className = ''
 }) => {
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number }>({ top: 100, left: 100 });
 
   const isLastStep = stepIndex === totalSteps - 1;
@@ -152,7 +152,7 @@ export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
       targetRect,
       dialogWidth,
       dialogHeight,
-      step.placement || 'auto'
+      step.placement ?? 'auto'
     );
 
     setPosition({ top, left });
@@ -166,16 +166,16 @@ export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
   }, [targetRect, step, onPositionChange]);
 
   return (
-    <div
+    <dialog
+      open
       ref={dialogRef}
-      role="dialog"
       aria-modal="true"
       aria-labelledby="walkthrough-dialog-title"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`
       }}
-      className={`fixed z-50 w-[calc(100vw-32px)] max-w-[380px] bg-white rounded-2xl shadow-2xl border border-primary/20 p-5 font-sans pointer-events-auto transition-all duration-200 ${className}`}
+      className={`fixed z-50 w-[calc(100vw-32px)] max-w-[380px] bg-white rounded-2xl shadow-2xl border border-primary/20 p-5 font-sans pointer-events-auto transition-all duration-200 m-0 ${className}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -231,6 +231,6 @@ export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };

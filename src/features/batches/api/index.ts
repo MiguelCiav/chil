@@ -218,16 +218,16 @@ function generateSecureBatchId(): number {
 
 export async function createBatch(params: BatchCreationParams, userId?: string): Promise<Batch> {
   const numericId = generateSecureBatchId();
-  const targetUserId = params.user_id || (userId !== undefined ? userId : (auth.currentUser?.uid || ''));
+  const targetUserId = params.user_id ?? (userId !== undefined ? userId : (auth.currentUser?.uid ?? ''));
   const newBatch: Batch = {
     id: numericId,
-    comment: params.comment || '',
+    comment: params.comment ?? '',
     region_id: params.region_id,
     district_id: params.district_id,
     group_id: params.group_id,
-    unit_scope: params.unit_scope || 'mixed',
+    unit_scope: params.unit_scope ?? 'mixed',
     recognition_type: params.recognition_type,
-    recognition_duration: params.recognition_duration || '',
+    recognition_duration: params.recognition_duration ?? '',
     created_at: new Date().toISOString(),
     ...(targetUserId ? { user_id: targetUserId } : {})
   };
@@ -241,17 +241,17 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
   const batchRef = doc(db, "batches", String(id));
   const docSnap = await getDoc(batchRef);
   const existingData = docSnap.exists() ? (docSnap.data() as Batch) : null;
-  const targetUserId = params.user_id || (userId !== undefined ? userId : (existingData?.user_id || auth.currentUser?.uid || ''));
+  const targetUserId = params.user_id ?? (userId !== undefined ? userId : (existingData?.user_id ?? auth.currentUser?.uid ?? ''));
 
   const updatedBatch: Batch = {
     id,
-    comment: params.comment || '',
+    comment: params.comment ?? '',
     region_id: params.region_id,
     district_id: params.district_id,
     group_id: params.group_id,
-    unit_scope: params.unit_scope || existingData?.unit_scope || 'mixed',
+    unit_scope: params.unit_scope ?? existingData?.unit_scope ?? 'mixed',
     recognition_type: params.recognition_type,
-    recognition_duration: params.recognition_duration || '',
+    recognition_duration: params.recognition_duration ?? '',
     created_at: existingData ? existingData.created_at : new Date().toISOString(),
     ...(targetUserId ? { user_id: targetUserId } : {})
   };
@@ -287,12 +287,12 @@ export async function getMemberStatus(cedula: string): Promise<ScraperMemberDeta
   } catch (error: unknown) {
     console.error("Scraper function failed:", error);
     const err = error as Error;
-    throw new Error(err?.message || "Error de red", { cause: error });
+    throw new Error(err?.message ?? "Error de red", { cause: error });
   }
 }
 
 export async function createMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
-  const targetUserId = member.user_id || (userId !== undefined ? userId : (auth.currentUser?.uid || ''));
+  const targetUserId = member.user_id ?? (userId !== undefined ? userId : (auth.currentUser?.uid ?? ''));
   const newMember: ScoutMember = {
     ...member,
     ...(targetUserId ? { user_id: targetUserId } : {})
@@ -303,7 +303,7 @@ export async function createMember(member: ScoutMember, userId?: string): Promis
 }
 
 export async function updateMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
-  const targetUserId = member.user_id || (userId !== undefined ? userId : (auth.currentUser?.uid || ''));
+  const targetUserId = member.user_id ?? (userId !== undefined ? userId : (auth.currentUser?.uid ?? ''));
   const updatedMember: ScoutMember = {
     ...member,
     ...(targetUserId ? { user_id: targetUserId } : {})
@@ -339,7 +339,7 @@ export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[
 }
 
 export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
-  const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid || '');
+  const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid ?? '');
   if (!targetUserId) {
     return [];
   }
@@ -363,7 +363,7 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
 }
 
 export async function getAllBatches(userId?: string): Promise<Batch[]> {
-  const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid || '');
+  const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid ?? '');
   if (!targetUserId) {
     return [];
   }
@@ -410,22 +410,22 @@ export async function loginScraper(): Promise<void> {
   } catch (error: unknown) {
     console.error("Scraper login failed:", error);
     const err = error as Error;
-    throw new Error(err?.message || "Credenciales incorrectas o inicio de sesión fallido", { cause: error });
+    throw new Error(err?.message ?? "Credenciales incorrectas o inicio de sesión fallido", { cause: error });
   }
 }
 
 export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
   const headers = ['Cédula', 'Nombres', 'Apellidos', 'Tipo', 'Estatus', 'Código Rec.', 'Fecha Nacimiento', 'Email', 'Teléfono'];
   const rows = members.map(m => [
-    `"${m.identity || ''}"`,
-    `"${m.first_names || ''}"`,
-    `"${m.last_names || ''}"`,
+    `"${m.identity ?? ''}"`,
+    `"${m.first_names ?? ''}"`,
+    `"${m.last_names ?? ''}"`,
     `"${m.member_type === 'young' ? 'Joven' : 'Adulto'}"`,
     `"${m.status === 'active' ? 'Registro Válido' : m.status === 'exceptional' ? 'Emisión Excepcional' : 'No registrado'}"`,
-    `"${m.recognition_code || '-'}"`,
-    `"${m.birth_date || '-'}"`,
-    `"${m.email || ''}"`,
-    `"${m.phone || ''}"`
+    `"${m.recognition_code ?? '-'}"`,
+    `"${m.birth_date ?? '-'}"`,
+    `"${m.email ?? ''}"`,
+    `"${m.phone ?? ''}"`
   ]);
   
   const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
@@ -463,12 +463,12 @@ export async function generateBatchReport(
     batch = batchOrId;
   }
   if (!batch) throw new Error("Lote no encontrado");
-  const members = membersParam || (await getMembersByBatchId(batch.id));
-  const hierarchy = hierarchyParam || (await getHierarchyData());
+  const members = membersParam ?? (await getMembersByBatchId(batch.id));
+  const hierarchy = hierarchyParam ?? (await getHierarchyData());
   
-  const region = (!batch.region_id || batch.region_id === 0) ? 'No aplica' : (hierarchy.regions.find(r => r.id === batch.region_id)?.name || `Región ${batch.region_id}`);
-  const district = (!batch.district_id || batch.district_id === 0) ? 'No aplica' : (hierarchy.districts.find(d => d.id === batch.district_id)?.name || `Distrito ${batch.district_id}`);
-  const group = (!batch.group_id || batch.group_id === 0) ? 'No aplica' : (hierarchy.groups.find(g => g.id === batch.group_id)?.name || `Grupo ${batch.group_id}`);
+  const region = (!batch.region_id || batch.region_id === 0) ? 'No aplica' : (hierarchy.regions.find(r => r.id === batch.region_id)?.name ?? `Región ${batch.region_id}`);
+  const district = (!batch.district_id || batch.district_id === 0) ? 'No aplica' : (hierarchy.districts.find(d => d.id === batch.district_id)?.name ?? `Distrito ${batch.district_id}`);
+  const group = (!batch.group_id || batch.group_id === 0) ? 'No aplica' : (hierarchy.groups.find(g => g.id === batch.group_id)?.name ?? `Grupo ${batch.group_id}`);
 
   const docPdf = new jsPDF();
   
@@ -493,7 +493,7 @@ export async function generateBatchReport(
   
   docPdf.setFont("helvetica", "normal");
   docPdf.setFontSize(11);
-  docPdf.text(`Comentario: ${batch.comment || 'Ninguno'}`, 14, 50);
+  docPdf.text(`Comentario: ${batch.comment ?? 'Ninguno'}`, 14, 50);
   docPdf.text(`ID del Lote: ${batch.id}`, 14, 56);
   docPdf.text(`Fecha de Creación: ${new Date(batch.created_at).toLocaleString()}`, 14, 62);
   

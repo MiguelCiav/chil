@@ -191,7 +191,7 @@ describe('SummaryView component', () => {
     expect(screen.getByText('Rodríguez')).toBeInTheDocument();
 
     // Verify status badges
-    expect(screen.getAllByText(/● Registro Válido/i).length).toBe(2);
+    expect(screen.getAllByText(/● Registro Válido/i)).toHaveLength(2);
     expect(screen.getByText(/● Emisión Excepcional/i)).toBeInTheDocument();
     expect(screen.getByText(/● Registro Inválido/i)).toBeInTheDocument();
 

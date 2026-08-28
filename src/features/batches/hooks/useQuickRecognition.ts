@@ -83,6 +83,114 @@ export function validateQuickRecognitionFields(params: QuickRecognitionValidatio
   return newErrors;
 }
 
+export function resolveQuickRecognitionType(
+  recognitionType: string,
+  availableRecognitionTypes: (RecognitionType | { id: string; name: string })[]
+): RecognitionType {
+  const found = availableRecognitionTypes.find(r => r.id === recognitionType);
+  return {
+    id: found?.id ?? recognitionType,
+    name: found?.name ?? recognitionType,
+    created_at: (found && 'created_at' in found && found.created_at) ? (found as RecognitionType).created_at : new Date().toISOString(),
+    ...(found && 'template' in found && found.template ? { template: (found as RecognitionType).template } : {})
+  };
+}
+
+export interface QuickEmissionExecutionParams {
+  comment: string;
+  regionId: string;
+  districtId: string;
+  groupId: string;
+  unit: ScoutUnit;
+  recognitionType: string;
+  identity: string;
+  firstNames: string;
+  lastNames: string;
+  birthDate: string;
+  email: string;
+  phone: string;
+  recognitionCode: string;
+  userId?: string;
+  availableRecognitionTypes: (RecognitionType | { id: string; name: string })[];
+  regions: Region[];
+  districts: District[];
+  groups: ScoutGroup[];
+}
+
+export async function executeQuickEmission(params: QuickEmissionExecutionParams): Promise<SuccessEmissionData> {
+  const {
+    comment,
+    regionId,
+    districtId,
+    groupId,
+    unit,
+    recognitionType,
+    identity,
+    firstNames,
+    lastNames,
+    birthDate,
+    email,
+    phone,
+    recognitionCode,
+    userId,
+    availableRecognitionTypes,
+    regions,
+    districts,
+    groups
+  } = params;
+
+  const isNoScout = unit === 'no_scout';
+  const finalRegionId = (isNoScout && (!regionId || regionId === '')) ? 0 : Number(regionId);
+  const finalDistrictId = (isNoScout && (!districtId || districtId === '')) ? 0 : Number(districtId);
+  const finalGroupId = (isNoScout && (!groupId || groupId === '')) ? 0 : Number(groupId);
+
+  // 1. Create single-member Batch
+  const createdBatch = await createBatch({
+    comment: comment.trim() || undefined,
+    region_id: finalRegionId,
+    district_id: finalDistrictId,
+    group_id: finalGroupId,
+    unit_scope: unit,
+    recognition_type: recognitionType,
+    user_id: userId
+  }, userId);
+
+  // 2. Create Member
+  const memberType = (unit === 'institucional' || unit === 'no_scout') ? 'adult' : 'young';
+  const createdMember = await createMember({
+    identity: identity.trim(),
+    first_names: firstNames.trim(),
+    last_names: lastNames.trim(),
+    birth_date: birthDate || '2000-01-01',
+    email: email || undefined,
+    phone: phone || undefined,
+    unit,
+    member_type: memberType,
+    status: 'active',
+    verified_in_registry: unit !== 'no_scout',
+    batch_id: createdBatch.id,
+    recognition_code: recognitionCode.trim(),
+    user_id: userId
+  }, userId);
+
+  // 3. Resolve Recognition Object
+  const resolvedRec = resolveQuickRecognitionType(recognitionType, availableRecognitionTypes);
+
+  // 4. Download Single Certificate PDF
+  await downloadSingleCertificatePdf({
+    member: createdMember,
+    batch: createdBatch,
+    recognition: resolvedRec,
+    hierarchy: { regions, districts, groups }
+  });
+
+  return {
+    batch: createdBatch,
+    member: createdMember,
+    recognitionName: resolvedRec.name
+  };
+}
+
 export function useQuickRecognition() {
   const { user } = useAuth();
 
@@ -141,10 +249,10 @@ export function useQuickRecognition() {
       getAllRecognitionTypes(user?.uid)
     ])
       .then(([hierarchy, recTypes]) => {
-        setRegions(hierarchy.regions || []);
-        setDistricts(hierarchy.districts || []);
-        setGroups(hierarchy.groups || []);
-        setRecognitionTypes(recTypes || []);
+        setRegions(hierarchy.regions ?? []);
+        setDistricts(hierarchy.districts ?? []);
+        setGroups(hierarchy.groups ?? []);
+        setRecognitionTypes(recTypes ?? []);
       })
       .catch((err) => {
         console.error('Error loading quick recognition metadata:', err);
@@ -390,63 +498,28 @@ export function useQuickRecognition() {
     setIsSubmitting(true);
 
     try {
-      const finalRegionId = (unit === 'no_scout' && (!regionId || regionId === '')) ? 0 : Number(regionId);
-      const finalDistrictId = (unit === 'no_scout' && (!districtId || districtId === '')) ? 0 : Number(districtId);
-      const finalGroupId = (unit === 'no_scout' && (!groupId || groupId === '')) ? 0 : Number(groupId);
-
-      // 1. Create single-member Batch
-      const createdBatch = await createBatch({
-        comment: comment.trim() || undefined,
-        region_id: finalRegionId,
-        district_id: finalDistrictId,
-        group_id: finalGroupId,
-        unit_scope: unit,
-        recognition_type: recognitionType,
-        user_id: user?.uid
-      }, user?.uid);
-
-      // 2. Create Member
-      const memberType = (unit === 'institucional' || unit === 'no_scout') ? 'adult' : 'young';
-      const createdMember = await createMember({
-        identity: identity.trim(),
-        first_names: firstNames.trim(),
-        last_names: lastNames.trim(),
-        birth_date: birthDate || '2000-01-01',
-        email: email || undefined,
-        phone: phone || undefined,
+      const result = await executeQuickEmission({
+        comment,
+        regionId,
+        districtId,
+        groupId,
         unit,
-        member_type: memberType,
-        status: 'active',
-        verified_in_registry: unit !== 'no_scout',
-        batch_id: createdBatch.id,
-        recognition_code: recognitionCode.trim(),
-        user_id: user?.uid
-      }, user?.uid);
-
-      // 3. Resolve Recognition Object
-      const found = availableRecognitionTypes.find(r => r.id === recognitionType);
-      const resolvedRec: RecognitionType = {
-        id: found?.id || recognitionType,
-        name: found?.name || recognitionType,
-        created_at: (found && 'created_at' in found && found.created_at) ? (found as RecognitionType).created_at : new Date().toISOString(),
-        ...(found && 'template' in found && found.template ? { template: (found as RecognitionType).template } : {})
-      };
-
-      // 4. Download Single Certificate PDF
-      await downloadSingleCertificatePdf({
-        member: createdMember,
-        batch: createdBatch,
-        recognition: resolvedRec,
-        hierarchy: { regions, districts, groups }
+        recognitionType,
+        identity,
+        firstNames,
+        lastNames,
+        birthDate,
+        email,
+        phone,
+        recognitionCode,
+        userId: user?.uid,
+        availableRecognitionTypes,
+        regions,
+        districts,
+        groups
       });
 
-      // 5. Set Success Screen
-      setSuccessData({
-        batch: createdBatch,
-        member: createdMember,
-        recognitionName: resolvedRec.name
-      });
-
+      setSuccessData(result);
       triggerToast('¡Reconocimiento emitido y descargado exitosamente!', 'success');
     } catch (err) {
       console.error('Error in quick recognition emission:', err);
@@ -456,13 +529,12 @@ export function useQuickRecognition() {
     }
   }, [
     validateForm,
-    unit,
+    comment,
     regionId,
     districtId,
     groupId,
-    comment,
+    unit,
     recognitionType,
-    user,
     identity,
     firstNames,
     lastNames,
@@ -470,6 +542,7 @@ export function useQuickRecognition() {
     email,
     phone,
     recognitionCode,
+    user,
     availableRecognitionTypes,
     regions,
     districts,

@@ -97,21 +97,21 @@ const step1Schema = z.object({
   if (!isNoScout) {
     if (!data.regionId || data.regionId.trim() === '') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['regionId'],
         message: 'Debe seleccionar una región'
       });
     }
     if (!data.districtId || data.districtId.trim() === '') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['districtId'],
         message: 'Debe seleccionar un distrito'
       });
     }
     if (!data.groupId || data.groupId.trim() === '') {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: 'custom',
         path: ['groupId'],
         message: 'Debe seleccionar un grupo scout'
       });
@@ -156,7 +156,7 @@ function getStepCircleClasses(currentStep: number, itemStep: number): string {
 }
 
 function handleScrapeErrorResult(
-  err: Error | unknown
+  err: unknown
 ): { name: string; status: 'No registrado' | 'Error de red'; isUnregistered: boolean } {
   const errStr = err instanceof Error ? err.message : String(err);
   const isUnregistered = errStr.includes("No registrado");

@@ -63,9 +63,9 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
 
             {/* Typography: Font Family */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-neutral">
+              <span className="text-xs font-semibold text-neutral block">
                 Familia Tipográfica
-              </label>
+              </span>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { key: 'helvetica', label: 'Helvetica' },
@@ -109,7 +109,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                 max={48}
                 value={selectedField.font_size}
                 onChange={(e) =>
-                  onUpdateField({ font_size: parseInt(e.target.value, 10) })
+                  onUpdateField({ font_size: Number.parseInt(e.target.value, 10) })
                 }
                 className="w-full accent-primary cursor-pointer"
                 aria-label="Tamaño de fuente"
@@ -118,7 +118,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
 
             {/* Font Weight / Style */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-neutral">Estilo de Texto</label>
+              <span className="text-xs font-semibold text-neutral block">Estilo de Texto</span>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { key: 'normal', label: 'Normal' },
@@ -148,7 +148,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
             {/* Text Color */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <label className="font-semibold text-neutral">Color de Texto</label>
+                <span className="font-semibold text-neutral">Color de Texto</span>
                 <span className="font-mono text-xs text-neutral/60">
                   {selectedField.color}
                 </span>
@@ -184,7 +184,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
 
             {/* Alignment */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-neutral">Alineación</label>
+              <span className="text-xs font-semibold text-neutral block">Alineación</span>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { key: 'left', label: 'Izquierda', icon: <AlignLeft className="w-3.5 h-3.5" /> },
@@ -215,11 +215,14 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
 
             {/* Coordinates X, Y Fine Tuning */}
             <div className="space-y-1.5 pt-2 border-t border-gray-100">
-              <label className="text-xs font-semibold text-neutral">Posición (%)</label>
+              <span className="text-xs font-semibold text-neutral block">Posición (%)</span>
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
-                  <span className="text-[11px] font-bold text-neutral/60 pl-1">X:</span>
+                  <label htmlFor="field-pos-x" className="text-[11px] font-bold text-neutral/60 pl-1 cursor-pointer">
+                    X:
+                  </label>
                   <input
+                    id="field-pos-x"
                     type="number"
                     min={0}
                     max={100}
@@ -235,8 +238,11 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                   <span className="text-[10px] text-neutral/40 pr-1">%</span>
                 </div>
                 <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
-                  <span className="text-[11px] font-bold text-neutral/60 pl-1">Y:</span>
+                  <label htmlFor="field-pos-y" className="text-[11px] font-bold text-neutral/60 pl-1 cursor-pointer">
+                    Y:
+                  </label>
                   <input
+                    id="field-pos-y"
                     type="number"
                     min={0}
                     max={100}

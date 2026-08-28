@@ -37,13 +37,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
       />
 
       {/* Modal Content - No shadow, subtle primary border, rounded */}
-      <div
-        className={`relative bg-white border border-primary/20 rounded-2xl flex flex-col w-full max-h-[90vh] overflow-hidden ${className}`}
-        role="dialog"
+      <dialog
+        open
         aria-modal="true"
+        className={`relative bg-white border border-primary/20 rounded-2xl flex flex-col w-full max-h-[90vh] overflow-hidden m-0 p-0 text-neutral ${className}`}
       >
         {children}
-      </div>
+      </dialog>
     </div>
   );
 };

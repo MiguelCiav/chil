@@ -230,6 +230,62 @@ export function buildFilterSummaryLabels(
   };
 }
 
+export interface ComputeFilteredStatisticsParams {
+  batches: Batch[];
+  members: ScoutMember[];
+  regions: Region[];
+  districts: District[];
+  recognitionTypes: RecognitionType[];
+  filters: StatisticsFilterState;
+}
+
+export function computeFilteredStatisticsDataset(params: ComputeFilteredStatisticsParams) {
+  const { batches, members, regions, districts, recognitionTypes, filters } = params;
+  const batchMap = new Map<number, Batch>();
+  batches.forEach(b => batchMap.set(b.id, b));
+
+  // Filter members
+  const filteredMembers = filterMembersByCriteria(members, batchMap, filters);
+
+  // Filter batches matching the criteria
+  const filteredBatches = filterBatchesByCriteria(batches, filters);
+
+  // Determine current and previous year for YoY comparison
+  const { currentYear, previousYear } = determineTargetYears(batches, filters);
+
+  // Filter current year and previous year batches applying active non-period filters
+  const currentYearBatches = extractYearBatches(batches, currentYear, filters);
+  const previousYearBatches = extractYearBatches(batches, previousYear, filters);
+
+  const currentYearBatchIds = new Set<number>(currentYearBatches.map(b => b.id));
+  const previousYearBatchIds = new Set<number>(previousYearBatches.map(b => b.id));
+
+  const currentYearMembers = extractYearMembers(members, currentYearBatchIds, filters.memberType);
+  const previousYearMembers = extractYearMembers(members, previousYearBatchIds, filters.memberType);
+
+  const yoyComparison = calculateYoYComparison({
+    currentMembers: currentYearMembers,
+    previousMembers: previousYearMembers,
+    currentBatches: currentYearBatches,
+    previousBatches: previousYearBatches,
+    regions,
+    districts,
+    currentYear,
+    previousYear
+  });
+
+  const dataset = buildStatisticsDataset(
+    filteredMembers,
+    filteredBatches,
+    regions,
+    districts,
+    recognitionTypes,
+    yoyComparison
+  );
+
+  return { dataset, yoyComparison };
+}
+
 export function useStatisticsData() {
   const { user } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -268,7 +324,7 @@ export function useStatisticsData() {
         if (!isCancelled) {
           console.error('Failed to load statistics data:', err);
           const e = err as Error;
-          setError(e.message || 'Error al cargar los datos estadísticos');
+          setError(e.message ?? 'Error al cargar los datos estadísticos');
         }
       })
       .finally(() => {
@@ -320,49 +376,14 @@ export function useStatisticsData() {
 
   // Reactive filtering of Batches and Members
   const filteredDataset = useMemo(() => {
-    const batchMap = new Map<number, Batch>();
-    batches.forEach(b => batchMap.set(b.id, b));
-
-    // Filter members
-    const filteredMembers = filterMembersByCriteria(members, batchMap, filters);
-
-    // Filter batches matching the criteria
-    const filteredBatches = filterBatchesByCriteria(batches, filters);
-
-    // Determine current and previous year for YoY comparison
-    const { currentYear, previousYear } = determineTargetYears(batches, filters);
-
-    // Filter current year and previous year batches applying active non-period filters
-    const currentYearBatches = extractYearBatches(batches, currentYear, filters);
-    const previousYearBatches = extractYearBatches(batches, previousYear, filters);
-
-    const currentYearBatchIds = new Set<number>(currentYearBatches.map(b => b.id));
-    const previousYearBatchIds = new Set<number>(previousYearBatches.map(b => b.id));
-
-    const currentYearMembers = extractYearMembers(members, currentYearBatchIds, filters.memberType);
-    const previousYearMembers = extractYearMembers(members, previousYearBatchIds, filters.memberType);
-
-    const yoyComparison = calculateYoYComparison({
-      currentMembers: currentYearMembers,
-      previousMembers: previousYearMembers,
-      currentBatches: currentYearBatches,
-      previousBatches: previousYearBatches,
-      regions,
-      districts,
-      currentYear,
-      previousYear
-    });
-
-    const dataset = buildStatisticsDataset(
-      filteredMembers,
-      filteredBatches,
+    return computeFilteredStatisticsDataset({
+      batches,
+      members,
       regions,
       districts,
       recognitionTypes,
-      yoyComparison
-    );
-
-    return { dataset, yoyComparison };
+      filters
+    });
   }, [batches, members, regions, districts, recognitionTypes, filters]);
 
   const getFilterSummaryLabels = useCallback((): FilterSummaryLabels => {

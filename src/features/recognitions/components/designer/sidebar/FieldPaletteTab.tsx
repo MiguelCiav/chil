@@ -28,6 +28,48 @@ function getFieldItemClassName(isSelected: boolean, isPlaced: boolean): string {
   return 'bg-white border-dashed border-gray-300 text-neutral/60 hover:border-primary/40 hover:bg-primary/5';
 }
 
+function renderFieldPaletteAction(
+  isPlaced: boolean,
+  placedFieldId: string | undefined,
+  label: string,
+  onRemoveField: (fieldId: string) => void,
+  onAddField: () => void
+) {
+  if (isPlaced && placedFieldId) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] bg-green-100 text-green-700 font-semibold px-1.5 py-0.5 rounded">
+          En plantilla
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemoveField(placedFieldId);
+          }}
+          className="p-1 text-neutral/40 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+          title="Quitar campo"
+          aria-label={`Eliminar campo ${label}`}
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onAddField}
+      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary font-bold text-[11px] transition-colors"
+      aria-label={`Añadir ${label}`}
+    >
+      <Plus className="w-3 h-3" />
+      <span>Añadir</span>
+    </button>
+  );
+}
+
 export const FieldPaletteTab: React.FC<FieldPaletteTabProps> = ({
   fields,
   selectedFieldId,
@@ -56,21 +98,21 @@ export const FieldPaletteTab: React.FC<FieldPaletteTabProps> = ({
         <div className="space-y-1.5">
           {AVAILABLE_TEMPLATE_FIELDS.map((def) => {
             const placedField = fields.find((f) => f.field_key === def.field_key);
-            const isPlaced = !!placedField;
-            const isSelected = placedField?.id === selectedFieldId;
+            const isPlaced = placedField !== undefined;
+            const isSelected = placedField !== undefined && placedField.id === selectedFieldId;
 
             return (
               <div
                 key={def.field_key}
                 className={`flex items-center justify-between p-2 rounded-xl text-xs transition-all border ${getFieldItemClassName(
-                  Boolean(isSelected),
+                  isSelected,
                   isPlaced
                 )}`}
               >
                 <button
                   type="button"
                   onClick={() => {
-                    if (isPlaced) {
+                    if (placedField) {
                       onSelectField(placedField.id);
                     } else {
                       onAddField(def.field_key);
@@ -84,34 +126,12 @@ export const FieldPaletteTab: React.FC<FieldPaletteTabProps> = ({
                   <span className="truncate">{def.label}</span>
                 </button>
 
-                {isPlaced ? (
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] bg-green-100 text-green-700 font-semibold px-1.5 py-0.5 rounded">
-                      En plantilla
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveField(placedField.id);
-                      }}
-                      className="p-1 text-neutral/40 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="Quitar campo"
-                      aria-label={`Eliminar campo ${def.label}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onAddField(def.field_key)}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary font-bold text-[11px] transition-colors"
-                    aria-label={`Añadir ${def.label}`}
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Añadir</span>
-                  </button>
+                {renderFieldPaletteAction(
+                  isPlaced,
+                  placedField?.id,
+                  def.label,
+                  onRemoveField,
+                  () => onAddField(def.field_key)
                 )}
               </div>
             );

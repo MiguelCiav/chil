@@ -1,5 +1,9 @@
 import { ScoutMember, ScoutUnit, BatchUnitScope } from '../types';
 
+export type YouthScoutUnit = 'manada' | 'tropa' | 'caminantes' | 'clan';
+
+const YOUTH_SCOUT_UNITS: YouthScoutUnit[] = ['manada', 'tropa', 'caminantes', 'clan'];
+
 /**
  * Parses a birth date string into a Date object.
  * Supports formats: 'YYYY-MM-DD', 'DD/MM/YYYY', 'DD-MM-YYYY', and ISO strings.
@@ -26,7 +30,7 @@ export function parseBirthDate(birthDateStr?: string): Date | null {
   }
 
   const d = new Date(trimmed);
-  return isNaN(d.getTime()) ? null : d;
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 /**
@@ -34,7 +38,7 @@ export function parseBirthDate(birthDateStr?: string): Date | null {
  */
 export function calculateAge(birthDateStr?: string): number | null {
   const d = parseBirthDate(birthDateStr);
-  if (!d || isNaN(d.getTime())) return null;
+  if (!d || Number.isNaN(d.getTime())) return null;
 
   const today = new Date();
   let age = today.getFullYear() - d.getFullYear();
@@ -94,7 +98,7 @@ export function resolveMemberYouthUnitOrAdult(member: ScoutMember): {
  * Computes the mode (most frequent) unit among non-adults in the batch.
  */
 export function computeBatchModeUnit(youthUnits: (ScoutUnit | undefined)[]): ScoutUnit {
-  const unitCounts: Record<'manada' | 'tropa' | 'caminantes' | 'clan', number> = {
+  const unitCounts: Record<YouthScoutUnit, number> = {
     manada: 0,
     tropa: 0,
     caminantes: 0,
@@ -102,17 +106,16 @@ export function computeBatchModeUnit(youthUnits: (ScoutUnit | undefined)[]): Sco
   };
 
   for (const u of youthUnits) {
-    if (u && u in unitCounts) {
-      unitCounts[u as 'manada' | 'tropa' | 'caminantes' | 'clan']++;
+    if (u && (u === 'manada' || u === 'tropa' || u === 'caminantes' || u === 'clan')) {
+      unitCounts[u as YouthScoutUnit]++;
     }
   }
 
-  const validUnits: ('manada' | 'tropa' | 'caminantes' | 'clan')[] = ['manada', 'tropa', 'caminantes', 'clan'];
   let mostFrequentUnit: ScoutUnit = 'institucional';
   let maxCount = 0;
   let isTied = false;
 
-  for (const u of validUnits) {
+  for (const u of YOUTH_SCOUT_UNITS) {
     const count = unitCounts[u];
     if (count > maxCount) {
       maxCount = count;
@@ -138,7 +141,7 @@ export function inferMemberUnit(
   if (isAdultCandidate) {
     return batchModeUnit;
   }
-  return inferredUnit || member.unit || 'tropa';
+  return inferredUnit ?? member.unit ?? 'tropa';
 }
 
 /**

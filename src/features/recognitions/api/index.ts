@@ -22,14 +22,15 @@ export function generateRecognitionId(name: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // remove accents
     .replace(/[^a-z0-9]+/g, '-') // replace non-alphanumeric with hyphen
-    .replace(/^-+|-+$/g, ''); // trim leading/trailing hyphens
+    .replace(/^-+/, '')
+    .replace(/-+$/, ''); // trim leading/trailing hyphens
 
   return `sct-${normalized || 'custom'}`;
 }
 
 export async function getAllRecognitionTypes(userId?: string): Promise<RecognitionType[]> {
   try {
-    const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid || '');
+    const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid ?? '');
     if (!targetUserId) {
       return [];
     }
@@ -44,8 +45,8 @@ export async function getAllRecognitionTypes(userId?: string): Promise<Recogniti
       const data = d.data() as Omit<RecognitionType, 'id'>;
       return {
         id: d.id,
-        name: data.name || d.id,
-        created_at: data.created_at || new Date().toISOString(),
+        name: data.name ? data.name : d.id,
+        created_at: data.created_at ? data.created_at : new Date().toISOString(),
         ...(data.user_id ? { user_id: data.user_id } : {}),
         ...(data.template ? { template: data.template } : {})
       };
@@ -69,8 +70,8 @@ export async function getRecognitionTypeById(id: string): Promise<RecognitionTyp
     const data = snap.data() as Omit<RecognitionType, 'id'>;
     return {
       id: snap.id,
-      name: data.name || snap.id,
-      created_at: data.created_at || new Date().toISOString(),
+      name: data.name ? data.name : snap.id,
+      created_at: data.created_at ? data.created_at : new Date().toISOString(),
       ...(data.user_id ? { user_id: data.user_id } : {}),
       ...(data.template ? { template: data.template } : {})
     };
@@ -85,7 +86,7 @@ export async function createRecognitionType(
   userId?: string
 ): Promise<RecognitionType> {
   const id = generateRecognitionId(data.name);
-  const targetUserId = data.user_id || (userId !== undefined ? userId : (auth.currentUser?.uid || ''));
+  const targetUserId = data.user_id ?? (userId !== undefined ? userId : (auth.currentUser?.uid ?? ''));
   const newRecognition: RecognitionType = {
     id,
     name: data.name.trim(),
@@ -103,11 +104,11 @@ export async function updateRecognitionType(
   userId?: string
 ): Promise<RecognitionType> {
   const existing = await getRecognitionTypeById(id);
-  const targetUserId = (userId !== undefined ? userId : (existing?.user_id || auth.currentUser?.uid || ''));
+  const targetUserId = (userId !== undefined ? userId : (existing?.user_id ?? auth.currentUser?.uid ?? ''));
   const updated: RecognitionType = {
     id,
     name: data.name.trim(),
-    created_at: existing?.created_at || new Date().toISOString(),
+    created_at: existing?.created_at ?? new Date().toISOString(),
     ...(targetUserId ? { user_id: targetUserId } : {}),
     ...(existing?.template ? { template: existing.template } : {})
   };

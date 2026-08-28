@@ -134,6 +134,49 @@ const RegionTableStandard: React.FC<RegionTableStandardProps> = ({
   </div>
 );
 
+function getDisplayedYoYRegions(hasYoY: boolean, yoy: YoYComparisonData | undefined, showAll: boolean): YoYRegionItem[] {
+  if (!hasYoY || !yoy) return [];
+  return showAll ? yoy.regions : yoy.regions.slice(0, 5);
+}
+
+function getDisplayedStandardRegions(hasYoY: boolean, regions: GeographicItem[], showAll: boolean): GeographicItem[] {
+  if (hasYoY) return [];
+  return showAll ? regions : regions.slice(0, 5);
+}
+
+function renderRegionTableBody(
+  itemsCount: number,
+  hasYoY: boolean,
+  yoy: YoYComparisonData | undefined,
+  displayedYoYRegions: YoYRegionItem[],
+  displayedStandardRegions: GeographicItem[],
+  maxCount: number
+) {
+  if (itemsCount === 0) {
+    return (
+      <div className="py-8 text-center text-neutral/50 text-xs">
+        No hay registros disponibles por región para los filtros seleccionados.
+      </div>
+    );
+  }
+  if (hasYoY && yoy) {
+    return (
+      <RegionTableYoY
+        regions={displayedYoYRegions}
+        currentYear={yoy.currentYear}
+        previousYear={yoy.previousYear}
+        maxCount={maxCount}
+      />
+    );
+  }
+  return (
+    <RegionTableStandard
+      regions={displayedStandardRegions}
+      maxCount={maxCount}
+    />
+  );
+}
+
 export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions, yoy }) => {
   const [showAll, setShowAll] = useState(false);
 
@@ -141,13 +184,8 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
   const itemsCount = hasYoY && yoy ? yoy.regions.length : regions.length;
   const maxCount = computeRegionMaxCount(regions, yoy, hasYoY);
 
-  const displayedYoYRegions = hasYoY && yoy
-    ? (showAll ? yoy.regions : yoy.regions.slice(0, 5))
-    : [];
-
-  const displayedStandardRegions = !hasYoY
-    ? (showAll ? regions : regions.slice(0, 5))
-    : [];
+  const displayedYoYRegions = getDisplayedYoYRegions(hasYoY, yoy, showAll);
+  const displayedStandardRegions = getDisplayedStandardRegions(hasYoY, regions, showAll);
 
   return (
     <div className="bg-white border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
@@ -173,22 +211,13 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
       </div>
 
       {/* Table Content */}
-      {itemsCount === 0 ? (
-        <div className="py-8 text-center text-neutral/50 text-xs">
-          No hay registros disponibles por región para los filtros seleccionados.
-        </div>
-      ) : hasYoY && yoy ? (
-        <RegionTableYoY
-          regions={displayedYoYRegions}
-          currentYear={yoy.currentYear}
-          previousYear={yoy.previousYear}
-          maxCount={maxCount}
-        />
-      ) : (
-        <RegionTableStandard
-          regions={displayedStandardRegions}
-          maxCount={maxCount}
-        />
+      {renderRegionTableBody(
+        itemsCount,
+        hasYoY,
+        yoy,
+        displayedYoYRegions,
+        displayedStandardRegions,
+        maxCount
       )}
 
       {/* Show more toggle */}

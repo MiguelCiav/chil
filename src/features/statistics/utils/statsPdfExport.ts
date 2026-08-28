@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { StatisticsDataset } from '../types';
+import { StatisticsDataset, YoYComparisonData } from '../types';
 
 export interface FilterSummaryLabels {
   periodLabel?: string;
@@ -113,6 +113,102 @@ export function drawReportHeader(
   return y;
 }
 
+function drawKpiDiplomasBox(doc: jsPDF, stats: StatisticsDataset, hasYoY: boolean, yoy: YoYComparisonData | undefined, x: number, y: number, w: number, h: number): void {
+  doc.setFillColor(240, 248, 255);
+  doc.setDrawColor(180, 215, 245);
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(11, 79, 108);
+  doc.text('TOTAL RECONOCIMIENTOS', x + 3, y + 5);
+  doc.setFontSize(12.5);
+  doc.text(String(stats.kpis.totalDiplomas), x + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(90, 105, 120);
+  if (hasYoY && yoy) {
+    const diffSign = yoy.totalDiplomas.diff >= 0 ? '+' : '';
+    const pctStr = yoy.totalDiplomas.percentChange !== null ? ` (${diffSign}${yoy.totalDiplomas.percentChange}%)` : '';
+    doc.text(`vs ${yoy.totalDiplomas.previous} en ${yoy.previousYear}: ${diffSign}${yoy.totalDiplomas.diff}${pctStr}`, x + 3, y + 15.5);
+  } else {
+    doc.text(`de ${stats.kpis.totalMembers} miembros`, x + 3, y + 15.5);
+  }
+}
+
+function drawKpiBatchesBox(doc: jsPDF, stats: StatisticsDataset, hasYoY: boolean, yoy: YoYComparisonData | undefined, x: number, y: number, w: number, h: number): void {
+  doc.setFillColor(255, 251, 235);
+  doc.setDrawColor(254, 240, 138);
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(180, 83, 9);
+  doc.text('TOTAL LOTES', x + 3, y + 5);
+  doc.setFontSize(12.5);
+  doc.text(`${stats.kpis.totalBatches} Lotes`, x + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(120, 90, 40);
+  if (hasYoY && yoy) {
+    const diffSign = yoy.totalBatches.diff >= 0 ? '+' : '';
+    doc.text(`vs ${yoy.totalBatches.previous} en ${yoy.previousYear} (${diffSign}${yoy.totalBatches.diff})`, x + 3, y + 15.5);
+  } else {
+    doc.text(`Promedio: ${stats.kpis.avgMembersPerBatch}/lote`, x + 3, y + 15.5);
+  }
+}
+
+function drawKpiTopRecognitionBox(doc: jsPDF, stats: StatisticsDataset, x: number, y: number, w: number, h: number): void {
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(187, 247, 208);
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(22, 101, 52);
+  doc.text('MÁS ENTREGADO', x + 3, y + 5);
+  doc.setFontSize(9.5);
+  const topRecDisplay = (stats.kpis.topRecognitionName ?? '-').substring(0, 18);
+  doc.text(topRecDisplay, x + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(70, 100, 80);
+  doc.text(`${stats.kpis.topRecognitionCount ?? 0} emitidos`, x + 3, y + 15.5);
+}
+
+function drawKpiTerritoryBox(doc: jsPDF, stats: StatisticsDataset, x: number, y: number, w: number, h: number): void {
+  doc.setFillColor(245, 243, 255);
+  doc.setDrawColor(221, 214, 254);
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(107, 33, 168);
+  doc.text('COBERTURA TERRITORIAL', x + 3, y + 5);
+  doc.setFontSize(12.5);
+  doc.text(`${stats.kpis.activeRegionsCount} Regiones`, x + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 80, 130);
+  doc.text(`en ${stats.kpis.activeDistrictsCount} distritos y ${stats.kpis.activeGroupsCount} grupos`, x + 3, y + 15.5);
+}
+
+function drawKpiDemographicsBox(doc: jsPDF, stats: StatisticsDataset, hasYoY: boolean, yoy: YoYComparisonData | undefined, x: number, y: number, w: number, h: number): void {
+  doc.setFillColor(240, 249, 255);
+  doc.setDrawColor(186, 230, 253);
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(3, 105, 161);
+  doc.text('DISTRIBUCIÓN DEMOGRÁFICA', x + 3, y + 5);
+  doc.setFontSize(10.5);
+  doc.text(`${stats.demographics.youngPercentage}% Jóvenes | ${stats.demographics.adultPercentage}% Adultos`, x + 3, y + 11.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(60, 100, 130);
+  if (hasYoY && yoy) {
+    doc.text(`vs ${yoy.demographics.young.previous} jóvenes / ${yoy.demographics.adult.previous} adultos (${yoy.previousYear})`, x + 3, y + 15.5);
+  } else {
+    doc.text(`${stats.demographics.youngCount} jóvenes / ${stats.demographics.adultCount} adultos`, x + 3, y + 15.5);
+  }
+}
+
 /**
  * Draws executive KPI Summary cards (Top 5 KPIs)
  */
@@ -135,101 +231,16 @@ export function drawKpiSummaryBoxes(
   const boxW2 = (CONTENT_WIDTH - 4) / 2;
   const boxH = 18;
 
-  // Row 1 - Card 1: Total Reconocimientos
-  doc.setFillColor(240, 248, 255);
-  doc.setDrawColor(180, 215, 245);
-  doc.roundedRect(MARGIN, y, boxW3, boxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(11, 79, 108);
-  doc.text('TOTAL RECONOCIMIENTOS', MARGIN + 3, y + 5);
-  doc.setFontSize(12.5);
-  doc.text(String(stats.kpis.totalDiplomas), MARGIN + 3, y + 11.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(90, 105, 120);
-  if (hasYoY && yoy) {
-    const diffSign = yoy.totalDiplomas.diff >= 0 ? '+' : '';
-    const pctStr = yoy.totalDiplomas.percentChange !== null ? ` (${diffSign}${yoy.totalDiplomas.percentChange}%)` : '';
-    doc.text(`vs ${yoy.totalDiplomas.previous} en ${yoy.previousYear}: ${diffSign}${yoy.totalDiplomas.diff}${pctStr}`, MARGIN + 3, y + 15.5);
-  } else {
-    doc.text(`de ${stats.kpis.totalMembers} miembros`, MARGIN + 3, y + 15.5);
-  }
-
-  // Row 1 - Card 2: Total Lotes
-  const col2X = MARGIN + boxW3 + 3;
-  doc.setFillColor(255, 251, 235);
-  doc.setDrawColor(254, 240, 138);
-  doc.roundedRect(col2X, y, boxW3, boxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(180, 83, 9);
-  doc.text('TOTAL LOTES', col2X + 3, y + 5);
-  doc.setFontSize(12.5);
-  doc.text(`${stats.kpis.totalBatches} Lotes`, col2X + 3, y + 11.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(120, 90, 40);
-  if (hasYoY && yoy) {
-    const diffSign = yoy.totalBatches.diff >= 0 ? '+' : '';
-    doc.text(`vs ${yoy.totalBatches.previous} en ${yoy.previousYear} (${diffSign}${yoy.totalBatches.diff})`, col2X + 3, y + 15.5);
-  } else {
-    doc.text(`Promedio: ${stats.kpis.avgMembersPerBatch}/lote`, col2X + 3, y + 15.5);
-  }
-
-  // Row 1 - Card 3: Reconocimiento Más Entregado
-  const col3X = col2X + boxW3 + 3;
-  doc.setFillColor(240, 253, 244);
-  doc.setDrawColor(187, 247, 208);
-  doc.roundedRect(col3X, y, boxW3, boxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(22, 101, 52);
-  doc.text('MÁS ENTREGADO', col3X + 3, y + 5);
-  doc.setFontSize(9.5);
-  const topRecDisplay = (stats.kpis.topRecognitionName ?? '-').substring(0, 18);
-  doc.text(topRecDisplay, col3X + 3, y + 11.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(70, 100, 80);
-  doc.text(`${stats.kpis.topRecognitionCount ?? 0} emitidos`, col3X + 3, y + 15.5);
+  // Row 1
+  drawKpiDiplomasBox(doc, stats, hasYoY, yoy, MARGIN, y, boxW3, boxH);
+  drawKpiBatchesBox(doc, stats, hasYoY, yoy, MARGIN + boxW3 + 3, y, boxW3, boxH);
+  drawKpiTopRecognitionBox(doc, stats, MARGIN + 2 * (boxW3 + 3), y, boxW3, boxH);
 
   y += boxH + 3;
 
-  // Row 2 - Card 4: Cobertura Territorial
-  doc.setFillColor(245, 243, 255);
-  doc.setDrawColor(221, 214, 254);
-  doc.roundedRect(MARGIN, y, boxW2, boxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(107, 33, 168);
-  doc.text('COBERTURA TERRITORIAL', MARGIN + 3, y + 5);
-  doc.setFontSize(12.5);
-  doc.text(`${stats.kpis.activeRegionsCount} Regiones`, MARGIN + 3, y + 11.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(100, 80, 130);
-  doc.text(`en ${stats.kpis.activeDistrictsCount} distritos y ${stats.kpis.activeGroupsCount} grupos`, MARGIN + 3, y + 15.5);
-
-  // Row 2 - Card 5: Demografía
-  const col5X = MARGIN + boxW2 + 4;
-  doc.setFillColor(240, 249, 255);
-  doc.setDrawColor(186, 230, 253);
-  doc.roundedRect(col5X, y, boxW2, boxH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(3, 105, 161);
-  doc.text('DISTRIBUCIÓN DEMOGRÁFICA', col5X + 3, y + 5);
-  doc.setFontSize(10.5);
-  doc.text(`${stats.demographics.youngPercentage}% Jóvenes | ${stats.demographics.adultPercentage}% Adultos`, col5X + 3, y + 11.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(60, 100, 130);
-  if (hasYoY && yoy) {
-    doc.text(`vs ${yoy.demographics.young.previous} jóvenes / ${yoy.demographics.adult.previous} adultos (${yoy.previousYear})`, col5X + 3, y + 15.5);
-  } else {
-    doc.text(`${stats.demographics.youngCount} jóvenes / ${stats.demographics.adultCount} adultos`, col5X + 3, y + 15.5);
-  }
+  // Row 2
+  drawKpiTerritoryBox(doc, stats, MARGIN, y, boxW2, boxH);
+  drawKpiDemographicsBox(doc, stats, hasYoY, yoy, MARGIN + boxW2 + 4, y, boxW2, boxH);
 
   y += boxH + 8;
   return y;
@@ -791,6 +802,56 @@ function drawMonthlyTableStandard(doc: jsPDF, stats: StatisticsDataset, startY: 
   return y;
 }
 
+function drawYoYMonthlyBar(
+  doc: jsPDF,
+  item: { currentCount: number; previousCount: number; label: string },
+  idx: number,
+  maxMonthlyVal: number,
+  slotW: number,
+  barW: number,
+  chartHeight: number,
+  chartBottomY: number
+): void {
+  const barHCurr = maxMonthlyVal > 0 ? (item.currentCount / maxMonthlyVal) * (chartHeight - 8) : 0;
+  const barHPrev = maxMonthlyVal > 0 ? (item.previousCount / maxMonthlyVal) * (chartHeight - 8) : 0;
+
+  const xCenter = MARGIN + 8 + idx * slotW + slotW / 2;
+  const xBarCurr = xCenter - barW - 0.5;
+  const xBarPrev = xCenter + 0.5;
+
+  const yBarCurr = chartBottomY - barHCurr;
+  const yBarPrev = chartBottomY - barHPrev;
+
+  // Draw Current Year Bar
+  if (barHCurr > 0) {
+    doc.setFillColor(11, 79, 108);
+    doc.rect(xBarCurr, yBarCurr, barW, barHCurr, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.5);
+    doc.setTextColor(11, 79, 108);
+    doc.text(String(item.currentCount), xBarCurr + barW / 2, yBarCurr - 1, { align: 'center' });
+  }
+
+  // Draw Previous Year Bar
+  if (barHPrev > 0) {
+    doc.setFillColor(148, 163, 184);
+    doc.rect(xBarPrev, yBarPrev, barW, barHPrev, 'F');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(100, 115, 130);
+    doc.text(String(item.previousCount), xBarPrev + barW / 2, yBarPrev - 1, { align: 'center' });
+  }
+
+  // Month label below baseline
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6);
+  doc.setTextColor(100, 115, 130);
+  const shortLabel = item.label.substring(0, 3);
+  doc.text(shortLabel, xCenter, chartBottomY + 4, { align: 'center' });
+}
+
 function drawMonthlyChartYoY(doc: jsPDF, stats: StatisticsDataset, startY: number, onBreak: PageBreakChecker): number {
   let y = onBreak(doc, startY, 52);
   const yoy = stats.yoyComparison!;
@@ -832,44 +893,7 @@ function drawMonthlyChartYoY(doc: jsPDF, stats: StatisticsDataset, startY: numbe
   const barW = Math.max((slotW - 3) / 2, 2.5);
 
   yoy.monthly.forEach((item, idx) => {
-    const barHCurr = maxMonthlyVal > 0 ? (item.currentCount / maxMonthlyVal) * (chartHeight - 8) : 0;
-    const barHPrev = maxMonthlyVal > 0 ? (item.previousCount / maxMonthlyVal) * (chartHeight - 8) : 0;
-
-    const xCenter = MARGIN + 8 + idx * slotW + slotW / 2;
-    const xBarCurr = xCenter - barW - 0.5;
-    const xBarPrev = xCenter + 0.5;
-
-    const yBarCurr = chartBottomY - barHCurr;
-    const yBarPrev = chartBottomY - barHPrev;
-
-    // Draw Current Year Bar
-    if (barHCurr > 0) {
-      doc.setFillColor(11, 79, 108);
-      doc.rect(xBarCurr, yBarCurr, barW, barHCurr, 'F');
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(5.5);
-      doc.setTextColor(11, 79, 108);
-      doc.text(String(item.currentCount), xBarCurr + barW / 2, yBarCurr - 1, { align: 'center' });
-    }
-
-    // Draw Previous Year Bar
-    if (barHPrev > 0) {
-      doc.setFillColor(148, 163, 184);
-      doc.rect(xBarPrev, yBarPrev, barW, barHPrev, 'F');
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(5.5);
-      doc.setTextColor(100, 115, 130);
-      doc.text(String(item.previousCount), xBarPrev + barW / 2, yBarPrev - 1, { align: 'center' });
-    }
-
-    // Month label below baseline
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6);
-    doc.setTextColor(100, 115, 130);
-    const shortLabel = item.label.substring(0, 3);
-    doc.text(shortLabel, xCenter, chartBottomY + 4, { align: 'center' });
+    drawYoYMonthlyBar(doc, item, idx, maxMonthlyVal, slotW, barW, chartHeight, chartBottomY);
   });
 
   return chartBottomY + 14;

@@ -255,6 +255,63 @@ function renderSummaryTableRows(
   });
 }
 
+function getMemberStatusLabel(status: 'active' | 'pending' | 'exceptional'): 'Registro Válido' | 'Registro Inválido' | 'Emisión Excepcional' {
+  if (status === 'active') return 'Registro Válido';
+  if (status === 'exceptional') return 'Emisión Excepcional';
+  return 'Registro Inválido';
+}
+
+function getMemberTypeLabel(memberType: 'young' | 'adult'): 'Joven' | 'Adulto' {
+  return memberType === 'young' ? 'Joven' : 'Adulto';
+}
+
+function resolveHierarchyName(id?: number, rawName?: string): string {
+  if (!id || id === 0) return '-';
+  const name = rawName ?? '-';
+  if (name.toLowerCase() === 'no aplica') return '-';
+  return name;
+}
+
+function renderStatusBadge(status: 'active' | 'pending' | 'exceptional') {
+  if (status === 'active') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
+        ● Registro Válido
+      </span>
+    );
+  }
+  if (status === 'exceptional') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
+        ● Emisión Excepcional
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
+      ● Registro Inválido
+    </span>
+  );
+}
+
+function renderRecognitionBadge(name: string) {
+  const style = getRecognitionBadgeStyle(name);
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${style.pillClass}`}>
+      {name}
+    </span>
+  );
+}
+
+function renderUnitBadgeCell(unit?: string) {
+  const badge = getUnitBadge(unit as Parameters<typeof getUnitBadge>[0]);
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}>
+      {badge.label}
+    </span>
+  );
+}
+
 export const SummaryView: React.FC = () => {
   const { user } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
@@ -295,12 +352,12 @@ export const SummaryView: React.FC = () => {
       getAllRecognitionTypes(user?.uid)
     ])
       .then(([batchList, memberList, hierarchy, recTypes]) => {
-        setBatches(batchList || []);
-        setMembers(memberList || []);
-        setRegions(hierarchy.regions || []);
-        setDistricts(hierarchy.districts || []);
-        setGroups(hierarchy.groups || []);
-        setRecognitionTypes(recTypes || []);
+        setBatches(batchList ?? []);
+        setMembers(memberList ?? []);
+        setRegions(hierarchy.regions ?? []);
+        setDistricts(hierarchy.districts ?? []);
+        setGroups(hierarchy.groups ?? []);
+        setRecognitionTypes(recTypes ?? []);
       })
       .catch(err => {
         console.error('Error loading summary data:', err);
@@ -332,38 +389,36 @@ export const SummaryView: React.FC = () => {
       const issueDate = batch?.created_at ? formatBatchDate(batch.created_at) : '-';
       const batchCode = batch ? formatBatchCode(batch.id, batch.created_at) : '#000';
       const unitLabel = getUnitLabel(m.unit);
-      const memberTypeLabel = m.member_type === 'young' ? 'Joven' : 'Adulto';
-      const statusLabel = m.status === 'active' ? 'Registro Válido' : m.status === 'exceptional' ? 'Emisión Excepcional' : 'Registro Inválido';
+      const memberTypeLabel = getMemberTypeLabel(m.member_type);
+      const statusLabel = getMemberStatusLabel(m.status);
 
-      const rawRegionName = regionObj ? regionObj.name : '-';
-      const regionName = (!batch?.region_id || batch.region_id === 0 || rawRegionName.toLowerCase() === 'no aplica') ? '-' : rawRegionName;
+      const regionName = resolveHierarchyName(batch?.region_id, regionObj?.name);
+      const districtName = resolveHierarchyName(batch?.district_id, districtObj?.name);
+      const groupName = resolveHierarchyName(batch?.group_id, groupObj?.name);
 
-      const rawDistrictName = districtObj ? districtObj.name : '-';
-      const districtName = (!batch?.district_id || batch.district_id === 0 || rawDistrictName.toLowerCase() === 'no aplica') ? '-' : rawDistrictName;
-
-      const rawGroupName = groupObj ? groupObj.name : '-';
-      const groupName = (!batch?.group_id || batch.group_id === 0 || rawGroupName.toLowerCase() === 'no aplica') ? '-' : rawGroupName;
+      const rawFullName = `${m.first_names ?? ''} ${m.last_names ?? ''}`.trim();
+      const fullName = rawFullName.length > 0 ? rawFullName : '-';
 
       return {
         id: `${m.identity}-${batch?.id ?? '0'}`,
         issueDate,
-        rawDate: batch?.created_at || '',
+        rawDate: batch?.created_at ?? '',
         batchId: batch?.id ?? 0,
         batchCode,
-        recognitionId: recType || '',
+        recognitionId: recType ?? '',
         recognitionName: recName,
-        identity: m.identity || '-',
-        firstName: m.first_names || '',
-        lastName: m.last_names || '',
-        fullName: `${m.first_names || ''} ${m.last_names || ''}`.trim() || '-',
+        identity: m.identity ?? '-',
+        firstName: m.first_names ?? '',
+        lastName: m.last_names ?? '',
+        fullName,
         unit: m.unit,
         unitLabel,
         memberType: m.member_type,
         memberTypeLabel,
         status: m.status,
         statusLabel,
-        exceptionalReason: m.exceptional_reason || '',
-        recognitionCode: m.recognition_code || '-',
+        exceptionalReason: m.exceptional_reason ?? '',
+        recognitionCode: m.recognition_code ?? '-',
         regionName,
         districtName,
         groupName
@@ -499,15 +554,7 @@ export const SummaryView: React.FC = () => {
     {
       accessorKey: 'recognitionName',
       header: 'RECONOCIMIENTO',
-      cell: info => {
-        const name = info.getValue() as string;
-        const style = getRecognitionBadgeStyle(name);
-        return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${style.pillClass}`}>
-            {name}
-          </span>
-        );
-      }
+      cell: info => renderRecognitionBadge(info.getValue() as string)
     },
     {
       accessorKey: 'identity',
@@ -529,15 +576,7 @@ export const SummaryView: React.FC = () => {
     {
       accessorKey: 'unitLabel',
       header: 'UNIDAD',
-      cell: ({ row }) => {
-        const unit = row.original.unit;
-        const badge = getUnitBadge(unit);
-        return (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}>
-            {badge.label}
-          </span>
-        );
-      }
+      cell: ({ row }) => renderUnitBadgeCell(row.original.unit)
     },
     {
       accessorKey: 'memberTypeLabel',
@@ -549,28 +588,7 @@ export const SummaryView: React.FC = () => {
     {
       accessorKey: 'status',
       header: 'ESTATUS',
-      cell: ({ row }) => {
-        const status = row.original.status;
-        if (status === 'active') {
-          return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-              ● Registro Válido
-            </span>
-          );
-        }
-        if (status === 'exceptional') {
-          return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-              ● Emisión Excepcional
-            </span>
-          );
-        }
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-            ● Registro Inválido
-          </span>
-        );
-      }
+      cell: ({ row }) => renderStatusBadge(row.original.status)
     },
     {
       accessorKey: 'recognitionCode',

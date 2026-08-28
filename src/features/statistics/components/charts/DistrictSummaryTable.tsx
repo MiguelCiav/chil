@@ -142,6 +142,49 @@ const DistrictTableStandard: React.FC<DistrictTableStandardProps> = ({
   </div>
 );
 
+function getDisplayedYoYDistricts(hasYoY: boolean, yoy: YoYComparisonData | undefined, showAll: boolean): YoYDistrictItem[] {
+  if (!hasYoY || !yoy) return [];
+  return showAll ? yoy.districts : yoy.districts.slice(0, 5);
+}
+
+function getDisplayedStandardDistricts(hasYoY: boolean, districts: GeographicItem[], showAll: boolean): GeographicItem[] {
+  if (hasYoY) return [];
+  return showAll ? districts : districts.slice(0, 5);
+}
+
+function renderDistrictTableBody(
+  itemsCount: number,
+  hasYoY: boolean,
+  yoy: YoYComparisonData | undefined,
+  displayedYoYDistricts: YoYDistrictItem[],
+  displayedStandardDistricts: GeographicItem[],
+  maxCount: number
+) {
+  if (itemsCount === 0) {
+    return (
+      <div className="py-8 text-center text-neutral/50 text-xs">
+        No hay registros disponibles por distrito para los filtros seleccionados.
+      </div>
+    );
+  }
+  if (hasYoY && yoy) {
+    return (
+      <DistrictTableYoY
+        districts={displayedYoYDistricts}
+        currentYear={yoy.currentYear}
+        previousYear={yoy.previousYear}
+        maxCount={maxCount}
+      />
+    );
+  }
+  return (
+    <DistrictTableStandard
+      districts={displayedStandardDistricts}
+      maxCount={maxCount}
+    />
+  );
+}
+
 export const DistrictSummaryTable: React.FC<DistrictSummaryTableProps> = ({ districts, yoy }) => {
   const [showAll, setShowAll] = useState(false);
 
@@ -149,13 +192,8 @@ export const DistrictSummaryTable: React.FC<DistrictSummaryTableProps> = ({ dist
   const itemsCount = hasYoY && yoy ? yoy.districts.length : districts.length;
   const maxCount = computeDistrictMaxCount(districts, yoy, hasYoY);
 
-  const displayedYoYDistricts = hasYoY && yoy
-    ? (showAll ? yoy.districts : yoy.districts.slice(0, 5))
-    : [];
-
-  const displayedStandardDistricts = !hasYoY
-    ? (showAll ? districts : districts.slice(0, 5))
-    : [];
+  const displayedYoYDistricts = getDisplayedYoYDistricts(hasYoY, yoy, showAll);
+  const displayedStandardDistricts = getDisplayedStandardDistricts(hasYoY, districts, showAll);
 
   return (
     <div className="bg-white border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
@@ -181,22 +219,13 @@ export const DistrictSummaryTable: React.FC<DistrictSummaryTableProps> = ({ dist
       </div>
 
       {/* Table Content */}
-      {itemsCount === 0 ? (
-        <div className="py-8 text-center text-neutral/50 text-xs">
-          No hay registros disponibles por distrito para los filtros seleccionados.
-        </div>
-      ) : hasYoY && yoy ? (
-        <DistrictTableYoY
-          districts={displayedYoYDistricts}
-          currentYear={yoy.currentYear}
-          previousYear={yoy.previousYear}
-          maxCount={maxCount}
-        />
-      ) : (
-        <DistrictTableStandard
-          districts={displayedStandardDistricts}
-          maxCount={maxCount}
-        />
+      {renderDistrictTableBody(
+        itemsCount,
+        hasYoY,
+        yoy,
+        displayedYoYDistricts,
+        displayedStandardDistricts,
+        maxCount
       )}
 
       {/* Show more toggle */}

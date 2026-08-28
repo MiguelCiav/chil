@@ -44,7 +44,7 @@ export function hexToRgb(hex?: string): { r: number; g: number; b: number } {
   if (cleanHex.length !== 6) {
     return { r: 33, g: 33, b: 33 };
   }
-  const num = parseInt(cleanHex, 16);
+  const num = Number.parseInt(cleanHex, 16);
   if (Number.isNaN(num)) {
     return { r: 33, g: 33, b: 33 };
   }
@@ -78,7 +78,8 @@ export function slugify(text: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
+    .replace(/^_+/, '')
+    .replace(/_+$/, '');
 }
 
 /**
@@ -204,7 +205,7 @@ export function interpolateCertificateVariables(params: {
   const regionName = resolveHierarchyName(batch.region_id, hierarchy?.regions);
   const districtName = resolveHierarchyName(batch.district_id, hierarchy?.districts);
   const groupName = resolveHierarchyName(batch.group_id, hierarchy?.groups);
-  const recognitionName = recognition?.name || batch.recognition_type || 'Reconocimiento Scout';
+  const recognitionName = recognition?.name ?? batch.recognition_type ?? 'Reconocimiento Scout';
   const issueDate = formatIssueDate(batch.created_at);
   const last4 = member.identity.length >= 4 ? member.identity.slice(-4) : member.identity;
   const recognitionCode =
@@ -313,7 +314,7 @@ async function resolvePdfContext(
   recognition?: RecognitionType | null,
   hierarchy?: HierarchyData
 ): Promise<{ resolvedRecognition?: RecognitionType | null; resolvedHierarchy: HierarchyData }> {
-  const resolvedHierarchy = hierarchy || (await getHierarchyData());
+  const resolvedHierarchy = hierarchy ?? (await getHierarchyData());
   let resolvedRecognition = recognition;
   if (resolvedRecognition === undefined && batch.recognition_type) {
     resolvedRecognition = await getRecognitionTypeById(batch.recognition_type);
@@ -361,7 +362,7 @@ export async function downloadSingleCertificatePdf(
   const doc = await generateSingleCertificatePdf(params);
 
   const sanitizedIdentity = params.member.identity.replace(/[^a-zA-Z0-9_-]+/g, '_');
-  const slug = slugify(params.recognition?.name || params.batch.recognition_type || 'Reconocimiento');
+  const slug = slugify(params.recognition?.name ?? params.batch.recognition_type ?? 'Reconocimiento');
   const fileName = `Reconocimiento_${sanitizedIdentity}_Lote_${params.batch.id}_${slug}.pdf`;
 
   doc.save(fileName);
@@ -409,7 +410,7 @@ export async function generateBatchCertificatesPdf(
     });
   });
 
-  const slug = slugify(resolvedRecognition?.name || batch.recognition_type || 'Reconocimientos');
+  const slug = slugify(resolvedRecognition?.name ?? batch.recognition_type ?? 'Reconocimientos');
   const fileName = `Reconocimientos_Lote_${batch.id}_${slug}.pdf`;
 
   doc.save(fileName);
