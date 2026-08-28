@@ -1,11 +1,13 @@
 import { z } from 'zod';
 
+export const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 export const loginSchema = z.object({
   email: z
     .string()
     .trim()
     .min(1, { message: 'El correo electrónico es requerido' })
-    .email({ message: 'Ingrese un correo electrónico válido' }),
+    .regex(EMAIL_REGEX, { message: 'Ingrese un correo electrónico válido' }),
   password: z
     .string()
     .min(1, { message: 'La contraseña es requerida' })
@@ -25,7 +27,7 @@ export const registerSchema = z
       .string()
       .trim()
       .min(1, { message: 'El correo electrónico es requerido' })
-      .email({ message: 'Ingrese un correo electrónico válido' }),
+      .regex(EMAIL_REGEX, { message: 'Ingrese un correo electrónico válido' }),
     password: z
       .string()
       .min(1, { message: 'La contraseña es requerida' })
@@ -46,7 +48,7 @@ export const forgotPasswordSchema = z.object({
     .string()
     .trim()
     .min(1, { message: 'El correo electrónico es requerido' })
-    .email({ message: 'Ingrese un correo electrónico válido' })
+    .regex(EMAIL_REGEX, { message: 'Ingrese un correo electrónico válido' })
 });
 
 export type ForgotPasswordParams = z.infer<typeof forgotPasswordSchema>;

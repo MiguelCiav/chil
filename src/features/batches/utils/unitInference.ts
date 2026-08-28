@@ -68,13 +68,15 @@ export function inferYouthUnitByAge(age: number | null): ScoutUnit {
 
 export const inferUnitByAge = inferYouthUnitByAge;
 
+export type InferredUnitResult = {
+  inferredUnit?: ScoutUnit;
+  isAdultCandidate: boolean;
+};
+
 /**
  * Resolves whether a member is an adult candidate or has a direct youth unit.
  */
-export function resolveMemberYouthUnitOrAdult(member: ScoutMember): {
-  inferredUnit?: ScoutUnit;
-  isAdultCandidate: boolean;
-} {
+export function resolveMemberYouthUnitOrAdult(member: ScoutMember): InferredUnitResult {
   if (member.unit === 'no_scout') {
     return { inferredUnit: 'no_scout', isAdultCandidate: false };
   }

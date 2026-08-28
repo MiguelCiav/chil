@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ColumnDef,
+  Row,
   getCoreRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
@@ -28,6 +29,191 @@ import { getAllRecognitionTypes } from '../api';
 import { RecognitionFormModal } from './RecognitionFormModal';
 import { RecognitionDeleteModal } from './RecognitionDeleteModal';
 import { useAuth } from '../../auth';
+
+function formatCreationDate(dateStr?: string): string {
+  if (!dateStr) return '-';
+  try {
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function renderRecognitionNameCell(item: RecognitionType) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+        <Award className="w-4 h-4" />
+      </div>
+      <div className="flex flex-col">
+        <span className="font-bold text-neutral text-sm">{item.name}</span>
+        <span className="text-xs text-neutral/40 font-mono">{item.id}</span>
+      </div>
+    </div>
+  );
+}
+
+function renderRecognitionDateCell(dateStr?: string) {
+  return <span className="text-xs text-neutral/60">{formatCreationDate(dateStr)}</span>;
+}
+
+interface RecognitionActionsCellProps {
+  item: RecognitionType;
+  onNavigateTemplate: (id: string) => void;
+  onEdit: (item: RecognitionType) => void;
+  onDelete: (item: RecognitionType) => void;
+}
+
+function renderRecognitionActionsCell({
+  item,
+  onNavigateTemplate,
+  onEdit,
+  onDelete
+}: RecognitionActionsCellProps) {
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <button
+        type="button"
+        onClick={() => {
+          onNavigateTemplate(item.id);
+        }}
+        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors"
+        title="Diseñar Plantilla de Certificado"
+        aria-label={`Diseñar plantilla para ${item.name}`}
+      >
+        <Palette className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Plantilla</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onEdit(item)}
+        className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/5 rounded-lg border border-gray-200 hover:border-primary/20 transition-colors"
+        title="Editar Reconocimiento"
+        aria-label={`Editar ${item.name}`}
+      >
+        <Pencil className="w-4 h-4" />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onDelete(item)}
+        className="p-1.5 text-neutral/60 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-colors"
+        title="Eliminar Reconocimiento"
+        aria-label={`Eliminar ${item.name}`}
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+function renderRecognitionActionsHeader() {
+  return <div className="text-right">Acciones</div>;
+}
+
+interface TableBodyContentProps {
+  loading: boolean;
+  rows: Row<RecognitionType>[];
+  totalCount: number;
+  columnsLength: number;
+  globalFilter: string;
+  onClearFilter: () => void;
+  onOpenCreate: () => void;
+}
+
+function renderTableBodyContent({
+  loading,
+  rows,
+  totalCount,
+  columnsLength,
+  globalFilter,
+  onClearFilter,
+  onOpenCreate
+}: TableBodyContentProps) {
+  if (loading) {
+    return (
+      <tr>
+        <td colSpan={columnsLength} className="px-6 py-12 text-center text-neutral/60">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span>Cargando tipos de reconocimiento...</span>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (rows.length > 0) {
+    return rows.map((row) => (
+      <tr key={row.id} className="hover:bg-primary/5 transition-colors bg-white">
+        {row.getVisibleCells().map((cell) => (
+          <td key={cell.id} className="px-6 py-4 text-sm text-neutral whitespace-nowrap">
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </td>
+        ))}
+      </tr>
+    ));
+  }
+
+  if (totalCount === 0) {
+    return (
+      <tr>
+        <td colSpan={columnsLength} className="px-6 py-16 text-center text-neutral/60">
+          <div className="flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+              <Award className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-neutral">
+                No hay tipos de reconocimiento registrados
+              </h3>
+              <p className="text-sm text-neutral/60">
+                No hay tipos de reconocimiento registrados. Haga clic en &apos;Nuevo Reconocimiento&apos; para comenzar.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={onOpenCreate}
+              icon={<Plus size={16} />}
+              className="mt-2 shadow-sm"
+            >
+              Nuevo Reconocimiento
+            </Button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr>
+      <td colSpan={columnsLength} className="px-6 py-12 text-center text-neutral/60">
+        <div className="flex flex-col items-center justify-center gap-2">
+          <Award className="w-8 h-8 text-neutral/30" />
+          <p className="text-sm font-medium">No se encontraron reconocimientos.</p>
+          {globalFilter && (
+            <button
+              type="button"
+              onClick={onClearFilter}
+              className="text-xs text-primary hover:underline font-semibold"
+            >
+              Limpiar filtros de búsqueda
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 export const RecognitionCatalog: React.FC = () => {
   const navigate = useNavigate();
@@ -70,28 +256,36 @@ export const RecognitionCatalog: React.FC = () => {
     fetchRecognitions();
   }, [fetchRecognitions]);
 
-  const handleOpenCreate = () => {
+  const handleOpenCreateModal = () => {
     setEditingRecognition(null);
     setIsFormModalOpen(true);
   };
 
-  const handleOpenEdit = (recognition: RecognitionType) => {
+  const handleOpenEditModal = (recognition: RecognitionType) => {
     setEditingRecognition(recognition);
     setIsFormModalOpen(true);
   };
 
-  const handleOpenDelete = (recognition: RecognitionType) => {
+  const handleOpenDeleteModal = (recognition: RecognitionType) => {
     setDeletingRecognition(recognition);
     setIsDeleteModalOpen(true);
   };
 
+  const handleCreateSuccess = (saved: RecognitionType) => {
+    setRecognitions(prev => [saved, ...prev.filter(r => r.id !== saved.id)]);
+    triggerToast(`Reconocimiento "${saved.name}" creado exitosamente.`);
+  };
+
+  const handleEditSuccess = (saved: RecognitionType) => {
+    setRecognitions(prev => prev.map(r => (r.id === saved.id ? saved : r)));
+    triggerToast(`Reconocimiento "${saved.name}" actualizado exitosamente.`);
+  };
+
   const handleFormSuccess = (saved: RecognitionType, isEdit: boolean) => {
     if (isEdit) {
-      setRecognitions(prev => prev.map(r => (r.id === saved.id ? saved : r)));
-      triggerToast(`Reconocimiento "${saved.name}" actualizado exitosamente.`);
+      handleEditSuccess(saved);
     } else {
-      setRecognitions(prev => [saved, ...prev.filter(r => r.id !== saved.id)]);
-      triggerToast(`Reconocimiento "${saved.name}" creado exitosamente.`);
+      handleCreateSuccess(saved);
     }
   };
 
@@ -105,91 +299,28 @@ export const RecognitionCatalog: React.FC = () => {
     );
   };
 
-  const formatCreationDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    try {
-      const d = new Date(dateStr);
-      if (Number.isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
   const columns = useMemo<ColumnDef<RecognitionType>[]>(
     () => [
       {
         accessorKey: 'name',
         header: 'Nombre',
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                <Award className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-neutral text-sm">{item.name}</span>
-                <span className="text-xs text-neutral/40 font-mono">{item.id}</span>
-              </div>
-            </div>
-          );
-        }
+        cell: ({ row }) => renderRecognitionNameCell(row.original)
       },
       {
         accessorKey: 'created_at',
         header: 'Fecha de Creación',
-        cell: ({ getValue }) => {
-          const val = getValue<string>();
-          return <span className="text-xs text-neutral/60">{formatCreationDate(val)}</span>;
-        }
+        cell: ({ getValue }) => renderRecognitionDateCell(getValue<string>())
       },
       {
         id: 'actions',
-        header: () => <div className="text-right">Acciones</div>,
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="flex items-center justify-end gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  navigate(`/reconocimientos/${item.id}/plantilla`);
-                }}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors"
-                title="Diseñar Plantilla de Certificado"
-                aria-label={`Diseñar plantilla para ${item.name}`}
-              >
-                <Palette className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Plantilla</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenEdit(item)}
-                className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/5 rounded-lg border border-gray-200 hover:border-primary/20 transition-colors"
-                title="Editar Reconocimiento"
-                aria-label={`Editar ${item.name}`}
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenDelete(item)}
-                className="p-1.5 text-neutral/60 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-colors"
-                title="Eliminar Reconocimiento"
-                aria-label={`Eliminar ${item.name}`}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          );
-        }
+        header: renderRecognitionActionsHeader,
+        cell: ({ row }) =>
+          renderRecognitionActionsCell({
+            item: row.original,
+            onNavigateTemplate: (id) => navigate(`/reconocimientos/${id}/plantilla`),
+            onEdit: handleOpenEditModal,
+            onDelete: handleOpenDeleteModal
+          })
       }
     ],
     [navigate]
@@ -242,7 +373,7 @@ export const RecognitionCatalog: React.FC = () => {
         <Button
           type="button"
           variant="primary"
-          onClick={handleOpenCreate}
+          onClick={handleOpenCreateModal}
           icon={<Plus size={18} />}
           className="shadow-sm flex-shrink-0"
         >
@@ -298,72 +429,15 @@ export const RecognitionCatalog: React.FC = () => {
               ))}
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={columns.length} className="px-6 py-12 text-center text-neutral/60">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      <span>Cargando tipos de reconocimiento...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : currentPageRows.length > 0 ? (
-                currentPageRows.map((row) => (
-                  <tr key={row.id} className="hover:bg-primary/5 transition-colors bg-white">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-6 py-4 text-sm text-neutral whitespace-nowrap">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : recognitions.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length} className="px-6 py-16 text-center text-neutral/60">
-                    <div className="flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
-                      <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-                        <Award className="w-6 h-6" />
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="text-base font-bold text-neutral">
-                          No hay tipos de reconocimiento registrados
-                        </h3>
-                        <p className="text-sm text-neutral/60">
-                          No hay tipos de reconocimiento registrados. Haga clic en &apos;Nuevo Reconocimiento&apos; para comenzar.
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        onClick={handleOpenCreate}
-                        icon={<Plus size={16} />}
-                        className="mt-2 shadow-sm"
-                      >
-                        Nuevo Reconocimiento
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                <tr>
-                  <td colSpan={columns.length} className="px-6 py-12 text-center text-neutral/60">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Award className="w-8 h-8 text-neutral/30" />
-                      <p className="text-sm font-medium">No se encontraron reconocimientos.</p>
-                      {globalFilter && (
-                        <button
-                          type="button"
-                          onClick={() => setGlobalFilter('')}
-                          className="text-xs text-primary hover:underline font-semibold"
-                        >
-                          Limpiar filtros de búsqueda
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )}
+              {renderTableBodyContent({
+                loading,
+                rows: currentPageRows,
+                totalCount,
+                columnsLength: columns.length,
+                globalFilter,
+                onClearFilter: () => setGlobalFilter(''),
+                onOpenCreate: handleOpenCreateModal
+              })}
             </tbody>
           </table>
         </div>

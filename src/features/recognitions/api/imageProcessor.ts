@@ -32,7 +32,7 @@ export async function processBackgroundImageFile(
           orientation: 'landscape'
         });
       };
-      reader.onerror = (err) => reject(new Error(String(err)));
+      reader.onerror = (err) => reject(new Error(err instanceof Error ? err.message : String(err)));
       reader.readAsDataURL(file);
       return;
     }
@@ -190,7 +190,7 @@ export async function processBackgroundImageFile(
         });
       }
     };
-    reader.onerror = (err) => reject(new Error(String(err)));
+    reader.onerror = (err) => reject(new Error(err instanceof Error ? err.message : String(err)));
     reader.readAsDataURL(file);
   });
 }

@@ -8,6 +8,18 @@ interface DistrictSummaryTableProps {
   yoy?: YoYComparisonData;
 }
 
+function getProgressColor(count: number, maxCount: number): string {
+  if (maxCount <= 0) return 'bg-emerald-600';
+  const ratio = count / maxCount;
+  if (ratio > 0.75) return 'bg-emerald-600';
+  if (ratio > 0.4) return 'bg-emerald-500';
+  return 'bg-emerald-400';
+}
+
+function getDistrictCountLabel(count: number): string {
+  return count === 1 ? 'distrito' : 'distritos';
+}
+
 function computeDistrictMaxCount(
   districts: GeographicItem[],
   yoy?: YoYComparisonData,
@@ -79,7 +91,7 @@ const DistrictTableYoY: React.FC<DistrictTableYoYProps> = ({
                 <span>{d.currentPercentage}%</span>
                 <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
                   <div
-                    className="bg-emerald-600 h-full rounded-full"
+                    className={`${getProgressColor(d.currentCount, maxCount)} h-full rounded-full`}
                     style={{ width: `${(d.currentCount / maxCount) * 100}%` }}
                   />
                 </div>
@@ -129,7 +141,7 @@ const DistrictTableStandard: React.FC<DistrictTableStandardProps> = ({
                 <span>{d.percentage}%</span>
                 <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
                   <div
-                    className="bg-emerald-600 h-full rounded-full"
+                    className={`${getProgressColor(d.count, maxCount)} h-full rounded-full`}
                     style={{ width: `${(d.count / maxCount) * 100}%` }}
                   />
                 </div>
@@ -214,7 +226,7 @@ export const DistrictSummaryTable: React.FC<DistrictSummaryTableProps> = ({ dist
           </div>
         </div>
         <span className="text-xs font-semibold text-neutral/50 bg-gray-100 px-2.5 py-1 rounded-full">
-          {itemsCount} {itemsCount === 1 ? 'distrito' : 'distritos'}
+          {itemsCount} {getDistrictCountLabel(itemsCount)}
         </span>
       </div>
 

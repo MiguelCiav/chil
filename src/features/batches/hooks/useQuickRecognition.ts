@@ -43,44 +43,55 @@ export interface QuickRecognitionValidationParams {
   recognitionCode: string;
 }
 
+function validateHierarchyFields(
+  regionId: string,
+  districtId: string,
+  groupId: string,
+  isNoScout: boolean
+): Record<string, string> {
+  if (isNoScout) return {};
+  const errors: Record<string, string> = {};
+  if (!regionId && regionId !== '0') errors.regionId = 'Debe seleccionar una región';
+  if (!districtId && districtId !== '0') errors.districtId = 'Debe seleccionar un distrito';
+  if (!groupId && groupId !== '0') errors.groupId = 'Debe seleccionar un grupo scout';
+  return errors;
+}
+
+function validateIdentityField(
+  identity: string,
+  isNoScout: boolean,
+  scraperStatus: string,
+  verifiedCedula: string | null
+): Record<string, string> {
+  const clean = identity.trim();
+  if (!clean) return { identity: 'Debe ingresar la cédula de identidad' };
+  if (!isNoScout && (scraperStatus !== 'success' || verifiedCedula !== clean)) {
+    return { identity: 'Debe consultar el sistema de registro para verificar la cédula del scout antes de emitir el reconocimiento.' };
+  }
+  return {};
+}
+
+function validatePersonalFields(firstNames: string, lastNames: string, recognitionCode: string): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!firstNames.trim()) errors.firstNames = 'Debe ingresar el o los nombres';
+  if (!lastNames.trim()) errors.lastNames = 'Debe ingresar el o los apellidos';
+  if (!recognitionCode.trim()) errors.recognitionCode = 'Debe generar o ingresar un código de reconocimiento';
+  return errors;
+}
+
 export function validateQuickRecognitionFields(params: QuickRecognitionValidationParams): Record<string, string> {
-  const newErrors: Record<string, string> = {};
   const isNoScout = params.unit === 'no_scout';
+  const errors: Record<string, string> = {};
 
   if (!params.recognitionType) {
-    newErrors.recognitionType = 'Debe seleccionar un tipo de reconocimiento';
+    errors.recognitionType = 'Debe seleccionar un tipo de reconocimiento';
   }
 
-  if (!isNoScout) {
-    if (!params.regionId && params.regionId !== '0') {
-      newErrors.regionId = 'Debe seleccionar una región';
-    }
-    if (!params.districtId && params.districtId !== '0') {
-      newErrors.districtId = 'Debe seleccionar un distrito';
-    }
-    if (!params.groupId && params.groupId !== '0') {
-      newErrors.groupId = 'Debe seleccionar un grupo scout';
-    }
-  }
+  Object.assign(errors, validateHierarchyFields(params.regionId, params.districtId, params.groupId, isNoScout));
+  Object.assign(errors, validateIdentityField(params.identity, isNoScout, params.scraperStatus, params.verifiedCedula));
+  Object.assign(errors, validatePersonalFields(params.firstNames, params.lastNames, params.recognitionCode));
 
-  const cleanIdentity = params.identity.trim();
-  if (!cleanIdentity) {
-    newErrors.identity = 'Debe ingresar la cédula de identidad';
-  } else if (!isNoScout && (params.scraperStatus !== 'success' || params.verifiedCedula !== cleanIdentity)) {
-    newErrors.identity = 'Debe consultar el sistema de registro para verificar la cédula del scout antes de emitir el reconocimiento.';
-  }
-
-  if (!params.firstNames.trim()) {
-    newErrors.firstNames = 'Debe ingresar el o los nombres';
-  }
-  if (!params.lastNames.trim()) {
-    newErrors.lastNames = 'Debe ingresar el o los apellidos';
-  }
-  if (!params.recognitionCode.trim()) {
-    newErrors.recognitionCode = 'Debe generar o ingresar un código de reconocimiento';
-  }
-
-  return newErrors;
+  return errors;
 }
 
 export function resolveQuickRecognitionType(

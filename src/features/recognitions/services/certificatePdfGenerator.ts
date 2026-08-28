@@ -77,9 +77,8 @@ export function slugify(text: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+/, '')
-    .replace(/_+$/, '');
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '');
 }
 
 /**
@@ -361,7 +360,7 @@ export async function downloadSingleCertificatePdf(
 ): Promise<string> {
   const doc = await generateSingleCertificatePdf(params);
 
-  const sanitizedIdentity = params.member.identity.replace(/[^a-zA-Z0-9_-]+/g, '_');
+  const sanitizedIdentity = params.member.identity.replace(/[^a-zA-Z0-9_-]/g, '_');
   const slug = slugify(params.recognition?.name ?? params.batch.recognition_type ?? 'Reconocimiento');
   const fileName = `Reconocimiento_${sanitizedIdentity}_Lote_${params.batch.id}_${slug}.pdf`;
 

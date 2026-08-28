@@ -22,6 +22,29 @@ export const initialFilterState: StatisticsFilterState = {
   memberType: 'all'
 };
 
+function isWithinCustomRange(itemDate: Date, startDate?: string, endDate?: string): boolean {
+  if (startDate && endDate) {
+    const sDate = new Date(`${startDate}T00:00:00.000`);
+    const eDate = new Date(`${endDate}T23:59:59.999`);
+    return itemDate >= sDate && itemDate <= eDate;
+  }
+  if (startDate) {
+    const sDate = new Date(`${startDate}T00:00:00.000`);
+    return itemDate >= sDate;
+  }
+  if (endDate) {
+    const eDate = new Date(`${endDate}T23:59:59.999`);
+    return itemDate <= eDate;
+  }
+  return true;
+}
+
+function isWithinPastDays(itemDate: Date, now: Date, days: number): boolean {
+  const pastDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  pastDate.setHours(0, 0, 0, 0);
+  return itemDate >= pastDate && itemDate <= now;
+}
+
 function matchesDateRange(createdAt: string, period: string, startDate?: string, endDate?: string): boolean {
   if (!createdAt) return false;
   const itemDate = new Date(createdAt);
@@ -29,48 +52,22 @@ function matchesDateRange(createdAt: string, period: string, startDate?: string,
 
   const now = new Date();
 
-  if (period === 'all') return true;
-
-  if (period === 'this-year') {
-    return itemDate.getFullYear() === now.getFullYear();
+  switch (period) {
+    case 'all':
+      return true;
+    case 'this-year':
+      return itemDate.getFullYear() === now.getFullYear();
+    case 'this-month':
+      return itemDate.getFullYear() === now.getFullYear() && itemDate.getMonth() === now.getMonth();
+    case 'last-30':
+      return isWithinPastDays(itemDate, now, 30);
+    case 'last-90':
+      return isWithinPastDays(itemDate, now, 90);
+    case 'custom':
+      return isWithinCustomRange(itemDate, startDate, endDate);
+    default:
+      return true;
   }
-
-  if (period === 'this-month') {
-    return (
-      itemDate.getFullYear() === now.getFullYear() &&
-      itemDate.getMonth() === now.getMonth()
-    );
-  }
-
-  if (period === 'last-30') {
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    thirtyDaysAgo.setHours(0, 0, 0, 0);
-    return itemDate >= thirtyDaysAgo && itemDate <= now;
-  }
-
-  if (period === 'last-90') {
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    ninetyDaysAgo.setHours(0, 0, 0, 0);
-    return itemDate >= ninetyDaysAgo && itemDate <= now;
-  }
-
-  if (period === 'custom') {
-    if (startDate && endDate) {
-      const sDate = new Date(`${startDate}T00:00:00.000`);
-      const eDate = new Date(`${endDate}T23:59:59.999`);
-      return itemDate >= sDate && itemDate <= eDate;
-    }
-    if (startDate) {
-      const sDate = new Date(`${startDate}T00:00:00.000`);
-      return itemDate >= sDate;
-    }
-    if (endDate) {
-      const eDate = new Date(`${endDate}T23:59:59.999`);
-      return itemDate <= eDate;
-    }
-  }
-
-  return true;
 }
 
 export function buildAvailableDistricts(districts: District[], regionId?: string): District[] {
@@ -184,49 +181,53 @@ export function extractYearMembers(
   });
 }
 
+function getPeriodSummaryLabel(filters: StatisticsFilterState): string | undefined {
+  if (filters.period === 'this-year') return 'Este Año';
+  if (filters.period === 'this-month') return 'Este Mes';
+  if (filters.period === 'last-30') return 'Últimos 30 días';
+  if (filters.period === 'last-90') return 'Últimos 90 días';
+  if (filters.period === 'custom') {
+    return `Desde ${filters.startDate || 'inicio'} hasta ${filters.endDate || 'fin'}`;
+  }
+  return undefined;
+}
+
+function getRecognitionSummaryLabel(recognitionId?: string, recognitionTypes: RecognitionType[] = []): string | undefined {
+  if (!recognitionId) return undefined;
+  const rec = recognitionTypes.find(r => r.id === recognitionId);
+  return rec ? rec.name : recognitionId;
+}
+
+function getRegionSummaryLabel(regionId?: string, regions: Region[] = []): string | undefined {
+  if (!regionId) return undefined;
+  const reg = regions.find(r => String(r.id) === regionId);
+  return reg ? reg.name : `Región ${regionId}`;
+}
+
+function getDistrictSummaryLabel(districtId?: string, districts: District[] = []): string | undefined {
+  if (!districtId) return undefined;
+  const dist = districts.find(d => String(d.id) === districtId);
+  return dist ? dist.name : `Distrito ${districtId}`;
+}
+
+function getMemberTypeSummaryLabel(memberType?: string): string | undefined {
+  if (memberType === 'young') return 'Jóvenes';
+  if (memberType === 'adult') return 'Adultos';
+  return undefined;
+}
+
 export function buildFilterSummaryLabels(
   filters: StatisticsFilterState,
   recognitionTypes: RecognitionType[],
   regions: Region[],
   districts: District[]
 ): FilterSummaryLabels {
-  let periodLabel: string | undefined;
-  if (filters.period === 'this-year') periodLabel = 'Este Año';
-  else if (filters.period === 'this-month') periodLabel = 'Este Mes';
-  else if (filters.period === 'last-30') periodLabel = 'Últimos 30 días';
-  else if (filters.period === 'last-90') periodLabel = 'Últimos 90 días';
-  else if (filters.period === 'custom') {
-    periodLabel = `Desde ${filters.startDate || 'inicio'} hasta ${filters.endDate || 'fin'}`;
-  }
-
-  let recognitionLabel: string | undefined;
-  if (filters.recognitionId) {
-    const rec = recognitionTypes.find(r => r.id === filters.recognitionId);
-    recognitionLabel = rec ? rec.name : filters.recognitionId;
-  }
-
-  let regionLabel: string | undefined;
-  if (filters.regionId) {
-    const reg = regions.find(r => String(r.id) === filters.regionId);
-    regionLabel = reg ? reg.name : `Región ${filters.regionId}`;
-  }
-
-  let districtLabel: string | undefined;
-  if (filters.districtId) {
-    const dist = districts.find(d => String(d.id) === filters.districtId);
-    districtLabel = dist ? dist.name : `Distrito ${filters.districtId}`;
-  }
-
-  let memberTypeLabel: string | undefined;
-  if (filters.memberType === 'young') memberTypeLabel = 'Jóvenes';
-  else if (filters.memberType === 'adult') memberTypeLabel = 'Adultos';
-
   return {
-    periodLabel,
-    recognitionLabel,
-    regionLabel,
-    districtLabel,
-    memberTypeLabel
+    periodLabel: getPeriodSummaryLabel(filters),
+    recognitionLabel: getRecognitionSummaryLabel(filters.recognitionId, recognitionTypes),
+    regionLabel: getRegionSummaryLabel(filters.regionId, regions),
+    districtLabel: getDistrictSummaryLabel(filters.districtId, districts),
+    memberTypeLabel: getMemberTypeSummaryLabel(filters.memberType)
   };
 }
 

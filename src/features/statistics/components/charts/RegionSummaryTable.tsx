@@ -8,6 +8,18 @@ interface RegionSummaryTableProps {
   yoy?: YoYComparisonData;
 }
 
+function getProgressColor(count: number, maxCount: number): string {
+  if (maxCount <= 0) return 'bg-emerald-600';
+  const ratio = count / maxCount;
+  if (ratio > 0.75) return 'bg-emerald-600';
+  if (ratio > 0.4) return 'bg-emerald-500';
+  return 'bg-emerald-400';
+}
+
+function getRegionCountLabel(count: number): string {
+  return count === 1 ? 'región' : 'regiones';
+}
+
 function computeRegionMaxCount(
   regions: GeographicItem[],
   yoy?: YoYComparisonData,
@@ -75,7 +87,7 @@ const RegionTableYoY: React.FC<RegionTableYoYProps> = ({
                 <span>{r.currentPercentage}%</span>
                 <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
                   <div
-                    className="bg-emerald-600 h-full rounded-full"
+                    className={`${getProgressColor(r.currentCount, maxCount)} h-full rounded-full`}
                     style={{ width: `${(r.currentCount / maxCount) * 100}%` }}
                   />
                 </div>
@@ -121,7 +133,7 @@ const RegionTableStandard: React.FC<RegionTableStandardProps> = ({
                 <span>{r.percentage}%</span>
                 <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
                   <div
-                    className="bg-emerald-600 h-full rounded-full"
+                    className={`${getProgressColor(r.count, maxCount)} h-full rounded-full`}
                     style={{ width: `${(r.count / maxCount) * 100}%` }}
                   />
                 </div>
@@ -206,7 +218,7 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
           </div>
         </div>
         <span className="text-xs font-semibold text-neutral/50 bg-gray-100 px-2.5 py-1 rounded-full">
-          {itemsCount} {itemsCount === 1 ? 'región' : 'regiones'}
+          {itemsCount} {getRegionCountLabel(itemsCount)}
         </span>
       </div>
 

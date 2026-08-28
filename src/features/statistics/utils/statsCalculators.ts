@@ -186,6 +186,8 @@ export interface BuildYoYDistrictComparisonOptions {
   previousMembersCount: number;
 }
 
+export type BuildYoYDistrictParams = BuildYoYDistrictComparisonOptions;
+
 function buildYoYDistrictComparison(
   options: BuildYoYDistrictComparisonOptions
 ): YoYDistrictItem[] {

@@ -85,39 +85,36 @@ const NEW_BATCH_WIZARD_TOUR_STEPS: WalkthroughStep[] = [
 ];
 
 // Step 1 Validation Schema
-const step1Schema = z.object({
-  comment: z.string().optional(),
-  regionId: z.string().optional(),
-  districtId: z.string().optional(),
-  groupId: z.string().optional(),
-  recognitionType: z.string().min(1, "Debe seleccionar un tipo de reconocimiento"),
-  unitScope: z.string().optional()
-}).superRefine((data, ctx) => {
-  const isNoScout = data.unitScope === 'no_scout';
-  if (!isNoScout) {
-    if (!data.regionId || data.regionId.trim() === '') {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['regionId'],
-        message: 'Debe seleccionar una región'
-      });
+const step1Schema = z
+  .object({
+    comment: z.string().optional(),
+    regionId: z.string().optional(),
+    districtId: z.string().optional(),
+    groupId: z.string().optional(),
+    recognitionType: z.string().min(1, 'Debe seleccionar un tipo de reconocimiento'),
+    unitScope: z.string().optional()
+  })
+  .refine(
+    (data) => data.unitScope === 'no_scout' || Boolean(data.regionId && data.regionId.trim() !== ''),
+    {
+      message: 'Debe seleccionar una región',
+      path: ['regionId']
     }
-    if (!data.districtId || data.districtId.trim() === '') {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['districtId'],
-        message: 'Debe seleccionar un distrito'
-      });
+  )
+  .refine(
+    (data) => data.unitScope === 'no_scout' || Boolean(data.districtId && data.districtId.trim() !== ''),
+    {
+      message: 'Debe seleccionar un distrito',
+      path: ['districtId']
     }
-    if (!data.groupId || data.groupId.trim() === '') {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['groupId'],
-        message: 'Debe seleccionar un grupo scout'
-      });
+  )
+  .refine(
+    (data) => data.unitScope === 'no_scout' || Boolean(data.groupId && data.groupId.trim() !== ''),
+    {
+      message: 'Debe seleccionar un grupo scout',
+      path: ['groupId']
     }
-  }
-});
+  );
 
 type Step1FormData = z.infer<typeof step1Schema>;
 function splitFullName(name: string): { first_names: string; last_names: string } {

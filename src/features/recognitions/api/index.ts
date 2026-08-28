@@ -21,16 +21,15 @@ export function generateRecognitionId(name: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // remove accents
-    .replace(/[^a-z0-9]+/g, '-') // replace non-alphanumeric with hyphen
-    .replace(/^-+/, '')
-    .replace(/-+$/, ''); // trim leading/trailing hyphens
+    .replace(/[^a-z0-9-]+/g, '-') // replace non-alphanumeric with hyphen
+    .replace(/^-+|-+$/g, ''); // trim leading/trailing hyphens
 
   return `sct-${normalized || 'custom'}`;
 }
 
 export async function getAllRecognitionTypes(userId?: string): Promise<RecognitionType[]> {
   try {
-    const targetUserId = userId !== undefined ? userId : (auth.currentUser?.uid ?? '');
+    const targetUserId = userId ?? auth.currentUser?.uid ?? '';
     if (!targetUserId) {
       return [];
     }
@@ -86,7 +85,7 @@ export async function createRecognitionType(
   userId?: string
 ): Promise<RecognitionType> {
   const id = generateRecognitionId(data.name);
-  const targetUserId = data.user_id ?? (userId !== undefined ? userId : (auth.currentUser?.uid ?? ''));
+  const targetUserId = data.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const newRecognition: RecognitionType = {
     id,
     name: data.name.trim(),
@@ -104,7 +103,7 @@ export async function updateRecognitionType(
   userId?: string
 ): Promise<RecognitionType> {
   const existing = await getRecognitionTypeById(id);
-  const targetUserId = (userId !== undefined ? userId : (existing?.user_id ?? auth.currentUser?.uid ?? ''));
+  const targetUserId = userId ?? existing?.user_id ?? auth.currentUser?.uid ?? '';
   const updated: RecognitionType = {
     id,
     name: data.name.trim(),

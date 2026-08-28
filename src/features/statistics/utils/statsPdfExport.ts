@@ -34,25 +34,13 @@ export function checkPageBreak(doc: jsPDF, currentY: number, requiredSpace: numb
   return currentY;
 }
 
-/**
- * Draws the PDF report top header banner and applied filter summary box
- */
-export function drawReportHeader(
+function drawReportBanner(
   doc: jsPDF,
-  stats: StatisticsDataset,
-  filterSummary?: FilterSummaryLabels,
-  startY: number = 16
+  hasYoY: boolean,
+  yoy: YoYComparisonData | undefined,
+  todayStr: string,
+  y: number
 ): number {
-  let y = startY;
-  const yoy = stats.yoyComparison;
-  const hasYoY = Boolean(yoy?.hasPreviousYearData);
-
-  const todayStr = new Date().toLocaleDateString('es-VE', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  });
-
   const bannerHeight = hasYoY ? 28 : 24;
   doc.setFillColor(11, 79, 108); // Primary dark blue/teal
   doc.rect(MARGIN, y, CONTENT_WIDTH, bannerHeight, 'F');
@@ -73,41 +61,65 @@ export function drawReportHeader(
     doc.setTextColor(220, 235, 245);
     doc.text('Asociación de Scouts de Venezuela • Sistema Chil de Gestión y Emisión', MARGIN + 6, y + 19);
     doc.text(`Fecha de emisión: ${todayStr}`, MARGIN + 6, y + 24);
-    y += 32;
-  } else {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(220, 235, 245);
-    doc.text('Asociación de Scouts de Venezuela • Sistema Chil de Gestión y Emisión', MARGIN + 6, y + 15);
-    doc.text(`Fecha de emisión: ${todayStr}`, MARGIN + 6, y + 20);
-    y += 28;
+    return y + 32;
   }
 
-  // Filter Summary Box
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(220, 235, 245);
+  doc.text('Asociación de Scouts de Venezuela • Sistema Chil de Gestión y Emisión', MARGIN + 6, y + 15);
+  doc.text(`Fecha de emisión: ${todayStr}`, MARGIN + 6, y + 20);
+  return y + 28;
+}
+
+function drawFilterSummaryBox(doc: jsPDF, filterSummary: FilterSummaryLabels, y: number): number {
+  const filterParts: string[] = [];
+  if (filterSummary.periodLabel) filterParts.push(`Período: ${filterSummary.periodLabel}`);
+  if (filterSummary.recognitionLabel) filterParts.push(`Reconocimiento: ${filterSummary.recognitionLabel}`);
+  if (filterSummary.regionLabel) filterParts.push(`Región: ${filterSummary.regionLabel}`);
+  if (filterSummary.districtLabel) filterParts.push(`Distrito: ${filterSummary.districtLabel}`);
+  if (filterSummary.memberTypeLabel) filterParts.push(`Tipo: ${filterSummary.memberTypeLabel}`);
+
+  if (filterParts.length === 0) return y;
+
+  doc.setFillColor(245, 247, 250);
+  doc.setDrawColor(215, 225, 235);
+  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 10, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(50, 70, 90);
+  doc.text('Filtros aplicados:', MARGIN + 4, y + 6);
+
+  doc.setFont('helvetica', 'normal');
+  const filterText = filterParts.join('  |  ');
+  doc.text(filterText.substring(0, 110), MARGIN + 30, y + 6);
+
+  return y + 14;
+}
+
+/**
+ * Draws the PDF report top header banner and applied filter summary box
+ */
+export function drawReportHeader(
+  doc: jsPDF,
+  stats: StatisticsDataset,
+  filterSummary?: FilterSummaryLabels,
+  startY: number = 16
+): number {
+  const yoy = stats.yoyComparison;
+  const hasYoY = Boolean(yoy?.hasPreviousYearData);
+
+  const todayStr = new Date().toLocaleDateString('es-VE', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  let y = drawReportBanner(doc, hasYoY, yoy, todayStr, startY);
+
   if (filterSummary) {
-    const filterParts: string[] = [];
-    if (filterSummary?.periodLabel) filterParts.push(`Período: ${filterSummary.periodLabel}`);
-    if (filterSummary?.recognitionLabel) filterParts.push(`Reconocimiento: ${filterSummary.recognitionLabel}`);
-    if (filterSummary?.regionLabel) filterParts.push(`Región: ${filterSummary.regionLabel}`);
-    if (filterSummary?.districtLabel) filterParts.push(`Distrito: ${filterSummary.districtLabel}`);
-    if (filterSummary?.memberTypeLabel) filterParts.push(`Tipo: ${filterSummary.memberTypeLabel}`);
-
-    if (filterParts.length > 0) {
-      doc.setFillColor(245, 247, 250);
-      doc.setDrawColor(215, 225, 235);
-      doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 10, 2, 2, 'FD');
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(50, 70, 90);
-      doc.text('Filtros aplicados:', MARGIN + 4, y + 6);
-
-      doc.setFont('helvetica', 'normal');
-      const filterText = filterParts.join('  |  ');
-      doc.text(filterText.substring(0, 110), MARGIN + 30, y + 6);
-
-      y += 14;
-    }
+    y = drawFilterSummaryBox(doc, filterSummary, y);
   }
 
   return y;

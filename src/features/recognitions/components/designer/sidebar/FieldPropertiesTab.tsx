@@ -95,7 +95,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
             {/* Font Size Slider */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <label htmlFor="font-size-slider" className="font-semibold text-neutral">
+                <label htmlFor="field-font-size" className="font-semibold text-neutral">
                   Tamaño de Fuente
                 </label>
                 <span className="font-bold text-primary font-mono">
@@ -103,7 +103,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                 </span>
               </div>
               <input
-                id="font-size-slider"
+                id="field-font-size"
                 type="range"
                 min={10}
                 max={48}
@@ -148,7 +148,9 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
             {/* Text Color */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-neutral">Color de Texto</span>
+                <label htmlFor="field-color-picker" className="font-semibold text-neutral">
+                  Color de Texto
+                </label>
                 <span className="font-mono text-xs text-neutral/60">
                   {selectedField.color}
                 </span>
@@ -172,6 +174,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                   ))}
                 </div>
                 <input
+                  id="field-color-picker"
                   type="color"
                   value={selectedField.color}
                   onChange={(e) => onUpdateField({ color: e.target.value })}
