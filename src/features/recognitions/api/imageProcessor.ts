@@ -10,6 +10,16 @@ export interface ProcessedBackgroundResult {
   orientation: 'landscape' | 'portrait';
 }
 
+function extractErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === 'string') {
+    return err;
+  }
+  return 'Error al procesar la imagen';
+}
+
 export async function processBackgroundImageFile(
   file: File,
   maxWidth = 1920,
@@ -33,8 +43,7 @@ export async function processBackgroundImageFile(
         });
       };
       reader.onerror = (err) => {
-        const errorMsg = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Error al procesar la imagen');
-        reject(new Error(errorMsg));
+        reject(new Error(extractErrorMessage(err)));
       };
       reader.readAsDataURL(file);
       return;
@@ -194,8 +203,7 @@ export async function processBackgroundImageFile(
       }
     };
     reader.onerror = (err) => {
-      const errorMsg = err instanceof Error ? err.message : (typeof err === 'string' ? err : 'Error al procesar la imagen');
-      reject(new Error(errorMsg));
+      reject(new Error(extractErrorMessage(err)));
     };
     reader.readAsDataURL(file);
   });

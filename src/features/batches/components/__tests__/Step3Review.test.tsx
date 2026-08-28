@@ -65,8 +65,8 @@ describe('Step3Review component', () => {
     render(<Step3Review {...defaultProps} />);
 
     expect(screen.getByText('Códigos de Reconocimiento')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Generar automáticamente/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Ingreso manual/i)).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Generar códigos automáticamente/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Ingreso manual/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Regenerar códigos/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Limpiar códigos/i })).toBeInTheDocument();
   });

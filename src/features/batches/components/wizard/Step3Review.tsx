@@ -229,6 +229,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <label
                 htmlFor="radio-code-auto"
+                aria-label="Generar códigos automáticamente"
                 className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                   codeMode === 'auto'
                     ? 'bg-white border-primary shadow-sm ring-2 ring-primary/10'
@@ -254,6 +255,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
 
               <label
                 htmlFor="radio-code-manual"
+                aria-label="Ingreso manual de códigos en tabla"
                 className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                   codeMode === 'manual'
                     ? 'bg-white border-primary shadow-sm ring-2 ring-primary/10'
