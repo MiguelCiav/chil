@@ -82,6 +82,7 @@ export const QuickRecognition: React.FC = () => {
     groupId,
     comment,
     unit,
+    memberType,
     identity,
     firstNames,
     lastNames,
@@ -108,6 +109,7 @@ export const QuickRecognition: React.FC = () => {
     handleGroupChange,
     handleRecognitionTypeChange,
     handleUnitChange,
+    handleMemberTypeChange,
     handleIdentityChange,
     handleFirstNamesChange,
     handleLastNamesChange,
@@ -189,6 +191,8 @@ export const QuickRecognition: React.FC = () => {
             <RecipientFieldsSection
               unit={unit}
               onUnitChange={handleUnitChange}
+              memberType={memberType}
+              onMemberTypeChange={handleMemberTypeChange}
               identity={identity}
               onIdentityChange={handleIdentityChange}
               isSearchingScraper={isSearchingScraper}

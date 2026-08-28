@@ -219,12 +219,16 @@ function generateSecureBatchId(): number {
 export async function createBatch(params: BatchCreationParams, userId?: string): Promise<Batch> {
   const numericId = generateSecureBatchId();
   const targetUserId = params.user_id ?? userId ?? auth.currentUser?.uid ?? '';
+  const regionId = typeof params.region_id === 'number' && !Number.isNaN(params.region_id) ? params.region_id : 0;
+  const districtId = typeof params.district_id === 'number' && !Number.isNaN(params.district_id) ? params.district_id : 0;
+  const groupId = typeof params.group_id === 'number' && !Number.isNaN(params.group_id) ? params.group_id : 0;
+
   const newBatch: Batch = {
     id: numericId,
-    comment: params.comment ?? '',
-    region_id: params.region_id,
-    district_id: params.district_id,
-    group_id: params.group_id,
+    comment: params.comment || '',
+    region_id: regionId,
+    district_id: districtId,
+    group_id: groupId,
     unit_scope: params.unit_scope ?? 'mixed',
     recognition_type: params.recognition_type,
     recognition_duration: params.recognition_duration ?? '',
@@ -242,16 +246,19 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
   const docSnap = await getDoc(batchRef);
   const existingData = docSnap.exists() ? (docSnap.data() as Batch) : null;
   const targetUserId = params.user_id ?? userId ?? existingData?.user_id ?? auth.currentUser?.uid ?? '';
+  const regionId = typeof params.region_id === 'number' && !Number.isNaN(params.region_id) ? params.region_id : (existingData?.region_id ?? 0);
+  const districtId = typeof params.district_id === 'number' && !Number.isNaN(params.district_id) ? params.district_id : (existingData?.district_id ?? 0);
+  const groupId = typeof params.group_id === 'number' && !Number.isNaN(params.group_id) ? params.group_id : (existingData?.group_id ?? 0);
 
   const updatedBatch: Batch = {
     id,
-    comment: params.comment ?? '',
-    region_id: params.region_id,
-    district_id: params.district_id,
-    group_id: params.group_id,
+    comment: params.comment ?? existingData?.comment ?? '',
+    region_id: regionId,
+    district_id: districtId,
+    group_id: groupId,
     unit_scope: params.unit_scope ?? existingData?.unit_scope ?? 'mixed',
-    recognition_type: params.recognition_type,
-    recognition_duration: params.recognition_duration ?? '',
+    recognition_type: params.recognition_type ?? existingData?.recognition_type,
+    recognition_duration: params.recognition_duration ?? existingData?.recognition_duration ?? '',
     created_at: existingData ? existingData.created_at : new Date().toISOString(),
     ...(targetUserId ? { user_id: targetUserId } : {})
   };
@@ -294,9 +301,27 @@ export async function getMemberStatus(cedula: string): Promise<ScraperMemberDeta
 export async function createMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
   const targetUserId = member.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const newMember: ScoutMember = {
-    ...member,
-    ...(targetUserId ? { user_id: targetUserId } : {})
+    identity: member.identity,
+    first_names: member.first_names,
+    last_names: member.last_names,
+    birth_date: member.birth_date,
+    member_type: member.member_type,
+    status: member.status,
+    verified_in_registry: Boolean(member.verified_in_registry),
+    ...(member.unit ? { unit: member.unit } : {}),
+    ...(member.group_id !== undefined && !Number.isNaN(member.group_id) ? { group_id: member.group_id } : {}),
+    ...(member.unit_id !== undefined && !Number.isNaN(member.unit_id) ? { unit_id: member.unit_id } : {}),
+    ...(member.batch_id !== undefined && !Number.isNaN(member.batch_id) ? { batch_id: member.batch_id } : {}),
+    ...(member.email ? { email: member.email } : {}),
+    ...(member.phone ? { phone: member.phone } : {}),
+    ...(member.recognition_code ? { recognition_code: member.recognition_code } : {}),
+    ...(member.exceptional_reason ? { exceptional_reason: member.exceptional_reason } : {})
   };
+
+  if (targetUserId) {
+    newMember.user_id = targetUserId;
+  }
+
   // Use member.identity (the unique national ID/cédula) as the document key to perform safe upserts
   await setDoc(doc(db, "scout_members", member.identity), newMember);
   return newMember;
@@ -305,9 +330,27 @@ export async function createMember(member: ScoutMember, userId?: string): Promis
 export async function updateMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
   const targetUserId = member.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const updatedMember: ScoutMember = {
-    ...member,
-    ...(targetUserId ? { user_id: targetUserId } : {})
+    identity: member.identity,
+    first_names: member.first_names,
+    last_names: member.last_names,
+    birth_date: member.birth_date,
+    member_type: member.member_type,
+    status: member.status,
+    verified_in_registry: Boolean(member.verified_in_registry),
+    ...(member.unit ? { unit: member.unit } : {}),
+    ...(member.group_id !== undefined && !Number.isNaN(member.group_id) ? { group_id: member.group_id } : {}),
+    ...(member.unit_id !== undefined && !Number.isNaN(member.unit_id) ? { unit_id: member.unit_id } : {}),
+    ...(member.batch_id !== undefined && !Number.isNaN(member.batch_id) ? { batch_id: member.batch_id } : {}),
+    ...(member.email ? { email: member.email } : {}),
+    ...(member.phone ? { phone: member.phone } : {}),
+    ...(member.recognition_code ? { recognition_code: member.recognition_code } : {}),
+    ...(member.exceptional_reason ? { exceptional_reason: member.exceptional_reason } : {})
   };
+
+  if (targetUserId) {
+    updatedMember.user_id = targetUserId;
+  }
+
   await setDoc(doc(db, "scout_members", member.identity), updatedMember);
   return updatedMember;
 }

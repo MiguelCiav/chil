@@ -65,6 +65,16 @@ export const QuickRecognitionSuccess: React.FC<QuickRecognitionSuccessProps> = (
               </span>
             </div>
             <div>
+              <span className="text-xs uppercase text-neutral/50 font-bold block">Tipo de Miembro</span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                successData.member.member_type === 'young'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}>
+                {successData.member.member_type === 'young' ? 'Joven' : 'Adulto'}
+              </span>
+            </div>
+            <div>
               <span className="text-xs uppercase text-neutral/50 font-bold block">Lote Creado</span>
               <span className="font-bold text-neutral">
                 Lote #{successData.batch.id}

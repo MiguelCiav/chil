@@ -303,10 +303,139 @@ describe('QuickRecognition Component', () => {
     await waitFor(() => {
       expect(screen.getByText('¡Reconocimiento Emitido con Éxito!')).toBeInTheDocument();
       expect(screen.getByText('María González')).toBeInTheDocument();
+      expect(screen.getByText('Adulto')).toBeInTheDocument();
       expect(screen.getByText('Lote #501')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Emitir otro reconocimiento rápido/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Ver Lote Creado/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Ir al Listado de Lotes/i })).toBeInTheDocument();
+    });
+  });
+
+  it('allows toggling member type between Joven and Adulto and persists selection', async () => {
+    vi.mocked(batchesApi.createBatch).mockResolvedValue({
+      id: 601,
+      comment: 'Reconocimiento',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      unit_scope: 'no_scout',
+      recognition_type: 'sct-wood-badge',
+      created_at: '2026-08-25T12:00:00.000Z',
+      user_id: 'user-quick-123'
+    });
+
+    vi.mocked(batchesApi.createMember).mockResolvedValue({
+      identity: 'V-20111222',
+      first_names: 'Luis',
+      last_names: 'Ramírez',
+      birth_date: '2005-01-01',
+      unit: 'no_scout',
+      member_type: 'young',
+      status: 'active',
+      batch_id: 601,
+      recognition_code: 'REC-LMR123',
+      user_id: 'user-quick-123'
+    });
+
+    vi.mocked(recognitionsApi.downloadSingleCertificatePdf).mockResolvedValue('Reconocimiento.pdf');
+
+    render(
+      <MemoryRouter>
+        <QuickRecognition />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Región Capital' })).toBeInTheDocument();
+    });
+
+    // Select No Scout unit (defaults memberType to Adulto)
+    fireEvent.change(screen.getByLabelText('Unidad / Categoría'), { target: { value: 'no_scout' } });
+
+    // Click "Joven" toggle
+    const jovenBtn = screen.getByRole('button', { name: 'Joven' });
+    const adultoBtn = screen.getByRole('button', { name: 'Adulto' });
+
+    expect(adultoBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(jovenBtn).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(jovenBtn);
+    expect(jovenBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(adultoBtn).toHaveAttribute('aria-pressed', 'false');
+
+    // Fill and submit
+    fireEvent.change(screen.getByLabelText('Tipo de Reconocimiento'), { target: { value: 'sct-wood-badge' } });
+    fireEvent.change(screen.getByLabelText('Cédula de Identidad'), { target: { value: 'V-20111222' } });
+    fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Luis' } });
+    fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'Ramírez' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar Reconocimiento/i }));
+
+    await waitFor(() => {
+      expect(batchesApi.createMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          member_type: 'young'
+        }),
+        'user-quick-123'
+      );
+    });
+  });
+
+  it('sanitizes non-numeric and non-V characters in quick recognition cédula input', async () => {
+    render(
+      <MemoryRouter>
+        <QuickRecognition />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Región Capital' })).toBeInTheDocument();
+    });
+
+    const cedulaInput = screen.getByLabelText('Cédula de Identidad') as HTMLInputElement;
+    fireEvent.change(cedulaInput, { target: { value: 'V-12.345.678 (hola!)' } });
+    expect(cedulaInput.value).toBe('V-12345678');
+  });
+
+  it('auto-updates memberType when unit changes or when scraper returns adult birth date', async () => {
+    vi.mocked(batchesApi.getMemberStatus).mockResolvedValue({
+      nombre_completo: 'Carlos Adulto',
+      status: 'Activo',
+      fecha_nacimiento: '1985-06-15',
+      correo_electronico: 'carlos@example.com',
+      telefono: '04141234567'
+    });
+
+    render(
+      <MemoryRouter>
+        <QuickRecognition />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Región Capital' })).toBeInTheDocument();
+    });
+
+    const jovenBtn = screen.getByRole('button', { name: 'Joven' });
+    const adultoBtn = screen.getByRole('button', { name: 'Adulto' });
+
+    // Initial unit is 'manada' -> memberType is 'young'
+    expect(jovenBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Change unit to 'institucional' -> memberType defaults to 'adult'
+    fireEvent.change(screen.getByLabelText('Unidad / Categoría'), { target: { value: 'institucional' } });
+    expect(adultoBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Change unit back to 'tropa' -> memberType defaults to 'young'
+    fireEvent.change(screen.getByLabelText('Unidad / Categoría'), { target: { value: 'tropa' } });
+    expect(jovenBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Consult adult scout via scraper -> should auto-switch to 'adult'
+    fireEvent.change(screen.getByLabelText('Cédula de Identidad'), { target: { value: 'V-12345678' } });
+    fireEvent.click(screen.getByRole('button', { name: /Consultar/i }));
+
+    await waitFor(() => {
+      expect(adultoBtn).toHaveAttribute('aria-pressed', 'true');
     });
   });
 

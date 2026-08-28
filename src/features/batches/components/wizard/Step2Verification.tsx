@@ -157,6 +157,8 @@ const createStep2Columns = (
   }
 ];
 
+const sanitizeCedulaInput = (val: string) => val.replace(/[^0-9\n\r]/g, '');
+
 export const Step2Verification: React.FC<Step2VerificationProps> = ({
   batchName,
   youngCedulas,
@@ -173,8 +175,8 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
   onBack
 }) => {
   const currentCedulas = React.useMemo(() => {
-    const youngs = youngCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
-    const adults = adultCedulas.split('\n').map(c => c.trim()).filter(c => c !== '');
+    const youngs = youngCedulas.split('\n').map(c => c.trim().replace(/[^0-9]/g, '')).filter(c => c !== '');
+    const adults = adultCedulas.split('\n').map(c => c.trim().replace(/[^0-9]/g, '')).filter(c => c !== '');
     return new Set([...youngs, ...adults]);
   }, [youngCedulas, adultCedulas]);
 
@@ -203,7 +205,7 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
             multiline
             rows={6}
             value={youngCedulas}
-            onChange={e => setYoungCedulas(e.target.value)}
+            onChange={e => setYoungCedulas(sanitizeCedulaInput(e.target.value))}
             disabled={isVerifying}
           />
           <Field
@@ -212,7 +214,7 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
             multiline
             rows={6}
             value={adultCedulas}
-            onChange={e => setAdultCedulas(e.target.value)}
+            onChange={e => setAdultCedulas(sanitizeCedulaInput(e.target.value))}
             disabled={isVerifying}
           />
         </div>

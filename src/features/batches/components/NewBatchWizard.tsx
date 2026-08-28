@@ -189,8 +189,14 @@ function upsertVerificationItem(
 }
 
 function parseCedulaEntries(youngsText: string, adultsText: string) {
-  const youngs = youngsText.split('\n').map(c => c.trim()).filter(Boolean);
-  const adults = adultsText.split('\n').map(c => c.trim()).filter(Boolean);
+  const youngs = youngsText
+    .split('\n')
+    .map(c => c.trim().replace(/[^0-9]/g, ''))
+    .filter(Boolean);
+  const adults = adultsText
+    .split('\n')
+    .map(c => c.trim().replace(/[^0-9]/g, ''))
+    .filter(Boolean);
   const allCedulas = [
     ...youngs.map(c => ({ cedula: c, type: 'young' as const })),
     ...adults.map(c => ({ cedula: c, type: 'adult' as const }))

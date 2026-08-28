@@ -7,6 +7,8 @@ import { ScoutUnit } from '../../types';
 export interface RecipientFieldsSectionProps {
   unit: ScoutUnit;
   onUnitChange: (val: ScoutUnit) => void;
+  memberType: 'young' | 'adult';
+  onMemberTypeChange: (val: 'young' | 'adult') => void;
   identity: string;
   onIdentityChange: (val: string) => void;
   isSearchingScraper: boolean;
@@ -26,6 +28,8 @@ export interface RecipientFieldsSectionProps {
 export const RecipientFieldsSection: React.FC<RecipientFieldsSectionProps> = ({
   unit,
   onUnitChange,
+  memberType,
+  onMemberTypeChange,
   identity,
   onIdentityChange,
   isSearchingScraper,
@@ -69,6 +73,39 @@ export const RecipientFieldsSection: React.FC<RecipientFieldsSectionProps> = ({
               <option value="institucional">Institucional</option>
               <option value="no_scout">No scout</option>
             </select>
+          </div>
+
+          {/* Tipo de Miembro */}
+          <div className="space-y-1">
+            <label className="block uppercase text-xs font-bold tracking-wide text-neutral">
+              Tipo de Miembro *
+            </label>
+            <div className="flex h-[46px] rounded-field bg-primary/5 p-1 border border-primary/20" role="group" aria-label="Tipo de Miembro">
+              <button
+                type="button"
+                aria-pressed={memberType === 'young'}
+                onClick={() => onMemberTypeChange('young')}
+                className={`flex-1 rounded-lg text-sm font-semibold transition-all ${
+                  memberType === 'young'
+                    ? 'bg-primary text-white shadow-xs font-bold'
+                    : 'text-neutral/70 hover:text-neutral hover:bg-white/50'
+                }`}
+              >
+                Joven
+              </button>
+              <button
+                type="button"
+                aria-pressed={memberType === 'adult'}
+                onClick={() => onMemberTypeChange('adult')}
+                className={`flex-1 rounded-lg text-sm font-semibold transition-all ${
+                  memberType === 'adult'
+                    ? 'bg-primary text-white shadow-xs font-bold'
+                    : 'text-neutral/70 hover:text-neutral hover:bg-white/50'
+                }`}
+              >
+                Adulto
+              </button>
+            </div>
           </div>
 
           {/* Cédula + Sistema de Registro Query */}

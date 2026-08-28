@@ -16,6 +16,7 @@ import {
 } from '../types';
 import { generateRecognitionCode } from '../utils/codeGenerator';
 import { splitFullName } from '../utils/nameHelper';
+import { calculateAge } from '../utils/unitInference';
 import {
   getAllRecognitionTypes,
   downloadSingleCertificatePdf,
@@ -121,6 +122,7 @@ export interface QuickEmissionExecutionParams {
   districtId: string;
   groupId: string;
   unit: ScoutUnit;
+  memberType: 'young' | 'adult';
   recognitionType: string;
   identity: string;
   firstNames: string;
@@ -143,6 +145,7 @@ export async function executeQuickEmission(params: QuickEmissionExecutionParams)
     districtId,
     groupId,
     unit,
+    memberType,
     recognitionType,
     identity,
     firstNames,
@@ -159,9 +162,13 @@ export async function executeQuickEmission(params: QuickEmissionExecutionParams)
   } = params;
 
   const isNoScout = unit === 'no_scout';
-  const finalRegionId = (isNoScout && (!regionId || regionId === '')) ? 0 : Number(regionId);
-  const finalDistrictId = (isNoScout && (!districtId || districtId === '')) ? 0 : Number(districtId);
-  const finalGroupId = (isNoScout && (!groupId || groupId === '')) ? 0 : Number(groupId);
+  const parsedRegion = Number(regionId);
+  const parsedDistrict = Number(districtId);
+  const parsedGroup = Number(groupId);
+
+  const finalRegionId = (isNoScout && (!regionId || regionId === '')) ? 0 : (Number.isNaN(parsedRegion) ? 0 : parsedRegion);
+  const finalDistrictId = (isNoScout && (!districtId || districtId === '')) ? 0 : (Number.isNaN(parsedDistrict) ? 0 : parsedDistrict);
+  const finalGroupId = (isNoScout && (!groupId || groupId === '')) ? 0 : (Number.isNaN(parsedGroup) ? 0 : parsedGroup);
 
   // 1. Create single-member Batch
   const createdBatch = await createBatch({
@@ -175,21 +182,20 @@ export async function executeQuickEmission(params: QuickEmissionExecutionParams)
   }, userId);
 
   // 2. Create Member
-  const memberType = (unit === 'institucional' || unit === 'no_scout') ? 'adult' : 'young';
   const createdMember = await createMember({
     identity: identity.trim(),
     first_names: firstNames.trim(),
     last_names: lastNames.trim(),
     birth_date: birthDate || '2000-01-01',
-    email: email || undefined,
-    phone: phone || undefined,
+    ...(email ? { email: email.trim() } : {}),
+    ...(phone ? { phone: phone.trim() } : {}),
     unit,
     member_type: memberType,
     status: 'active',
     verified_in_registry: unit !== 'no_scout',
     batch_id: createdBatch.id,
     recognition_code: recognitionCode.trim(),
-    user_id: userId
+    ...(userId ? { user_id: userId } : {})
   }, userId);
 
   // 3. Resolve Recognition Object
@@ -228,6 +234,7 @@ export function useQuickRecognition() {
   const [comment, setComment] = useState<string>('');
 
   const [unit, setUnit] = useState<ScoutUnit>('manada');
+  const [memberType, setMemberType] = useState<'young' | 'adult'>('young');
   const [identity, setIdentity] = useState<string>('');
   const [firstNames, setFirstNames] = useState<string>('');
   const [lastNames, setLastNames] = useState<string>('');
@@ -366,14 +373,27 @@ export function useQuickRecognition() {
   // Unit change handler
   const handleUnitChange = useCallback((newUnit: ScoutUnit) => {
     setUnit(newUnit);
+    if (newUnit === 'institucional' || newUnit === 'no_scout') {
+      setMemberType('adult');
+    } else {
+      setMemberType('young');
+    }
     setScraperStatus('idle');
     setScraperMsg('');
     setVerifiedCedula(null);
   }, []);
 
+  // Member type change handler
+  const handleMemberTypeChange = useCallback((newType: 'young' | 'adult') => {
+    setMemberType(newType);
+  }, []);
+
+  const sanitizeQuickCedula = (val: string) => val.replace(/[^0-9vV-]/g, '');
+
   // Identity change handler
   const handleIdentityChange = useCallback((val: string) => {
-    setIdentity(val);
+    const sanitized = sanitizeQuickCedula(val);
+    setIdentity(sanitized);
     setVerifiedCedula(null);
     setScraperStatus('idle');
     setScraperMsg('');
@@ -457,7 +477,13 @@ export function useQuickRecognition() {
         const { first_names, last_names } = splitFullName(details.nombre_completo);
         setFirstNames(first_names);
         setLastNames(last_names);
-        if (details.fecha_nacimiento) setBirthDate(details.fecha_nacimiento);
+        if (details.fecha_nacimiento) {
+          setBirthDate(details.fecha_nacimiento);
+          const age = calculateAge(details.fecha_nacimiento);
+          if (age !== null) {
+            setMemberType(age >= 21 ? 'adult' : 'young');
+          }
+        }
         if (details.correo_electronico) setEmail(details.correo_electronico);
         if (details.telefono) setPhone(details.telefono);
 
@@ -518,6 +544,7 @@ export function useQuickRecognition() {
         districtId,
         groupId,
         unit,
+        memberType,
         recognitionType,
         identity,
         firstNames,
@@ -548,6 +575,7 @@ export function useQuickRecognition() {
     districtId,
     groupId,
     unit,
+    memberType,
     recognitionType,
     identity,
     firstNames,
@@ -566,6 +594,8 @@ export function useQuickRecognition() {
 
   const handleEmitAnother = useCallback(() => {
     setSuccessData(null);
+    setUnit('manada');
+    setMemberType('young');
     setIdentity('');
     setFirstNames('');
     setLastNames('');
@@ -604,6 +634,8 @@ export function useQuickRecognition() {
     setComment,
     unit,
     setUnit,
+    memberType,
+    setMemberType,
     identity,
     setIdentity,
     firstNames,
@@ -644,6 +676,7 @@ export function useQuickRecognition() {
     handleGroupChange,
     handleRecognitionTypeChange,
     handleUnitChange,
+    handleMemberTypeChange,
     handleIdentityChange,
     handleFirstNamesChange,
     handleLastNamesChange,

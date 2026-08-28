@@ -42,6 +42,18 @@ describe('Step2Verification component', () => {
     expect(defaultProps.handleVerify).toHaveBeenCalled();
   });
 
+  it('sanitizes non-numeric characters in cédula textareas', () => {
+    render(<Step2Verification {...defaultProps} />);
+
+    const youngInput = screen.getByLabelText(/Cédulas de Jóvenes/i);
+    fireEvent.change(youngInput, { target: { value: 'V-29.111.222 abc\n30-444-555!' } });
+    expect(defaultProps.setYoungCedulas).toHaveBeenCalledWith('29111222\n30444555');
+
+    const adultInput = screen.getByLabelText(/Cédulas de Adultos/i);
+    fireEvent.change(adultInput, { target: { value: 'V-12345678, test\n98765432' } });
+    expect(defaultProps.setAdultCedulas).toHaveBeenCalledWith('12345678\n98765432');
+  });
+
   it('renders verification progress and disabled state when isVerifying is true', () => {
     render(
       <Step2Verification

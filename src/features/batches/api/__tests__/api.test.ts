@@ -166,6 +166,24 @@ describe('Batches API Layer', () => {
       expect(firestore.setDoc).toHaveBeenCalled();
     });
 
+    it('safely handles missing or NaN hierarchy IDs when creating batch', async () => {
+      vi.mocked(firestore.setDoc).mockResolvedValueOnce();
+
+      const newBatch = await createBatch({
+        region_id: NaN,
+        district_id: NaN,
+        group_id: NaN,
+        recognition_type: 'sct-wood-badge'
+      });
+
+      expect(newBatch.region_id).toBe(0);
+      expect(newBatch.district_id).toBe(0);
+      expect(newBatch.group_id).toBe(0);
+      const writtenObject = vi.mocked(firestore.setDoc).mock.calls[0][1] as Record<string, unknown>;
+      expect(Number.isNaN(writtenObject.region_id)).toBe(false);
+      expect(writtenObject.region_id).toBe(0);
+    });
+
     it('updates an existing batch preserving created_at date', async () => {
       vi.mocked(firestore.getDoc).mockResolvedValueOnce({
         exists: () => true,
@@ -259,16 +277,42 @@ describe('Batches API Layer', () => {
       batch_id: 100
     };
 
-    it('creates a scout member', async () => {
+    it('creates a scout member without undefined fields', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
-      const res = await createMember(mockMember);
+      const res = await createMember({
+        ...mockMember,
+        email: undefined,
+        phone: undefined,
+        exceptional_reason: undefined
+      });
       expect(res.identity).toBe('V-12345678');
+      expect(firestore.setDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.not.objectContaining({
+          email: undefined,
+          phone: undefined,
+          exceptional_reason: undefined
+        })
+      );
+      // Verify keys in the written object do not contain undefined values
+      const writtenObject = vi.mocked(firestore.setDoc).mock.calls[0][1] as Record<string, unknown>;
+      Object.keys(writtenObject).forEach(key => {
+        expect(writtenObject[key]).not.toBeUndefined();
+      });
     });
 
-    it('updates a scout member', async () => {
+    it('updates a scout member without undefined fields', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
-      const res = await updateMember(mockMember);
+      const res = await updateMember({
+        ...mockMember,
+        email: undefined,
+        phone: undefined
+      });
       expect(res.identity).toBe('V-12345678');
+      const writtenObject = vi.mocked(firestore.setDoc).mock.calls[0][1] as Record<string, unknown>;
+      Object.keys(writtenObject).forEach(key => {
+        expect(writtenObject[key]).not.toBeUndefined();
+      });
     });
 
     it('deletes a scout member', async () => {
