@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ColumnDef,
@@ -344,6 +344,26 @@ export const BatchDetail: React.FC = () => {
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerToast = useCallback((msg: string, durationMs = 3000) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastMessage(msg);
+    setShowToast(true);
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+    }, durationMs);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Dropdown action menu per member row
   const [activeMenuMemberId, setActiveMenuMemberId] = useState<string | null>(null);
@@ -411,9 +431,7 @@ export const BatchDetail: React.FC = () => {
         recognition,
         hierarchy: { regions, districts, groups }
       });
-      setToastMessage(`¡Reconocimientos descargados exitosamente en ${fileName}!`);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
+      triggerToast(`¡Reconocimientos descargados exitosamente en ${fileName}!`, 4000);
     } catch (err) {
       console.error('Error generating PDF:', err);
       alert('Error al generar los reconocimientos en PDF.');
@@ -433,15 +451,13 @@ export const BatchDetail: React.FC = () => {
           recognition,
           hierarchy: { regions, districts, groups }
         });
-        setToastMessage(`¡Reconocimiento descargado: ${fileName}!`);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
+        triggerToast(`¡Reconocimiento descargado: ${fileName}!`);
       } catch (err) {
         console.error('Error generating single recognition:', err);
         alert('Error al descargar el reconocimiento.');
       }
     },
-    [batch, recognition, regions, districts, groups]
+    [batch, recognition, regions, districts, groups, triggerToast]
   );
 
   const handleDownloadMemberListPDF = async () => {
@@ -449,9 +465,7 @@ export const BatchDetail: React.FC = () => {
     setDownloadingReport(true);
     try {
       await generateBatchReport(batch, members, { regions, districts, groups });
-      setToastMessage('Lista de miembros (PDF) generada exitosamente.');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      triggerToast('Lista de miembros (PDF) generada exitosamente.');
     } catch (err) {
       console.error('Error generating member list PDF:', err);
       alert('Error al generar la lista de miembros en PDF.');
@@ -475,9 +489,7 @@ export const BatchDetail: React.FC = () => {
       setMembers(updated);
       setIsEditModalOpen(false);
       setEditingMember(null);
-      setToastMessage('Datos del miembro actualizados con éxito.');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      triggerToast('Datos del miembro actualizados con éxito.');
     } catch (err) {
       console.error('Error saving member edit:', err);
       alert('Error al actualizar la información del miembro.');

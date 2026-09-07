@@ -12,7 +12,8 @@
     "tauri": "tauri",
     "prepare": "husky",
     "version-packages": "changeset version",
-    "create-changeset": "changeset"
+    "create-changeset": "changeset",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

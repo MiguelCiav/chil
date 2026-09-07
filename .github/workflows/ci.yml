@@ -94,9 +94,10 @@ jobs:
         uses: changesets/action@v1
         with:
           version: npm run version-packages
-          publish: npx changeset tag
+          publish: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     needs: [lint-and-test, release-planner]
