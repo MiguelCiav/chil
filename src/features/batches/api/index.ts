@@ -267,6 +267,126 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
   return updatedBatch;
 }
 
+export interface MergeBatchesParams {
+  batchIds: number[];
+  newComment?: string;
+  user_id?: string;
+}
+
+export async function mergeBatches(params: MergeBatchesParams, userId?: string): Promise<Batch> {
+  const { batchIds, newComment } = params;
+  if (!batchIds || batchIds.length < 2) {
+    throw new Error('Se requieren al menos 2 lotes para fusionar');
+  }
+
+  // Fetch all batches
+  const fetchedBatches = await Promise.all(batchIds.map(id => getBatchById(id)));
+  const existingBatches = fetchedBatches.filter((b): b is Batch => b !== null);
+
+  if (existingBatches.length < 2) {
+    throw new Error('No se encontraron suficientes lotes válidos para fusionar');
+  }
+
+  // Compute latestCreatedAt: find the most recent created_at timestamp among the batches
+  const timestamps = existingBatches.map(b => new Date(b.created_at).getTime());
+  const maxTimestamp = Math.max(...timestamps.filter(t => !Number.isNaN(t)));
+  const latestCreatedAt = Number.isNaN(maxTimestamp) || maxTimestamp === -Infinity
+    ? new Date().toISOString()
+    : new Date(maxTimestamp).toISOString();
+
+  // Determine primary batch properties:
+  // Region: if all share the same region, use it; otherwise 0 or first
+  const firstRegion = existingBatches[0].region_id;
+  const allSameRegion = existingBatches.every(b => b.region_id === firstRegion);
+  const region_id = allSameRegion ? firstRegion : 0;
+
+  // District: if all share the same district, use it; otherwise 0
+  const firstDistrict = existingBatches[0].district_id;
+  const allSameDistrict = existingBatches.every(b => b.district_id === firstDistrict);
+  const district_id = (allSameRegion && allSameDistrict) ? firstDistrict : 0;
+
+  // Group: If multiple groups exist, group_id: 0 (Multigrupo)
+  const firstGroup = existingBatches[0].group_id;
+  const allSameGroup = existingBatches.every(b => b.group_id === firstGroup);
+  const group_id = allSameGroup ? firstGroup : 0;
+
+  // Recognition type: If all share the same type, use that type; otherwise fallback or keep first batch's type
+  const firstType = existingBatches[0].recognition_type;
+  const allSameType = existingBatches.every(b => b.recognition_type === firstType);
+  const recognition_type = allSameType ? firstType : (firstType ?? '');
+
+  // Unit scope: If all share the same unit, use it; otherwise 'mixed'
+  const firstUnit = existingBatches[0].unit_scope;
+  const allSameUnit = existingBatches.every(b => b.unit_scope === firstUnit);
+  const unit_scope = allSameUnit && firstUnit ? firstUnit : 'mixed';
+
+  // Duration: If all share the same duration, use it
+  const firstDuration = existingBatches[0].recognition_duration;
+  const allSameDuration = existingBatches.every(b => b.recognition_duration === firstDuration);
+  const recognition_duration = allSameDuration ? firstDuration : '';
+
+  // User ID
+  const targetUserId = params.user_id ?? userId ?? existingBatches[0].user_id ?? auth.currentUser?.uid ?? '';
+
+  // Generate new merged batch ID
+  const newNumericId = generateSecureBatchId();
+  const mergedBatch: Batch = {
+    id: newNumericId,
+    comment: newComment !== undefined ? newComment : '',
+    region_id,
+    district_id,
+    group_id,
+    unit_scope,
+    recognition_type,
+    recognition_duration,
+    created_at: latestCreatedAt,
+    ...(targetUserId ? { user_id: targetUserId } : {})
+  };
+
+  // Fetch all ScoutMember records associated with batchIds
+  const membersByBatch = await Promise.all(
+    existingBatches.map(async b => {
+      const members = await getMembersByBatchId(b.id);
+      return { batch: b, members };
+    })
+  );
+
+  // Use writeBatch for atomic updates
+  const batchOp = writeBatch(db);
+
+  // 1. Create the new merged batch
+  const newBatchRef = doc(db, 'batches', String(newNumericId));
+  batchOp.set(newBatchRef, mergedBatch);
+
+  // 2. Member reassignment
+  for (const { batch: sourceBatch, members } of membersByBatch) {
+    for (const member of members) {
+      const memberRef = doc(db, 'scout_members', member.identity);
+      const memberGroupId = member.group_id !== undefined && !Number.isNaN(member.group_id)
+        ? member.group_id
+        : (sourceBatch.group_id !== undefined && !Number.isNaN(sourceBatch.group_id) ? sourceBatch.group_id : 0);
+
+      const updatedMember: ScoutMember = {
+        ...member,
+        batch_id: newNumericId,
+        group_id: memberGroupId,
+        ...(targetUserId ? { user_id: targetUserId } : {})
+      };
+      batchOp.set(memberRef, updatedMember);
+    }
+  }
+
+  // 3. Delete original batches
+  for (const sourceBatch of existingBatches) {
+    const oldBatchRef = doc(db, 'batches', String(sourceBatch.id));
+    batchOp.delete(oldBatchRef);
+  }
+
+  await batchOp.commit();
+
+  return mergedBatch;
+}
+
 export interface ScraperMemberDetails {
   nombre_completo: string;
   status: string;

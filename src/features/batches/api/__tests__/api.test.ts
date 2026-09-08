@@ -19,7 +19,8 @@ import {
   getRecognitionName,
   exportMembersToCSV,
   generateRecognitionCode,
-  assignBatchRecognitionCodes
+  assignBatchRecognitionCodes,
+  mergeBatches
 } from '../index';
 import * as firestore from 'firebase/firestore';
 import * as functionsSdk from 'firebase/functions';
@@ -263,6 +264,164 @@ describe('Batches API Layer', () => {
       expect(deleteMock).toHaveBeenCalledWith(mockMemberDocRef);
       expect(deleteMock).toHaveBeenCalledWith(expect.objectContaining({ path: 'batches/101' }));
       expect(commitMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('mergeBatches operation', () => {
+    it('throws error when fewer than 2 batch IDs are provided', async () => {
+      await expect(mergeBatches({ batchIds: [1] })).rejects.toThrow(
+        'Se requieren al menos 2 lotes para fusionar'
+      );
+      await expect(mergeBatches({ batchIds: [] })).rejects.toThrow(
+        'Se requieren al menos 2 lotes para fusionar'
+      );
+    });
+
+    it('throws error when fewer than 2 valid batches exist in Firestore', async () => {
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => ({ id: 101, created_at: '2026-08-01T00:00:00.000Z' })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false,
+          data: () => null
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      await expect(mergeBatches({ batchIds: [101, 102] })).rejects.toThrow(
+        'No se encontraron suficientes lotes válidos para fusionar'
+      );
+    });
+
+    it('merges batches: computes newest timestamp, reassigns members preserving group, deletes old batches and creates merged batch', async () => {
+      const batch1 = {
+        id: 101,
+        comment: 'Lote Uno',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge',
+        recognition_duration: '3 años',
+        unit_scope: 'manada',
+        created_at: '2026-08-01T10:00:00.000Z',
+        user_id: 'user-1'
+      };
+      const batch2 = {
+        id: 102,
+        comment: 'Lote Dos',
+        region_id: 1,
+        district_id: 10,
+        group_id: 200,
+        recognition_type: 'sct-wood-badge',
+        recognition_duration: '3 años',
+        unit_scope: 'tropa',
+        created_at: '2026-08-15T12:00:00.000Z',
+        user_id: 'user-1'
+      };
+
+      // Mock getBatchById for 101 and 102
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => batch1
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => batch2
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      // Members for batch 101 and 102
+      const member1 = {
+        identity: 'V-111',
+        batch_id: 101,
+        group_id: 100,
+        first_names: 'Ana',
+        last_names: 'Perez'
+      };
+      const member2 = {
+        identity: 'V-222',
+        batch_id: 102,
+        group_id: 200,
+        first_names: 'Luis',
+        last_names: 'Gomez'
+      };
+
+      vi.mocked(firestore.getDocs)
+        .mockResolvedValueOnce({
+          forEach: (cb: (doc: { data: () => unknown }) => void) => {
+            cb({ data: () => member1 });
+          }
+        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
+        .mockResolvedValueOnce({
+          forEach: (cb: (doc: { data: () => unknown }) => void) => {
+            cb({ data: () => member2 });
+          }
+        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const setMock = vi.fn();
+      const deleteMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: setMock,
+        delete: deleteMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      const result = await mergeBatches({
+        batchIds: [101, 102],
+        newComment: 'Lote consolidado agosto'
+      });
+
+      // Validations:
+      // 1. Result batch structure
+      expect(result.id).toBeGreaterThan(0);
+      expect(result.comment).toBe('Lote consolidado agosto');
+      // Newest timestamp: 2026-08-15T12:00:00.000Z > 2026-08-01T10:00:00.000Z
+      expect(result.created_at).toBe('2026-08-15T12:00:00.000Z');
+      // Region same -> 1, District same -> 10
+      expect(result.region_id).toBe(1);
+      expect(result.district_id).toBe(10);
+      // Groups differed (100 vs 200) -> 0
+      expect(result.group_id).toBe(0);
+      // Units differed ('manada' vs 'tropa') -> 'mixed'
+      expect(result.unit_scope).toBe('mixed');
+      // Recognition type same -> 'sct-wood-badge'
+      expect(result.recognition_type).toBe('sct-wood-badge');
+
+      // 2. batchOp.set called for new batch
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: `batches/${result.id}` }),
+        result
+      );
+
+      // 3. Member reassignment with batch_id updated and original group preserved
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/V-111' }),
+        expect.objectContaining({
+          batch_id: result.id,
+          group_id: 100,
+          identity: 'V-111'
+        })
+      );
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/V-222' }),
+        expect.objectContaining({
+          batch_id: result.id,
+          group_id: 200,
+          identity: 'V-222'
+        })
+      );
+
+      // 4. Old batches deleted
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'batches/101' })
+      );
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'batches/102' })
+      );
+
+      // 5. Atomic commit executed
+      expect(commitMock).toHaveBeenCalledTimes(1);
     });
   });
 
