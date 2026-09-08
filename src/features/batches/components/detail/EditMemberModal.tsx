@@ -2,22 +2,24 @@ import React, { useState } from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
 import { Field } from '../../../../components/Field';
-import { ScoutMember, ScoutUnit } from '../../types';
+import { ScoutGroup, ScoutMember, ScoutUnit } from '../../types';
 
 export interface EditMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   member: ScoutMember | null;
   onSave: (member: ScoutMember) => Promise<void>;
+  groups?: ScoutGroup[];
 }
 
 interface EditMemberFormProps {
   member: ScoutMember;
   onClose: () => void;
   onSave: (member: ScoutMember) => Promise<void>;
+  groups?: ScoutGroup[];
 }
 
-const EditMemberForm: React.FC<EditMemberFormProps> = ({ member, onClose, onSave }) => {
+const EditMemberForm: React.FC<EditMemberFormProps> = ({ member, onClose, onSave, groups = [] }) => {
   const [editingMember, setEditingMember] = useState<ScoutMember>(() => ({ ...member }));
 
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -82,51 +84,83 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({ member, onClose, onSave
             </select>
           </div>
         </div>
-        <div className="w-full">
-          <label
-            htmlFor="member-unit-select"
-            className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-          >
-            Unidad Scout *
-          </label>
-          <select
-            id="member-unit-select"
-            value={
-              editingMember.unit ||
-              (editingMember.member_type === 'young' ? 'tropa' : 'institucional')
-            }
-            onChange={(e) => {
-              const newUnit = e.target.value as ScoutUnit;
-              const wasUnverified =
-                editingMember.verified_in_registry === false ||
-                (!editingMember.verified_in_registry && editingMember.unit === 'no_scout');
-              const isChangingToScout = newUnit !== 'no_scout';
-              let nextStatus = editingMember.status;
-              if (newUnit === 'no_scout') {
-                nextStatus = 'active';
-              } else if (
-                wasUnverified &&
-                isChangingToScout &&
-                editingMember.status === 'active'
-              ) {
-                nextStatus = 'pending';
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="w-full">
+            <label
+              htmlFor="member-unit-select"
+              className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
+            >
+              Unidad Scout *
+            </label>
+            <select
+              id="member-unit-select"
+              value={
+                editingMember.unit ||
+                (editingMember.member_type === 'young' ? 'tropa' : 'institucional')
               }
+              onChange={(e) => {
+                const newUnit = e.target.value as ScoutUnit;
+                const wasUnverified =
+                  editingMember.verified_in_registry === false ||
+                  (!editingMember.verified_in_registry && editingMember.unit === 'no_scout');
+                const isChangingToScout = newUnit !== 'no_scout';
+                let nextStatus = editingMember.status;
+                if (newUnit === 'no_scout') {
+                  nextStatus = 'active';
+                } else if (
+                  wasUnverified &&
+                  isChangingToScout &&
+                  editingMember.status === 'active'
+                ) {
+                  nextStatus = 'pending';
+                }
 
-              setEditingMember({
-                ...editingMember,
-                unit: newUnit,
-                status: nextStatus
-              });
-            }}
-            className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-          >
-            <option value="manada">Manada</option>
-            <option value="tropa">Tropa</option>
-            <option value="caminantes">Caminantes</option>
-            <option value="clan">Clan</option>
-            <option value="institucional">Institucional</option>
-            <option value="no_scout">No scout</option>
-          </select>
+                setEditingMember({
+                  ...editingMember,
+                  unit: newUnit,
+                  status: nextStatus
+                });
+              }}
+              className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            >
+              <option value="manada">Manada</option>
+              <option value="tropa">Tropa</option>
+              <option value="caminantes">Caminantes</option>
+              <option value="clan">Clan</option>
+              <option value="institucional">Institucional</option>
+              <option value="no_scout">No scout</option>
+            </select>
+          </div>
+
+          <div className="w-full">
+            <label
+              htmlFor="member-group-select"
+              className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
+            >
+              Grupo Scout
+            </label>
+            <select
+              id="member-group-select"
+              value={editingMember.group_id ?? 0}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setEditingMember({
+                  ...editingMember,
+                  group_id: val === 0 ? undefined : val
+                });
+              }}
+              className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            >
+              <option value={0}>Sin grupo asignado / No aplica</option>
+              {groups
+                .filter(g => g.id !== 0)
+                .map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+            </select>
+          </div>
         </div>
         {editingMember.status !== 'active' && (
           <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-3">
@@ -222,7 +256,8 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
   isOpen,
   onClose,
   member,
-  onSave
+  onSave,
+  groups
 }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-xl">
@@ -233,6 +268,7 @@ export const EditMemberModal: React.FC<EditMemberModalProps> = ({
           member={member}
           onClose={onClose}
           onSave={onSave}
+          groups={groups}
         />
       )}
     </Modal>

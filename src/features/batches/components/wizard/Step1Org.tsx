@@ -42,7 +42,10 @@ function getFilteredGroups(
 ): ScoutGroup[] {
   if (!selectedDistrictId || selectedDistrictId === '0') return [];
   const grps = groups.filter(g => g.id !== 0 && g.district_id === Number(selectedDistrictId));
-  return [{ id: 0, name: 'No aplica', district_id: Number(selectedDistrictId) }, ...grps];
+  return [
+    { id: 0, name: 'Multigrupo', district_id: Number(selectedDistrictId) },
+    ...grps
+  ];
 }
 
 function getSelectedRegion(regions: Region[], selectedRegionId?: string): { id: number; name: string } | undefined {
@@ -55,8 +58,19 @@ function getSelectedDistrict(districts: District[], selectedDistrictId?: string)
   return districts.find(d => d.id.toString() === selectedDistrictId);
 }
 
-function getSelectedGroup(groups: ScoutGroup[], selectedGroupId?: string): { id: number; name: string; district_id: number } | undefined {
-  if (selectedGroupId === '0') return { id: 0, name: 'No aplica', district_id: 0 };
+function getSelectedGroup(
+  groups: ScoutGroup[],
+  selectedGroupId?: string,
+  selectedDistrictId?: string
+): { id: number; name: string; district_id: number } | undefined {
+  if (selectedGroupId === '0') {
+    const isMultigroup = selectedDistrictId && selectedDistrictId !== '0';
+    return {
+      id: 0,
+      name: isMultigroup ? 'Multigrupo' : 'No aplica',
+      district_id: Number(selectedDistrictId || 0)
+    };
+  }
   return groups.find(g => g.id.toString() === selectedGroupId);
 }
 
@@ -130,7 +144,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
 
   const selectedRegion = getSelectedRegion(regions, selectedRegionId);
   const selectedDistrict = getSelectedDistrict(districts, selectedDistrictId);
-  const selectedGroup = getSelectedGroup(groups, selectedGroupId);
+  const selectedGroup = getSelectedGroup(groups, selectedGroupId, selectedDistrictId);
 
   const isDistrictDisabled = !selectedRegionId || selectedRegionId === '0' || loadingHierarchy;
   const isGroupDisabled = !selectedDistrictId || selectedDistrictId === '0' || selectedRegionId === '0' || loadingHierarchy;

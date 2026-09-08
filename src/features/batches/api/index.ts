@@ -571,8 +571,9 @@ export async function generateBatchReport(
   docPdf.setFontSize(10);
   docPdf.text("Cédula", 16, y - 1);
   docPdf.text("Nombre Completo", 46, y - 1);
-  docPdf.text("Tipo", 116, y - 1);
-  docPdf.text("Estado", 146, y - 1);
+  docPdf.text("Grupo", 106, y - 1);
+  docPdf.text("Tipo", 146, y - 1);
+  docPdf.text("Estado", 170, y - 1);
   
   docPdf.setFont("helvetica", "normal");
   y += 6;
@@ -597,6 +598,10 @@ export async function generateBatchReport(
     }
     
     const fullName = `${m.first_names} ${m.last_names}`;
+    const memberGroupId = m.group_id ?? batch.group_id;
+    const memberGroupName = (!memberGroupId || memberGroupId === 0)
+      ? 'No aplica'
+      : (hierarchy.groups.find(g => g.id === memberGroupId)?.name ?? `Grupo ${memberGroupId}`);
     const typeStr = m.member_type === 'young' ? 'Joven' : 'Adulto';
     const statusStr = getReportMemberStatusText(m.status);
     const [r, g, bColor] = getReportMemberStatusColor(m.status);
@@ -606,11 +611,12 @@ export async function generateBatchReport(
     docPdf.line(14, y + 1, 196, y + 1);
     
     docPdf.text(m.identity, 16, y);
-    docPdf.text(fullName.substring(0, 35), 46, y);
-    docPdf.text(typeStr, 116, y);
+    docPdf.text(fullName.substring(0, 26), 46, y);
+    docPdf.text(memberGroupName.substring(0, 18), 106, y);
+    docPdf.text(typeStr, 146, y);
     
     docPdf.setTextColor(r, g, bColor);
-    docPdf.text(statusStr, 146, y);
+    docPdf.text(statusStr, 170, y);
     docPdf.setTextColor(0, 0, 0); // Reset
     
     y += 8;

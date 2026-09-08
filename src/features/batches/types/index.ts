@@ -100,6 +100,7 @@ export interface MemberVerificationResult {
   status: 'Consultando...' | 'Registro válido' | 'No registrado' | 'Error de red';
   type: 'young' | 'adult';
   unit?: ScoutUnit;
+  group_id?: number;
   details?: {
     nombre_completo: string;
     status: string;

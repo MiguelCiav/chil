@@ -202,9 +202,10 @@ export function interpolateCertificateVariables(params: {
   hierarchy?: HierarchyData;
 }): Record<RecognitionFieldKey, string> {
   const { member, batch, recognition, hierarchy } = params;
+  const effectiveGroupId = member.group_id ?? batch.group_id;
   const regionName = resolveHierarchyName(batch.region_id, hierarchy?.regions);
   const districtName = resolveHierarchyName(batch.district_id, hierarchy?.districts);
-  const groupName = resolveHierarchyName(batch.group_id, hierarchy?.groups);
+  const groupName = resolveHierarchyName(effectiveGroupId, hierarchy?.groups);
   const recognitionName = recognition?.name ?? batch.recognition_type ?? 'Reconocimiento Scout';
   const issueDate = formatIssueDate(batch.created_at);
   const last4 = member.identity.length >= 4 ? member.identity.slice(-4) : member.identity;

@@ -136,7 +136,7 @@ describe('BatchDetail component', () => {
     expect(screen.getByText(/Lote de Inspección/i)).toBeInTheDocument();
     expect(screen.getByText(/Región Capital/i)).toBeInTheDocument();
     expect(screen.getByText(/Distrito Sucre/i)).toBeInTheDocument();
-    expect(screen.getByText(/Grupo San Luis/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Grupo San Luis/i)).toHaveLength(3); // Card and 2 table rows
     expect(screen.getByText(/Detalles del Lote/i)).toBeInTheDocument();
     expect(screen.getByText(/Tipo de Reconocimiento/i)).toBeInTheDocument();
     expect(screen.getByText('Servicio Prolongado')).toBeInTheDocument();

@@ -5,7 +5,7 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Field } from '../../../../components/Field';
 import { Table } from '../../../../components/Table';
-import { MemberVerificationResult, ScoutUnit } from '../../types';
+import { MemberVerificationResult, ScoutGroup, ScoutUnit } from '../../types';
 
 interface Step2VerificationProps {
   readonly batchName: string;
@@ -21,6 +21,8 @@ interface Step2VerificationProps {
   readonly handleToggleMemberType: (cedula: string) => void;
   readonly handleStep2Continue: () => void;
   readonly onBack: () => void;
+  readonly groups?: readonly ScoutGroup[];
+  readonly onUpdateMemberGroup?: (cedula: string, groupId: number) => void;
 }
 
 interface StatusBadgeProps {
@@ -113,49 +115,96 @@ const NameCell: React.FC<{ readonly value: string }> = ({ value }) => (
   <span className="text-neutral/80">{value || 'Pendiente...'}</span>
 );
 
+const MemberGroupSelect: React.FC<{
+  readonly member: MemberVerificationResult;
+  readonly groups: readonly ScoutGroup[];
+  readonly onChange: (groupId: number) => void;
+}> = ({ member, groups, onChange }) => {
+  return (
+    <select
+      aria-label={`Grupo scout de ${member.name || member.cedula}`}
+      value={member.group_id ?? 0}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="text-xs py-1 px-2 rounded-lg border border-primary/20 bg-white text-neutral focus:outline-none focus:ring-1 focus:ring-primary max-w-[150px] truncate"
+    >
+      <option value={0}>Sin grupo</option>
+      {groups
+        .filter(g => g.id !== 0)
+        .map((g) => (
+          <option key={g.id} value={g.id}>
+            {g.name}
+          </option>
+        ))}
+    </select>
+  );
+};
+
 export type Step2MemberColumnDef = ColumnDef<MemberVerificationResult>;
 
 const createStep2Columns = (
   verifyCedula: (cedula: string, type: 'young' | 'adult', unit?: ScoutUnit) => void,
-  handleToggleMemberType: (cedula: string) => void
-): Step2MemberColumnDef[] => [
-  {
-    accessorKey: 'cedula',
-    header: 'Cédula',
-    cell: (info) => <CedulaCell value={info.getValue() as string} />
-  },
-  {
-    accessorKey: 'name',
-    header: 'Nombre Completo',
-    cell: (info) => <NameCell value={info.getValue() as string} />
-  },
-  {
-    accessorKey: 'status',
-    header: 'Estatus',
-    cell: (info) => (
-      <StatusBadge
-        status={info.getValue() as string}
-        onRetry={() => {
-          if (info.row.original.unit) {
-            verifyCedula(info.row.original.cedula, info.row.original.type, info.row.original.unit);
-          } else {
-            verifyCedula(info.row.original.cedula, info.row.original.type);
-          }
-        }}
-      />
-    )
-  },
-  {
-    accessorKey: 'type',
-    header: 'Tipo de Miembro',
-    cell: (info) => (
-      <MemberTypeToggle
-        type={info.getValue() as 'young' | 'adult'}
-        onToggle={() => handleToggleMemberType(info.row.original.cedula)}
-      />
-    )
+  handleToggleMemberType: (cedula: string) => void,
+  groups?: readonly ScoutGroup[],
+  onUpdateMemberGroup?: (cedula: string, groupId: number) => void
+): Step2MemberColumnDef[] => {
+  const baseCols: Step2MemberColumnDef[] = [
+    {
+      accessorKey: 'cedula',
+      header: 'Cédula',
+      cell: (info) => <CedulaCell value={info.getValue() as string} />
+    },
+    {
+      accessorKey: 'name',
+      header: 'Nombre Completo',
+      cell: (info) => <NameCell value={info.getValue() as string} />
+    }
+  ];
+
+  if (groups && groups.length > 0 && onUpdateMemberGroup) {
+    baseCols.push({
+      accessorKey: 'group_id',
+      header: 'Grupo Scout',
+      cell: (info) => (
+        <MemberGroupSelect
+          member={info.row.original}
+          groups={groups}
+          onChange={(groupId) => onUpdateMemberGroup(info.row.original.cedula, groupId)}
+        />
+      )
+    });
   }
-];
+
+  baseCols.push(
+    {
+      accessorKey: 'status',
+      header: 'Estatus',
+      cell: (info) => (
+        <StatusBadge
+          status={info.getValue() as string}
+          onRetry={() => {
+            if (info.row.original.unit) {
+              verifyCedula(info.row.original.cedula, info.row.original.type, info.row.original.unit);
+            } else {
+              verifyCedula(info.row.original.cedula, info.row.original.type);
+            }
+          }}
+        />
+      )
+    },
+    {
+      accessorKey: 'type',
+      header: 'Tipo de Miembro',
+      cell: (info) => (
+        <MemberTypeToggle
+          type={info.getValue() as 'young' | 'adult'}
+          onToggle={() => handleToggleMemberType(info.row.original.cedula)}
+        />
+      )
+    }
+  );
+
+  return baseCols;
+};
 
 const sanitizeCedulaInput = (val: string) => val.replace(/[^0-9\n\r]/g, '');
 
@@ -172,7 +221,9 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
   verifyCedula,
   handleToggleMemberType,
   handleStep2Continue,
-  onBack
+  onBack,
+  groups,
+  onUpdateMemberGroup
 }) => {
   const currentCedulas = React.useMemo(() => {
     const youngs = youngCedulas.split('\n').map(c => c.trim().replace(/[^0-9]/g, '')).filter(c => c !== '');
@@ -185,8 +236,8 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
   }, [verificationList, currentCedulas]);
 
   const columns = React.useMemo(
-    () => createStep2Columns(verifyCedula, handleToggleMemberType),
-    [verifyCedula, handleToggleMemberType]
+    () => createStep2Columns(verifyCedula, handleToggleMemberType, groups, onUpdateMemberGroup),
+    [verifyCedula, handleToggleMemberType, groups, onUpdateMemberGroup]
   );
 
   return (

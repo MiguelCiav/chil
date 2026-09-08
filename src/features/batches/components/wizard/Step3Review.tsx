@@ -13,7 +13,7 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Field } from '../../../../components/Field';
-import { ScoutMember, ScoutUnit, getUnitBadge } from '../../types';
+import { ScoutGroup, ScoutMember, ScoutUnit, getUnitBadge } from '../../types';
 import { updateMember, getMembersByBatchId, assignBatchRecognitionCodes } from '../../api';
 
 interface Step3ReviewProps {
@@ -22,6 +22,7 @@ interface Step3ReviewProps {
   onMembersUpdated: (members: ScoutMember[]) => void;
   handleFinalizeBatch: () => void;
   onBack: () => void;
+  groups?: ScoutGroup[];
 }
 
 function getMemberStatusBadge(status: 'active' | 'pending' | 'exceptional') {
@@ -62,7 +63,8 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   savedMembers,
   onMembersUpdated,
   handleFinalizeBatch,
-  onBack
+  onBack,
+  groups = []
 }) => {
   const [codeMode, setCodeMode] = useState<'auto' | 'manual'>('auto');
   const [activeTab, setActiveTab] = useState<'valid' | 'pending'>('valid');
@@ -343,7 +345,10 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                     </div>
                     <div>
                       <div className="font-semibold text-neutral">{member.first_names} {member.last_names}</div>
-                      <div className="text-xs text-neutral/50 font-medium">C.I. {member.identity} • {member.member_type === 'young' ? 'Joven' : 'Adulto'}</div>
+                      <div className="text-xs text-neutral/50 font-medium">
+                        C.I. {member.identity} • {member.member_type === 'young' ? 'Joven' : 'Adulto'}
+                        {member.group_id ? ` • ${groups.find(g => g.id === member.group_id)?.name ?? `Grupo ${member.group_id}`}` : ''}
+                      </div>
                     </div>
                   </div>
 
@@ -491,6 +496,34 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   </select>
                 </div>
               </div>
+              {groups.length > 0 && (
+                <div className="w-full">
+                  <label htmlFor="edit-member-group-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
+                    Grupo Scout
+                  </label>
+                  <select
+                    id="edit-member-group-select"
+                    className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                    value={editingMember.group_id ?? 0}
+                    onChange={e => {
+                      const val = Number(e.target.value);
+                      setEditingMember({
+                        ...editingMember,
+                        group_id: val === 0 ? undefined : val
+                      });
+                    }}
+                  >
+                    <option value={0}>Sin grupo asignado / No aplica</option>
+                    {groups
+                      .filter(g => g.id !== 0)
+                      .map(g => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
               {editingMember.status !== 'active' && (
                 <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">

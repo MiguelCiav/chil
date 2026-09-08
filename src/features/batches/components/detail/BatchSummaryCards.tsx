@@ -41,7 +41,9 @@ export const BatchSummaryCards: React.FC<BatchSummaryCardsProps> = ({
   };
 
   const getGroupName = (grpId: number) => {
-    if (!grpId || grpId === 0) return 'No aplica';
+    if (!grpId || grpId === 0) {
+      return (batch.region_id && batch.region_id !== 0) ? 'Multigrupo' : 'No aplica';
+    }
     const found = groups.find((g) => g.id === grpId);
     return found?.name || `Grupo ${grpId}`;
   };

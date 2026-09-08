@@ -681,4 +681,83 @@ describe('NewBatchWizard full flow', () => {
       expect(screen.queryByText('Paso 1 de 4')).not.toBeInTheDocument();
     });
   });
+
+  it('supports creating a multigrupo batch with group_id 0 and assigning groups to members', async () => {
+    vi.mocked(api.createBatch).mockResolvedValueOnce({
+      id: 999,
+      comment: 'Lote Multigrupo Distrital',
+      region_id: 1,
+      district_id: 10,
+      group_id: 0,
+      unit_scope: 'mixed',
+      recognition_type: 'sct-wood-badge',
+      created_at: '2026-09-01T00:00:00.000Z'
+    });
+
+    render(
+      <MemoryRouter>
+        <NewBatchWizard />
+      </MemoryRouter>
+    );
+
+    // Wait for hierarchy to load
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
+    });
+
+    // 1. Select Region
+    const regionBtn = screen.getByLabelText(/Región Scout/i);
+    fireEvent.click(regionBtn);
+    const regionOpt = await screen.findByText('Región Capital');
+    fireEvent.click(regionOpt);
+
+    await waitFor(() => {
+      expect(screen.getByText('Región Capital')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Distrito Scout/i)).not.toBeDisabled();
+    });
+
+    // 2. Select District
+    const districtBtn = screen.getByLabelText(/Distrito Scout/i);
+    fireEvent.click(districtBtn);
+    const districtOpt = await screen.findByText('Distrito Sucre');
+    fireEvent.click(districtOpt);
+
+    await waitFor(() => {
+      expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Grupo Scout/i)).not.toBeDisabled();
+    });
+
+    // 3. Select Group: Multigrupo (id: 0)
+    const groupBtn = screen.getByLabelText(/Grupo Scout/i);
+    fireEvent.click(groupBtn);
+    const groupOpt = await screen.findByText('Multigrupo');
+    fireEvent.click(groupOpt);
+
+    await waitFor(() => {
+      expect(screen.getByText('Multigrupo')).toBeInTheDocument();
+    });
+
+    // 4. Select Recognition Type
+    const recSelect = screen.getByLabelText(/Tipo de Reconocimiento/i);
+    fireEvent.change(recSelect, { target: { value: 'sct-wood-badge' } });
+
+    // 5. Submit Step 1
+    const nextBtn = screen.getByText('Siguiente paso');
+    await waitFor(() => {
+      expect(nextBtn).not.toBeDisabled();
+    });
+    fireEvent.click(nextBtn);
+
+    await waitFor(() => {
+      expect(api.createBatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          region_id: 1,
+          district_id: 10,
+          group_id: 0
+        }),
+        'test-user-id'
+      );
+      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
+    });
+  });
 });

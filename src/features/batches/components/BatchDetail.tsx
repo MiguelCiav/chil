@@ -267,7 +267,9 @@ function renderMemberActionsCell(props: MemberActionsCellProps) {
 }
 
 function createBatchDetailColumns(
-  actionsProps: Omit<MemberActionsCellProps, 'row' | 'table'>
+  actionsProps: Omit<MemberActionsCellProps, 'row' | 'table'>,
+  groups: ScoutGroup[],
+  batch: Batch | null
 ): ColumnDef<ScoutMember>[] {
   return [
     {
@@ -279,6 +281,22 @@ function createBatchDetailColumns(
       accessorKey: 'name',
       header: 'NOMBRE',
       cell: renderMemberNameCell
+    },
+    {
+      id: 'group',
+      header: 'GRUPO',
+      cell: (info) => {
+        const memberGroupId = info.row.original.group_id ?? batch?.group_id;
+        if (!memberGroupId || memberGroupId === 0) {
+          return <span className="text-xs sm:text-sm text-neutral/50 font-medium">No aplica</span>;
+        }
+        const found = groups.find(g => g.id === memberGroupId);
+        return (
+          <span className="text-xs sm:text-sm font-medium text-neutral/80">
+            {found?.name ?? `Grupo ${memberGroupId}`}
+          </span>
+        );
+      }
     },
     {
       accessorKey: 'unit',
@@ -536,14 +554,18 @@ export const BatchDetail: React.FC = () => {
   // TanStack Table columns
   const columns = useMemo(
     () =>
-      createBatchDetailColumns({
-        activeMenuMemberId,
-        setActiveMenuMemberId,
-        setViewingMember,
-        handleEditClick,
-        handleDownloadSingleRecognition
-      }),
-    [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition]
+      createBatchDetailColumns(
+        {
+          activeMenuMemberId,
+          setActiveMenuMemberId,
+          setViewingMember,
+          handleEditClick,
+          handleDownloadSingleRecognition
+        },
+        groups,
+        batch
+      ),
+    [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition, groups, batch]
   );
 
   const table = useReactTable({
@@ -791,12 +813,15 @@ export const BatchDetail: React.FC = () => {
         onClose={() => setIsEditModalOpen(false)}
         member={editingMember}
         onSave={handleSaveMemberEdit}
+        groups={groups}
       />
 
       {/* Member Quick View Details Modal */}
       <MemberQuickViewModal
         member={viewingMember}
         onClose={() => setViewingMember(null)}
+        groups={groups}
+        batchGroup={batch.group_id ? (groups.find(g => g.id === batch.group_id)?.name ?? `Grupo ${batch.group_id}`) : (batch.region_id === 0 ? 'No aplica' : 'Multigrupo')}
       />
 
       {/* Modal: Confirmar Eliminación de Lote */}

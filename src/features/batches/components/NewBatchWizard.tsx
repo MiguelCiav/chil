@@ -209,7 +209,8 @@ async function saveNoScoutMemberToDb(
   cedula: string,
   type: 'young' | 'adult',
   batchId: number | null,
-  userId?: string
+  userId?: string,
+  groupId?: number
 ): Promise<void> {
   if (!batchId) return;
   try {
@@ -224,7 +225,8 @@ async function saveNoScoutMemberToDb(
         status: 'active',
         verified_in_registry: false,
         batch_id: batchId,
-        user_id: userId
+        user_id: userId,
+        group_id: groupId && groupId !== 0 ? groupId : undefined
       },
       userId
     );
@@ -238,7 +240,8 @@ async function saveUnregisteredMemberToDb(
   type: 'young' | 'adult',
   memberUnit: ScoutUnit,
   batchId: number | null,
-  userId?: string
+  userId?: string,
+  groupId?: number
 ): Promise<void> {
   if (!batchId) return;
   try {
@@ -253,7 +256,8 @@ async function saveUnregisteredMemberToDb(
         status: 'pending',
         verified_in_registry: true,
         batch_id: batchId,
-        user_id: userId
+        user_id: userId,
+        group_id: groupId && groupId !== 0 ? groupId : undefined
       },
       userId
     );
@@ -268,7 +272,8 @@ async function saveScrapedMemberToDb(
   type: 'young' | 'adult',
   memberUnit: ScoutUnit,
   batchId: number | null,
-  userId?: string
+  userId?: string,
+  groupId?: number
 ): Promise<void> {
   if (!batchId) return;
   try {
@@ -287,7 +292,8 @@ async function saveScrapedMemberToDb(
         status: isScrapedActive ? 'active' : 'pending',
         verified_in_registry: true,
         batch_id: batchId,
-        user_id: userId
+        user_id: userId,
+        group_id: groupId && groupId !== 0 ? groupId : undefined
       },
       userId
     );
@@ -321,6 +327,7 @@ export const NewBatchWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [batchId, setBatchId] = useState<number | null>(null);
   const [batchName, setBatchName] = useState<string>('');
+  const [batchGroupId, setBatchGroupId] = useState<number>(0);
   const [batchUnitScope, setBatchUnitScope] = useState<BatchUnitScope>('mixed');
 
   // Hierarchy State
@@ -454,6 +461,7 @@ export const NewBatchWizard: React.FC = () => {
 
       setBatchId(created.id);
       setBatchName(created.comment || '');
+      setBatchGroupId(group_id);
       setCurrentStep(2);
     } catch (err) {
       console.error("Failed to save batch:", err);
@@ -472,10 +480,11 @@ export const NewBatchWizard: React.FC = () => {
         name: 'Colaborador No Scout',
         status: 'Registro válido',
         type,
-        unit: 'no_scout'
+        unit: 'no_scout',
+        group_id: batchGroupId !== 0 ? batchGroupId : undefined
       }));
 
-      await saveNoScoutMemberToDb(cedula, type, batchId, user?.uid);
+      await saveNoScoutMemberToDb(cedula, type, batchId, user?.uid, batchGroupId !== 0 ? batchGroupId : undefined);
       setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
       return;
     }
@@ -485,7 +494,8 @@ export const NewBatchWizard: React.FC = () => {
       cedula,
       status: 'Consultando...',
       type,
-      unit: memberUnit
+      unit: memberUnit,
+      group_id: batchGroupId !== 0 ? batchGroupId : undefined
     }));
 
     let scrapedResult: ScraperMemberDetails | null = null;
@@ -502,12 +512,19 @@ export const NewBatchWizard: React.FC = () => {
 
       setVerificationList(prev => prev.map(item =>
         item.cedula === cedula
-          ? { cedula, name, status, type, unit: memberUnit }
+          ? {
+              cedula,
+              name,
+              status,
+              type,
+              unit: memberUnit,
+              group_id: item.group_id ?? (batchGroupId !== 0 ? batchGroupId : undefined)
+            }
           : item
       ));
 
       if (isUnregistered) {
-        await saveUnregisteredMemberToDb(cedula, type, memberUnit, batchId, user?.uid);
+        await saveUnregisteredMemberToDb(cedula, type, memberUnit, batchId, user?.uid, batchGroupId !== 0 ? batchGroupId : undefined);
       } else {
         setToastMessage(`Error de red al verificar la cédula ${cedula}`);
         setShowToast(true);
@@ -520,11 +537,19 @@ export const NewBatchWizard: React.FC = () => {
 
       setVerificationList(prev => prev.map(item =>
         item.cedula === cedula
-          ? { cedula, name: res.nombre_completo, status: rowStatus, type, unit: memberUnit, details: res }
+          ? {
+              cedula,
+              name: res.nombre_completo,
+              status: rowStatus,
+              type,
+              unit: memberUnit,
+              details: res,
+              group_id: item.group_id ?? (batchGroupId !== 0 ? batchGroupId : undefined)
+            }
           : item
       ));
 
-      await saveScrapedMemberToDb(cedula, res, type, memberUnit, batchId, user?.uid);
+      await saveScrapedMemberToDb(cedula, res, type, memberUnit, batchId, user?.uid, batchGroupId !== 0 ? batchGroupId : undefined);
     }
 
     setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
@@ -600,6 +625,35 @@ export const NewBatchWizard: React.FC = () => {
           item.cedula === cedula ? { ...item, type: originalType } : item
         ));
         alert("No se pudo actualizar el tipo de miembro en la base de datos. Se ha revertido el cambio.");
+      }
+    }
+  };
+
+  const handleUpdateMemberGroup = async (cedula: string, newGroupId: number) => {
+    const currentItem = verificationList.find(item => item.cedula === cedula);
+    if (!currentItem) return;
+
+    const originalGroupId = currentItem.group_id;
+    const targetGroupId = newGroupId === 0 ? undefined : newGroupId;
+
+    setVerificationList(prev => prev.map(item =>
+      item.cedula === cedula ? { ...item, group_id: targetGroupId } : item
+    ));
+
+    if (batchId) {
+      try {
+        const members = await getMembersByBatchId(batchId);
+        const currentMember = members.find(m => m.identity === cedula);
+        if (currentMember) {
+          currentMember.group_id = targetGroupId;
+          await updateMember(currentMember);
+        }
+      } catch (err) {
+        console.error("Error al actualizar grupo de miembro en DB:", err);
+        setVerificationList(prev => prev.map(item =>
+          item.cedula === cedula ? { ...item, group_id: originalGroupId } : item
+        ));
+        alert("No se pudo actualizar el grupo del miembro en la base de datos.");
       }
     }
   };
@@ -759,6 +813,8 @@ export const NewBatchWizard: React.FC = () => {
           handleToggleMemberType={handleToggleMemberType}
           handleStep2Continue={handleStep2Continue}
           onBack={() => setCurrentStep(1)}
+          groups={groups}
+          onUpdateMemberGroup={handleUpdateMemberGroup}
         />
       )}
 
@@ -770,6 +826,7 @@ export const NewBatchWizard: React.FC = () => {
           onMembersUpdated={setSavedMembers}
           handleFinalizeBatch={handleFinalizeBatch}
           onBack={() => setCurrentStep(2)}
+          groups={groups}
         />
       )}
 

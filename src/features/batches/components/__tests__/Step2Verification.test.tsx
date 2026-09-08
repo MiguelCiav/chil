@@ -161,4 +161,38 @@ describe('Step2Verification component', () => {
     expect(screen.queryByText('Caminantes')).not.toBeInTheDocument();
     expect(screen.queryByText('No scout')).not.toBeInTheDocument();
   });
+
+  it('renders Grupo Scout column and calls onUpdateMemberGroup when groups are provided', () => {
+    const list: MemberVerificationResult[] = [
+      {
+        cedula: '29111222',
+        name: 'Ana Perez',
+        status: 'Registro válido',
+        type: 'young',
+        group_id: 101
+      }
+    ];
+    const mockGroups = [
+      { id: 101, name: 'Grupo San Luis', district_id: 1 },
+      { id: 102, name: 'Grupo La Salle', district_id: 1 }
+    ];
+    const onUpdateMemberGroup = vi.fn();
+
+    render(
+      <Step2Verification
+        {...defaultProps}
+        verificationList={list}
+        groups={mockGroups}
+        onUpdateMemberGroup={onUpdateMemberGroup}
+      />
+    );
+
+    expect(screen.getByText('Grupo Scout')).toBeInTheDocument();
+    const groupSelect = screen.getByLabelText(/Grupo scout de Ana Perez/i);
+    expect(groupSelect).toBeInTheDocument();
+    expect(groupSelect).toHaveValue('101');
+
+    fireEvent.change(groupSelect, { target: { value: '102' } });
+    expect(onUpdateMemberGroup).toHaveBeenCalledWith('29111222', 102);
+  });
 });

@@ -437,5 +437,48 @@ describe('Step3Review component', () => {
       );
     });
   });
+
+  it('allows selecting Grupo Scout in edit modal and saves with updated group_id', async () => {
+    const mockGroups = [
+      { id: 101, name: 'Grupo San Luis', district_id: 1 },
+      { id: 102, name: 'Grupo La Salle', district_id: 1 }
+    ];
+    vi.mocked(api.updateMember).mockResolvedValueOnce({} as unknown as ScoutMember);
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        ...sampleMembers[0],
+        group_id: 102
+      }
+    ]);
+
+    render(
+      <Step3Review
+        {...defaultProps}
+        groups={mockGroups}
+      />
+    );
+
+    // Member card displays group
+    expect(screen.getByText(/Ana Perez/i)).toBeInTheDocument();
+
+    // Open edit modal for Ana
+    fireEvent.click(screen.getByLabelText(/Editar información de Ana Perez/i));
+
+    const groupSelect = screen.getByLabelText(/Grupo Scout/i);
+    expect(groupSelect).toBeInTheDocument();
+
+    fireEvent.change(groupSelect, { target: { value: '102' } });
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-11111111',
+          group_id: 102
+        })
+      );
+    });
+  });
 });
 
