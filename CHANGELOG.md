@@ -1,5 +1,39 @@
 # chil
 
+## 1.0.0
+
+### Major Changes
+
+- # Chil v1.0.0 - Versión Oficial de Producción ⚜️
+
+  ¡Lanzamiento oficial de la versión 1.0.0 del Sistema de Emisión y Control de Reconocimientos Scouts (Chil)!
+
+  ### Hitos y Capacidades Principales en v1.0.0:
+
+  - **Gestión Masiva de Lotes (`/lotes`)**:
+    - Wizard guiado en 3 pasos con autocompletado y validación de nóminas scouts.
+    - Verificación automatizada contra el sistema de registro e inferencia de unidades por edad.
+    - Filtro estricto numérico en cédulas y soporte para casos excepcionales con justificación.
+  - **Emisión Rápida Individual (`/lotes/emision-rapida`)**:
+    - Emisión ágil en un solo paso con generación automática de código oficial y descarga directa del certificado en PDF.
+    - Selector de Tipo de Miembro (Joven / Adulto) con autoselección inteligente según unidad y edad.
+    - Soporte completo para reconocimiento directo a colaboradores No Scouts.
+  - **Diseñador Visual de Diplomas (`/reconocimientos/:id/plantilla`)**:
+    - Editor visual drag-and-drop en lienzo 1:1 con soporte para fondos personalizados en PNG/JPEG/WebP.
+    - Inserción y calibración física milimétrica de campos dinámicos y previsualización interactiva con datos reales.
+  - **Analítica Territorial y Estadísticas (`/estadisticas`)**:
+    - Tablero de analítica territorial por región, distrito y unidad scout.
+    - Comparativa Interanual (Year-over-Year - YoY) con badges de variación porcentual y gráficos SVG de tendencia mensual.
+    - Exportación ejecutiva de informes en formato PDF y exportación de datos en Excel/CSV.
+  - **Identidad Visual Estandarizada y Landing Pública**:
+    - Página de inicio institucional con valores del movimiento scout, navegación optimizada y diseño profesional sin emojis.
+    - Estandarización visual completa de encabezados, tablas TanStack con diseño de marca y jerarquía tipográfica.
+  - **Sistema de Guías Interactivas (Walkthroughs)**:
+    - Tours guiados integrados en todos los módulos con overlays SVG, focalización dinámica y navegación por teclado.
+  - **Seguridad Multi-Tenant y Calidad de Código**:
+    - Aislamiento estricto de datos por dirigente/usuario autenticado en Firebase Auth y Firestore.
+    - Calidad de código en SonarCloud con 0 incidencias abiertas y Quality Gate aprobado al 100%.
+
 ## 0.11.0
 
 ### Minor Changes
