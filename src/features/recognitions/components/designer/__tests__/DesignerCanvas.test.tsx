@@ -81,4 +81,72 @@ describe('DesignerCanvas component', () => {
     expect(screen.getByAltText('Fondo del Certificado')).toBeInTheDocument();
     expect(screen.getByText('Carlos Eduardo Mendoza')).toBeInTheDocument();
   });
+
+  it('renders horizontal and vertical alignment guides when active in edit mode', () => {
+    const activeGuides = [
+      {
+        orientation: 'horizontal' as const,
+        position: 50,
+        type: 'canvas-center' as const
+      },
+      {
+        orientation: 'vertical' as const,
+        position: 25,
+        type: 'field-align' as const,
+        targetFieldId: 'field-2'
+      }
+    ];
+
+    render(
+      <DesignerCanvas
+        canvasRef={{ current: null }}
+        template={mockTemplate}
+        selectedFieldId="field-full_name"
+        isPreviewMode={false}
+        fontScale={1}
+        activeGuides={activeGuides}
+        recognitionName="Insignia de Madera"
+        onPointerMove={vi.fn()}
+        onPointerUp={vi.fn()}
+        onPointerDownField={vi.fn()}
+        onSelectField={vi.fn()}
+      />
+    );
+
+    const horizontalGuide = screen.getByTestId('alignment-guide-horizontal');
+    const verticalGuide = screen.getByTestId('alignment-guide-vertical');
+
+    expect(horizontalGuide).toBeInTheDocument();
+    expect(horizontalGuide).toHaveStyle({ top: '50%' });
+    expect(verticalGuide).toBeInTheDocument();
+    expect(verticalGuide).toHaveStyle({ left: '25%' });
+  });
+
+  it('does not render alignment guides when in preview mode', () => {
+    const activeGuides = [
+      {
+        orientation: 'horizontal' as const,
+        position: 50,
+        type: 'canvas-center' as const
+      }
+    ];
+
+    render(
+      <DesignerCanvas
+        canvasRef={{ current: null }}
+        template={mockTemplate}
+        selectedFieldId="field-full_name"
+        isPreviewMode={true}
+        fontScale={1}
+        activeGuides={activeGuides}
+        recognitionName="Insignia de Madera"
+        onPointerMove={vi.fn()}
+        onPointerUp={vi.fn()}
+        onPointerDownField={vi.fn()}
+        onSelectField={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('alignment-guide-horizontal')).not.toBeInTheDocument();
+  });
 });
