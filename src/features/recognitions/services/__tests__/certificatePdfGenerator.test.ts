@@ -7,7 +7,8 @@ import {
   generateSingleCertificatePdf,
   downloadSingleCertificatePdf,
   generateBatchCertificatesPdf,
-  renderCertificatePage
+  renderCertificatePage,
+  getPdfFontFamily
 } from '../certificatePdfGenerator';
 import { Batch, ScoutMember } from '../../../batches/types';
 import { RecognitionType, CertificateTemplate } from '../../types';
@@ -732,6 +733,29 @@ describe('certificatePdfGenerator service', () => {
         297,
         210
       );
+    });
+  });
+
+  describe('getPdfFontFamily helper', () => {
+    it('maps scouts-gt-planar-bold and Scouts GT Planar to helvetica', () => {
+      expect(getPdfFontFamily('scouts-gt-planar-bold')).toBe('helvetica');
+      expect(getPdfFontFamily('Scouts GT Planar')).toBe('helvetica');
+    });
+
+    it('maps noto-sans to helvetica', () => {
+      expect(getPdfFontFamily('noto-sans')).toBe('helvetica');
+    });
+
+    it('preserves legacy fonts times and courier', () => {
+      expect(getPdfFontFamily('times')).toBe('times');
+      expect(getPdfFontFamily('courier')).toBe('courier');
+    });
+
+    it('falls back to helvetica for undefined, unknown or empty strings', () => {
+      expect(getPdfFontFamily(undefined)).toBe('helvetica');
+      expect(getPdfFontFamily('')).toBe('helvetica');
+      expect(getPdfFontFamily('arial')).toBe('helvetica');
+      expect(getPdfFontFamily('roboto')).toBe('helvetica');
     });
   });
 });

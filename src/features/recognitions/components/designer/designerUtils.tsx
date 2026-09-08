@@ -73,13 +73,12 @@ export function getFormatBadgeText(
 
 export function getFontFamilyStyle(family: RecognitionFieldConfig['font_family']): string {
   switch (family) {
-    case 'times':
-      return 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif';
-    case 'courier':
-      return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace';
-    case 'helvetica':
+    case 'scouts-gt-planar-bold':
+    case 'Scouts GT Planar':
+      return '"Scouts GT Planar", sans-serif';
+    case 'noto-sans':
     default:
-      return 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+      return '"Noto Sans", sans-serif';
   }
 }
 

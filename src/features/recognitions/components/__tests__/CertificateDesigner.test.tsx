@@ -210,9 +210,9 @@ describe('CertificateDesigner component', () => {
     const estiloTabBtn = screen.getByRole('button', { name: /^Estilo$/i });
     fireEvent.click(estiloTabBtn);
 
-    // Change font family to Times
-    const timesBtn = screen.getByRole('button', { name: 'Times' });
-    fireEvent.click(timesBtn);
+    // Change font family to Scouts GT Planar
+    const planarBtn = screen.getByRole('button', { name: 'Scouts GT Planar' });
+    fireEvent.click(planarBtn);
 
     // Change font size
     const fontSizeSlider = screen.getByLabelText('Tamaño de fuente');

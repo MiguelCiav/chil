@@ -242,13 +242,25 @@ export function resolveFieldsToRender(template?: CertificateTemplate): Recogniti
   }));
 }
 
-function getFontFamily(fontFamily?: string): 'times' | 'courier' | 'helvetica' {
-  if (fontFamily === 'times') return 'times';
-  if (fontFamily === 'courier') return 'courier';
-  return 'helvetica';
+export function getPdfFontFamily(fontFamily?: string): 'helvetica' | 'times' | 'courier' {
+  switch (fontFamily) {
+    case 'times':
+      return 'times';
+    case 'courier':
+      return 'courier';
+    case 'scouts-gt-planar-bold':
+    case 'Scouts GT Planar':
+    case 'noto-sans':
+    case 'helvetica':
+    default:
+      return 'helvetica';
+  }
 }
 
-function getFontWeight(fontWeight?: string): 'bold' | 'italic' | 'normal' {
+function getFontWeight(fontWeight?: string, fontFamily?: string): 'bold' | 'italic' | 'normal' {
+  if (fontFamily === 'scouts-gt-planar-bold' || fontFamily === 'Scouts GT Planar') {
+    return fontWeight === 'italic' ? 'italic' : 'bold';
+  }
   if (fontWeight === 'bold') return 'bold';
   if (fontWeight === 'italic') return 'italic';
   return 'normal';
@@ -264,7 +276,7 @@ function drawSingleField(
   const x = Math.round(((field.x / 100) * width) * 100) / 100;
   const y = Math.round(((field.y / 100) * height) * 100) / 100;
 
-  doc.setFont(getFontFamily(field.font_family), getFontWeight(field.font_weight));
+  doc.setFont(getPdfFontFamily(field.font_family), getFontWeight(field.font_weight, field.font_family));
   doc.setFontSize(field.font_size);
 
   const { r, g, b } = hexToRgb(field.color);
