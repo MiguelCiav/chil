@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   AlertCircle,
   MoreVertical,
-  Zap
+  Zap,
+  GitMerge
 } from 'lucide-react';
 
 import { Button } from '../../../components/Button';
@@ -30,6 +31,7 @@ import {
   WalkthroughHelpButton,
   WalkthroughStep
 } from '../../../components/walkthrough';
+import { MergeBatchesModal, BatchMergeOption } from './list/MergeBatchesModal';
 
 import {
   getAllBatches,
@@ -43,7 +45,7 @@ import {
   RECOGNITION_TYPES
 } from '../api';
 import {
-  generateBatchCertificatesPdf,
+  generateBatchCertificatesZip,
   getRecognitionTypeById,
   getAllRecognitionTypes,
   RecognitionType
@@ -350,7 +352,7 @@ function renderBatchActionsCell(props: BatchActionsCellProps) {
       </button>
 
       {isMenuOpen && (
-        <div className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
+        <div className={`absolute right-0 ${dropdownPosition} w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
           <button
             type="button"
             onClick={() => {
@@ -372,7 +374,7 @@ function renderBatchActionsCell(props: BatchActionsCellProps) {
             className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5 text-primary" />
-            {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (PDF)'}
+            {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (ZIP)'}
           </button>
           <div className="border-t border-gray-100 my-1" />
           <button
@@ -443,6 +445,33 @@ interface BatchListColumnsParams {
 
 function createBatchListColumns(params: BatchListColumnsParams): ColumnDef<BatchRowData>[] {
   return [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          aria-label="Seleccionar todos los lotes"
+          checked={table.getIsAllPageRowsSelected()}
+          ref={input => {
+            if (input) {
+              input.indeterminate = table.getIsSomePageRowsSelected();
+            }
+          }}
+          onChange={table.getToggleAllPageRowsSelectedHandler()}
+          className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          aria-label={`Seleccionar lote ${row.original.id}`}
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          onChange={row.getToggleSelectedHandler()}
+          className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+        />
+      )
+    },
     {
       accessorKey: 'formattedDate',
       header: 'FECHA DE EMISIÓN',
@@ -533,6 +562,10 @@ export const BatchList: React.FC = () => {
   const [newFilterType, setNewFilterType] = useState<FilterType>('region');
   const [newFilterValue, setNewFilterValue] = useState<string>('');
 
+  // Row selection state & Merge Batches modal state
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+
   // Date filter mode & values for Add Filter modal
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('predefined');
   const [datePredefinedValue, setDatePredefinedValue] = useState<string>('Este Año');
@@ -590,7 +623,7 @@ export const BatchList: React.FC = () => {
         recType = await getRecognitionTypeById(targetBatch.recognition_type);
       }
 
-      const fileName = await generateBatchCertificatesPdf({
+      const fileName = await generateBatchCertificatesZip({
         batch: targetBatch,
         members: batchMembers,
         recognition: recType,
@@ -601,7 +634,7 @@ export const BatchList: React.FC = () => {
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error("Error downloading PDF:", err);
-      alert("Error al generar los reconocimientos en PDF.");
+      alert("Error al generar los reconocimientos en ZIP.");
     } finally {
       setDownloadingId(null);
     }
@@ -725,6 +758,11 @@ export const BatchList: React.FC = () => {
   const table = useReactTable({
     data: filteredData,
     columns,
+    state: {
+      rowSelection
+    },
+    onRowSelectionChange: setRowSelection,
+    getRowId: row => String(row.id),
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
@@ -736,6 +774,49 @@ export const BatchList: React.FC = () => {
 
   const currentPageRows = table.getRowModel().rows;
   const totalCount = filteredData.length;
+
+  // Selected batches for merging
+  const selectedBatches = useMemo<BatchMergeOption[]>(() => {
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    return selectedIds
+      .map(id => {
+        const row = tableData.find(r => String(r.id) === id);
+        if (!row) return null;
+        return {
+          id: row.id,
+          batch: row.batch,
+          created_at: row.created_at,
+          formattedDate: row.formattedDate,
+          groupName: row.groupName,
+          recognitionName: row.recognitionName,
+          memberCount: row.memberCount
+        };
+      })
+      .filter((b): b is BatchMergeOption => b !== null);
+  }, [rowSelection, tableData]);
+
+  const handleMergeSuccess = useCallback(async (newBatch: Batch) => {
+    // 1. Show success toast
+    setToastMessage(`¡Lotes fusionados exitosamente en el Lote #${newBatch.id}!`);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 4000);
+
+    // 2. Clear selection and close modal
+    setRowSelection({});
+    setIsMergeModalOpen(false);
+
+    // 3. Update local state: remove merged batch IDs and add new batch
+    const mergedIds = selectedBatches.map(b => b.id);
+    setBatches(prev => [newBatch, ...prev.filter(b => !mergedIds.includes(b.id))]);
+
+    // 4. Refresh members to have updated batch_id
+    try {
+      const refreshedMembers = await getAllMembers(user?.uid);
+      setMembers(refreshedMembers);
+    } catch (err) {
+      console.error('Error refreshing members after merge:', err);
+    }
+  }, [selectedBatches, user?.uid]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
@@ -762,6 +843,17 @@ export const BatchList: React.FC = () => {
         </div>
 
         <div data-walkthrough="batch-list-actions" className="flex items-center gap-3">
+          {selectedBatches.length >= 2 && (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setIsMergeModalOpen(true)}
+              icon={<GitMerge className="w-4 h-4" />}
+              className="shadow-sm flex-shrink-0 animate-fade-in"
+            >
+              Fusionar lotes ({selectedBatches.length})
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -1118,6 +1210,15 @@ export const BatchList: React.FC = () => {
           </ModalFooter>
         </form>
       </Modal>
+
+      {/* Modal: Fusionar Lotes */}
+      <MergeBatchesModal
+        isOpen={isMergeModalOpen}
+        onClose={() => setIsMergeModalOpen(false)}
+        selectedBatches={selectedBatches}
+        onMergeSuccess={handleMergeSuccess}
+        userId={user?.uid}
+      />
 
       {/* Walkthrough Interactive Guide Overlay */}
       <WalkthroughOverlay

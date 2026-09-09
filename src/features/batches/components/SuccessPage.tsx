@@ -21,7 +21,7 @@ import { ColumnDef, CellContext } from '@tanstack/react-table';
 import { getBatchById, getMembersByBatchId, getHierarchyData, generateBatchReport } from '../api';
 import { Batch, ScoutMember } from '../types';
 import {
-  generateBatchCertificatesPdf,
+  generateBatchCertificatesZip,
   getRecognitionTypeById,
   RecognitionType
 } from '../../recognitions';
@@ -232,7 +232,7 @@ export const SuccessPage: React.FC = () => {
         recType = await getRecognitionTypeById(batch.recognition_type);
       }
       const hierarchy = await getHierarchyData();
-      const path = await generateBatchCertificatesPdf({
+      const path = await generateBatchCertificatesZip({
         batch,
         members,
         recognition: recType,
@@ -243,7 +243,7 @@ export const SuccessPage: React.FC = () => {
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error(err);
-      alert("Error al generar los reconocimientos en PDF.");
+      alert("Error al generar los reconocimientos en ZIP.");
     } finally {
       setDownloading(false);
     }
@@ -328,7 +328,7 @@ export const SuccessPage: React.FC = () => {
             title={eligibleCount === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos" : undefined}
             icon={<Download size={18} />}
           >
-            {downloading ? 'Generando PDF...' : 'Descargar Reconocimientos'}
+            {downloading ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
           </Button>
           <Button
             variant="outline"

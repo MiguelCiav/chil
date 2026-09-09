@@ -17,7 +17,7 @@ export interface RecognitionFieldConfig {
   label: string;
   x: number; // Position X in percentage (0-100) or mm (0-297)
   y: number; // Position Y in percentage (0-100) or mm (0-210)
-  font_family: 'helvetica' | 'times' | 'courier';
+  font_family: 'noto-sans' | 'scouts-gt-planar-bold' | string;
   font_size: number; // e.g. 10 - 48
   font_weight: 'normal' | 'bold' | 'italic';
   color: string; // e.g. "#1b7a37" or "#222222"
@@ -46,7 +46,7 @@ export interface TemplateFieldDefinition {
   label: string;
   default_font_size: number;
   default_font_weight: 'normal' | 'bold' | 'italic';
-  default_font_family: 'helvetica' | 'times' | 'courier';
+  default_font_family: 'noto-sans' | 'scouts-gt-planar-bold' | string;
   default_color: string;
   default_align: 'left' | 'center' | 'right';
   default_x: number;
@@ -60,7 +60,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Nombre y Apellido',
     default_font_size: 24,
     default_font_weight: 'bold',
-    default_font_family: 'helvetica',
+    default_font_family: 'noto-sans',
     default_color: '#1b7a37',
     default_align: 'center',
     default_x: 50,
@@ -72,7 +72,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Cédula de Identidad',
     default_font_size: 14,
     default_font_weight: 'normal',
-    default_font_family: 'helvetica',
+    default_font_family: 'noto-sans',
     default_color: '#333333',
     default_align: 'center',
     default_x: 50,
@@ -84,7 +84,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Nombre del Reconocimiento',
     default_font_size: 20,
     default_font_weight: 'bold',
-    default_font_family: 'helvetica',
+    default_font_family: 'noto-sans',
     default_color: '#8c4e37',
     default_align: 'center',
     default_x: 50,
@@ -96,7 +96,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Región Scout',
     default_font_size: 12,
     default_font_weight: 'normal',
-    default_font_family: 'helvetica',
+    default_font_family: 'noto-sans',
     default_color: '#444444',
     default_align: 'left',
     default_x: 20,
@@ -108,7 +108,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Distrito Scout',
     default_font_size: 12,
     default_font_weight: 'normal',
-    default_font_family: 'helvetica',
+    default_font_family: 'noto-sans',
     default_color: '#444444',
     default_align: 'left',
     default_x: 20,
@@ -120,7 +120,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Grupo Scout',
     default_font_size: 12,
     default_font_weight: 'normal',
-    default_font_family: 'helvetica',
+    default_font_family: 'noto-sans',
     default_color: '#444444',
     default_align: 'left',
     default_x: 20,
@@ -132,7 +132,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Unidad Scout',
     default_font_size: 12,
     default_font_weight: 'normal',
-    default_font_family: 'helvetica',
+    default_font_family: 'noto-sans',
     default_color: '#444444',
     default_align: 'left',
     default_x: 20,
@@ -144,7 +144,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Fecha de Emisión',
     default_font_size: 12,
     default_font_weight: 'normal',
-    default_font_family: 'helvetica',
+    default_font_family: 'noto-sans',
     default_color: '#555555',
     default_align: 'center',
     default_x: 80,
@@ -156,7 +156,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     label: 'Código de Reconocimiento',
     default_font_size: 11,
     default_font_weight: 'normal',
-    default_font_family: 'courier',
+    default_font_family: 'noto-sans',
     default_color: '#666666',
     default_align: 'center',
     default_x: 80,

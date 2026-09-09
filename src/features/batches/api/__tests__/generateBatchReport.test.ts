@@ -130,11 +130,12 @@ describe('generateBatchReport', () => {
     // Check that table rows include BOTH members
     expect(mockDocInstance.text).toHaveBeenCalledWith('V-11111111', 16, expect.any(Number));
     expect(mockDocInstance.text).toHaveBeenCalledWith('Ana Perez', 46, expect.any(Number));
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Registro Válido', 146, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith('Grupo San Luis', 106, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith('Registro Válido', 170, expect.any(Number));
 
     expect(mockDocInstance.text).toHaveBeenCalledWith('V-22222222', 16, expect.any(Number));
     expect(mockDocInstance.text).toHaveBeenCalledWith('Carlos Gomez', 46, expect.any(Number));
-    expect(mockDocInstance.text).toHaveBeenCalledWith('No registrado', 146, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith('No registrado', 170, expect.any(Number));
 
     // Check that green and red colors were set for active and inactive status
     expect(mockDocInstance.setTextColor).toHaveBeenCalledWith(40, 167, 69);

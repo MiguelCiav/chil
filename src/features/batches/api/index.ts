@@ -267,6 +267,126 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
   return updatedBatch;
 }
 
+export interface MergeBatchesParams {
+  batchIds: number[];
+  newComment?: string;
+  user_id?: string;
+}
+
+export async function mergeBatches(params: MergeBatchesParams, userId?: string): Promise<Batch> {
+  const { batchIds, newComment } = params;
+  if (!batchIds || batchIds.length < 2) {
+    throw new Error('Se requieren al menos 2 lotes para fusionar');
+  }
+
+  // Fetch all batches
+  const fetchedBatches = await Promise.all(batchIds.map(id => getBatchById(id)));
+  const existingBatches = fetchedBatches.filter((b): b is Batch => b !== null);
+
+  if (existingBatches.length < 2) {
+    throw new Error('No se encontraron suficientes lotes válidos para fusionar');
+  }
+
+  // Compute latestCreatedAt: find the most recent created_at timestamp among the batches
+  const timestamps = existingBatches.map(b => new Date(b.created_at).getTime());
+  const maxTimestamp = Math.max(...timestamps.filter(t => !Number.isNaN(t)));
+  const latestCreatedAt = Number.isNaN(maxTimestamp) || maxTimestamp === -Infinity
+    ? new Date().toISOString()
+    : new Date(maxTimestamp).toISOString();
+
+  // Determine primary batch properties:
+  // Region: if all share the same region, use it; otherwise 0 or first
+  const firstRegion = existingBatches[0].region_id;
+  const allSameRegion = existingBatches.every(b => b.region_id === firstRegion);
+  const region_id = allSameRegion ? firstRegion : 0;
+
+  // District: if all share the same district, use it; otherwise 0
+  const firstDistrict = existingBatches[0].district_id;
+  const allSameDistrict = existingBatches.every(b => b.district_id === firstDistrict);
+  const district_id = (allSameRegion && allSameDistrict) ? firstDistrict : 0;
+
+  // Group: If multiple groups exist, group_id: 0 (Multigrupo)
+  const firstGroup = existingBatches[0].group_id;
+  const allSameGroup = existingBatches.every(b => b.group_id === firstGroup);
+  const group_id = allSameGroup ? firstGroup : 0;
+
+  // Recognition type: If all share the same type, use that type; otherwise fallback or keep first batch's type
+  const firstType = existingBatches[0].recognition_type;
+  const allSameType = existingBatches.every(b => b.recognition_type === firstType);
+  const recognition_type = allSameType ? firstType : (firstType ?? '');
+
+  // Unit scope: If all share the same unit, use it; otherwise 'mixed'
+  const firstUnit = existingBatches[0].unit_scope;
+  const allSameUnit = existingBatches.every(b => b.unit_scope === firstUnit);
+  const unit_scope = allSameUnit && firstUnit ? firstUnit : 'mixed';
+
+  // Duration: If all share the same duration, use it
+  const firstDuration = existingBatches[0].recognition_duration;
+  const allSameDuration = existingBatches.every(b => b.recognition_duration === firstDuration);
+  const recognition_duration = allSameDuration ? firstDuration : '';
+
+  // User ID
+  const targetUserId = params.user_id ?? userId ?? existingBatches[0].user_id ?? auth.currentUser?.uid ?? '';
+
+  // Generate new merged batch ID
+  const newNumericId = generateSecureBatchId();
+  const mergedBatch: Batch = {
+    id: newNumericId,
+    comment: newComment !== undefined ? newComment : '',
+    region_id,
+    district_id,
+    group_id,
+    unit_scope,
+    recognition_type,
+    recognition_duration,
+    created_at: latestCreatedAt,
+    ...(targetUserId ? { user_id: targetUserId } : {})
+  };
+
+  // Fetch all ScoutMember records associated with batchIds
+  const membersByBatch = await Promise.all(
+    existingBatches.map(async b => {
+      const members = await getMembersByBatchId(b.id);
+      return { batch: b, members };
+    })
+  );
+
+  // Use writeBatch for atomic updates
+  const batchOp = writeBatch(db);
+
+  // 1. Create the new merged batch
+  const newBatchRef = doc(db, 'batches', String(newNumericId));
+  batchOp.set(newBatchRef, mergedBatch);
+
+  // 2. Member reassignment
+  for (const { batch: sourceBatch, members } of membersByBatch) {
+    for (const member of members) {
+      const memberRef = doc(db, 'scout_members', member.identity);
+      const memberGroupId = member.group_id !== undefined && !Number.isNaN(member.group_id)
+        ? member.group_id
+        : (sourceBatch.group_id !== undefined && !Number.isNaN(sourceBatch.group_id) ? sourceBatch.group_id : 0);
+
+      const updatedMember: ScoutMember = {
+        ...member,
+        batch_id: newNumericId,
+        group_id: memberGroupId,
+        ...(targetUserId ? { user_id: targetUserId } : {})
+      };
+      batchOp.set(memberRef, updatedMember);
+    }
+  }
+
+  // 3. Delete original batches
+  for (const sourceBatch of existingBatches) {
+    const oldBatchRef = doc(db, 'batches', String(sourceBatch.id));
+    batchOp.delete(oldBatchRef);
+  }
+
+  await batchOp.commit();
+
+  return mergedBatch;
+}
+
 export interface ScraperMemberDetails {
   nombre_completo: string;
   status: string;
@@ -309,6 +429,8 @@ export async function createMember(member: ScoutMember, userId?: string): Promis
     status: member.status,
     verified_in_registry: Boolean(member.verified_in_registry),
     ...(member.unit ? { unit: member.unit } : {}),
+    ...(member.region_id !== undefined && !Number.isNaN(member.region_id) ? { region_id: member.region_id } : {}),
+    ...(member.district_id !== undefined && !Number.isNaN(member.district_id) ? { district_id: member.district_id } : {}),
     ...(member.group_id !== undefined && !Number.isNaN(member.group_id) ? { group_id: member.group_id } : {}),
     ...(member.unit_id !== undefined && !Number.isNaN(member.unit_id) ? { unit_id: member.unit_id } : {}),
     ...(member.batch_id !== undefined && !Number.isNaN(member.batch_id) ? { batch_id: member.batch_id } : {}),
@@ -338,6 +460,8 @@ export async function updateMember(member: ScoutMember, userId?: string): Promis
     status: member.status,
     verified_in_registry: Boolean(member.verified_in_registry),
     ...(member.unit ? { unit: member.unit } : {}),
+    ...(member.region_id !== undefined && !Number.isNaN(member.region_id) ? { region_id: member.region_id } : {}),
+    ...(member.district_id !== undefined && !Number.isNaN(member.district_id) ? { district_id: member.district_id } : {}),
     ...(member.group_id !== undefined && !Number.isNaN(member.group_id) ? { group_id: member.group_id } : {}),
     ...(member.unit_id !== undefined && !Number.isNaN(member.unit_id) ? { unit_id: member.unit_id } : {}),
     ...(member.batch_id !== undefined && !Number.isNaN(member.batch_id) ? { batch_id: member.batch_id } : {}),
@@ -571,8 +695,9 @@ export async function generateBatchReport(
   docPdf.setFontSize(10);
   docPdf.text("Cédula", 16, y - 1);
   docPdf.text("Nombre Completo", 46, y - 1);
-  docPdf.text("Tipo", 116, y - 1);
-  docPdf.text("Estado", 146, y - 1);
+  docPdf.text("Grupo", 106, y - 1);
+  docPdf.text("Tipo", 146, y - 1);
+  docPdf.text("Estado", 170, y - 1);
   
   docPdf.setFont("helvetica", "normal");
   y += 6;
@@ -597,6 +722,10 @@ export async function generateBatchReport(
     }
     
     const fullName = `${m.first_names} ${m.last_names}`;
+    const memberGroupId = m.group_id ?? batch.group_id;
+    const memberGroupName = (!memberGroupId || memberGroupId === 0)
+      ? 'No aplica'
+      : (hierarchy.groups.find(g => g.id === memberGroupId)?.name ?? `Grupo ${memberGroupId}`);
     const typeStr = m.member_type === 'young' ? 'Joven' : 'Adulto';
     const statusStr = getReportMemberStatusText(m.status);
     const [r, g, bColor] = getReportMemberStatusColor(m.status);
@@ -606,11 +735,12 @@ export async function generateBatchReport(
     docPdf.line(14, y + 1, 196, y + 1);
     
     docPdf.text(m.identity, 16, y);
-    docPdf.text(fullName.substring(0, 35), 46, y);
-    docPdf.text(typeStr, 116, y);
+    docPdf.text(fullName.substring(0, 26), 46, y);
+    docPdf.text(memberGroupName.substring(0, 18), 106, y);
+    docPdf.text(typeStr, 146, y);
     
     docPdf.setTextColor(r, g, bColor);
-    docPdf.text(statusStr, 146, y);
+    docPdf.text(statusStr, 170, y);
     docPdf.setTextColor(0, 0, 0); // Reset
     
     y += 8;

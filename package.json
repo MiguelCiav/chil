@@ -13,6 +13,7 @@
     "prepare": "husky",
     "version-packages": "changeset version",
     "create-changeset": "changeset",
+    "seed-hierarchy": "node scripts/seed-hierarchy.mjs",
     "release": "node scripts/release.mjs"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "@tanstack/react-table": "^8.21.3",
     "firebase": "^12.14.0",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.2",
     "lucide-react": "^1.14.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -36,6 +38,7 @@
     "@eslint/js": "^10.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/jszip": "^3.4.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",

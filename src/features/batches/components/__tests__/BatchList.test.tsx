@@ -14,6 +14,7 @@ vi.mock('../../api', () => ({
   getMembersByBatchId: vi.fn(),
   getHierarchyData: vi.fn(),
   deleteBatch: vi.fn(),
+  mergeBatches: vi.fn(),
   getRecognitionBadgeStyle: vi.fn(() => ({
     bg: 'bg-sky-100',
     text: 'text-sky-800',
@@ -33,6 +34,7 @@ vi.mock('../../api', () => ({
 }));
 
 vi.mock('../../../recognitions', () => ({
+  generateBatchCertificatesZip: vi.fn(),
   generateBatchCertificatesPdf: vi.fn(),
   getRecognitionTypeById: vi.fn(() => Promise.resolve(null)),
   getAllRecognitionTypes: vi.fn(() => Promise.resolve([
@@ -172,7 +174,7 @@ describe('BatchList component', () => {
 
     // Verify actions inside dropdown
     expect(screen.getByRole('button', { name: /Ver detalle/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Descargar reconocimientos \(PDF\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Descargar reconocimientos \(ZIP\)/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Eliminar lote/i })).toBeInTheDocument();
   });
 
@@ -256,7 +258,7 @@ describe('BatchList component', () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Reconocimientos_Lote_101_go_solar.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesZip).mockResolvedValueOnce('Reconocimientos_Lote_101_go_solar.zip');
 
     render(
       <MemoryRouter>
@@ -276,17 +278,17 @@ describe('BatchList component', () => {
 
     // 2. Test Download PDF from dropdown
     fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
-    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(PDF\)$/i });
+    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(ZIP\)$/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(recognitions.generateBatchCertificatesPdf).toHaveBeenCalledWith(
+      expect(recognitions.generateBatchCertificatesZip).toHaveBeenCalledWith(
         expect.objectContaining({
           batch: expect.objectContaining({ id: 101 }),
           members: expect.any(Array)
         })
       );
-      expect(screen.getByText(/Reconocimientos descargados: Reconocimientos_Lote_101_go_solar\.pdf/i)).toBeInTheDocument();
+      expect(screen.getByText(/Reconocimientos descargados: Reconocimientos_Lote_101_go_solar\.zip/i)).toBeInTheDocument();
     });
   });
 
@@ -514,7 +516,7 @@ describe('BatchList component', () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockRejectedValueOnce(new Error('PDF generation failure'));
+    vi.mocked(recognitions.generateBatchCertificatesZip).mockRejectedValueOnce(new Error('ZIP generation failure'));
     vi.mocked(api.deleteBatch).mockRejectedValueOnce(new Error('Delete failure'));
 
     render(
@@ -529,11 +531,11 @@ describe('BatchList component', () => {
 
     // Test download PDF error via 3-dots dropdown
     fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
-    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(PDF\)$/i });
+    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(ZIP\)$/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en PDF.');
+      expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en ZIP.');
     });
 
     // Test delete error via 3-dots dropdown
@@ -680,6 +682,75 @@ describe('BatchList component', () => {
     // Overlay is closed
     expect(screen.queryByText('Gestión de Lotes')).not.toBeInTheDocument();
     expect(localStorage.getItem('chil_tour_batch-list-tour_test-user-id')).toBe('true');
+  });
+
+  it('handles row selection, displays Fusionar lotes button when >= 2 batches are selected, opens modal, and executes merge', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValue(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    const mergedBatch = {
+      id: 9999,
+      comment: 'Lotes combinados',
+      region_id: 1,
+      district_id: 10,
+      group_id: 0,
+      recognition_type: 'sct-go-solar',
+      created_at: '2026-08-21T11:00:00.000Z'
+    };
+    vi.mocked(api.mergeBatches).mockResolvedValueOnce(mergedBatch);
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('FECHA DE EMISIÓN')).toBeInTheDocument();
+    });
+
+    // Verify merge button is NOT visible initially
+    expect(screen.queryByRole('button', { name: /Fusionar lotes/i })).not.toBeInTheDocument();
+
+    // Select row 101
+    const checkbox101 = screen.getByLabelText('Seleccionar lote 101');
+    fireEvent.click(checkbox101);
+
+    // Still not visible with 1 selection
+    expect(screen.queryByRole('button', { name: /Fusionar lotes/i })).not.toBeInTheDocument();
+
+    // Select row 102
+    const checkbox102 = screen.getByLabelText('Seleccionar lote 102');
+    fireEvent.click(checkbox102);
+
+    // Button should now be visible: "Fusionar lotes (2)"
+    const mergeBtn = await screen.findByRole('button', { name: 'Fusionar lotes (2)' });
+    expect(mergeBtn).toBeInTheDocument();
+
+    // Click merge button to open modal
+    fireEvent.click(mergeBtn);
+
+    // Modal is open
+    expect(screen.getByText('Fusionar Lotes Seleccionados')).toBeInTheDocument();
+
+    // Confirm merge
+    const confirmBtn = screen.getByRole('button', { name: 'Fusionar lotes' });
+    fireEvent.click(confirmBtn);
+
+    // Check merge success toast and modal closed
+    await waitFor(() => {
+      expect(api.mergeBatches).toHaveBeenCalledWith(
+        expect.objectContaining({
+          batchIds: expect.arrayContaining([101, 102])
+        }),
+        'test-user-id'
+      );
+      expect(screen.getByText('¡Lotes fusionados exitosamente en el Lote #9999!')).toBeInTheDocument();
+    });
+
+    // Merge button disappears as selection is reset
+    expect(screen.queryByRole('button', { name: /Fusionar lotes/i })).not.toBeInTheDocument();
   });
 });
 

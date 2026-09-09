@@ -7,7 +7,9 @@ import {
   generateSingleCertificatePdf,
   downloadSingleCertificatePdf,
   generateBatchCertificatesPdf,
-  renderCertificatePage
+  generateBatchCertificatesZip,
+  renderCertificatePage,
+  getPdfFontFamily
 } from '../certificatePdfGenerator';
 import { Batch, ScoutMember } from '../../../batches/types';
 import { RecognitionType, CertificateTemplate } from '../../types';
@@ -26,7 +28,8 @@ const mockDocInstance = {
   rect: vi.fn(),
   addPage: vi.fn(),
   addImage: vi.fn(),
-  save: vi.fn()
+  save: vi.fn(),
+  output: vi.fn().mockReturnValue(new ArrayBuffer(8))
 };
 
 vi.mock('firebase/firestore', async (importOriginal) => {
@@ -681,6 +684,61 @@ describe('certificatePdfGenerator service', () => {
     });
   });
 
+  describe('generateBatchCertificatesZip', () => {
+    it('generates a zip containing individual certificate PDFs for each active and exceptional member', async () => {
+      const members = [
+        mockActiveMember,
+        mockPendingMember,
+        {
+          identity: 'V-15.111.222',
+          first_names: 'Mariana',
+          last_names: 'Rojas',
+          birth_date: '2001-09-10',
+          member_type: 'adult',
+          status: 'exceptional',
+          batch_id: 45,
+          recognition_code: 'REC-45-002'
+        } as ScoutMember
+      ];
+
+      const fileName = await generateBatchCertificatesZip({
+        batch: mockBatch,
+        members,
+        recognition: mockRecognition,
+        hierarchy: mockHierarchy
+      });
+
+      expect(fileName).toBe('Reconocimientos_Lote_45_insignia_de_madera.zip');
+      // output called for each eligible member (2 times)
+      expect(mockDocInstance.output).toHaveBeenCalledWith('arraybuffer');
+      expect(mockDocInstance.text).toHaveBeenCalledWith(
+        'Carlos Eduardo Mendoza',
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Object)
+      );
+      expect(mockDocInstance.text).toHaveBeenCalledWith(
+        'Mariana Rojas',
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Object)
+      );
+    });
+
+    it('throws an error if no active or exceptional members exist in the batch when generating zip', async () => {
+      const onlyPendingMembers = [mockPendingMember];
+
+      await expect(
+        generateBatchCertificatesZip({
+          batch: mockBatch,
+          members: onlyPendingMembers,
+          recognition: mockRecognition,
+          hierarchy: mockHierarchy
+        })
+      ).rejects.toThrow('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos');
+    });
+  });
+
   describe('renderCertificatePage edge cases', () => {
     it('detects PNG and JPEG background formats correctly', () => {
       const pngTemplate: CertificateTemplate = {
@@ -732,6 +790,29 @@ describe('certificatePdfGenerator service', () => {
         297,
         210
       );
+    });
+  });
+
+  describe('getPdfFontFamily helper', () => {
+    it('maps scouts-gt-planar-bold and Scouts GT Planar to helvetica', () => {
+      expect(getPdfFontFamily('scouts-gt-planar-bold')).toBe('helvetica');
+      expect(getPdfFontFamily('Scouts GT Planar')).toBe('helvetica');
+    });
+
+    it('maps noto-sans to helvetica', () => {
+      expect(getPdfFontFamily('noto-sans')).toBe('helvetica');
+    });
+
+    it('preserves legacy fonts times and courier', () => {
+      expect(getPdfFontFamily('times')).toBe('times');
+      expect(getPdfFontFamily('courier')).toBe('courier');
+    });
+
+    it('falls back to helvetica for undefined, unknown or empty strings', () => {
+      expect(getPdfFontFamily(undefined)).toBe('helvetica');
+      expect(getPdfFontFamily('')).toBe('helvetica');
+      expect(getPdfFontFamily('arial')).toBe('helvetica');
+      expect(getPdfFontFamily('roboto')).toBe('helvetica');
     });
   });
 });

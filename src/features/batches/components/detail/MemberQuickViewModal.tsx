@@ -1,11 +1,13 @@
 import React from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
-import { ScoutMember, getUnitLabel } from '../../types';
+import { ScoutGroup, ScoutMember, getUnitLabel } from '../../types';
 
 export interface MemberQuickViewModalProps {
   member: ScoutMember | null;
   onClose: () => void;
+  groups?: ScoutGroup[];
+  batchGroup?: string;
 }
 
 function getMemberTypeLabel(type: 'young' | 'adult'): string {
@@ -26,8 +28,18 @@ function getMemberStatusText(status: string): string {
 
 export const MemberQuickViewModal: React.FC<MemberQuickViewModalProps> = ({
   member,
-  onClose
+  onClose,
+  groups = [],
+  batchGroup
 }) => {
+  const memberGroupName = React.useMemo(() => {
+    if (!member) return '-';
+    if (member.group_id && member.group_id !== 0) {
+      const found = groups.find(g => g.id === member.group_id);
+      return found?.name ?? `Grupo ${member.group_id}`;
+    }
+    return batchGroup || 'No aplica';
+  }, [member, groups, batchGroup]);
   return (
     <Modal isOpen={member !== null} onClose={onClose} className="max-w-md">
       <ModalHeader onClose={onClose}>Ficha del Miembro Scout</ModalHeader>
@@ -53,6 +65,10 @@ export const MemberQuickViewModal: React.FC<MemberQuickViewModalProps> = ({
             <div className="flex justify-between border-b border-gray-200 pb-2">
               <span className="text-neutral/50 font-semibold">Unidad</span>
               <span className="font-semibold text-neutral">{getUnitLabel(member.unit)}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-200 pb-2">
+              <span className="text-neutral/50 font-semibold">Grupo Scout</span>
+              <span className="font-semibold text-neutral">{memberGroupName}</span>
             </div>
             <div className="flex justify-between border-b border-gray-200 pb-2">
               <span className="text-neutral/50 font-semibold">Estatus</span>

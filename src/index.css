@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Scouts GT Planar';
+  src: url('/fonts/Scouts-GT-Planar-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-primary: #8C4E37;
   --color-secondary: #F1EAD8;
@@ -7,5 +15,16 @@
   --color-neutral: #383836;
   
   --font-sans: "Noto Sans", sans-serif;
+  --font-display: "Scouts GT Planar", sans-serif;
   --radius-field: 0.75rem;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
 }

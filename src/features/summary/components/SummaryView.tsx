@@ -532,7 +532,8 @@ export const SummaryView: React.FC = () => {
       const batch = batches.find(b => b.id === m.batch_id);
       const regionObj = regions.find(r => r.id === batch?.region_id);
       const districtObj = districts.find(d => d.id === batch?.district_id);
-      const groupObj = groups.find(g => g.id === batch?.group_id);
+      const effectiveGroupId = m.group_id ?? batch?.group_id;
+      const groupObj = groups.find(g => g.id === effectiveGroupId);
 
       const recType = batch?.recognition_type;
       const recName = resolveRecognitionName(recType);
@@ -545,7 +546,7 @@ export const SummaryView: React.FC = () => {
 
       const regionName = resolveHierarchyName(batch?.region_id, regionObj?.name);
       const districtName = resolveHierarchyName(batch?.district_id, districtObj?.name);
-      const groupName = resolveHierarchyName(batch?.group_id, groupObj?.name);
+      const groupName = resolveHierarchyName(effectiveGroupId, groupObj?.name);
 
       const rawFullName = `${m.first_names ?? ''} ${m.last_names ?? ''}`.trim();
       const fullName = rawFullName.length > 0 ? rawFullName : '-';

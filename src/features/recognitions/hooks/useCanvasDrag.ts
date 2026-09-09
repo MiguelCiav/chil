@@ -1,5 +1,6 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { RecognitionFieldConfig } from '../types';
+import { AlignmentGuide, calculateSnapGuidelines } from '../utils/snapGuidelines';
 
 export interface UseCanvasDragOptions {
   canvasRef: React.RefObject<HTMLDivElement | null>;
@@ -7,6 +8,7 @@ export interface UseCanvasDragOptions {
   isPreviewMode: boolean;
   onUpdateFieldCoordinates: (fieldId: string, x: number, y: number) => void;
   onSelectField?: (fieldId: string) => void;
+  snapThreshold?: number; // threshold in percentage, default 1.5%
 }
 
 export function useCanvasDrag({
@@ -14,8 +16,11 @@ export function useCanvasDrag({
   fields,
   isPreviewMode,
   onUpdateFieldCoordinates,
-  onSelectField
+  onSelectField,
+  snapThreshold = 1.5
 }: UseCanvasDragOptions) {
+  const [activeGuides, setActiveGuides] = useState<AlignmentGuide[]>([]);
+
   const dragInfoRef = useRef<{
     isDragging: boolean;
     fieldId: string;
@@ -72,16 +77,29 @@ export function useCanvasDrag({
       const percentDeltaX = (deltaX / canvasRect.width) * 100;
       const percentDeltaY = (deltaY / canvasRect.height) * 100;
 
-      let newX = Math.round((initialX + percentDeltaX) * 10) / 10;
-      let newY = Math.round((initialY + percentDeltaY) * 10) / 10;
+      let rawX = Math.round((initialX + percentDeltaX) * 10) / 10;
+      let rawY = Math.round((initialY + percentDeltaY) * 10) / 10;
 
       // Clamp coordinates inside canvas boundaries (2% to 98%)
-      newX = Math.max(2, Math.min(98, newX));
-      newY = Math.max(2, Math.min(98, newY));
+      rawX = Math.max(2, Math.min(98, rawX));
+      rawY = Math.max(2, Math.min(98, rawY));
 
-      onUpdateFieldCoordinates(fieldId, newX, newY);
+      // Calculate snapping and active guidelines
+      const snapResult = calculateSnapGuidelines({
+        currentX: rawX,
+        currentY: rawY,
+        fieldId,
+        fields,
+        threshold: snapThreshold
+      });
+
+      const finalX = Math.max(2, Math.min(98, Math.round(snapResult.snappedX * 10) / 10));
+      const finalY = Math.max(2, Math.min(98, Math.round(snapResult.snappedY * 10) / 10));
+
+      setActiveGuides(snapResult.activeGuides);
+      onUpdateFieldCoordinates(fieldId, finalX, finalY);
     },
-    [canvasRef, onUpdateFieldCoordinates]
+    [canvasRef, fields, onUpdateFieldCoordinates, snapThreshold]
   );
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -92,12 +110,14 @@ export function useCanvasDrag({
         // Safe fallback
       }
       dragInfoRef.current = null;
+      setActiveGuides([]);
     }
   }, []);
 
   return {
     handlePointerDown,
     handlePointerMove,
-    handlePointerUp
+    handlePointerUp,
+    activeGuides
   };
 }

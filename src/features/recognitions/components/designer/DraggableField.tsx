@@ -23,7 +23,10 @@ function getFieldClass(isPreviewMode: boolean, isSelected: boolean): string {
   return 'hover:ring-1 hover:ring-primary/50 hover:bg-primary/5 rounded cursor-pointer';
 }
 
-function getFieldFontWeight(fontWeight?: string): number {
+function getFieldFontWeight(fontWeight?: string, fontFamily?: string): number {
+  if (fontFamily === 'scouts-gt-planar-bold' || fontFamily === 'Scouts GT Planar') {
+    return 700;
+  }
   return fontWeight === 'bold' ? 700 : 400;
 }
 
@@ -58,7 +61,7 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
           transform: getAlignTransform(field.align),
           fontFamily: getFontFamilyStyle(field.font_family),
           fontSize: `${displayFontSizePx}px`,
-          fontWeight: getFieldFontWeight(field.font_weight),
+          fontWeight: getFieldFontWeight(field.font_weight, field.font_family),
           fontStyle: getFieldFontStyle(field.font_weight),
           color: field.color,
           textAlign: field.align,
@@ -95,7 +98,7 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
         transform: getAlignTransform(field.align),
         fontFamily: getFontFamilyStyle(field.font_family),
         fontSize: `${displayFontSizePx}px`,
-        fontWeight: getFieldFontWeight(field.font_weight),
+        fontWeight: getFieldFontWeight(field.font_weight, field.font_family),
         fontStyle: getFieldFontStyle(field.font_weight),
         color: field.color,
         textAlign: field.align,

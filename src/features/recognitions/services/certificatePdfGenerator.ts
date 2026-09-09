@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import JSZip from 'jszip';
 import { Batch, ScoutMember, Region, District, ScoutGroup, getUnitLabel } from '../../batches/types';
 import { getHierarchyData } from '../../batches/api';
 import { getRecognitionTypeById } from '../api';
@@ -202,9 +203,12 @@ export function interpolateCertificateVariables(params: {
   hierarchy?: HierarchyData;
 }): Record<RecognitionFieldKey, string> {
   const { member, batch, recognition, hierarchy } = params;
-  const regionName = resolveHierarchyName(batch.region_id, hierarchy?.regions);
-  const districtName = resolveHierarchyName(batch.district_id, hierarchy?.districts);
-  const groupName = resolveHierarchyName(batch.group_id, hierarchy?.groups);
+  const effectiveRegionId = member.region_id ?? batch.region_id;
+  const effectiveDistrictId = member.district_id ?? batch.district_id;
+  const effectiveGroupId = member.group_id ?? batch.group_id;
+  const regionName = resolveHierarchyName(effectiveRegionId, hierarchy?.regions);
+  const districtName = resolveHierarchyName(effectiveDistrictId, hierarchy?.districts);
+  const groupName = resolveHierarchyName(effectiveGroupId, hierarchy?.groups);
   const recognitionName = recognition?.name ?? batch.recognition_type ?? 'Reconocimiento Scout';
   const issueDate = formatIssueDate(batch.created_at);
   const last4 = member.identity.length >= 4 ? member.identity.slice(-4) : member.identity;
@@ -242,13 +246,25 @@ export function resolveFieldsToRender(template?: CertificateTemplate): Recogniti
   }));
 }
 
-function getFontFamily(fontFamily?: string): 'times' | 'courier' | 'helvetica' {
-  if (fontFamily === 'times') return 'times';
-  if (fontFamily === 'courier') return 'courier';
-  return 'helvetica';
+export function getPdfFontFamily(fontFamily?: string): 'helvetica' | 'times' | 'courier' {
+  switch (fontFamily) {
+    case 'times':
+      return 'times';
+    case 'courier':
+      return 'courier';
+    case 'scouts-gt-planar-bold':
+    case 'Scouts GT Planar':
+    case 'noto-sans':
+    case 'helvetica':
+    default:
+      return 'helvetica';
+  }
 }
 
-function getFontWeight(fontWeight?: string): 'bold' | 'italic' | 'normal' {
+function getFontWeight(fontWeight?: string, fontFamily?: string): 'bold' | 'italic' | 'normal' {
+  if (fontFamily === 'scouts-gt-planar-bold' || fontFamily === 'Scouts GT Planar') {
+    return fontWeight === 'italic' ? 'italic' : 'bold';
+  }
   if (fontWeight === 'bold') return 'bold';
   if (fontWeight === 'italic') return 'italic';
   return 'normal';
@@ -264,7 +280,7 @@ function drawSingleField(
   const x = Math.round(((field.x / 100) * width) * 100) / 100;
   const y = Math.round(((field.y / 100) * height) * 100) / 100;
 
-  doc.setFont(getFontFamily(field.font_family), getFontWeight(field.font_weight));
+  doc.setFont(getPdfFontFamily(field.font_family), getFontWeight(field.font_weight, field.font_family));
   doc.setFontSize(field.font_size);
 
   const { r, g, b } = hexToRgb(field.color);
@@ -415,4 +431,74 @@ export async function generateBatchCertificatesPdf(
 
   doc.save(fileName);
   return fileName;
+}
+
+function triggerBlobDownload(blob: Blob, filename: string): void {
+  if (typeof window === 'undefined' || !window.document) return;
+  const url = window.URL.createObjectURL(blob);
+  const a = window.document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  window.document.body.appendChild(a);
+  a.click();
+  window.document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
+/**
+ * Generates individual certificate PDFs for all active and exceptional members of a batch,
+ * compresses them into a .zip file and triggers the browser download.
+ */
+export async function generateBatchCertificatesZip(
+  params: BatchCertificatesParams
+): Promise<string> {
+  const { batch, members, recognition, hierarchy } = params;
+
+  const eligibleMembers = members.filter(m => m.status === 'active' || m.status === 'exceptional');
+  if (eligibleMembers.length === 0) {
+    throw new Error(
+      'No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos'
+    );
+  }
+
+  const { resolvedRecognition, resolvedHierarchy } = await resolvePdfContext(batch, recognition, hierarchy);
+  const template = resolvedRecognition?.template;
+  const { width, height, orientation } = getNormalizedPageDimensions(template);
+
+  const zip = new JSZip();
+  const slug = slugify(resolvedRecognition?.name ?? batch.recognition_type ?? 'Reconocimiento');
+
+  for (const member of eligibleMembers) {
+    const doc = new jsPDF({
+      orientation,
+      unit: 'mm',
+      format: [width, height]
+    });
+
+    renderCertificatePage(doc, {
+      member,
+      batch,
+      recognition: resolvedRecognition,
+      hierarchy: resolvedHierarchy,
+      template,
+      width,
+      height
+    });
+
+    const pdfBuffer = doc.output('arraybuffer');
+    const sanitizedIdentity = member.identity.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const memberFileName = `Reconocimiento_${sanitizedIdentity}_Lote_${batch.id}_${slug}.pdf`;
+    zip.file(memberFileName, pdfBuffer);
+  }
+
+  const zipBlob = await zip.generateAsync({
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 }
+  });
+
+  const zipFileName = `Reconocimientos_Lote_${batch.id}_${slug}.zip`;
+  triggerBlobDownload(zipBlob, zipFileName);
+
+  return zipFileName;
 }

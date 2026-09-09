@@ -437,5 +437,110 @@ describe('Step3Review component', () => {
       );
     });
   });
+
+  it('allows selecting Grupo Scout in edit modal and saves with updated group_id', async () => {
+    const mockGroups = [
+      { id: 101, name: 'Grupo San Luis', district_id: 1 },
+      { id: 102, name: 'Grupo La Salle', district_id: 1 }
+    ];
+    vi.mocked(api.updateMember).mockResolvedValueOnce({} as unknown as ScoutMember);
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        ...sampleMembers[0],
+        group_id: 102
+      }
+    ]);
+
+    render(
+      <Step3Review
+        {...defaultProps}
+        groups={mockGroups}
+      />
+    );
+
+    // Member card displays group
+    expect(screen.getByText(/Ana Perez/i)).toBeInTheDocument();
+
+    // Open edit modal for Ana
+    fireEvent.click(screen.getByLabelText(/Editar información de Ana Perez/i));
+
+    const groupSelect = screen.getByLabelText(/Grupo Scout/i);
+    expect(groupSelect).toBeInTheDocument();
+
+    fireEvent.change(groupSelect, { target: { value: '102' } });
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-11111111',
+          group_id: 102
+        })
+      );
+    });
+  });
+
+  it('allows selecting Region, District, and Group in edit modal and saves updated hierarchy', async () => {
+    const mockRegions = [
+      { id: 1, name: 'Región Capital' },
+      { id: 2, name: 'Región Aragua' }
+    ];
+    const mockDistricts = [
+      { id: 10, name: 'Distrito Sucre', region_id: 1 },
+      { id: 20, name: 'Distrito Girardot', region_id: 2 }
+    ];
+    const mockGroups = [
+      { id: 101, name: 'Grupo San Luis', district_id: 10 },
+      { id: 201, name: 'Grupo Maracay', district_id: 20 }
+    ];
+
+    vi.mocked(api.updateMember).mockResolvedValueOnce({} as unknown as ScoutMember);
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        ...sampleMembers[0],
+        region_id: 2,
+        district_id: 20,
+        group_id: 201
+      }
+    ]);
+
+    render(
+      <Step3Review
+        {...defaultProps}
+        regions={mockRegions}
+        districts={mockDistricts}
+        groups={mockGroups}
+      />
+    );
+
+    // Open edit modal for Ana
+    fireEvent.click(screen.getByLabelText(/Editar información de Ana Perez/i));
+
+    const regionSelect = screen.getByLabelText(/Región Scout/i);
+    const districtSelect = screen.getByLabelText(/Distrito Scout/i);
+    const groupSelect = screen.getByLabelText(/Grupo Scout/i);
+
+    expect(regionSelect).toBeInTheDocument();
+    expect(districtSelect).toBeInTheDocument();
+    expect(groupSelect).toBeInTheDocument();
+
+    fireEvent.change(regionSelect, { target: { value: '2' } });
+    fireEvent.change(districtSelect, { target: { value: '20' } });
+    fireEvent.change(groupSelect, { target: { value: '201' } });
+
+    fireEvent.click(screen.getByText('Guardar Cambios'));
+
+    await waitFor(() => {
+      expect(api.updateMember).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identity: 'V-11111111',
+          region_id: 2,
+          district_id: 20,
+          group_id: 201
+        })
+      );
+    });
+  });
 });
 

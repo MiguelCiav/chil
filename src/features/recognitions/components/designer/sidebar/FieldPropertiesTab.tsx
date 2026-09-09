@@ -66,29 +66,36 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
               <span className="text-xs font-semibold text-neutral block">
                 Familia Tipográfica
               </span>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {[
-                  { key: 'helvetica', label: 'Helvetica' },
-                  { key: 'times', label: 'Times' },
-                  { key: 'courier', label: 'Courier' }
-                ].map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() =>
-                      onUpdateField({
-                        font_family: item.key as RecognitionFieldConfig['font_family']
-                      })
-                    }
-                    className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-colors ${
-                      selectedField.font_family === item.key
-                        ? 'bg-primary text-white border-primary font-bold'
-                        : 'bg-white text-neutral/80 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+                  { key: 'scouts-gt-planar-bold', label: 'Scouts GT Planar' },
+                  { key: 'noto-sans', label: 'Noto Sans' }
+                ].map((item) => {
+                  const isSelected =
+                    item.key === 'scouts-gt-planar-bold'
+                      ? selectedField.font_family === 'scouts-gt-planar-bold' || selectedField.font_family === 'Scouts GT Planar'
+                      : selectedField.font_family === 'noto-sans' ||
+                        !['scouts-gt-planar-bold', 'Scouts GT Planar'].includes(selectedField.font_family);
+
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() =>
+                        onUpdateField({
+                          font_family: item.key
+                        })
+                      }
+                      className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-colors ${
+                        isSelected
+                          ? 'bg-primary text-white border-primary font-bold'
+                          : 'bg-white text-neutral/80 border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

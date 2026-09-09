@@ -6,4 +6,4 @@ export * from './components/RecognitionFormModal';
 export * from './components/RecognitionDeleteModal';
 export * from './components/CertificateDesigner';
 export * from './hooks';
-
+export * from './utils';

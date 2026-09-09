@@ -194,21 +194,22 @@ export const CertificateDesigner: React.FC = () => {
 
   const { canvasRef, fontScale, normalizedDimensions } = useCanvasScale(template);
 
-  const { handlePointerDown, handlePointerMove, handlePointerUp } = useCanvasDrag({
-    canvasRef,
-    fields: template.fields,
-    isPreviewMode,
-    onUpdateFieldCoordinates: (fieldId, x, y) => {
-      setTemplate((prev) => ({
-        ...prev,
-        fields: prev.fields.map((f) => (f.id === fieldId ? { ...f, x, y } : f))
-      }));
-    },
-    onSelectField: (fieldId) => {
-      setSelectedFieldId(fieldId);
-      setActiveSidebarTab('properties');
-    }
-  });
+  const { handlePointerDown, handlePointerMove, handlePointerUp, activeGuides } =
+    useCanvasDrag({
+      canvasRef,
+      fields: template.fields,
+      isPreviewMode,
+      onUpdateFieldCoordinates: (fieldId, x, y) => {
+        setTemplate((prev) => ({
+          ...prev,
+          fields: prev.fields.map((f) => (f.id === fieldId ? { ...f, x, y } : f))
+        }));
+      },
+      onSelectField: (fieldId) => {
+        setSelectedFieldId(fieldId);
+        setActiveSidebarTab('properties');
+      }
+    });
 
   // Fetch recognition and existing template
   useEffect(() => {
@@ -448,6 +449,7 @@ export const CertificateDesigner: React.FC = () => {
           selectedFieldId={selectedFieldId}
           isPreviewMode={isPreviewMode}
           fontScale={fontScale}
+          activeGuides={activeGuides}
           recognitionName={recognition.name}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}

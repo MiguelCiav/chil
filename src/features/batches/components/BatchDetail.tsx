@@ -51,7 +51,7 @@ import {
   getUnitBadge
 } from '../types';
 import {
-  generateBatchCertificatesPdf,
+  generateBatchCertificatesZip,
   downloadSingleCertificatePdf,
   getAllRecognitionTypes,
   RecognitionType
@@ -267,7 +267,9 @@ function renderMemberActionsCell(props: MemberActionsCellProps) {
 }
 
 function createBatchDetailColumns(
-  actionsProps: Omit<MemberActionsCellProps, 'row' | 'table'>
+  actionsProps: Omit<MemberActionsCellProps, 'row' | 'table'>,
+  groups: ScoutGroup[],
+  batch: Batch | null
 ): ColumnDef<ScoutMember>[] {
   return [
     {
@@ -279,6 +281,22 @@ function createBatchDetailColumns(
       accessorKey: 'name',
       header: 'NOMBRE',
       cell: renderMemberNameCell
+    },
+    {
+      id: 'group',
+      header: 'GRUPO',
+      cell: (info) => {
+        const memberGroupId = info.row.original.group_id ?? batch?.group_id;
+        if (!memberGroupId || memberGroupId === 0) {
+          return <span className="text-xs sm:text-sm text-neutral/50 font-medium">No aplica</span>;
+        }
+        const found = groups.find(g => g.id === memberGroupId);
+        return (
+          <span className="text-xs sm:text-sm font-medium text-neutral/80">
+            {found?.name ?? `Grupo ${memberGroupId}`}
+          </span>
+        );
+      }
     },
     {
       accessorKey: 'unit',
@@ -425,7 +443,7 @@ export const BatchDetail: React.FC = () => {
     if (!batch) return;
     setDownloading(true);
     try {
-      const fileName = await generateBatchCertificatesPdf({
+      const fileName = await generateBatchCertificatesZip({
         batch,
         members,
         recognition,
@@ -433,8 +451,8 @@ export const BatchDetail: React.FC = () => {
       });
       triggerToast(`¡Reconocimientos descargados exitosamente en ${fileName}!`, 4000);
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      alert('Error al generar los reconocimientos en PDF.');
+      console.error('Error generating ZIP:', err);
+      alert('Error al generar los reconocimientos en ZIP.');
     } finally {
       setDownloading(false);
     }
@@ -536,14 +554,18 @@ export const BatchDetail: React.FC = () => {
   // TanStack Table columns
   const columns = useMemo(
     () =>
-      createBatchDetailColumns({
-        activeMenuMemberId,
-        setActiveMenuMemberId,
-        setViewingMember,
-        handleEditClick,
-        handleDownloadSingleRecognition
-      }),
-    [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition]
+      createBatchDetailColumns(
+        {
+          activeMenuMemberId,
+          setActiveMenuMemberId,
+          setViewingMember,
+          handleEditClick,
+          handleDownloadSingleRecognition
+        },
+        groups,
+        batch
+      ),
+    [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition, groups, batch]
   );
 
   const table = useReactTable({
@@ -648,7 +670,7 @@ export const BatchDetail: React.FC = () => {
             icon={<FileText size={16} />}
             className="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
           >
-            {downloading ? 'Generando PDF...' : 'Descargar Reconocimientos (PDF)'}
+            {downloading ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
           </Button>
         </div>
       </div>
@@ -791,12 +813,17 @@ export const BatchDetail: React.FC = () => {
         onClose={() => setIsEditModalOpen(false)}
         member={editingMember}
         onSave={handleSaveMemberEdit}
+        regions={regions}
+        districts={districts}
+        groups={groups}
       />
 
       {/* Member Quick View Details Modal */}
       <MemberQuickViewModal
         member={viewingMember}
         onClose={() => setViewingMember(null)}
+        groups={groups}
+        batchGroup={batch.group_id ? (groups.find(g => g.id === batch.group_id)?.name ?? `Grupo ${batch.group_id}`) : (batch.region_id === 0 ? 'No aplica' : 'Multigrupo')}
       />
 
       {/* Modal: Confirmar Eliminación de Lote */}

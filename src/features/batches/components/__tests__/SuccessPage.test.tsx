@@ -13,6 +13,7 @@ vi.mock('../../api', () => ({
 }));
 
 vi.mock('../../../recognitions', () => ({
+  generateBatchCertificatesZip: vi.fn(),
   generateBatchCertificatesPdf: vi.fn(),
   getRecognitionTypeById: vi.fn(() => Promise.resolve(null))
 }));
@@ -70,7 +71,7 @@ describe('SuccessPage component', () => {
       }
     ]);
 
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Reconocimientos_Lote_555_go_solar.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesZip).mockResolvedValueOnce('Reconocimientos_Lote_555_go_solar.zip');
     vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_555.pdf');
 
     render(
@@ -110,17 +111,17 @@ describe('SuccessPage component', () => {
     expect(newBatchLink).toBeInTheDocument();
     expect(backListLink).toBeInTheDocument();
 
-    // 1. Trigger certificates PDF download
+    // 1. Trigger certificates ZIP download
     fireEvent.click(downloadRecBtn);
 
     await waitFor(() => {
-      expect(recognitions.generateBatchCertificatesPdf).toHaveBeenCalledWith(
+      expect(recognitions.generateBatchCertificatesZip).toHaveBeenCalledWith(
         expect.objectContaining({
           batch: expect.objectContaining({ id: 555 }),
           members: expect.any(Array)
         })
       );
-      expect(screen.getByText(/¡Reconocimientos descargados exitosamente en Reconocimientos_Lote_555_go_solar\.pdf!/i)).toBeInTheDocument();
+      expect(screen.getByText(/¡Reconocimientos descargados exitosamente en Reconocimientos_Lote_555_go_solar\.zip!/i)).toBeInTheDocument();
     });
 
     // 2. Trigger members list PDF report download
@@ -161,7 +162,7 @@ describe('SuccessPage component', () => {
       }
     ]);
 
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockRejectedValueOnce(new Error('PDF generation error'));
+    vi.mocked(recognitions.generateBatchCertificatesZip).mockRejectedValueOnce(new Error('ZIP generation error'));
 
     render(
       <MemoryRouter initialEntries={[{ pathname: '/lotes/exito', state: { batchId: 555 } }]}>
@@ -176,7 +177,7 @@ describe('SuccessPage component', () => {
     fireEvent.click(screen.getByText(/Descargar Reconocimientos/i));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en PDF.');
+      expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en ZIP.');
     });
 
     alertSpy.mockRestore();

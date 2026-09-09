@@ -27,36 +27,64 @@ interface Step1OrgProps {
   recognitionTypes?: { id: string; name: string }[];
 }
 
+function getAvailableRegions(regions: Region[], isNoScout?: boolean): Region[] {
+  const zeroName = isNoScout ? 'No aplica' : 'Mixto';
+  const list = regions.filter(r => r.id !== 0);
+  return [{ id: 0, name: zeroName }, ...list];
+}
+
 function getFilteredDistricts(
   districts: District[],
-  selectedRegionId?: string
+  selectedRegionId?: string,
+  isNoScout?: boolean
 ): District[] {
-  if (!selectedRegionId || selectedRegionId === '0') return [];
-  const dists = districts.filter(d => d.id !== 0 && d.region_id === Number(selectedRegionId));
-  return [{ id: 0, name: 'No aplica', region_id: Number(selectedRegionId) }, ...dists];
+  if (!selectedRegionId) return [];
+  const zeroName = isNoScout ? 'No aplica' : 'Mixto';
+  const dists = selectedRegionId === '0'
+    ? districts.filter(d => d.id !== 0)
+    : districts.filter(d => d.id !== 0 && d.region_id === Number(selectedRegionId));
+  return [{ id: 0, name: zeroName, region_id: Number(selectedRegionId || 0) }, ...dists];
 }
 
 function getFilteredGroups(
   groups: ScoutGroup[],
-  selectedDistrictId?: string
+  selectedDistrictId?: string,
+  isNoScout?: boolean
 ): ScoutGroup[] {
-  if (!selectedDistrictId || selectedDistrictId === '0') return [];
-  const grps = groups.filter(g => g.id !== 0 && g.district_id === Number(selectedDistrictId));
-  return [{ id: 0, name: 'No aplica', district_id: Number(selectedDistrictId) }, ...grps];
+  if (!selectedDistrictId) return [];
+  const zeroName = isNoScout ? 'No aplica' : 'Mixto';
+  const grps = selectedDistrictId === '0'
+    ? groups.filter(g => g.id !== 0)
+    : groups.filter(g => g.id !== 0 && g.district_id === Number(selectedDistrictId));
+  return [
+    { id: 0, name: zeroName, district_id: Number(selectedDistrictId || 0) },
+    ...grps
+  ];
 }
 
-function getSelectedRegion(regions: Region[], selectedRegionId?: string): { id: number; name: string } | undefined {
-  if (selectedRegionId === '0') return { id: 0, name: 'No aplica' };
+function getSelectedRegion(regions: Region[], selectedRegionId?: string, isNoScout?: boolean): { id: number; name: string } | undefined {
+  if (selectedRegionId === '0') return { id: 0, name: isNoScout ? 'No aplica' : 'Mixto' };
   return regions.find(r => r.id.toString() === selectedRegionId);
 }
 
-function getSelectedDistrict(districts: District[], selectedDistrictId?: string): { id: number; name: string; region_id: number } | undefined {
-  if (selectedDistrictId === '0') return { id: 0, name: 'No aplica', region_id: 0 };
+function getSelectedDistrict(districts: District[], selectedDistrictId?: string, isNoScout?: boolean): { id: number; name: string; region_id: number } | undefined {
+  if (selectedDistrictId === '0') return { id: 0, name: isNoScout ? 'No aplica' : 'Mixto', region_id: 0 };
   return districts.find(d => d.id.toString() === selectedDistrictId);
 }
 
-function getSelectedGroup(groups: ScoutGroup[], selectedGroupId?: string): { id: number; name: string; district_id: number } | undefined {
-  if (selectedGroupId === '0') return { id: 0, name: 'No aplica', district_id: 0 };
+function getSelectedGroup(
+  groups: ScoutGroup[],
+  selectedGroupId?: string,
+  selectedDistrictId?: string,
+  isNoScout?: boolean
+): { id: number; name: string; district_id: number } | undefined {
+  if (selectedGroupId === '0') {
+    return {
+      id: 0,
+      name: isNoScout ? 'No aplica' : 'Mixto',
+      district_id: Number(selectedDistrictId || 0)
+    };
+  }
   return groups.find(g => g.id.toString() === selectedGroupId);
 }
 
@@ -72,18 +100,16 @@ function getDistrictDisplayText(
   isNoScout?: boolean
 ): string {
   if (selectedDistrict) return selectedDistrict.name;
-  if (selectedRegionId === '0' || isNoScout) return 'No aplica';
+  if (isNoScout && !selectedRegionId) return 'No aplica';
   return 'Seleccione un distrito';
 }
 
 function getGroupDisplayText(
   selectedGroup?: { name: string },
-  selectedDistrictId?: string,
-  selectedRegionId?: string,
   isNoScout?: boolean
 ): string {
   if (selectedGroup) return selectedGroup.name;
-  if (selectedDistrictId === '0' || selectedRegionId === '0' || isNoScout) return 'No aplica';
+  if (isNoScout) return 'No aplica';
   return 'Seleccione un grupo scout';
 }
 
@@ -118,22 +144,27 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
   const selectedUnitScope = watch('unitScope');
   const isNoScout = selectedUnitScope === 'no_scout';
 
+  const availableRegions = React.useMemo(
+    () => getAvailableRegions(regions, isNoScout),
+    [regions, isNoScout]
+  );
+
   const filteredDistricts = React.useMemo(
-    () => getFilteredDistricts(districts, selectedRegionId),
-    [districts, selectedRegionId]
+    () => getFilteredDistricts(districts, selectedRegionId, isNoScout),
+    [districts, selectedRegionId, isNoScout]
   );
 
   const filteredGroups = React.useMemo(
-    () => getFilteredGroups(groups, selectedDistrictId),
-    [groups, selectedDistrictId]
+    () => getFilteredGroups(groups, selectedDistrictId, isNoScout),
+    [groups, selectedDistrictId, isNoScout]
   );
 
-  const selectedRegion = getSelectedRegion(regions, selectedRegionId);
-  const selectedDistrict = getSelectedDistrict(districts, selectedDistrictId);
-  const selectedGroup = getSelectedGroup(groups, selectedGroupId);
+  const selectedRegion = getSelectedRegion(regions, selectedRegionId, isNoScout);
+  const selectedDistrict = getSelectedDistrict(districts, selectedDistrictId, isNoScout);
+  const selectedGroup = getSelectedGroup(groups, selectedGroupId, selectedDistrictId, isNoScout);
 
-  const isDistrictDisabled = !selectedRegionId || selectedRegionId === '0' || loadingHierarchy;
-  const isGroupDisabled = !selectedDistrictId || selectedDistrictId === '0' || selectedRegionId === '0' || loadingHierarchy;
+  const isDistrictDisabled = !selectedRegionId || loadingHierarchy;
+  const isGroupDisabled = !selectedDistrictId || loadingHierarchy;
 
   const districtBtnClass = getSelectorButtonClass(isDistrictDisabled, Boolean(errors.districtId));
   const groupBtnClass = getSelectorButtonClass(isGroupDisabled, Boolean(errors.groupId));
@@ -229,7 +260,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
               disabled={isGroupDisabled}
             >
               <span className="truncate">
-                {getGroupDisplayText(selectedGroup, selectedDistrictId, selectedRegionId, isNoScout)}
+                {getGroupDisplayText(selectedGroup, isNoScout)}
               </span>
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isGroupDisabled ? 'text-neutral/20' : 'text-primary/70'}`} />
             </button>
@@ -299,17 +330,12 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
         onClose={() => setIsRegionModalOpen(false)}
         title="Seleccionar Región Scout"
         placeholder="Buscar región..."
-        items={regions}
+        items={availableRegions}
         selectedId={selectedRegionId || null}
         onSelect={(r) => {
           setValue('regionId', r.id.toString(), { shouldValidate: true });
-          if (r.id === 0) {
-            setValue('districtId', '0', { shouldValidate: true });
-            setValue('groupId', '0', { shouldValidate: true });
-          } else {
-            setValue('districtId', '', { shouldValidate: true });
-            setValue('groupId', '', { shouldValidate: true });
-          }
+          setValue('districtId', '', { shouldValidate: true });
+          setValue('groupId', '', { shouldValidate: true });
         }}
         searchFilter={(r, q) => r.name.toLowerCase().includes(q.toLowerCase())}
         renderItem={(r) => <span>{r.name}</span>}
@@ -326,11 +352,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
         selectedId={selectedDistrictId || null}
         onSelect={(d) => {
           setValue('districtId', d.id.toString(), { shouldValidate: true });
-          if (d.id === 0) {
-            setValue('groupId', '0', { shouldValidate: true });
-          } else {
-            setValue('groupId', '', { shouldValidate: true });
-          }
+          setValue('groupId', '', { shouldValidate: true });
         }}
         searchFilter={(d, q) => d.name.toLowerCase().includes(q.toLowerCase())}
         renderItem={(d) => <span>{d.name}</span>}
