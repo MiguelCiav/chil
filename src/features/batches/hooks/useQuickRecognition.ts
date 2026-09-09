@@ -100,6 +100,16 @@ export function getScraperErrorMessage(err: unknown): string {
   if (errorMsg.includes('No registrado')) {
     return 'Usuario no registrado en Sistema de Registro.';
   }
+  if (
+    errorMsg.includes('Credenciales') ||
+    errorMsg.includes('unauthenticated') ||
+    errorMsg.includes('UNAUTHENTICATED')
+  ) {
+    return 'Credenciales de scraper incorrectas o sesión expirada.';
+  }
+  if (errorMsg.toLowerCase().includes('internal')) {
+    return 'Error del servicio de verificación. Verifique las credenciales del scraper.';
+  }
   return 'Error al consultar Sistema de Registro.';
 }
 

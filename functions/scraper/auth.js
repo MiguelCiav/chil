@@ -35,6 +35,7 @@ async function performLogin(email, password) {
     headers: {
       'User-Agent': userAgent
     },
+    timeout: 15000,
     validateStatus: status => status >= 200 && status < 400
   });
   
@@ -60,13 +61,20 @@ async function performLogin(email, password) {
       'Referer': 'https://registro.scouts.org.ve/users/sign_in'
     },
     maxRedirects: 0,
-    validateStatus: status => status >= 200 && status < 400
+    timeout: 15000,
+    validateStatus: status => (status >= 200 && status < 400) || status === 422
   });
 
   const finalCookies = { ...cookies, ...extractCookies(loginResp.headers['set-cookie']) };
   
-  // Check if we stayed on sign_in page (usually denotes error)
-  if (loginResp.status === 200 && loginResp.data.includes("user[email]")) {
+  // Check if we stayed on sign_in page or got 422 (usually denotes error)
+  if (
+    loginResp.status === 422 ||
+    (loginResp.status === 200 && (
+      loginResp.data.includes("user[email]") ||
+      loginResp.data.includes("Email o contraseña no válida")
+    ))
+  ) {
     throw new Error("Credenciales incorrectas o inicio de sesión fallido");
   }
 

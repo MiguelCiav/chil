@@ -13,6 +13,7 @@ async function fetchMemberStatusWithCookies(cookies, cedula) {
       'Cookie': serializeCookies(cookies),
       'User-Agent': userAgent
     },
+    timeout: 15000,
     validateStatus: status => status >= 200 && status < 400
   });
 

@@ -172,6 +172,22 @@ describe('Cloud Function Handlers', () => {
       });
     });
 
+    it('throws unauthenticated error when login fails during getMemberStatus', async () => {
+      vi.spyOn(auth, 'getCachedCookies').mockReturnValueOnce(null);
+      vi.spyOn(auth, 'performLogin').mockRejectedValueOnce(
+        new Error('Credenciales incorrectas o inicio de sesión fallido')
+      );
+
+      await expect(
+        getMemberStatusHandler({
+          data: { cedula: '12345678', credentials: validCredentials }
+        })
+      ).rejects.toMatchObject({
+        code: 'unauthenticated',
+        message: 'Credenciales incorrectas o sesión expirada en Sistema de Registro'
+      });
+    });
+
     it('throws internal error when network or unexpected error occurs during scrape', async () => {
       vi.spyOn(auth, 'getCachedCookies').mockReturnValueOnce(null);
       vi.spyOn(auth, 'performLogin').mockRejectedValueOnce(new Error('Network Timeout'));

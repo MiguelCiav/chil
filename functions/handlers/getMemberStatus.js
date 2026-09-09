@@ -63,6 +63,14 @@ const getMemberStatusHandler = async (request) => {
     if (error.message === "No registrado") {
       throw new HttpsError("not-found", "No registrado");
     }
+    if (error.message && (
+      error.message.includes("Credenciales incorrectas") ||
+      error.message.includes("inicio de sesión fallido") ||
+      error.message.includes("Sesión de scraper no autenticada") ||
+      error.message.includes("422")
+    )) {
+      throw new HttpsError("unauthenticated", "Credenciales incorrectas o sesión expirada en Sistema de Registro");
+    }
     throw new HttpsError("internal", error.message || "Error de red al consultar miembro");
   }
 };
