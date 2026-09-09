@@ -60,6 +60,12 @@ async function createGitHubRelease({ version, tagName, notes, token }) {
         writeFileSync(tempNotesFile, notes, 'utf8');
         runInherit(`gh release create "${tagName}" --title "${tagName}" --notes-file "${tempNotesFile}"`);
         console.log(`[release] Release ${tagName} created successfully via gh.`);
+      } catch (ghErr) {
+        if (ghErr.message && (ghErr.message.includes('already exists') || ghErr.message.includes('already_exists'))) {
+          console.log(`[release] Release ${tagName} already exists (caught during creation via gh).`);
+        } else {
+          console.warn(`[release] Warning creating release via gh: ${ghErr.message}`);
+        }
       } finally {
         if (existsSync(tempNotesFile)) {
           unlinkSync(tempNotesFile);
@@ -128,6 +134,10 @@ async function createGitHubRelease({ version, tagName, notes, token }) {
 
       if (!createRes.ok) {
         const errorText = await createRes.text();
+        if (createRes.status === 422 && errorText.includes('already_exists')) {
+          console.log(`[release] Release ${tagName} already exists according to GitHub API (422 already_exists).`);
+          return;
+        }
         console.warn(`[release] Failed to create GitHub release via API: ${createRes.status} ${errorText}`);
       } else {
         console.log(`[release] Release ${tagName} created successfully via GitHub REST API.`);
@@ -190,17 +200,33 @@ async function main() {
 
   if (!tagExistsLocally) {
     console.log(`[release] Creating local git tag: ${tagName}`);
-    runInherit(`git tag -a "${tagName}" -m "Release ${tagName}"`);
+    try {
+      runInherit(`git tag -a "${tagName}" -m "Release ${tagName}"`);
+    } catch (err) {
+      console.warn(`[release] Tag creation warning: ${err.message}`);
+    }
   } else {
     console.log(`[release] Local git tag ${tagName} already exists.`);
   }
 
-  // 2. Push tag to origin
+  // 2. Push tag to origin if not already present on remote
+  let remoteTagExists = false;
   try {
-    console.log(`[release] Pushing tag ${tagName} to origin...`);
-    runInherit(`git push origin "${tagName}"`);
-  } catch (err) {
-    console.warn(`[release] Push tag warning: ${err.message}`);
+    const remoteTags = run(`git ls-remote --tags origin "refs/tags/${tagName}"`);
+    remoteTagExists = remoteTags.includes(tagName);
+  } catch {
+    remoteTagExists = false;
+  }
+
+  if (!remoteTagExists) {
+    try {
+      console.log(`[release] Pushing tag ${tagName} to origin...`);
+      runInherit(`git push origin "${tagName}"`);
+    } catch (err) {
+      console.warn(`[release] Push tag warning: ${err.message}`);
+    }
+  } else {
+    console.log(`[release] Remote git tag ${tagName} already exists on origin.`);
   }
 
   // 3. Create GitHub Release
