@@ -5,6 +5,14 @@
       "name": "No aplica"
     },
     {
+      "id": 1,
+      "name": "ANZOATEGUI"
+    },
+    {
+      "id": 2,
+      "name": "ARAGUA"
+    },
+    {
       "id": 3,
       "name": "ATENDIDOS POR LA OSN"
     },
@@ -46,6 +54,46 @@
       "id": 0,
       "name": "No aplica",
       "region_id": 0
+    },
+    {
+      "id": 1,
+      "name": "BARCELONA",
+      "region_id": 1
+    },
+    {
+      "id": 2,
+      "name": "PUERTO LA CRUZ",
+      "region_id": 1
+    },
+    {
+      "id": 3,
+      "name": "GUARICO",
+      "region_id": 2
+    },
+    {
+      "id": 4,
+      "name": "HENRI PITTIER",
+      "region_id": 2
+    },
+    {
+      "id": 5,
+      "name": "JOSE FELIX RIBAS",
+      "region_id": 2
+    },
+    {
+      "id": 6,
+      "name": "MANUEL ATANASIO GIRARDOT",
+      "region_id": 2
+    },
+    {
+      "id": 7,
+      "name": "SANTIAGO MARIÑO",
+      "region_id": 2
+    },
+    {
+      "id": 8,
+      "name": "SUCRE ZAMORA",
+      "region_id": 2
     },
     {
       "id": 9,
@@ -1018,6 +1066,111 @@
       "id": 173,
       "name": "NO_APLICA",
       "district_id": 21
+    },
+    {
+      "id": 174,
+      "name": "ARAUCA",
+      "district_id": 1
+    },
+    {
+      "id": 175,
+      "name": "CIVO",
+      "district_id": 1
+    },
+    {
+      "id": 176,
+      "name": "ANDRES ELOY BLANCO",
+      "district_id": 2
+    },
+    {
+      "id": 177,
+      "name": "DON BOSCO VII",
+      "district_id": 2
+    },
+    {
+      "id": 178,
+      "name": "MARIA AUXILIADORA",
+      "district_id": 2
+    },
+    {
+      "id": 179,
+      "name": "PADRE JOSE MARIA VELAZ",
+      "district_id": 2
+    },
+    {
+      "id": 180,
+      "name": "INDEPENDENCIA",
+      "district_id": 3
+    },
+    {
+      "id": 181,
+      "name": "ARAGUANEY",
+      "district_id": 4
+    },
+    {
+      "id": 182,
+      "name": "CIUDAD JARDIN",
+      "district_id": 4
+    },
+    {
+      "id": 183,
+      "name": "HUMBOLDT",
+      "district_id": 4
+    },
+    {
+      "id": 184,
+      "name": "JOSE SMITH",
+      "district_id": 4
+    },
+    {
+      "id": 185,
+      "name": "LIBERTADOR",
+      "district_id": 4
+    },
+    {
+      "id": 186,
+      "name": "GUSTAVO JOSE VOLLMER H.",
+      "district_id": 5
+    },
+    {
+      "id": 187,
+      "name": "GRAN MARISCAL DE AYACUCHO",
+      "district_id": 6
+    },
+    {
+      "id": 188,
+      "name": "LA SAGRADA FAMILIA",
+      "district_id": 6
+    },
+    {
+      "id": 189,
+      "name": "SAN BENITO",
+      "district_id": 6
+    },
+    {
+      "id": 190,
+      "name": "GENERAL SANTIAGO MARIÑO",
+      "district_id": 7
+    },
+    {
+      "id": 191,
+      "name": "INDEPENDENCIA",
+      "district_id": 7
+    },
+    {
+      "id": 192,
+      "name": "ORION",
+      "district_id": 7
+    },
+    {
+      "id": 193,
+      "name": "AGUSTÍN CODAZZI",
+      "district_id": 8
+    },
+    {
+      "id": 194,
+      "name": "FRANCISCO DE MIRANDA",
+      "district_id": 8
     }
   ]
 }
