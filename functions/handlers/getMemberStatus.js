@@ -76,4 +76,11 @@ const getMemberStatusHandler = async (request) => {
 };
 
 exports.getMemberStatusHandler = getMemberStatusHandler;
-exports.getMemberStatus = onCall({ cors: true }, getMemberStatusHandler);
+exports.getMemberStatus = onCall(
+  {
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 60,
+  },
+  getMemberStatusHandler
+);

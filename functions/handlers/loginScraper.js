@@ -37,4 +37,11 @@ const loginScraperHandler = async (request) => {
 };
 
 exports.loginScraperHandler = loginScraperHandler;
-exports.loginScraper = onCall({ cors: true }, loginScraperHandler);
+exports.loginScraper = onCall(
+  {
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 60,
+  },
+  loginScraperHandler
+);
