@@ -195,4 +195,68 @@ describe('Step2Verification component', () => {
     fireEvent.change(groupSelect, { target: { value: '102' } });
     expect(onUpdateMemberGroup).toHaveBeenCalledWith('29111222', 102);
   });
+
+  it('opens member hierarchy modal and saves updated region, district, and group', () => {
+    const list: MemberVerificationResult[] = [
+      {
+        cedula: '29111222',
+        name: 'Ana Perez',
+        status: 'Registro válido',
+        type: 'young',
+        region_id: 1,
+        district_id: 10,
+        group_id: 101
+      }
+    ];
+    const mockRegions = [
+      { id: 1, name: 'Región Capital' },
+      { id: 2, name: 'Región Aragua' }
+    ];
+    const mockDistricts = [
+      { id: 10, name: 'Distrito Sucre', region_id: 1 },
+      { id: 20, name: 'Distrito Girardot', region_id: 2 }
+    ];
+    const mockGroups = [
+      { id: 101, name: 'Grupo San Luis', district_id: 10 },
+      { id: 201, name: 'Grupo Maracay', district_id: 20 }
+    ];
+    const onUpdateMemberHierarchy = vi.fn();
+
+    render(
+      <Step2Verification
+        {...defaultProps}
+        verificationList={list}
+        regions={mockRegions}
+        districts={mockDistricts}
+        groups={mockGroups}
+        onUpdateMemberHierarchy={onUpdateMemberHierarchy}
+      />
+    );
+
+    const editBtn = screen.getByLabelText(/Editar estructura scout de Ana Perez/i);
+    fireEvent.click(editBtn);
+
+    expect(screen.getByText('Asignar Estructura Scout')).toBeInTheDocument();
+    const regionSelect = screen.getByLabelText(/^Región Scout$/i);
+    const districtSelect = screen.getByLabelText(/^Distrito Scout$/i);
+    const groupSelect = screen.getByLabelText(/^Grupo Scout$/i);
+
+    expect(regionSelect).toHaveValue('1');
+    expect(districtSelect).toHaveValue('10');
+    expect(groupSelect).toHaveValue('101');
+
+    // Change to Aragua
+    fireEvent.change(regionSelect, { target: { value: '2' } });
+    fireEvent.change(districtSelect, { target: { value: '20' } });
+    fireEvent.change(groupSelect, { target: { value: '201' } });
+
+    const saveBtn = screen.getByText('Guardar Cambios');
+    fireEvent.click(saveBtn);
+
+    expect(onUpdateMemberHierarchy).toHaveBeenCalledWith('29111222', {
+      region_id: 2,
+      district_id: 20,
+      group_id: 201
+    });
+  });
 });

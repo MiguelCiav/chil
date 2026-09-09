@@ -51,7 +51,7 @@ import {
   getUnitBadge
 } from '../types';
 import {
-  generateBatchCertificatesPdf,
+  generateBatchCertificatesZip,
   downloadSingleCertificatePdf,
   getAllRecognitionTypes,
   RecognitionType
@@ -443,7 +443,7 @@ export const BatchDetail: React.FC = () => {
     if (!batch) return;
     setDownloading(true);
     try {
-      const fileName = await generateBatchCertificatesPdf({
+      const fileName = await generateBatchCertificatesZip({
         batch,
         members,
         recognition,
@@ -451,8 +451,8 @@ export const BatchDetail: React.FC = () => {
       });
       triggerToast(`¡Reconocimientos descargados exitosamente en ${fileName}!`, 4000);
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      alert('Error al generar los reconocimientos en PDF.');
+      console.error('Error generating ZIP:', err);
+      alert('Error al generar los reconocimientos en ZIP.');
     } finally {
       setDownloading(false);
     }
@@ -670,7 +670,7 @@ export const BatchDetail: React.FC = () => {
             icon={<FileText size={16} />}
             className="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
           >
-            {downloading ? 'Generando PDF...' : 'Descargar Reconocimientos (PDF)'}
+            {downloading ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
           </Button>
         </div>
       </div>
@@ -813,6 +813,8 @@ export const BatchDetail: React.FC = () => {
         onClose={() => setIsEditModalOpen(false)}
         member={editingMember}
         onSave={handleSaveMemberEdit}
+        regions={regions}
+        districts={districts}
         groups={groups}
       />
 

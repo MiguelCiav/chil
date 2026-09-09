@@ -727,14 +727,14 @@ describe('NewBatchWizard full flow', () => {
       expect(screen.getByLabelText(/Grupo Scout/i)).not.toBeDisabled();
     });
 
-    // 3. Select Group: Multigrupo (id: 0)
+    // 3. Select Group: Mixto (id: 0)
     const groupBtn = screen.getByLabelText(/Grupo Scout/i);
     fireEvent.click(groupBtn);
-    const groupOpt = await screen.findByText('Multigrupo');
+    const groupOpt = await screen.findByText('Mixto');
     fireEvent.click(groupOpt);
 
     await waitFor(() => {
-      expect(screen.getByText('Multigrupo')).toBeInTheDocument();
+      expect(screen.getByText('Mixto')).toBeInTheDocument();
     });
 
     // 4. Select Recognition Type

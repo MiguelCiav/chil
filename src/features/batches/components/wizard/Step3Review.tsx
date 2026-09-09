@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users,
   GraduationCap,
@@ -13,7 +13,7 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Field } from '../../../../components/Field';
-import { ScoutGroup, ScoutMember, ScoutUnit, getUnitBadge } from '../../types';
+import { ScoutGroup, ScoutMember, ScoutUnit, Region, District, getUnitBadge } from '../../types';
 import { updateMember, getMembersByBatchId, assignBatchRecognitionCodes } from '../../api';
 
 interface Step3ReviewProps {
@@ -22,6 +22,8 @@ interface Step3ReviewProps {
   onMembersUpdated: (members: ScoutMember[]) => void;
   handleFinalizeBatch: () => void;
   onBack: () => void;
+  regions?: Region[];
+  districts?: District[];
   groups?: ScoutGroup[];
 }
 
@@ -58,12 +60,28 @@ function getExceptionalRecognitionCode(member: ScoutMember, isChecked: boolean):
   return `REC-${suffix}`;
 }
 
+function getFilteredReviewDistricts(districts: District[], regionId?: number): District[] {
+  if (!regionId || regionId === 0) {
+    return districts.filter(d => d.id !== 0);
+  }
+  return districts.filter(d => d.id !== 0 && d.region_id === regionId);
+}
+
+function getFilteredReviewGroups(groups: ScoutGroup[], districtId?: number): ScoutGroup[] {
+  if (!districtId || districtId === 0) {
+    return groups.filter(g => g.id !== 0);
+  }
+  return groups.filter(g => g.id !== 0 && g.district_id === districtId);
+}
+
 export const Step3Review: React.FC<Step3ReviewProps> = ({
   batchId,
   savedMembers,
   onMembersUpdated,
   handleFinalizeBatch,
   onBack,
+  regions = [],
+  districts = [],
   groups = []
 }) => {
   const [codeMode, setCodeMode] = useState<'auto' | 'manual'>('auto');
@@ -72,6 +90,14 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
   const [editingMember, setEditingMember] = useState<ScoutMember | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
+
+  const filteredReviewDistricts = useMemo(() => {
+    return getFilteredReviewDistricts(districts, editingMember?.region_id);
+  }, [districts, editingMember?.region_id]);
+
+  const filteredReviewGroups = useMemo(() => {
+    return getFilteredReviewGroups(groups, editingMember?.district_id);
+  }, [groups, editingMember?.district_id]);
 
   // Auto-assign codes on mount if auto mode and any active or exceptional member has no code assigned
   useEffect(() => {
@@ -496,32 +522,121 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                   </select>
                 </div>
               </div>
-              {groups.length > 0 && (
-                <div className="w-full">
-                  <label htmlFor="edit-member-group-select" className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral">
-                    Grupo Scout
-                  </label>
-                  <select
-                    id="edit-member-group-select"
-                    className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
-                    value={editingMember.group_id ?? 0}
-                    onChange={e => {
-                      const val = Number(e.target.value);
-                      setEditingMember({
-                        ...editingMember,
-                        group_id: val === 0 ? undefined : val
-                      });
-                    }}
-                  >
-                    <option value={0}>Sin grupo asignado / No aplica</option>
-                    {groups
-                      .filter(g => g.id !== 0)
-                      .map(g => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
-                      ))}
-                  </select>
+              {(regions.length > 0 || districts.length > 0 || groups.length > 0) && (
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-neutral/70">
+                    Estructura Scout
+                  </h4>
+                  {regions.length > 0 && (
+                    <div className="w-full">
+                      <label
+                        htmlFor="edit-member-region-select"
+                        className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral"
+                      >
+                        Región Scout
+                      </label>
+                      <select
+                        id="edit-member-region-select"
+                        className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                        value={editingMember.region_id ?? 0}
+                        onChange={(e) => {
+                          const newRegId = Number(e.target.value);
+                          const updated = {
+                            ...editingMember,
+                            region_id: newRegId === 0 ? undefined : newRegId
+                          };
+                          if (newRegId !== 0) {
+                            const isValidDist = districts.some(
+                              (d) => d.id === editingMember.district_id && d.region_id === newRegId
+                            );
+                            if (!isValidDist) {
+                              updated.district_id = undefined;
+                              updated.group_id = undefined;
+                            }
+                          }
+                          setEditingMember(updated);
+                        }}
+                      >
+                        <option value={0}>Sin región / No aplica</option>
+                        {regions
+                          .filter((r) => r.id !== 0)
+                          .map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {districts.length > 0 && (
+                    <div className="w-full">
+                      <label
+                        htmlFor="edit-member-district-select"
+                        className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral"
+                      >
+                        Distrito Scout
+                      </label>
+                      <select
+                        id="edit-member-district-select"
+                        className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                        value={editingMember.district_id ?? 0}
+                        onChange={(e) => {
+                          const newDistId = Number(e.target.value);
+                          const updated = {
+                            ...editingMember,
+                            district_id: newDistId === 0 ? undefined : newDistId
+                          };
+                          if (newDistId !== 0) {
+                            const isValidGrp = groups.some(
+                              (g) => g.id === editingMember.group_id && g.district_id === newDistId
+                            );
+                            if (!isValidGrp) {
+                              updated.group_id = undefined;
+                            }
+                          }
+                          setEditingMember(updated);
+                        }}
+                      >
+                        <option value={0}>Sin distrito / No aplica</option>
+                        {filteredReviewDistricts.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {groups.length > 0 && (
+                    <div className="w-full">
+                      <label
+                        htmlFor="edit-member-group-select"
+                        className="block uppercase text-sm font-semibold mb-2 tracking-wide text-neutral"
+                      >
+                        Grupo Scout
+                      </label>
+                      <select
+                        id="edit-member-group-select"
+                        className="w-full rounded-field px-4 transition-all bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm h-[46px]"
+                        value={editingMember.group_id ?? 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setEditingMember({
+                            ...editingMember,
+                            group_id: val === 0 ? undefined : val
+                          });
+                        }}
+                      >
+                        <option value={0}>Sin grupo asignado / No aplica</option>
+                        {filteredReviewGroups.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
               {editingMember.status !== 'active' && (

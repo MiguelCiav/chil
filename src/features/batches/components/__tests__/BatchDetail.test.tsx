@@ -18,6 +18,7 @@ vi.mock('../../api', () => ({
 }));
 
 vi.mock('../../../recognitions', () => ({
+  generateBatchCertificatesZip: vi.fn(),
   generateBatchCertificatesPdf: vi.fn(),
   downloadSingleCertificatePdf: vi.fn(),
   getAllRecognitionTypes: vi.fn(() => Promise.resolve([])),
@@ -116,8 +117,8 @@ describe('BatchDetail component', () => {
 
     vi.mocked(api.generateBatchReport).mockResolvedValueOnce('Reporte_Lote_101.pdf');
 
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce(
-      'Reconocimientos_Lote_101_servicio_prolongado.pdf'
+    vi.mocked(recognitions.generateBatchCertificatesZip).mockResolvedValueOnce(
+      'Reconocimientos_Lote_101_servicio_prolongado.zip'
     );
 
     render(
@@ -156,19 +157,19 @@ describe('BatchDetail component', () => {
       expect(screen.getByText(/Lista de miembros \(PDF\) generada exitosamente\./i)).toBeInTheDocument();
     });
 
-    // Trigger batch PDF download
-    const downloadBtn = screen.getByRole('button', { name: /Descargar (todos|reconocimientos) \(PDF\)/i });
+    // Trigger batch ZIP download
+    const downloadBtn = screen.getByRole('button', { name: /Descargar Reconocimientos \(ZIP\)/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(recognitions.generateBatchCertificatesPdf).toHaveBeenCalledWith(
+      expect(recognitions.generateBatchCertificatesZip).toHaveBeenCalledWith(
         expect.objectContaining({
           batch: expect.objectContaining({ id: 101 }),
           members: expect.any(Array)
         })
       );
       expect(
-        screen.getByText(/¡Reconocimientos descargados exitosamente en Reconocimientos_Lote_101_servicio_prolongado\.pdf!/i)
+        screen.getByText(/¡Reconocimientos descargados exitosamente en Reconocimientos_Lote_101_servicio_prolongado\.zip!/i)
       ).toBeInTheDocument();
     });
   });

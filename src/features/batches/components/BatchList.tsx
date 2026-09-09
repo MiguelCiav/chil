@@ -45,7 +45,7 @@ import {
   RECOGNITION_TYPES
 } from '../api';
 import {
-  generateBatchCertificatesPdf,
+  generateBatchCertificatesZip,
   getRecognitionTypeById,
   getAllRecognitionTypes,
   RecognitionType
@@ -352,7 +352,7 @@ function renderBatchActionsCell(props: BatchActionsCellProps) {
       </button>
 
       {isMenuOpen && (
-        <div className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
+        <div className={`absolute right-0 ${dropdownPosition} w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}>
           <button
             type="button"
             onClick={() => {
@@ -374,7 +374,7 @@ function renderBatchActionsCell(props: BatchActionsCellProps) {
             className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5 text-primary" />
-            {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (PDF)'}
+            {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (ZIP)'}
           </button>
           <div className="border-t border-gray-100 my-1" />
           <button
@@ -623,7 +623,7 @@ export const BatchList: React.FC = () => {
         recType = await getRecognitionTypeById(targetBatch.recognition_type);
       }
 
-      const fileName = await generateBatchCertificatesPdf({
+      const fileName = await generateBatchCertificatesZip({
         batch: targetBatch,
         members: batchMembers,
         recognition: recType,
@@ -634,7 +634,7 @@ export const BatchList: React.FC = () => {
       setTimeout(() => setShowToast(false), 4000);
     } catch (err) {
       console.error("Error downloading PDF:", err);
-      alert("Error al generar los reconocimientos en PDF.");
+      alert("Error al generar los reconocimientos en ZIP.");
     } finally {
       setDownloadingId(null);
     }

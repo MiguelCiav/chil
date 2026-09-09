@@ -168,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </Link>
 
-          {isMobile && (
+          {isMobile ? (
             <button
               type="button"
               onClick={onMobileClose}
@@ -176,6 +176,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
               aria-label="Cerrar menú"
             >
               <X className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              className="p-1.5 rounded-lg text-neutral/60 hover:text-neutral hover:bg-gray-100 transition-colors"
+              aria-label={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+              title={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+            >
+              {collapsed ? (
+                <ChevronRight className="w-4 h-4 shrink-0" />
+              ) : (
+                <ChevronLeft className="w-4 h-4 shrink-0" />
+              )}
             </button>
           )}
         </div>
@@ -266,7 +280,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </nav>
 
-        {/* Footer Area: Scraper Settings, User profile, Collapse toggle */}
+        {/* Footer Area: Scraper Settings, User profile */}
         <div className="border-t border-gray-200 p-3 space-y-2">
           {user && (
             <>
@@ -288,31 +302,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
 
               <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between px-1'}`}>
-                <UserProfileMenu />
+                <UserProfileMenu isCollapsed={collapsed} />
               </div>
             </>
-          )}
-
-          {/* Desktop Collapse / Expand Button */}
-          {!isMobile && (
-            <button
-              type="button"
-              onClick={toggleCollapse}
-              className={`w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-neutral/60 hover:text-neutral hover:bg-gray-100 transition-colors ${
-                collapsed ? 'justify-center' : 'justify-start'
-              }`}
-              aria-label={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
-              title={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
-            >
-              {collapsed ? (
-                <ChevronRight className="w-4 h-4 shrink-0" />
-              ) : (
-                <>
-                  <ChevronLeft className="w-4 h-4 shrink-0" />
-                  <span>Colapsar</span>
-                </>
-              )}
-            </button>
           )}
         </div>
       </div>

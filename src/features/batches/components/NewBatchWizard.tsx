@@ -205,12 +205,18 @@ function parseCedulaEntries(youngsText: string, adultsText: string) {
   return { youngs, adults, allCedulas, cedulaSet };
 }
 
+interface InitialMemberHierarchy {
+  region_id?: number;
+  district_id?: number;
+  group_id?: number;
+}
+
 async function saveNoScoutMemberToDb(
   cedula: string,
   type: 'young' | 'adult',
   batchId: number | null,
   userId?: string,
-  groupId?: number
+  hierarchy?: InitialMemberHierarchy
 ): Promise<void> {
   if (!batchId) return;
   try {
@@ -226,7 +232,9 @@ async function saveNoScoutMemberToDb(
         verified_in_registry: false,
         batch_id: batchId,
         user_id: userId,
-        group_id: groupId && groupId !== 0 ? groupId : undefined
+        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
+        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
+        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
       },
       userId
     );
@@ -241,7 +249,7 @@ async function saveUnregisteredMemberToDb(
   memberUnit: ScoutUnit,
   batchId: number | null,
   userId?: string,
-  groupId?: number
+  hierarchy?: InitialMemberHierarchy
 ): Promise<void> {
   if (!batchId) return;
   try {
@@ -257,7 +265,9 @@ async function saveUnregisteredMemberToDb(
         verified_in_registry: true,
         batch_id: batchId,
         user_id: userId,
-        group_id: groupId && groupId !== 0 ? groupId : undefined
+        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
+        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
+        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
       },
       userId
     );
@@ -273,7 +283,7 @@ async function saveScrapedMemberToDb(
   memberUnit: ScoutUnit,
   batchId: number | null,
   userId?: string,
-  groupId?: number
+  hierarchy?: InitialMemberHierarchy
 ): Promise<void> {
   if (!batchId) return;
   try {
@@ -293,7 +303,9 @@ async function saveScrapedMemberToDb(
         verified_in_registry: true,
         batch_id: batchId,
         user_id: userId,
-        group_id: groupId && groupId !== 0 ? groupId : undefined
+        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
+        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
+        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
       },
       userId
     );
@@ -327,6 +339,8 @@ export const NewBatchWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [batchId, setBatchId] = useState<number | null>(null);
   const [batchName, setBatchName] = useState<string>('');
+  const [batchRegionId, setBatchRegionId] = useState<number>(0);
+  const [batchDistrictId, setBatchDistrictId] = useState<number>(0);
   const [batchGroupId, setBatchGroupId] = useState<number>(0);
   const [batchUnitScope, setBatchUnitScope] = useState<BatchUnitScope>('mixed');
 
@@ -390,9 +404,6 @@ export const NewBatchWizard: React.FC = () => {
     }
   });
 
-  const selectedRegionId = watch('regionId');
-  const selectedDistrictId = watch('districtId');
-
   // Load Hierarchy & Recognition Data
   useEffect(() => {
     Promise.all([
@@ -412,25 +423,6 @@ export const NewBatchWizard: React.FC = () => {
         setLoadingHierarchy(false);
       });
   }, [user?.uid]);
-
-  // Cascading Drops Logic: Reset dependent dropdowns when parent changes
-  useEffect(() => {
-    if (selectedRegionId === '0') {
-      setValue('districtId', '0', { shouldValidate: true });
-      setValue('groupId', '0', { shouldValidate: true });
-    } else {
-      setValue('districtId', '');
-      setValue('groupId', '');
-    }
-  }, [selectedRegionId, setValue]);
-
-  useEffect(() => {
-    if (selectedDistrictId === '0') {
-      setValue('groupId', '0', { shouldValidate: true });
-    } else if (selectedRegionId !== '0') {
-      setValue('groupId', '');
-    }
-  }, [selectedDistrictId, selectedRegionId, setValue]);
 
   // --- Step 1 Submit: Create or Update Batch ---
   const onSubmitStep1 = async (data: Step1FormData) => {
@@ -461,6 +453,8 @@ export const NewBatchWizard: React.FC = () => {
 
       setBatchId(created.id);
       setBatchName(created.comment || '');
+      setBatchRegionId(region_id);
+      setBatchDistrictId(district_id);
       setBatchGroupId(group_id);
       setCurrentStep(2);
     } catch (err) {
@@ -472,6 +466,11 @@ export const NewBatchWizard: React.FC = () => {
   // --- Step 2 verification logic ---
   const verifyCedula = async (cedula: string, type: 'young' | 'adult', explicitUnit?: ScoutUnit) => {
     const memberUnit = getInitialMemberUnit(explicitUnit, batchUnitScope, type);
+    const initialHierarchy: InitialMemberHierarchy = {
+      region_id: batchRegionId !== 0 ? batchRegionId : undefined,
+      district_id: batchDistrictId !== 0 ? batchDistrictId : undefined,
+      group_id: batchGroupId !== 0 ? batchGroupId : undefined
+    };
 
     // If member is 'no_scout', completely bypass Sistema de Registro scraper query and mark as active
     if (memberUnit === 'no_scout') {
@@ -481,10 +480,12 @@ export const NewBatchWizard: React.FC = () => {
         status: 'Registro válido',
         type,
         unit: 'no_scout',
-        group_id: batchGroupId !== 0 ? batchGroupId : undefined
+        region_id: initialHierarchy.region_id,
+        district_id: initialHierarchy.district_id,
+        group_id: initialHierarchy.group_id
       }));
 
-      await saveNoScoutMemberToDb(cedula, type, batchId, user?.uid, batchGroupId !== 0 ? batchGroupId : undefined);
+      await saveNoScoutMemberToDb(cedula, type, batchId, user?.uid, initialHierarchy);
       setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
       return;
     }
@@ -495,7 +496,9 @@ export const NewBatchWizard: React.FC = () => {
       status: 'Consultando...',
       type,
       unit: memberUnit,
-      group_id: batchGroupId !== 0 ? batchGroupId : undefined
+      region_id: initialHierarchy.region_id,
+      district_id: initialHierarchy.district_id,
+      group_id: initialHierarchy.group_id
     }));
 
     let scrapedResult: ScraperMemberDetails | null = null;
@@ -518,13 +521,15 @@ export const NewBatchWizard: React.FC = () => {
               status,
               type,
               unit: memberUnit,
-              group_id: item.group_id ?? (batchGroupId !== 0 ? batchGroupId : undefined)
+              region_id: item.region_id ?? initialHierarchy.region_id,
+              district_id: item.district_id ?? initialHierarchy.district_id,
+              group_id: item.group_id ?? initialHierarchy.group_id
             }
           : item
       ));
 
       if (isUnregistered) {
-        await saveUnregisteredMemberToDb(cedula, type, memberUnit, batchId, user?.uid, batchGroupId !== 0 ? batchGroupId : undefined);
+        await saveUnregisteredMemberToDb(cedula, type, memberUnit, batchId, user?.uid, initialHierarchy);
       } else {
         setToastMessage(`Error de red al verificar la cédula ${cedula}`);
         setShowToast(true);
@@ -544,12 +549,14 @@ export const NewBatchWizard: React.FC = () => {
               type,
               unit: memberUnit,
               details: res,
-              group_id: item.group_id ?? (batchGroupId !== 0 ? batchGroupId : undefined)
+              region_id: item.region_id ?? initialHierarchy.region_id,
+              district_id: item.district_id ?? initialHierarchy.district_id,
+              group_id: item.group_id ?? initialHierarchy.group_id
             }
           : item
       ));
 
-      await saveScrapedMemberToDb(cedula, res, type, memberUnit, batchId, user?.uid, batchGroupId !== 0 ? batchGroupId : undefined);
+      await saveScrapedMemberToDb(cedula, res, type, memberUnit, batchId, user?.uid, initialHierarchy);
     }
 
     setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
@@ -629,15 +636,30 @@ export const NewBatchWizard: React.FC = () => {
     }
   };
 
-  const handleUpdateMemberGroup = async (cedula: string, newGroupId: number) => {
+  const handleUpdateMemberHierarchy = async (
+    cedula: string,
+    hierarchy: { region_id?: number; district_id?: number; group_id?: number }
+  ) => {
     const currentItem = verificationList.find(item => item.cedula === cedula);
     if (!currentItem) return;
 
+    const originalRegionId = currentItem.region_id;
+    const originalDistrictId = currentItem.district_id;
     const originalGroupId = currentItem.group_id;
-    const targetGroupId = newGroupId === 0 ? undefined : newGroupId;
+
+    const targetRegionId = hierarchy.region_id === 0 ? undefined : hierarchy.region_id;
+    const targetDistrictId = hierarchy.district_id === 0 ? undefined : hierarchy.district_id;
+    const targetGroupId = hierarchy.group_id === 0 ? undefined : hierarchy.group_id;
 
     setVerificationList(prev => prev.map(item =>
-      item.cedula === cedula ? { ...item, group_id: targetGroupId } : item
+      item.cedula === cedula
+        ? {
+            ...item,
+            region_id: targetRegionId,
+            district_id: targetDistrictId,
+            group_id: targetGroupId
+          }
+        : item
     ));
 
     if (batchId) {
@@ -645,17 +667,35 @@ export const NewBatchWizard: React.FC = () => {
         const members = await getMembersByBatchId(batchId);
         const currentMember = members.find(m => m.identity === cedula);
         if (currentMember) {
+          currentMember.region_id = targetRegionId;
+          currentMember.district_id = targetDistrictId;
           currentMember.group_id = targetGroupId;
           await updateMember(currentMember);
         }
       } catch (err) {
-        console.error("Error al actualizar grupo de miembro en DB:", err);
+        console.error("Error al actualizar jerarquía de miembro en DB:", err);
         setVerificationList(prev => prev.map(item =>
-          item.cedula === cedula ? { ...item, group_id: originalGroupId } : item
+          item.cedula === cedula
+            ? {
+                ...item,
+                region_id: originalRegionId,
+                district_id: originalDistrictId,
+                group_id: originalGroupId
+              }
+            : item
         ));
-        alert("No se pudo actualizar el grupo del miembro en la base de datos.");
+        alert("No se pudo actualizar la estructura scout del miembro en la base de datos.");
       }
     }
+  };
+
+  const handleUpdateMemberGroup = (cedula: string, newGroupId: number) => {
+    const currentItem = verificationList.find(item => item.cedula === cedula);
+    handleUpdateMemberHierarchy(cedula, {
+      region_id: currentItem?.region_id,
+      district_id: currentItem?.district_id,
+      group_id: newGroupId
+    });
   };
 
   // Move from Step 2 to Step 3
@@ -813,8 +853,11 @@ export const NewBatchWizard: React.FC = () => {
           handleToggleMemberType={handleToggleMemberType}
           handleStep2Continue={handleStep2Continue}
           onBack={() => setCurrentStep(1)}
+          regions={regions}
+          districts={districts}
           groups={groups}
           onUpdateMemberGroup={handleUpdateMemberGroup}
+          onUpdateMemberHierarchy={handleUpdateMemberHierarchy}
         />
       )}
 
@@ -826,6 +869,8 @@ export const NewBatchWizard: React.FC = () => {
           onMembersUpdated={setSavedMembers}
           handleFinalizeBatch={handleFinalizeBatch}
           onBack={() => setCurrentStep(2)}
+          regions={regions}
+          districts={districts}
           groups={groups}
         />
       )}

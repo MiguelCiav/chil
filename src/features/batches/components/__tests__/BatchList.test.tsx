@@ -34,6 +34,7 @@ vi.mock('../../api', () => ({
 }));
 
 vi.mock('../../../recognitions', () => ({
+  generateBatchCertificatesZip: vi.fn(),
   generateBatchCertificatesPdf: vi.fn(),
   getRecognitionTypeById: vi.fn(() => Promise.resolve(null)),
   getAllRecognitionTypes: vi.fn(() => Promise.resolve([
@@ -173,7 +174,7 @@ describe('BatchList component', () => {
 
     // Verify actions inside dropdown
     expect(screen.getByRole('button', { name: /Ver detalle/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Descargar reconocimientos \(PDF\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Descargar reconocimientos \(ZIP\)/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Eliminar lote/i })).toBeInTheDocument();
   });
 
@@ -257,7 +258,7 @@ describe('BatchList component', () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockResolvedValueOnce('Reconocimientos_Lote_101_go_solar.pdf');
+    vi.mocked(recognitions.generateBatchCertificatesZip).mockResolvedValueOnce('Reconocimientos_Lote_101_go_solar.zip');
 
     render(
       <MemoryRouter>
@@ -277,17 +278,17 @@ describe('BatchList component', () => {
 
     // 2. Test Download PDF from dropdown
     fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
-    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(PDF\)$/i });
+    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(ZIP\)$/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(recognitions.generateBatchCertificatesPdf).toHaveBeenCalledWith(
+      expect(recognitions.generateBatchCertificatesZip).toHaveBeenCalledWith(
         expect.objectContaining({
           batch: expect.objectContaining({ id: 101 }),
           members: expect.any(Array)
         })
       );
-      expect(screen.getByText(/Reconocimientos descargados: Reconocimientos_Lote_101_go_solar\.pdf/i)).toBeInTheDocument();
+      expect(screen.getByText(/Reconocimientos descargados: Reconocimientos_Lote_101_go_solar\.zip/i)).toBeInTheDocument();
     });
   });
 
@@ -515,7 +516,7 @@ describe('BatchList component', () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
-    vi.mocked(recognitions.generateBatchCertificatesPdf).mockRejectedValueOnce(new Error('PDF generation failure'));
+    vi.mocked(recognitions.generateBatchCertificatesZip).mockRejectedValueOnce(new Error('ZIP generation failure'));
     vi.mocked(api.deleteBatch).mockRejectedValueOnce(new Error('Delete failure'));
 
     render(
@@ -530,11 +531,11 @@ describe('BatchList component', () => {
 
     // Test download PDF error via 3-dots dropdown
     fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
-    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(PDF\)$/i });
+    const downloadBtn = screen.getByRole('button', { name: /^Descargar reconocimientos \(ZIP\)$/i });
     fireEvent.click(downloadBtn);
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en PDF.');
+      expect(alertSpy).toHaveBeenCalledWith('Error al generar los reconocimientos en ZIP.');
     });
 
     // Test delete error via 3-dots dropdown

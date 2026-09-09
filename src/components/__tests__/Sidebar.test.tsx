@@ -93,13 +93,12 @@ describe('Sidebar component', () => {
     );
 
     const collapseBtn = screen.getByRole('button', { name: /Colapsar barra lateral/i });
-    expect(screen.getByText('Colapsar')).toBeInTheDocument();
+    expect(collapseBtn).toBeInTheDocument();
 
     fireEvent.click(collapseBtn);
 
     expect(localStorage.getItem('chil_sidebar_collapsed')).toBe('true');
     expect(screen.getByRole('button', { name: /Expandir barra lateral/i })).toBeInTheDocument();
-    expect(screen.queryByText('Colapsar')).not.toBeInTheDocument();
 
     // Expand again
     const expandBtn = screen.getByRole('button', { name: /Expandir barra lateral/i });

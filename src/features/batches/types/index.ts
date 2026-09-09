@@ -65,6 +65,8 @@ export interface ScoutMember {
   birth_date: string;
   email?: string;
   phone?: string;
+  region_id?: number;
+  district_id?: number;
   group_id?: number;
   unit_id?: number;
   unit?: ScoutUnit;
@@ -100,6 +102,8 @@ export interface MemberVerificationResult {
   status: 'Consultando...' | 'Registro válido' | 'No registrado' | 'Error de red';
   type: 'young' | 'adult';
   unit?: ScoutUnit;
+  region_id?: number;
+  district_id?: number;
   group_id?: number;
   details?: {
     nombre_completo: string;
