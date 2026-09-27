@@ -446,6 +446,7 @@ describe('BatchList component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Distrito: Distrito Sucre/i)).toBeInTheDocument();
     });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     // 2. Add Group filter
     fireEvent.click(screen.getByText(/Añadir Filtro/i));
@@ -456,6 +457,7 @@ describe('BatchList component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Grupo: Grupo San Luis/i)).toBeInTheDocument();
     });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     // 3. Add Predefined Date filter (Últimos 30 días)
     fireEvent.click(screen.getByText(/Añadir Filtro/i));
@@ -750,7 +752,9 @@ describe('BatchList component', () => {
     });
 
     // Merge button disappears as selection is reset
-    expect(screen.queryByRole('button', { name: /Fusionar lotes/i })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Fusionar lotes/i })).not.toBeInTheDocument();
+    });
   });
 });
 

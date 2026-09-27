@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -9,38 +9,68 @@ interface ModalProps {
 }
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className = '' }) => {
-  // Prevent scrolling on body when modal is open
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [mounted, setMounted] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Adjust state during render when isOpen prop changes (React recommended pattern)
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setMounted(true);
+      setIsClosing(false);
+    } else if (mounted) {
+      setIsClosing(true);
+    }
+  }
+
+  // Handle exit animation completion
+  useEffect(() => {
+    if (isClosing) {
+      const timer = setTimeout(() => {
+        setMounted(false);
+        setIsClosing(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isClosing]);
+
+  // Lock body scroll when open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!mounted) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/* Overlay */}
       <div
         data-testid="modal-backdrop"
-        className="absolute inset-0 bg-neutral/50 backdrop-blur-xs animate-modal-backdrop transition-opacity"
-        onClick={onClose}
+        className={`absolute inset-0 bg-neutral/50 backdrop-blur-xs transition-opacity ${
+          isClosing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop'
+        }`}
+        onClick={() => {
+          if (!isClosing) onClose();
+        }}
         aria-hidden="true"
         onKeyDown={(e) => {
-          if (e.key === 'Escape') onClose();
+          if (e.key === 'Escape' && !isClosing) onClose();
         }}
       />
 
-      {/* Modal Content - No shadow, subtle primary border, rounded with smooth pop-in animation */}
+      {/* Modal Content - No shadow, subtle primary border, rounded with smooth pop in/out animation */}
       <dialog
         open
         aria-modal="true"
-        className={`relative bg-white border border-primary/20 rounded-2xl flex flex-col w-full max-h-[90vh] overflow-hidden m-0 p-0 text-neutral animate-modal-pop ${className}`}
+        className={`relative bg-white border border-primary/20 rounded-2xl flex flex-col w-full max-h-[90vh] overflow-hidden m-0 p-0 text-neutral ${
+          isClosing ? 'animate-modal-pop-out' : 'animate-modal-pop'
+        } ${className}`}
       >
         {children}
       </dialog>
