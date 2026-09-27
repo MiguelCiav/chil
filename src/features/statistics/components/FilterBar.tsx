@@ -35,7 +35,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4 font-sans">
+    <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-4 font-sans">
       {/* Top row: Section title & PDF Export button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2 text-neutral">
@@ -49,7 +49,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           type="button"
           variant="primary"
           onClick={handleExportPdf}
-          className="flex items-center gap-2 text-xs font-bold shadow-sm whitespace-nowrap self-start sm:self-auto"
+          className="flex items-center gap-2 text-xs font-bold whitespace-nowrap self-start sm:self-auto"
           aria-label="Exportar Reporte Ejecutivo PDF"
         >
           <Download className="w-4 h-4" />

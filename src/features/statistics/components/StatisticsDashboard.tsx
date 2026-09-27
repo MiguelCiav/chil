@@ -57,7 +57,7 @@ export const StatisticsDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="max-w-xl mx-auto my-16 p-6 bg-white border border-red-200 rounded-2xl shadow-sm text-center space-y-4">
+      <div className="max-w-xl mx-auto my-16 p-6 bg-white border border-red-200 rounded-2xl text-center space-y-4">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
         <h2 className="text-lg font-bold text-neutral">Error al cargar estadísticas</h2>
         <p className="text-xs text-neutral/70">{error}</p>

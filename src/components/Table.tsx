@@ -23,7 +23,7 @@ export function Table<TData, TValue>({
   });
 
   return (
-    <div className={`w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm ${className}`}>
+    <div className={`w-full border border-primary/20 rounded-2xl overflow-hidden bg-white ${className}`}>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>

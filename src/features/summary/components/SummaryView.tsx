@@ -739,7 +739,7 @@ export const SummaryView: React.FC = () => {
             variant="outline"
             onClick={handleExportAll}
             disabled={flatData.length === 0}
-            className="shadow-2xs whitespace-nowrap"
+            className="whitespace-nowrap"
             aria-label="Descargar todo"
           >
             <Download className="w-4 h-4" />
@@ -750,7 +750,7 @@ export const SummaryView: React.FC = () => {
             variant="primary"
             onClick={handleExport}
             disabled={filteredData.length === 0}
-            className="shadow-sm whitespace-nowrap"
+            className="whitespace-nowrap"
             aria-label="Descargar Excel"
           >
             <Download className="w-4 h-4" />
@@ -761,7 +761,7 @@ export const SummaryView: React.FC = () => {
       </div>
 
       {/* Filter Controls Bar */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-4">
         {/* Global Search Bar */}
         <div className="relative">
           <Search className="w-4 h-4 text-neutral/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1000,7 +1000,7 @@ export const SummaryView: React.FC = () => {
       </div>
 
       {/* TanStack Table Container */}
-      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
+      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white">
         <div className="overflow-x-auto min-h-[300px]">
           <table className="w-full text-left border-collapse font-sans">
             <thead>

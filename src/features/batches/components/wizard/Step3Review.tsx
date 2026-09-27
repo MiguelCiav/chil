@@ -194,7 +194,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
 
   return (
     <div data-walkthrough="wizard-step-container" className="space-y-6">
-      <Card className="shadow-lg border-primary/10">
+      <Card className="border-primary/10">
         <CardHeader className="bg-primary/5 border-b border-primary/10">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
@@ -260,7 +260,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 aria-label="Generar códigos automáticamente"
                 className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                   codeMode === 'auto'
-                    ? 'bg-white border-primary shadow-sm ring-2 ring-primary/10'
+                    ? 'bg-white border-primary ring-2 ring-primary/10'
                     : 'bg-white/60 border-gray-200 hover:border-primary/40'
                 }`}
               >
@@ -286,7 +286,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 aria-label="Ingreso manual de códigos en tabla"
                 className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                   codeMode === 'manual'
-                    ? 'bg-white border-primary shadow-sm ring-2 ring-primary/10'
+                    ? 'bg-white border-primary ring-2 ring-primary/10'
                     : 'bg-white/60 border-gray-200 hover:border-primary/40'
                 }`}
               >
@@ -317,7 +317,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 type="button"
                 onClick={() => setActiveTab('valid')}
                 className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'valid'
-                  ? 'bg-white text-primary shadow-sm'
+                  ? 'bg-white text-primary'
                   : 'text-neutral/60 hover:text-primary'
                   }`}
               >
@@ -330,7 +330,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                 type="button"
                 onClick={() => setActiveTab('pending')}
                 className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'pending'
-                  ? 'bg-white text-primary shadow-sm'
+                  ? 'bg-white text-primary'
                   : 'text-neutral/60 hover:text-primary'
                   }`}
               >
@@ -362,7 +362,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
               return (
                 <div
                   key={member.identity}
-                  className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 bg-white border border-primary/10 rounded-2xl hover:bg-primary/5 transition-all shadow-sm group"
+                  className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 bg-white border border-primary/10 rounded-2xl hover:bg-primary/5 transition-all group"
                 >
                   <div className="flex items-center gap-4">
                     {/* Avatar */}
@@ -393,7 +393,7 @@ export const Step3Review: React.FC<Step3ReviewProps> = ({
                           value={member.recognition_code || ''}
                           onChange={(e) => handleInlineCodeChange(member.identity, e.target.value)}
                           placeholder="Ej. REC-001"
-                          className="w-32 sm:w-36 font-mono text-xs font-bold uppercase px-3 py-1.5 rounded-xl border border-primary/20 bg-white text-neutral focus:outline-none focus:ring-2 focus:ring-primary shadow-inner transition-all placeholder:font-sans placeholder:font-normal placeholder:text-neutral/40"
+                          className="w-32 sm:w-36 font-mono text-xs font-bold uppercase px-3 py-1.5 rounded-xl border border-primary/20 bg-white text-neutral focus:outline-none focus:ring-2 focus:ring-primary transition-all placeholder:font-sans placeholder:font-normal placeholder:text-neutral/40"
                           aria-label={`Código de reconocimiento de ${member.first_names} ${member.last_names}`}
                         />
                       </div>

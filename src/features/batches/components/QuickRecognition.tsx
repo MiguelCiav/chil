@@ -217,7 +217,7 @@ export const QuickRecognition: React.FC = () => {
                 size="lg"
                 disabled={isSubmitting || loadingHierarchy}
                 icon={<Zap className="w-5 h-5 fill-current" />}
-                className="w-full sm:w-auto shadow-md"
+                className="w-full sm:w-auto"
               >
                 {isSubmitting ? 'Emitiendo y Generando Reconocimiento...' : 'Emitir y Descargar Reconocimiento'}
               </Button>

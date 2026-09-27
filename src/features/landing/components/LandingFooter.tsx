@@ -7,7 +7,7 @@ export const LandingFooter: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="mt-16 border-t border-gray-200/80 bg-white/80 backdrop-blur-xs pt-12 pb-8 text-neutral rounded-2xl sm:rounded-3xl shadow-2xs">
+    <footer className="mt-16 border-t border-gray-200/80 bg-white/80 backdrop-blur-xs pt-12 pb-8 text-neutral rounded-2xl sm:rounded-3xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10 border-b border-gray-100">
           {/* Col 1: Branding & Mission */}

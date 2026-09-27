@@ -236,7 +236,7 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
   const adultArc = (adultPercentage / 100) * circumference;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 font-sans">
       {/* Card Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

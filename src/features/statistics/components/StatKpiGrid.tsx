@@ -12,7 +12,7 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {/* 1. Total Reconocimientos Emitidos */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">
@@ -40,7 +40,7 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
       </div>
 
       {/* 2. Total Lotes Generados */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">
@@ -68,7 +68,7 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
       </div>
 
       {/* 3. Reconocimiento Más Entregado */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">
@@ -93,7 +93,7 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
       </div>
 
       {/* 4. Regiones / Distritos Atendidos */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">
@@ -115,7 +115,7 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
       </div>
 
       {/* 5. Jóvenes vs Adultos */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">

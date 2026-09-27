@@ -688,7 +688,7 @@ export const BatchDetail: React.FC = () => {
       {/* Members Table Container ("Miembros del Lote") */}
       <div
         data-walkthrough="batch-detail-members-table"
-        className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm"
+        className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white"
       >
         {/* Table Header with Search Input */}
         <div className="p-4 sm:p-5 border-b border-primary/20 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

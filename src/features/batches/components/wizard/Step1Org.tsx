@@ -174,7 +174,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
     <div className="space-y-6">
       {/* Empty Recognition Types Alert Card */}
       {!loadingHierarchy && recognitionTypes.length === 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm font-medium text-amber-900">
@@ -183,7 +183,7 @@ export const Step1Org: React.FC<Step1OrgProps> = ({
           </div>
           <Link
             to="/reconocimientos"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors flex-shrink-0 shadow-xs"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors flex-shrink-0"
           >
             Ir al Catálogo de Reconocimientos
           </Link>

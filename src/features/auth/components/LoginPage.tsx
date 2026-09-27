@@ -69,7 +69,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Login Card */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 space-y-6">
           {serverError && (
             <div
               className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 font-medium"
@@ -168,7 +168,7 @@ export const LoginPage: React.FC = () => {
                 fullWidth
                 disabled={isSubmitting}
                 icon={<LogIn className="w-4 h-4" />}
-                className="py-2.5 text-sm font-bold shadow-sm"
+                className="py-2.5 text-sm font-bold"
               >
                 {isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
               </Button>

@@ -14,7 +14,7 @@ export const HeroSection: React.FC = () => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
         {/* Top Scout Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-xs mb-6 sm:mb-8 backdrop-blur-xs hover:bg-primary/15 transition-colors">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold mb-6 sm:mb-8 backdrop-blur-xs hover:bg-primary/15 transition-colors">
           <Award className="w-4 h-4 text-primary shrink-0" />
           <span>Sistema Oficial del Movimiento Scout</span>
         </div>
@@ -50,7 +50,7 @@ export const HeroSection: React.FC = () => {
               fullWidth
               icon={<ArrowRight className="w-4 h-4" />}
               iconPosition="right"
-              className="shadow-sm shadow-primary/20 hover:shadow-md hover:shadow-primary/30 hover:-translate-y-0.5 transition-all text-sm sm:text-base font-bold"
+              className="hover:-translate-y-0.5 transition-all text-sm sm:text-base font-bold"
             >
               Comenzar Ahora
             </Button>
@@ -61,7 +61,7 @@ export const HeroSection: React.FC = () => {
               size="lg"
               variant="outline"
               fullWidth
-              className="border-gray-300 hover:bg-gray-50/80 hover:border-gray-400 hover:-translate-y-0.5 transition-all text-sm sm:text-base font-semibold shadow-2xs"
+              className="border-gray-300 hover:bg-gray-50/80 hover:border-gray-400 hover:-translate-y-0.5 transition-all text-sm sm:text-base font-semibold"
               icon={<LogIn className="w-4 h-4 text-neutral/70" />}
             >
               Iniciar Sesión

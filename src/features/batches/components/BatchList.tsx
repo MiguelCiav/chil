@@ -849,7 +849,7 @@ export const BatchList: React.FC = () => {
               variant="primary"
               onClick={() => setIsMergeModalOpen(true)}
               icon={<GitMerge className="w-4 h-4" />}
-              className="shadow-sm flex-shrink-0 animate-fade-in"
+              className="flex-shrink-0 animate-fade-in"
             >
               Fusionar lotes ({selectedBatches.length})
             </Button>
@@ -859,7 +859,7 @@ export const BatchList: React.FC = () => {
             variant="outline"
             onClick={() => navigate('/lotes/rapido')}
             icon={<Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" />}
-            className="shadow-sm flex-shrink-0"
+            className="flex-shrink-0"
           >
             Emisión Rápida
           </Button>
@@ -868,7 +868,7 @@ export const BatchList: React.FC = () => {
             variant="primary"
             onClick={() => navigate('/lotes/nuevo')}
             icon={<Plus size={18} />}
-            className="shadow-sm flex-shrink-0"
+            className="flex-shrink-0"
           >
             Nuevo Lote
           </Button>
@@ -920,7 +920,7 @@ export const BatchList: React.FC = () => {
       </div>
 
       {/* Batches Data Table */}
-      <div data-walkthrough="batch-list-table" className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
+      <div data-walkthrough="batch-list-table" className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white">
         <div className="overflow-x-auto min-h-[260px] pb-12">
           <table className="w-full text-left border-collapse font-sans">
             <thead>
