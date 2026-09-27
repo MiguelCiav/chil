@@ -29,6 +29,11 @@ describe('Landing Page Feature', () => {
         </MemoryRouter>
       );
 
+      // World Scouting Logo and Top Gradient
+      const wsctLogo = screen.getByAltText('World Scouting');
+      expect(wsctLogo).toBeInTheDocument();
+      expect(screen.getByTestId('hero-top-gradient')).toBeInTheDocument();
+
       // Logo and Brand Name
       const logoImg = screen.getByAltText('Chil Logo');
       expect(logoImg).toBeInTheDocument();
