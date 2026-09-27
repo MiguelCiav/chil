@@ -193,7 +193,8 @@ function renderMemberActionsCell(props: MemberActionsCellProps) {
     handleDownloadSingleRecognition
   } = props;
   const rowData = row.original;
-  const isMenuOpen = activeMenuMemberId === rowData.identity;
+  const menuKey = rowData.recognition_code || rowData.identity;
+  const isMenuOpen = activeMenuMemberId === menuKey;
   const totalRows = table.getRowModel().rows.length;
   const isNearBottom =
     (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
@@ -219,7 +220,7 @@ function renderMemberActionsCell(props: MemberActionsCellProps) {
       <div className="relative inline-block">
         <button
           type="button"
-          onClick={() => setActiveMenuMemberId(isMenuOpen ? null : rowData.identity)}
+          onClick={() => setActiveMenuMemberId(isMenuOpen ? null : menuKey)}
           className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
           aria-label={`Opciones de ${rowData.first_names} ${rowData.last_names}`}
         >

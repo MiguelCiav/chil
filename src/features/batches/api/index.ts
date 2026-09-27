@@ -361,7 +361,7 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
   // 2. Member reassignment
   for (const { batch: sourceBatch, members } of membersByBatch) {
     for (const member of members) {
-      const memberRef = doc(db, 'scout_members', member.identity);
+      const memberRef = doc(db, 'scout_members', member.recognition_code || member.identity);
       const memberGroupId = member.group_id !== undefined && !Number.isNaN(member.group_id)
         ? member.group_id
         : (sourceBatch.group_id !== undefined && !Number.isNaN(sourceBatch.group_id) ? sourceBatch.group_id : 0);
@@ -444,8 +444,8 @@ export async function createMember(member: ScoutMember, userId?: string): Promis
     newMember.user_id = targetUserId;
   }
 
-  // Use member.identity (the unique national ID/cédula) as the document key to perform safe upserts
-  await setDoc(doc(db, "scout_members", member.identity), newMember);
+  // Use member.recognition_code or identity as document key to perform safe upserts
+  await setDoc(doc(db, "scout_members", member.recognition_code || member.identity), newMember);
   return newMember;
 }
 
@@ -475,12 +475,12 @@ export async function updateMember(member: ScoutMember, userId?: string): Promis
     updatedMember.user_id = targetUserId;
   }
 
-  await setDoc(doc(db, "scout_members", member.identity), updatedMember);
+  await setDoc(doc(db, "scout_members", member.recognition_code || member.identity), updatedMember);
   return updatedMember;
 }
 
-export async function deleteMember(identity: string): Promise<void> {
-  await deleteDoc(doc(db, "scout_members", identity));
+export async function deleteMember(identityOrCode: string): Promise<void> {
+  await deleteDoc(doc(db, "scout_members", identityOrCode));
 }
 
 export function buildBatchQueryForUser(userId: string) {
