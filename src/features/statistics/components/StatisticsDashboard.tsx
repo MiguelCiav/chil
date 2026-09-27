@@ -5,6 +5,7 @@ import { StatKpiGrid } from './StatKpiGrid';
 import { FilterBar } from './FilterBar';
 import { RegionSummaryTable } from './charts/RegionSummaryTable';
 import { DistrictSummaryTable } from './charts/DistrictSummaryTable';
+import { GroupSummaryTable } from './charts/GroupSummaryTable';
 import { UnitDistributionCard } from './charts/UnitDistributionCard';
 import { DemographicsDonut } from './charts/DemographicsDonut';
 import { MonthlyTrendChart } from './charts/MonthlyTrendChart';
@@ -107,6 +108,11 @@ export const StatisticsDashboard: React.FC = () => {
       {/* Section 2: Tabla de reconocimientos entregados por Distrito */}
       <div>
         <DistrictSummaryTable districts={stats.geographic.districts} yoy={yoyComparison} />
+      </div>
+
+      {/* Section 2b: Tabla de reconocimientos entregados por Grupo Scout */}
+      <div>
+        <GroupSummaryTable groups={stats.geographic.groups} />
       </div>
 
       {/* Section 3: Tabla de reconocimientos entregados por Unidad */}

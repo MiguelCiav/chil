@@ -83,6 +83,7 @@ export interface GeographicItem {
 export interface GeographicBreakdownData {
   regions: GeographicItem[];
   districts: GeographicItem[];
+  groups?: GeographicItem[];
 }
 
 export interface StatusBreakdownData {
@@ -186,6 +187,7 @@ export interface CalculateYoYOptions {
   previousBatches?: import('../../batches/types').Batch[];
   regions?: import('../../batches/types').Region[];
   districts?: import('../../batches/types').District[];
+  groups?: import('../../batches/types').ScoutGroup[];
   currentYear?: number;
   previousYear?: number;
 }

@@ -528,7 +528,7 @@ export const SummaryView: React.FC = () => {
 
   // Master Flat Data Aggregation
   const flatData = useMemo<SummaryRowData[]>(() => {
-    return members.map(m => {
+    return members.map((m, idx) => {
       const batch = batches.find(b => b.id === m.batch_id);
       const regionObj = regions.find(r => r.id === batch?.region_id);
       const districtObj = districts.find(d => d.id === batch?.district_id);
@@ -552,7 +552,7 @@ export const SummaryView: React.FC = () => {
       const fullName = rawFullName.length > 0 ? rawFullName : '-';
 
       return {
-        id: `${m.identity}-${batch?.id ?? '0'}`,
+        id: m.recognition_code ? `${m.recognition_code}-${batch?.id ?? '0'}` : `${m.identity}-${batch?.id ?? '0'}-${idx}`,
         issueDate,
         rawDate: batch?.created_at ?? '',
         batchId: batch?.id ?? 0,

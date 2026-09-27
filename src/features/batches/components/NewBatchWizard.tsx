@@ -325,7 +325,7 @@ async function syncAndFinalizeStep2Members(
 
   const deletePromises = dbMembers
     .filter(m => !cedulaSet.has(m.identity))
-    .map(m => deleteMember(m.identity));
+    .map(m => deleteMember(m.recognition_code || m.identity, m.identity));
   await Promise.all(deletePromises);
 
   const members = await getMembersByBatchId(batchId);

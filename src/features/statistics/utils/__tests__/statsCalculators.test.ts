@@ -481,5 +481,112 @@ describe('statsCalculators', () => {
       expect(dataset.yoyComparison).toBeUndefined();
     });
   });
+
+  describe('Mixed batch hierarchy resolution (resolveMemberHierarchy)', () => {
+    const testGroups: import('../../../batches/types').ScoutGroup[] = [
+      { id: 501, name: 'Grupo San Sebastian', district_id: 301 },
+      { id: 502, name: 'Grupo Chiquinquira', district_id: 302 }
+    ];
+    const testDistricts: District[] = [
+      { id: 301, name: 'Distrito Maracaibo Norte', region_id: 30 },
+      { id: 302, name: 'Distrito Maracaibo Sur', region_id: 30 }
+    ];
+    const testRegions: Region[] = [
+      { id: 30, name: 'Región Zulia' }
+    ];
+
+    it('resolves district and region from member group_id when batch is mixed (region_id: 0)', () => {
+      const mixedBatch: Batch = {
+        id: 999,
+        comment: 'Lote Mixto 2026',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_type: 'sct-robots-letales',
+        created_at: '2026-04-10T10:00:00.000Z'
+      };
+
+      const member1: ScoutMember = {
+        identity: 'V-1111',
+        first_names: 'Juan',
+        last_names: 'Perez',
+        birth_date: '2010-01-01',
+        member_type: 'young',
+        group_id: 501,
+        status: 'active',
+        batch_id: 999
+      };
+
+      const member2: ScoutMember = {
+        identity: 'V-2222',
+        first_names: 'Maria',
+        last_names: 'Gomez',
+        birth_date: '2012-05-10',
+        member_type: 'young',
+        group_id: 502,
+        status: 'active',
+        batch_id: 999
+      };
+
+      const geo = calculateGeographicBreakdown(
+        [mixedBatch],
+        [member1, member2],
+        testRegions,
+        testDistricts,
+        testGroups
+      );
+
+      // Both members belong to Región Zulia via their groups
+      expect(geo.regions).toHaveLength(1);
+      expect(geo.regions[0].id).toBe(30);
+      expect(geo.regions[0].name).toBe('Región Zulia');
+      expect(geo.regions[0].count).toBe(2);
+
+      // Two districts represented
+      expect(geo.districts).toHaveLength(2);
+      expect(geo.districts.find(d => d.id === 301)?.count).toBe(1);
+      expect(geo.districts.find(d => d.id === 302)?.count).toBe(1);
+
+      // Two groups represented
+      expect(geo.groups).toBeDefined();
+      expect(geo.groups).toHaveLength(2);
+      expect(geo.groups?.find(g => g.id === 501)?.count).toBe(1);
+      expect(geo.groups?.find(g => g.id === 502)?.count).toBe(1);
+    });
+
+    it('accurately counts active regions, districts, and groups in calculateKpiMetrics for mixed batches', () => {
+      const mixedBatch: Batch = {
+        id: 999,
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        created_at: '2026-04-10T10:00:00.000Z'
+      };
+
+      const member: ScoutMember = {
+        identity: 'V-1111',
+        first_names: 'Pedro',
+        last_names: 'Rivas',
+        birth_date: '1985-04-12',
+        member_type: 'adult',
+        group_id: 501,
+        status: 'active',
+        batch_id: 999
+      };
+
+      const kpis = calculateKpiMetrics(
+        [member],
+        [mixedBatch],
+        [],
+        testGroups,
+        testDistricts,
+        testRegions
+      );
+
+      expect(kpis.activeRegionsCount).toBe(1);
+      expect(kpis.activeDistrictsCount).toBe(1);
+      expect(kpis.activeGroupsCount).toBe(1);
+    });
+  });
 });
 

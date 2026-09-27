@@ -20,7 +20,8 @@ import {
   exportMembersToCSV,
   generateRecognitionCode,
   assignBatchRecognitionCodes,
-  mergeBatches
+  mergeBatches,
+  isGenericIdentity
 } from '../index';
 import * as firestore from 'firebase/firestore';
 import * as functionsSdk from 'firebase/functions';
@@ -519,6 +520,78 @@ describe('Batches API Layer', () => {
 
       const listNoBatches = await getAllMembers('no-batch-user');
       expect(listNoBatches).toEqual([]);
+    });
+
+    it('identifies generic identities correctly via isGenericIdentity', () => {
+      expect(isGenericIdentity(undefined)).toBe(true);
+      expect(isGenericIdentity('')).toBe(true);
+      expect(isGenericIdentity('  ')).toBe(true);
+      expect(isGenericIdentity('S/C')).toBe(true);
+      expect(isGenericIdentity('s/c')).toBe(true);
+      expect(isGenericIdentity('N/A')).toBe(true);
+      expect(isGenericIdentity('NO_DISPONIBLE')).toBe(true);
+      expect(isGenericIdentity('SIN CEDULA')).toBe(true);
+      expect(isGenericIdentity('NONE')).toBe(true);
+      expect(isGenericIdentity('V-12345678')).toBe(false);
+      expect(isGenericIdentity('32991058')).toBe(false);
+    });
+
+    it('preserves multiple members with generic identity (S/C) with distinct recognition codes in getMembersByBatchId', async () => {
+      const member1 = { ...mockMember, identity: 'S/C', recognition_code: 'CCRL-01', first_names: 'Ana' };
+      const member2 = { ...mockMember, identity: 'S/C', recognition_code: 'CCRL-02', first_names: 'Beto' };
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [
+          { id: 'CCRL-01', ref: { id: 'CCRL-01' }, data: () => member1 },
+          { id: 'CCRL-02', ref: { id: 'CCRL-02' }, data: () => member2 }
+        ]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const list = await getMembersByBatchId(100);
+      expect(list).toHaveLength(2);
+      expect(list.map(m => m.recognition_code)).toEqual(['CCRL-01', 'CCRL-02']);
+    });
+
+    it('removes stale draft document matching finalized member identity in getMembersByBatchId', async () => {
+      const finalized = { ...mockMember, identity: '32991058', recognition_code: 'REC-FINAL', first_names: 'Rayel' };
+      const staleDraft = { ...mockMember, identity: '32991058', recognition_code: '', first_names: 'Rayel' };
+      const deleteDocMock = vi.mocked(firestore.deleteDoc);
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [
+          { id: 'REC-FINAL', ref: { id: 'REC-FINAL' }, data: () => finalized },
+          { id: '32991058', ref: { id: '32991058' }, data: () => staleDraft }
+        ]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const list = await getMembersByBatchId(100);
+      expect(list).toHaveLength(1);
+      expect(list[0].recognition_code).toBe('REC-FINAL');
+      expect(deleteDocMock).toHaveBeenCalled();
+    });
+
+    it('preserves multiple members with generic identity across batches in getAllMembers', async () => {
+      // 1st: getAllBatches query
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        forEach: (cb: (doc: { data: () => unknown }) => void) => {
+          cb({ data: () => ({ id: 100, created_at: '2026-01-01T00:00:00.000Z' }) });
+        }
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const member1 = { ...mockMember, identity: 'S/C', recognition_code: 'CCRL-01', first_names: 'Ana', batch_id: 100 };
+      const member2 = { ...mockMember, identity: 'S/C', recognition_code: 'CCRL-02', first_names: 'Beto', batch_id: 100 };
+
+      // 2nd: members query chunk
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [
+          { data: () => member1 },
+          { data: () => member2 }
+        ]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const list = await getAllMembers('test-user-uid');
+      expect(list).toHaveLength(2);
+      expect(list.map(m => m.recognition_code)).toEqual(['CCRL-01', 'CCRL-02']);
     });
   });
 
