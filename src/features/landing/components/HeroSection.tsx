@@ -37,17 +37,29 @@ export const HeroSection: React.FC = () => {
             <linearGradient id="topo-stroke-flow" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.7" />
               <stop offset="28%" stopColor="#FFFFFF" stopOpacity="0.6" />
-              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.32" />
-              <stop offset="70%" stopColor="#8C4E37" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.35" />
+              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.18" />
+              <stop offset="68%" stopColor="#8C4E37" stopOpacity="0.14" />
+              <stop offset="85%" stopColor="#8C4E37" stopOpacity="0.24" />
+              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.32" />
             </linearGradient>
 
             <linearGradient id="topo-stroke-accent" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
               <stop offset="28%" stopColor="#FFFFFF" stopOpacity="0.75" />
-              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.45" />
-              <stop offset="70%" stopColor="#8C4E37" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.48" />
+              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.22" />
+              <stop offset="68%" stopColor="#8C4E37" stopOpacity="0.18" />
+              <stop offset="85%" stopColor="#8C4E37" stopOpacity="0.32" />
+              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.42" />
+            </linearGradient>
+
+            {/* Ultra-subtle whisper gradient for lower contour lines crossing directly behind the title */}
+            <linearGradient id="topo-stroke-whisper" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45" />
+              <stop offset="28%" stopColor="#FFFFFF" stopOpacity="0.35" />
+              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.08" />
+              <stop offset="68%" stopColor="#8C4E37" stopOpacity="0.06" />
+              <stop offset="85%" stopColor="#8C4E37" stopOpacity="0.14" />
+              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.2" />
             </linearGradient>
           </defs>
 
@@ -68,34 +80,35 @@ export const HeroSection: React.FC = () => {
           <path
             d="M -40 200 C 200 260, 450 170, 760 230 C 1020 290, 1220 180, 1480 250"
             stroke="url(#topo-stroke-accent)"
-            strokeWidth="1.6"
+            strokeWidth="1.4"
           />
+          {/* Lower lines crossing the title: rendered with ultra-subtle whisper opacity to preserve title prominence */}
           <path
             d="M -40 280 C 220 340, 490 240, 800 310 C 1060 370, 1260 250, 1480 320"
-            stroke="url(#topo-stroke-flow)"
-            strokeWidth="1.2"
+            stroke="url(#topo-stroke-whisper)"
+            strokeWidth="1"
           />
           <path
             d="M -40 360 C 240 420, 530 310, 840 380 C 1100 440, 1300 320, 1480 390"
-            stroke="url(#topo-stroke-accent)"
-            strokeWidth="1.5"
+            stroke="url(#topo-stroke-whisper)"
+            strokeWidth="1.1"
           />
           <path
             d="M -40 440 C 260 500, 570 380, 880 450 C 1140 510, 1340 390, 1480 460"
-            stroke="url(#topo-stroke-flow)"
-            strokeWidth="1.2"
+            stroke="url(#topo-stroke-whisper)"
+            strokeWidth="0.8"
             strokeDasharray="4 6"
           />
 
           {/* Elevation Labels on index contours */}
           <text x="360" y="246" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
-          <text x="1080" y="302" fill="rgba(140,78,55,0.4)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
+          <text x="1080" y="302" fill="rgba(140,78,55,0.2)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
 
           {/* Complementary concentric elevation loops on the top-right to balance the banner */}
-          <ellipse cx="1360" cy="70" rx="150" ry="105" stroke="rgba(140,78,55,0.28)" strokeWidth="1.2" strokeDasharray="3 4" />
-          <ellipse cx="1360" cy="70" rx="230" ry="160" stroke="rgba(140,78,55,0.38)" strokeWidth="1.5" />
-          <ellipse cx="1360" cy="70" rx="330" ry="230" stroke="rgba(140,78,55,0.28)" strokeWidth="1.2" />
-          <ellipse cx="1360" cy="70" rx="440" ry="305" stroke="rgba(140,78,55,0.34)" strokeWidth="1.5" strokeDasharray="6 4" />
+          <ellipse cx="1360" cy="70" rx="150" ry="105" stroke="rgba(140,78,55,0.22)" strokeWidth="1.2" strokeDasharray="3 4" />
+          <ellipse cx="1360" cy="70" rx="230" ry="160" stroke="rgba(140,78,55,0.3)" strokeWidth="1.5" />
+          <ellipse cx="1360" cy="70" rx="330" ry="230" stroke="rgba(140,78,55,0.22)" strokeWidth="1.2" />
+          <ellipse cx="1360" cy="70" rx="440" ry="305" stroke="rgba(140,78,55,0.26)" strokeWidth="1.5" strokeDasharray="6 4" />
         </svg>
       </div>
 
