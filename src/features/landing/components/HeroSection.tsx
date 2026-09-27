@@ -11,73 +11,93 @@ export const HeroSection: React.FC = () => {
       {/* Top atmospheric angled corner gradient providing backdrop for the white World Scouting logo */}
       <div
         data-testid="hero-top-gradient"
-        className="absolute top-0 left-0 right-0 h-[360px] sm:h-[440px] pointer-events-none -z-10 overflow-hidden"
+        className="absolute top-0 left-0 right-0 h-[380px] sm:h-[460px] pointer-events-none -z-10 overflow-hidden"
       >
         {/* Deep warm corner anchor for logo contrast and readability */}
-        <div className="absolute top-0 left-0 w-full sm:w-[75%] lg:w-[55%] h-full bg-[radial-gradient(ellipse_100%_80%_at_top_left,#220D06_0%,#38150B_30%,#542112/80_55%,#8C4E37/20_75%,transparent_100%)]" />
+        <div className="absolute top-0 left-0 w-full sm:w-[85%] md:w-[70%] lg:w-[58%] h-full hero-scout-gradient" />
 
         {/* Soft top-edge ambient mist blending seamlessly with page header */}
-        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-[#220D06]/40 via-[#38150B]/10 to-transparent" />
+        <div className="absolute top-0 inset-x-0 h-16 hero-top-mist" />
       </div>
 
       {/* Topographic Contour Texture (Scout Cartography & Trail Map) */}
-      <div className="absolute inset-0 h-[420px] pointer-events-none -z-10 overflow-hidden opacity-25">
+      <div className="absolute top-0 left-0 w-full sm:w-[85%] md:w-[72%] lg:w-[60%] h-[380px] sm:h-[460px] pointer-events-none -z-10 overflow-hidden">
         <svg
-          className="w-full h-full object-cover [mask-image:radial-gradient(ellipse_85%_75%_at_top_left,black_25%,transparent_85%)]"
-          viewBox="0 0 1200 420"
+          className="w-full h-full object-cover"
+          viewBox="0 0 800 460"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
-          {/* Topographic elevation contour lines */}
-          <path
-            d="M-50 40 C150 90, 280 20, 480 80 C680 140, 850 70, 1050 120 C1150 145, 1250 90, 1300 110"
-            stroke="#FFF"
-            strokeWidth="1"
-            strokeOpacity="0.3"
-            strokeDasharray="4 6"
-          />
-          <path
-            d="M-50 90 C180 150, 320 60, 520 130 C720 200, 890 120, 1100 170 C1180 190, 1260 150, 1300 160"
-            stroke="#FFF"
-            strokeWidth="1.2"
-            strokeOpacity="0.4"
-          />
-          <path
-            d="M-50 150 C200 210, 350 120, 560 190 C770 260, 930 170, 1140 220 C1200 235, 1270 210, 1300 215"
-            stroke="#FFF"
-            strokeWidth="0.8"
-            strokeOpacity="0.3"
-          />
-          <path
-            d="M-50 210 C220 270, 390 180, 600 250 C810 320, 970 230, 1180 280 C1230 295, 1280 270, 1300 275"
-            stroke="#FFF"
-            strokeWidth="1.5"
-            strokeOpacity="0.45"
-          />
-          <path
-            d="M-50 280 C240 340, 430 250, 650 310 C860 370, 1010 300, 1220 340 C1260 350, 1290 330, 1300 335"
-            stroke="#FFF"
-            strokeWidth="0.8"
-            strokeOpacity="0.25"
-          />
-          <path
-            d="M-50 350 C260 410, 470 320, 700 380 C910 430, 1060 370, 1250 400"
-            stroke="#FFF"
-            strokeWidth="1"
-            strokeOpacity="0.2"
-          />
-          {/* Concentric elevation loops around top-left crest */}
-          <ellipse cx="60" cy="40" rx="90" ry="60" stroke="#FFF" strokeWidth="1" strokeOpacity="0.35" />
-          <ellipse cx="60" cy="40" rx="150" ry="100" stroke="#FFF" strokeWidth="0.75" strokeOpacity="0.3" />
-          <ellipse cx="60" cy="40" rx="220" ry="145" stroke="#FFF" strokeWidth="1.2" strokeOpacity="0.35" strokeDasharray="3 5" />
-          <ellipse cx="60" cy="40" rx="300" ry="195" stroke="#FFF" strokeWidth="0.75" strokeOpacity="0.25" />
-          <ellipse cx="60" cy="40" rx="390" ry="250" stroke="#FFF" strokeWidth="1" strokeOpacity="0.2" />
-          {/* Subtle compass mark */}
-          <g transform="translate(190, 26)" stroke="#FFF" strokeOpacity="0.35" strokeWidth="0.75">
-            <line x1="0" y1="-8" x2="0" y2="8" />
-            <line x1="-8" y1="0" x2="8" y2="0" />
-            <circle cx="0" cy="0" r="3" fill="none" />
+          <defs>
+            {/* Soft fade-out mask for the outer gradient edges */}
+            <radialGradient id="topo-mask" cx="15%" cy="15%" r="85%">
+              <stop offset="0%" stopColor="#fff" stopOpacity="1" />
+              <stop offset="65%" stopColor="#fff" stopOpacity="0.85" />
+              <stop offset="85%" stopColor="#fff" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+            </radialGradient>
+            <mask id="topo-fade">
+              <rect width="800" height="460" fill="url(#topo-mask)" />
+            </mask>
+          </defs>
+
+          <g mask="url(#topo-fade)">
+            {/* Concentric elevation loops radiating outward from the logo crest */}
+            <ellipse cx="70" cy="50" rx="140" ry="95" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2" strokeDasharray="3 4" />
+            <ellipse cx="70" cy="50" rx="210" ry="145" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" />
+            <ellipse cx="70" cy="50" rx="290" ry="200" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2" />
+            <ellipse cx="70" cy="50" rx="380" ry="260" stroke="rgba(255,255,255,0.7)" strokeWidth="1.8" />
+            <ellipse cx="70" cy="50" rx="480" ry="330" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2" strokeDasharray="6 4" />
+            <ellipse cx="70" cy="50" rx="590" ry="405" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" />
+
+            {/* Topographic elevation wavy contour paths */}
+            <path
+              d="M -20 120 C 140 180, 240 110, 420 170 C 580 230, 680 160, 820 210"
+              stroke="rgba(255,255,255,0.5)"
+              strokeWidth="1.2"
+            />
+            <path
+              d="M -20 190 C 160 250, 280 170, 480 240 C 640 300, 720 230, 820 280"
+              stroke="rgba(255,255,255,0.68)"
+              strokeWidth="1.6"
+            />
+            <path
+              d="M -20 270 C 180 330, 320 240, 530 310 C 690 370, 750 310, 820 350"
+              stroke="rgba(255,255,255,0.48)"
+              strokeWidth="1.2"
+            />
+            <path
+              d="M -20 350 C 200 410, 370 320, 580 390 C 720 440, 780 380, 820 420"
+              stroke="rgba(255,255,255,0.62)"
+              strokeWidth="1.5"
+            />
+
+            {/* Elevation Labels on index contours */}
+            <text x="360" y="236" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
+            <text x="440" y="306" fill="rgba(255,255,255,0.6)" fontSize="9" fontFamily="monospace" letterSpacing="1">1200m</text>
+
+            {/* Scout Compass Rose & Orienteering Coordinates Marker */}
+            <g transform="translate(260, 92)">
+              {/* Outer compass ring */}
+              <circle cx="0" cy="0" r="18" stroke="rgba(255,255,255,0.65)" strokeWidth="1" fill="rgba(0,0,0,0.18)" />
+              <circle cx="0" cy="0" r="14" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" strokeDasharray="2 3" />
+              {/* Compass Needle / Star */}
+              <polygon points="0,-13 3,-3 0,-1 -3,-3" fill="rgba(255,255,255,0.98)" />
+              <polygon points="0,13 3,3 0,1 -3,3" fill="rgba(255,255,255,0.5)" />
+              <polygon points="13,0 3,3 1,0 3,-3" fill="rgba(255,255,255,0.55)" />
+              <polygon points="-13,0 -3,3 -1,0 -3,-3" fill="rgba(255,255,255,0.55)" />
+              <circle cx="0" cy="0" r="2" fill="white" />
+              {/* Cardinal North label */}
+              <text x="0" y="-17" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">N</text>
+              {/* Coordinates / Map Legend Tag */}
+              <text x="26" y="-3" fill="rgba(255,255,255,0.9)" fontSize="8.5" fontWeight="600" letterSpacing="0.5">
+                SCOUT ORIENTEERING
+              </text>
+              <text x="26" y="8" fill="rgba(255,255,255,0.65)" fontSize="7.5" fontFamily="monospace">
+                08° 18' N · 66° 56' W
+              </text>
+            </g>
           </g>
         </svg>
       </div>
@@ -87,7 +107,7 @@ export const HeroSection: React.FC = () => {
         <img
           src={worldScoutLogo}
           alt="World Scouting"
-          className="h-7 sm:h-9 lg:h-10 w-auto select-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] hover:scale-105 transition-transform duration-200"
+          className="h-7 sm:h-9 lg:h-10 w-auto select-none drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-200"
         />
       </div>
 
