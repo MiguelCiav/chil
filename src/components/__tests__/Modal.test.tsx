@@ -41,6 +41,22 @@ describe('Modal component', () => {
     expect(dialog).toHaveClass('max-h-[90vh]');
   });
 
+  it('renders backdrop with refined transparency and entrance animations on backdrop and dialog', () => {
+    render(
+      <Modal isOpen={true} onClose={vi.fn()}>
+        <div>Animated Modal</div>
+      </Modal>
+    );
+
+    const backdrop = screen.getByTestId('modal-backdrop');
+    expect(backdrop).toHaveClass('bg-neutral/50');
+    expect(backdrop).toHaveClass('backdrop-blur-xs');
+    expect(backdrop).toHaveClass('animate-modal-backdrop');
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveClass('animate-modal-pop');
+  });
+
   it('sets document.body.style.overflow to hidden when open and resets to unset when unmounted', () => {
     const { unmount } = render(
       <Modal isOpen={true} onClose={vi.fn()}>

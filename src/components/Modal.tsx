@@ -28,7 +28,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
       {/* Overlay */}
       <div
         data-testid="modal-backdrop"
-        className="absolute inset-0 bg-neutral/80 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-neutral/50 backdrop-blur-xs animate-modal-backdrop transition-opacity"
         onClick={onClose}
         aria-hidden="true"
         onKeyDown={(e) => {
@@ -36,11 +36,11 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
         }}
       />
 
-      {/* Modal Content - No shadow, subtle primary border, rounded */}
+      {/* Modal Content - No shadow, subtle primary border, rounded with smooth pop-in animation */}
       <dialog
         open
         aria-modal="true"
-        className={`relative bg-white border border-primary/20 rounded-2xl flex flex-col w-full max-h-[90vh] overflow-hidden m-0 p-0 text-neutral ${className}`}
+        className={`relative bg-white border border-primary/20 rounded-2xl flex flex-col w-full max-h-[90vh] overflow-hidden m-0 p-0 text-neutral animate-modal-pop ${className}`}
       >
         {children}
       </dialog>
