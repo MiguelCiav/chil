@@ -109,17 +109,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     {
-      to: '/lotes',
-      label: 'Lotes',
-      icon: Folder,
-      dataWalkthrough: 'nav-lotes'
-    },
-    {
       to: '/lotes/rapido',
       label: 'Emisión Rápida',
       icon: Zap,
       dataWalkthrough: 'nav-rapido',
       isSpecial: true
+    },
+    {
+      to: '/lotes',
+      label: 'Lotes',
+      icon: Folder,
+      dataWalkthrough: 'nav-lotes'
     },
     {
       to: '/lotes/nuevo',
@@ -214,13 +214,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     if (item.isSpecial) {
                       if (isActive) {
-                        return `${baseClasses} bg-amber-300 text-neutral-950 font-bold shadow-xs border border-amber-400`;
+                        return `${baseClasses} bg-amber-300 text-neutral-950 font-bold border border-amber-400`;
                       }
                       return `${baseClasses} bg-amber-100 hover:bg-amber-200 text-neutral-900 border border-amber-300`;
                     }
 
                     if (isActive) {
-                      return `${baseClasses} bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 shadow-2xs`;
+                      return `${baseClasses} bg-primary/10 text-primary font-bold border border-primary/20`;
                     }
                     return `${baseClasses} text-neutral/70 hover:text-neutral hover:bg-gray-100 border border-transparent`;
                   }}
@@ -234,7 +234,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               ? 'text-neutral-950'
                               : 'text-amber-800'
                             : isActive
-                            ? 'text-emerald-600'
+                            ? 'text-primary'
                             : 'text-neutral/50 group-hover:text-neutral/80'
                         }`}
                       />
@@ -340,7 +340,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           {/* Drawer Panel */}
-          <div className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
+          <div className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-white border-r border-gray-200 z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
             {renderNavContent(true)}
           </div>
         </div>
