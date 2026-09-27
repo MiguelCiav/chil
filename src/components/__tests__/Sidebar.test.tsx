@@ -101,10 +101,11 @@ describe('Sidebar component', () => {
     fireEvent.click(collapseBtn);
 
     expect(localStorage.getItem('chil_sidebar_collapsed')).toBe('true');
-    expect(screen.getByRole('button', { name: /Expandir barra lateral/i })).toBeInTheDocument();
-
-    // Expand again
+    // When collapsed, the reduced logo acts as the expand button without a separate arrow
     const expandBtn = screen.getByRole('button', { name: /Expandir barra lateral/i });
+    expect(within(expandBtn).getByAltText('Chil Logo')).toBeInTheDocument();
+
+    // Expand again by clicking the reduced logo
     fireEvent.click(expandBtn);
 
     expect(localStorage.getItem('chil_sidebar_collapsed')).toBe('false');

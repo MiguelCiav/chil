@@ -89,6 +89,10 @@ describe('UserProfileMenu component', () => {
     const menuBtn = screen.getByLabelText('Menú de usuario');
     fireEvent.click(menuBtn);
 
+    const menu = screen.getByRole('menu');
+    expect(menu).toHaveClass('left-0');
+    expect(menu).not.toHaveClass('sm:right-0');
+
     expect(screen.getByText('scout@test.com')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /Cerrar Sesión/i })).toBeInTheDocument();
 
