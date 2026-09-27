@@ -115,3 +115,13 @@
     transparent 100%
   );
 }
+
+.hero-right-gradient {
+  background: radial-gradient(
+    ellipse 90% 75% at 100% 0%,
+    rgba(140, 78, 55, 0.22) 0%,
+    rgba(217, 119, 6, 0.12) 35%,
+    rgba(140, 78, 55, 0.04) 65%,
+    transparent 100%
+  );
+}

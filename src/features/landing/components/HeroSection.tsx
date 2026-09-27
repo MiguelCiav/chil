@@ -11,94 +11,91 @@ export const HeroSection: React.FC = () => {
       {/* Top atmospheric angled corner gradient providing backdrop for the white World Scouting logo */}
       <div
         data-testid="hero-top-gradient"
-        className="absolute top-0 left-0 right-0 h-[380px] sm:h-[460px] pointer-events-none -z-10 overflow-hidden"
+        className="absolute top-0 left-0 right-0 h-[400px] sm:h-[480px] pointer-events-none -z-10 overflow-hidden"
       >
         {/* Deep warm corner anchor for logo contrast and readability */}
         <div className="absolute top-0 left-0 w-full sm:w-[85%] md:w-[70%] lg:w-[58%] h-full hero-scout-gradient" />
+
+        {/* Soft atmospheric gradient on top-right to balance the entire banner */}
+        <div className="absolute top-0 right-0 w-full sm:w-[75%] md:w-[55%] lg:w-[45%] h-full hero-right-gradient" />
 
         {/* Soft top-edge ambient mist blending seamlessly with page header */}
         <div className="absolute top-0 inset-x-0 h-16 hero-top-mist" />
       </div>
 
-      {/* Topographic Contour Texture (Scout Cartography & Trail Map) */}
-      <div className="absolute top-0 left-0 w-full sm:w-[85%] md:w-[72%] lg:w-[60%] h-[380px] sm:h-[460px] pointer-events-none -z-10 overflow-hidden">
+      {/* Topographic Contour Texture (Scout Cartography & Trail Map spanning entire banner) */}
+      <div className="absolute inset-0 h-[460px] sm:h-[540px] pointer-events-none -z-10 overflow-hidden">
         <svg
           className="w-full h-full object-cover"
-          viewBox="0 0 800 460"
+          viewBox="0 0 1440 520"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
           <defs>
-            {/* Soft fade-out mask for the outer gradient edges */}
-            <radialGradient id="topo-mask" cx="15%" cy="15%" r="85%">
-              <stop offset="0%" stopColor="#fff" stopOpacity="1" />
-              <stop offset="65%" stopColor="#fff" stopOpacity="0.85" />
-              <stop offset="85%" stopColor="#fff" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#fff" stopOpacity="0" />
-            </radialGradient>
-            <mask id="topo-fade">
-              <rect width="800" height="460" fill="url(#topo-mask)" />
-            </mask>
+            {/* Dynamic stroke gradient transitioning from white (over dark corner) to primary scout brown (over light center/right) */}
+            <linearGradient id="topo-stroke-flow" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.7" />
+              <stop offset="28%" stopColor="#FFFFFF" stopOpacity="0.6" />
+              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.32" />
+              <stop offset="70%" stopColor="#8C4E37" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.35" />
+            </linearGradient>
+
+            <linearGradient id="topo-stroke-accent" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
+              <stop offset="28%" stopColor="#FFFFFF" stopOpacity="0.75" />
+              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.45" />
+              <stop offset="70%" stopColor="#8C4E37" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.48" />
+            </linearGradient>
           </defs>
 
-          <g mask="url(#topo-fade)">
-            {/* Concentric elevation loops radiating outward from the logo crest */}
-            <ellipse cx="70" cy="50" rx="140" ry="95" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2" strokeDasharray="3 4" />
-            <ellipse cx="70" cy="50" rx="210" ry="145" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" />
-            <ellipse cx="70" cy="50" rx="290" ry="200" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2" />
-            <ellipse cx="70" cy="50" rx="380" ry="260" stroke="rgba(255,255,255,0.7)" strokeWidth="1.8" />
-            <ellipse cx="70" cy="50" rx="480" ry="330" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2" strokeDasharray="6 4" />
-            <ellipse cx="70" cy="50" rx="590" ry="405" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" />
+          {/* Concentric elevation loops around top-left crest (radiating behind the World Scouting logo) */}
+          <ellipse cx="80" cy="50" rx="140" ry="95" stroke="rgba(255,255,255,0.48)" strokeWidth="1.2" strokeDasharray="3 4" />
+          <ellipse cx="80" cy="50" rx="210" ry="145" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
+          <ellipse cx="80" cy="50" rx="290" ry="200" stroke="rgba(255,255,255,0.52)" strokeWidth="1.2" />
+          <ellipse cx="80" cy="50" rx="380" ry="260" stroke="rgba(255,255,255,0.75)" strokeWidth="1.8" />
+          <ellipse cx="80" cy="50" rx="490" ry="335" stroke="url(#topo-stroke-flow)" strokeWidth="1.3" strokeDasharray="6 4" />
+          <ellipse cx="80" cy="50" rx="610" ry="415" stroke="url(#topo-stroke-flow)" strokeWidth="1.5" />
 
-            {/* Topographic elevation wavy contour paths */}
-            <path
-              d="M -20 120 C 140 180, 240 110, 420 170 C 580 230, 680 160, 820 210"
-              stroke="rgba(255,255,255,0.5)"
-              strokeWidth="1.2"
-            />
-            <path
-              d="M -20 190 C 160 250, 280 170, 480 240 C 640 300, 720 230, 820 280"
-              stroke="rgba(255,255,255,0.68)"
-              strokeWidth="1.6"
-            />
-            <path
-              d="M -20 270 C 180 330, 320 240, 530 310 C 690 370, 750 310, 820 350"
-              stroke="rgba(255,255,255,0.48)"
-              strokeWidth="1.2"
-            />
-            <path
-              d="M -20 350 C 200 410, 370 320, 580 390 C 720 440, 780 380, 820 420"
-              stroke="rgba(255,255,255,0.62)"
-              strokeWidth="1.5"
-            />
+          {/* Continuous undulating topographic contour paths flowing across the entire banner */}
+          <path
+            d="M -40 130 C 180 190, 420 100, 720 160 C 980 220, 1180 120, 1480 180"
+            stroke="url(#topo-stroke-flow)"
+            strokeWidth="1.2"
+          />
+          <path
+            d="M -40 200 C 200 260, 450 170, 760 230 C 1020 290, 1220 180, 1480 250"
+            stroke="url(#topo-stroke-accent)"
+            strokeWidth="1.6"
+          />
+          <path
+            d="M -40 280 C 220 340, 490 240, 800 310 C 1060 370, 1260 250, 1480 320"
+            stroke="url(#topo-stroke-flow)"
+            strokeWidth="1.2"
+          />
+          <path
+            d="M -40 360 C 240 420, 530 310, 840 380 C 1100 440, 1300 320, 1480 390"
+            stroke="url(#topo-stroke-accent)"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M -40 440 C 260 500, 570 380, 880 450 C 1140 510, 1340 390, 1480 460"
+            stroke="url(#topo-stroke-flow)"
+            strokeWidth="1.2"
+            strokeDasharray="4 6"
+          />
 
-            {/* Elevation Labels on index contours */}
-            <text x="360" y="236" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
-            <text x="440" y="306" fill="rgba(255,255,255,0.6)" fontSize="9" fontFamily="monospace" letterSpacing="1">1200m</text>
+          {/* Elevation Labels on index contours */}
+          <text x="360" y="246" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
+          <text x="1080" y="302" fill="rgba(140,78,55,0.4)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
 
-            {/* Scout Compass Rose & Orienteering Coordinates Marker */}
-            <g transform="translate(260, 92)">
-              {/* Outer compass ring */}
-              <circle cx="0" cy="0" r="18" stroke="rgba(255,255,255,0.65)" strokeWidth="1" fill="rgba(0,0,0,0.18)" />
-              <circle cx="0" cy="0" r="14" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" strokeDasharray="2 3" />
-              {/* Compass Needle / Star */}
-              <polygon points="0,-13 3,-3 0,-1 -3,-3" fill="rgba(255,255,255,0.98)" />
-              <polygon points="0,13 3,3 0,1 -3,3" fill="rgba(255,255,255,0.5)" />
-              <polygon points="13,0 3,3 1,0 3,-3" fill="rgba(255,255,255,0.55)" />
-              <polygon points="-13,0 -3,3 -1,0 -3,-3" fill="rgba(255,255,255,0.55)" />
-              <circle cx="0" cy="0" r="2" fill="white" />
-              {/* Cardinal North label */}
-              <text x="0" y="-17" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">N</text>
-              {/* Coordinates / Map Legend Tag */}
-              <text x="26" y="-3" fill="rgba(255,255,255,0.9)" fontSize="8.5" fontWeight="600" letterSpacing="0.5">
-                SCOUT ORIENTEERING
-              </text>
-              <text x="26" y="8" fill="rgba(255,255,255,0.65)" fontSize="7.5" fontFamily="monospace">
-                08° 18' N · 66° 56' W
-              </text>
-            </g>
-          </g>
+          {/* Complementary concentric elevation loops on the top-right to balance the banner */}
+          <ellipse cx="1360" cy="70" rx="150" ry="105" stroke="rgba(140,78,55,0.28)" strokeWidth="1.2" strokeDasharray="3 4" />
+          <ellipse cx="1360" cy="70" rx="230" ry="160" stroke="rgba(140,78,55,0.38)" strokeWidth="1.5" />
+          <ellipse cx="1360" cy="70" rx="330" ry="230" stroke="rgba(140,78,55,0.28)" strokeWidth="1.2" />
+          <ellipse cx="1360" cy="70" rx="440" ry="305" stroke="rgba(140,78,55,0.34)" strokeWidth="1.5" strokeDasharray="6 4" />
         </svg>
       </div>
 
