@@ -6,18 +6,21 @@ import { LandingFooter } from './LandingFooter';
 
 export const LandingPage: React.FC = () => {
   return (
-    <div className="flex flex-col min-h-[calc(100vh-8rem)] font-sans -mx-4 sm:-mx-6 lg:-mx-8 -my-8 px-4 sm:px-6 lg:px-8">
-      {/* Hero Section */}
+    <div className="flex flex-col min-h-screen font-sans w-full overflow-x-hidden">
+      {/* Hero Section spans full width */}
       <HeroSection />
 
-      {/* Core Capabilities */}
-      <FeatureGridSection />
+      {/* Content Sections */}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 flex flex-col">
+        {/* Core Capabilities */}
+        <FeatureGridSection />
 
-      {/* How it Works / Workflow */}
-      <WorkflowSection />
+        {/* How it Works / Workflow */}
+        <WorkflowSection />
 
-      {/* Public Footer */}
-      <LandingFooter />
+        {/* Public Footer */}
+        <LandingFooter />
+      </div>
     </div>
   );
 };
