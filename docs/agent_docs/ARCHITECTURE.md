@@ -46,8 +46,11 @@ src/features/batches/
 
 ### Feature Guidelines
 * **Isolation**: Features should be as self-contained as possible. Avoid importing internal components or utilities directly from another feature. If a component is needed in multiple features, hoist it to `src/components/` or standard utilities to `src/lib/`.
+* **Layout & Navigation**: Core authenticated navigation uses a responsive, collapsible `Sidebar` (`src/components/Sidebar.tsx`) with a mobile slide-over drawer and top-positioned toggle button.
+* **Typography**: Visual hierarchy is enforced using institutional font `Scouts-GT-Planar-Bold` for headings and `Noto Sans` for body text, tables, and form inputs.
 * **State Management**: Form validation should be done using **Zod** schemas in `types/` combined with **React Hook Form** inside `hooks/` or `components/`.
-* **Data Displays**: Tables displaying records must use **TanStack Table (`@tanstack/react-table`)** to ensure clean sorting, filtering, and pagination support.
+* **Data Displays**: Tables displaying records must use **TanStack Table (`@tanstack/react-table`)** to ensure clean sorting, filtering, and pagination support. Table column definitions and cell renderers are placed outside component bodies to maintain optimal rendering performance.
+* **Export Engines**: Batch certificate generation utilizes `jsPDF` along with `JSZip` to bundle individual PDF certificates into a compressed `.zip` file for efficient distribution.
 * **API Client Standard**: All Firebase operations (Firestore SDK queries, Cloud Function triggers) must be kept within the feature's `api/` directory. **Never perform raw Firestore reads/writes or trigger Functions directly in the UI components.**
 
   *Example (`src/features/batches/api/index.ts`)*:
@@ -57,7 +60,9 @@ src/features/batches/
   import { Batch, BatchCreationParams } from '../types';
 
   export async function createBatch(params: BatchCreationParams): Promise<Batch> {
-    const numericId = Math.floor(Math.random() * 1000000) + 1;
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    const numericId = (array[0] % 1000000) + 1;
     const newBatch: Batch = {
       id: numericId,
       comment: params.comment || '',
@@ -89,8 +94,10 @@ functions/
 
 ### 3.1. Cloud Functions Guidelines
 * **Functions Scope**: Keep Cloud Functions focused on operations that require server-side security, credentials masking, or scraping external resources (e.g. `loginScraper` and `getMemberStatus`).
+* **Runtime & Scalability Settings**: Use 2nd Gen Firebase Functions with explicit `maxInstances: 10` and `timeoutSeconds: 60` to guarantee instance availability under Blaze plan and prevent cold-start thrashing.
 * **Scraper cookie persistence**: Session cookies are held in-memory and mapped to credentials keys to prevent repeating the login handshake on every member verification request.
-* **Error Handling standard**: Catch expected errors (e.g. "No registrado", network errors) and rethrow them using `HttpsError` from `firebase-functions/v2/https` with appropriate HTTP status codes (e.g., `not-found`, `unauthenticated`, `internal`).
+* **Network Timeouts**: All outbound Axios requests enforce a strict 15-second timeout.
+* **Error Handling standard**: Catch expected errors (e.g. "No registrado", Rails 7 Devise HTTP 422 authentication rejections, network errors) and rethrow them using `HttpsError` from `firebase-functions/v2/https` with appropriate HTTP status codes (`not-found`, `unauthenticated`, `invalid-argument`). Avoid raw `internal` re-throws that trigger Firebase's error message masking in production.
 
 ---
 
