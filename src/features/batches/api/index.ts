@@ -7,7 +7,9 @@ import {
   query,
   where,
   writeBatch,
-  deleteDoc
+  deleteDoc,
+  DocumentReference,
+  DocumentData
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { jsPDF } from 'jspdf';
@@ -536,7 +538,7 @@ export function isGenericIdentity(id?: string): boolean {
 
 interface FirestoreDocLike {
   id?: string;
-  ref?: unknown;
+  ref?: DocumentReference<DocumentData>;
   data?: () => unknown;
 }
 
@@ -582,7 +584,7 @@ export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[
     }
 
     // Identify stale draft docs left over from Step 2 to delete and discard
-    const staleDocsToDelete: import('firebase/firestore').DocumentReference[] = [];
+    const staleDocsToDelete: DocumentReference<DocumentData>[] = [];
     const nonDuplicateWithoutCode: ScoutMember[] = [];
 
     for (const d of withoutCode) {
