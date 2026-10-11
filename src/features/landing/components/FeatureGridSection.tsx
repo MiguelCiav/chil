@@ -109,7 +109,7 @@ export const FeatureGridSection: React.FC = () => {
   ];
 
   return (
-    <section id="capacidades" className="py-12 sm:py-16 lg:py-20 bg-white/70 backdrop-blur-xs rounded-3xl my-8 sm:my-12 border border-gray-200/80 shadow-xs">
+    <section id="capacidades" className="py-12 sm:py-16 lg:py-20 bg-white/70 backdrop-blur-xs rounded-3xl my-8 sm:my-12 border border-gray-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3 mb-12 sm:mb-16">
@@ -124,7 +124,7 @@ export const FeatureGridSection: React.FC = () => {
             <div
               key={feature.id}
               id={feature.id}
-              className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-7 border border-gray-200/80 hover:border-primary/40 hover:-translate-y-1.5 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+              className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-7 border border-gray-200/80 hover:border-primary/40 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group"
             >
               <div className="space-y-4">
                 {/* Header Icon + Badge */}

@@ -273,4 +273,67 @@ describe('useStatisticsData hook', () => {
 
     expect(result.current.error).toBe('Firestore network error');
   });
+
+  it('correctly attributes mixed batch members to their resolved region and district', async () => {
+    const mixedBatches: Batch[] = [
+      {
+        id: 99,
+        comment: 'Lote Mixto',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2026-03-10T10:00:00.000Z'
+      }
+    ];
+
+    const mixedMembers: ScoutMember[] = [
+      {
+        identity: 'V-9001',
+        first_names: 'Carlos',
+        last_names: 'Mendoza',
+        birth_date: '2010-01-01',
+        group_id: 100, // Belongs to District 10 (Sucre) -> Region 1 (Capital)
+        member_type: 'young',
+        status: 'active',
+        batch_id: 99
+      },
+      {
+        identity: 'V-9002',
+        first_names: 'Elena',
+        last_names: 'Blanco',
+        birth_date: '2011-05-15',
+        group_id: 200, // Belongs to District 20 (Valencia) -> Region 2 (Central)
+        member_type: 'young',
+        status: 'active',
+        batch_id: 99
+      }
+    ];
+
+    vi.mocked(batchApi.getAllBatches).mockResolvedValue(mixedBatches);
+    vi.mocked(batchApi.getAllMembers).mockResolvedValue(mixedMembers);
+
+    const { result } = renderHook(() => useStatisticsData());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Unfiltered: both members should be counted across 2 regions and 2 groups
+    expect(result.current.stats.filteredMembersCount).toBe(2);
+    expect(result.current.stats.geographic.regions).toHaveLength(2);
+    expect(result.current.stats.geographic.groups).toHaveLength(2);
+
+    // Filter by Region 1 (Capital)
+    act(() => {
+      result.current.setFilter('regionId', '1');
+    });
+
+    // Only Carlos (group 100 in Region 1) should remain, despite batch having region_id: 0
+    expect(result.current.stats.filteredMembersCount).toBe(1);
+    expect(result.current.stats.geographic.regions).toHaveLength(1);
+    expect(result.current.stats.geographic.regions[0].id).toBe(1);
+    expect(result.current.stats.geographic.groups).toHaveLength(1);
+    expect(result.current.stats.geographic.groups?.[0].id).toBe(100);
+  });
 });

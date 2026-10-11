@@ -69,7 +69,7 @@ export const RecognitionFieldsSection: React.FC<RecognitionFieldsSectionProps> =
 
   return (
     <div data-walkthrough="quick-rec-recognition-section">
-      <Card className="shadow-sm border-gray-200">
+      <Card className="border-gray-200">
         <CardHeader className="bg-[#faf8f5] border-b border-gray-200 text-neutral font-bold flex items-center gap-2">
           <Award className="w-5 h-5 text-primary" />
           1. Datos del Reconocimiento

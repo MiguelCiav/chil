@@ -13,7 +13,7 @@ export const RecognitionRankingChart: React.FC<RecognitionRankingChartProps> = (
   const maxCount = data.length > 0 ? Math.max(...data.map(d => d.count), 1) : 1;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-full">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between h-full">
       {/* Card Header */}
       <div>
         <div className="flex items-center justify-between mb-4">

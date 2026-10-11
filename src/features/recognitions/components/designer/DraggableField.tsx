@@ -18,7 +18,7 @@ function getFieldClass(isPreviewMode: boolean, isSelected: boolean): string {
     return 'cursor-default';
   }
   if (isSelected) {
-    return 'ring-2 ring-primary ring-offset-2 ring-offset-white bg-primary/10 rounded cursor-grab active:cursor-grabbing shadow-lg';
+    return 'ring-2 ring-primary ring-offset-2 ring-offset-white bg-primary/10 rounded cursor-grab active:cursor-grabbing';
   }
   return 'hover:ring-1 hover:ring-primary/50 hover:bg-primary/5 rounded cursor-pointer';
 }
@@ -91,7 +91,7 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
           onSelect(field.id);
         }
       }}
-      className={`absolute z-10 select-none transition-shadow border-0 outline-hidden ${getFieldClass(false, isSelected)}`}
+      className={`absolute z-10 select-none transition-all border-0 outline-hidden ${getFieldClass(false, isSelected)}`}
       style={{
         left: `${field.x}%`,
         top: `${field.y}%`,
@@ -109,7 +109,7 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
     >
       {/* Floating Position Badge when Selected */}
       {isSelected && (
-        <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow whitespace-nowrap flex items-center gap-1 pointer-events-none">
+        <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap flex items-center gap-1 pointer-events-none">
           <Move className="w-2.5 h-2.5" />
           <span>
             {field.label} ({field.x}%, {field.y}%)

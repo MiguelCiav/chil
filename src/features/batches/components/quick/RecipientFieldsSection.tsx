@@ -47,7 +47,7 @@ export const RecipientFieldsSection: React.FC<RecipientFieldsSectionProps> = ({
 }) => {
   return (
     <div data-walkthrough="quick-rec-recipient-section">
-      <Card className="shadow-sm border-gray-200">
+      <Card className="border-gray-200">
         <CardHeader className="bg-[#faf8f5] border-b border-gray-200 text-neutral font-bold flex items-center gap-2">
           <Users className="w-5 h-5 text-primary" />
           2. Datos del Homenajeado
@@ -87,7 +87,7 @@ export const RecipientFieldsSection: React.FC<RecipientFieldsSectionProps> = ({
                 onClick={() => onMemberTypeChange('young')}
                 className={`flex-1 rounded-lg text-sm font-semibold transition-all ${
                   memberType === 'young'
-                    ? 'bg-primary text-white shadow-xs font-bold'
+                    ? 'bg-primary text-white font-bold'
                     : 'text-neutral/70 hover:text-neutral hover:bg-white/50'
                 }`}
               >
@@ -99,7 +99,7 @@ export const RecipientFieldsSection: React.FC<RecipientFieldsSectionProps> = ({
                 onClick={() => onMemberTypeChange('adult')}
                 className={`flex-1 rounded-lg text-sm font-semibold transition-all ${
                   memberType === 'adult'
-                    ? 'bg-primary text-white shadow-xs font-bold'
+                    ? 'bg-primary text-white font-bold'
                     : 'text-neutral/70 hover:text-neutral hover:bg-white/50'
                 }`}
               >

@@ -41,7 +41,7 @@ const StatSummaryCard: React.FC<StatSummaryCardProps> = ({
   iconBgClass,
   iconColorClass
 }) => (
-  <Card className="shadow-sm hover:scale-[1.02] transition-transform">
+  <Card className="hover:scale-[1.02] transition-transform">
     <CardBody className="flex items-center gap-4">
       <div className={`w-12 h-12 ${iconBgClass} rounded-2xl flex items-center justify-center ${iconColorClass}`}>
         {icon}
@@ -308,8 +308,8 @@ export const SuccessPage: React.FC = () => {
       )}
 
       {/* Success Hero Header */}
-      <div className="text-center space-y-4 py-6 bg-white border border-primary/20 rounded-3xl p-8 shadow-sm">
-        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+      <div className="text-center space-y-4 py-6 bg-white border border-primary/20 rounded-3xl p-8">
+        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
           <CheckCircle2 className="w-10 h-10" />
         </div>
         <div>
@@ -381,7 +381,7 @@ export const SuccessPage: React.FC = () => {
 
       {/* Alert Banner for Unregistered/Pending members */}
       {totals.pending > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-3xl p-5 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 shadow-sm">
+        <div className="bg-red-50 border border-red-200 rounded-3xl p-5 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
           <div className="flex gap-3 items-center">
             <div className="p-2 bg-red-100 rounded-2xl text-red-600">
               <AlertCircle className="w-5 h-5" />
@@ -403,7 +403,7 @@ export const SuccessPage: React.FC = () => {
       )}
 
       {/* Resumen del Lote Table */}
-      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
+      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white">
         <div className="p-4 sm:p-5 border-b border-primary/20 bg-primary/5 flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" />
           <h2 className="text-base font-bold text-neutral">Resumen del Lote</h2>

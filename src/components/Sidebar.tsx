@@ -11,7 +11,6 @@ import {
   LogIn,
   UserPlus,
   ChevronLeft,
-  ChevronRight,
   X
 } from 'lucide-react';
 import logo from '../assets/CHIL_LOGO.png';
@@ -109,17 +108,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     {
-      to: '/lotes',
-      label: 'Lotes',
-      icon: Folder,
-      dataWalkthrough: 'nav-lotes'
-    },
-    {
       to: '/lotes/rapido',
       label: 'Emisión Rápida',
       icon: Zap,
       dataWalkthrough: 'nav-rapido',
       isSpecial: true
+    },
+    {
+      to: '/lotes',
+      label: 'Lotes',
+      icon: Folder,
+      dataWalkthrough: 'nav-lotes'
     },
     {
       to: '/lotes/nuevo',
@@ -154,19 +153,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex flex-col h-full bg-white text-neutral select-none">
         {/* Header / Logo */}
         <div className={`flex items-center h-16 border-b border-gray-200 ${collapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
-          <Link
-            to={user ? '/lotes' : '/'}
-            onClick={() => isMobile && onMobileClose()}
-            className={`flex items-center gap-3 overflow-hidden transition-opacity hover:opacity-90 ${collapsed ? 'justify-center' : ''}`}
-            title="Chil"
-          >
-            <img src={logo} alt="Chil Logo" className="h-8 w-8 object-contain shrink-0" />
-            {!collapsed && (
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={toggleCollapse}
+              className="p-1.5 rounded-xl hover:bg-gray-100 transition-all focus:outline-none focus:ring-2 focus:ring-primary flex items-center justify-center cursor-pointer"
+              aria-label="Expandir barra lateral"
+              title="Expandir barra lateral"
+            >
+              <img src={logo} alt="Chil Logo" className="h-8 w-8 object-contain shrink-0" />
+            </button>
+          ) : (
+            <Link
+              to={user ? '/lotes' : '/'}
+              onClick={() => isMobile && onMobileClose()}
+              className="flex items-center gap-3 overflow-hidden transition-opacity hover:opacity-90"
+              title="Chil"
+            >
+              <img src={logo} alt="Chil Logo" className="h-8 w-8 object-contain shrink-0" />
               <span className="text-primary font-bold text-xl tracking-tight">
                 Chil
               </span>
-            )}
-          </Link>
+            </Link>
+          )}
 
           {isMobile ? (
             <button
@@ -177,21 +186,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <X className="w-5 h-5" />
             </button>
-          ) : (
+          ) : !collapsed ? (
             <button
               type="button"
               onClick={toggleCollapse}
               className="p-1.5 rounded-lg text-neutral/60 hover:text-neutral hover:bg-gray-100 transition-colors"
-              aria-label={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
-              title={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+              aria-label="Colapsar barra lateral"
+              title="Colapsar barra lateral"
             >
-              {collapsed ? (
-                <ChevronRight className="w-4 h-4 shrink-0" />
-              ) : (
-                <ChevronLeft className="w-4 h-4 shrink-0" />
-              )}
+              <ChevronLeft className="w-4 h-4 shrink-0" />
             </button>
-          )}
+          ) : null}
         </div>
 
         {/* Navigation Items */}
@@ -214,13 +219,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     if (item.isSpecial) {
                       if (isActive) {
-                        return `${baseClasses} bg-amber-300 text-neutral-950 font-bold shadow-xs border border-amber-400`;
+                        return `${baseClasses} bg-amber-300 text-neutral-950 font-bold border border-amber-400`;
                       }
                       return `${baseClasses} bg-amber-100 hover:bg-amber-200 text-neutral-900 border border-amber-300`;
                     }
 
                     if (isActive) {
-                      return `${baseClasses} bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 shadow-2xs`;
+                      return `${baseClasses} bg-primary/10 text-primary font-bold border border-primary/20`;
                     }
                     return `${baseClasses} text-neutral/70 hover:text-neutral hover:bg-gray-100 border border-transparent`;
                   }}
@@ -234,7 +239,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               ? 'text-neutral-950'
                               : 'text-amber-800'
                             : isActive
-                            ? 'text-emerald-600'
+                            ? 'text-primary'
                             : 'text-neutral/50 group-hover:text-neutral/80'
                         }`}
                       />
@@ -301,7 +306,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {!collapsed && <span>Ajustes Scraper</span>}
               </button>
 
-              <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between px-1'}`}>
+              <div className={`flex items-center ${collapsed ? 'justify-center' : 'w-full'}`}>
                 <UserProfileMenu isCollapsed={collapsed} />
               </div>
             </>
@@ -340,7 +345,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           {/* Drawer Panel */}
-          <div className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
+          <div className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-white border-r border-gray-200 z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
             {renderNavContent(true)}
           </div>
         </div>

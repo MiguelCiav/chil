@@ -54,7 +54,7 @@ export const BatchSummaryCards: React.FC<BatchSummaryCardsProps> = ({
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
     >
       {/* Card 1: Detalles del Lote */}
-      <Card className="shadow-sm border-gray-200">
+      <Card className="border-gray-200">
         <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
@@ -89,7 +89,7 @@ export const BatchSummaryCards: React.FC<BatchSummaryCardsProps> = ({
       </Card>
 
       {/* Card 2: Tipo de Reconocimiento */}
-      <Card className="shadow-sm border-gray-200">
+      <Card className="border-gray-200">
         <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">
@@ -107,7 +107,7 @@ export const BatchSummaryCards: React.FC<BatchSummaryCardsProps> = ({
       </Card>
 
       {/* Card 3: Resumen de Miembros */}
-      <Card className="shadow-sm border-gray-200">
+      <Card className="border-gray-200">
         <CardBody className="p-6 flex flex-col justify-between h-full space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#e6f0fa] text-[#0284c7] flex items-center justify-center flex-shrink-0">
@@ -146,7 +146,7 @@ export const BatchSummaryCards: React.FC<BatchSummaryCardsProps> = ({
       </Card>
 
       {/* Card 4: Comentarios / Observaciones */}
-      <Card className="shadow-sm border-gray-200">
+      <Card className="border-gray-200">
         <CardBody className="p-6 flex flex-col h-full min-h-[140px]">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#f5ede2] text-[#935f3b] flex items-center justify-center flex-shrink-0">

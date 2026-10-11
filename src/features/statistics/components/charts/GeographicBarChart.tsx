@@ -15,7 +15,7 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
   const maxCount = currentList.length > 0 ? Math.max(...currentList.map(item => item.count), 1) : 1;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-full">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between h-full">
       {/* Card Header */}
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -43,7 +43,7 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
               }}
               className={`px-2.5 py-1 rounded-md transition-all ${
                 activeTab === 'regions'
-                  ? 'bg-white text-primary shadow-xs font-bold'
+                  ? 'bg-white text-primary font-bold'
                   : 'text-neutral/60 hover:text-neutral'
               }`}
             >
@@ -57,7 +57,7 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
               }}
               className={`px-2.5 py-1 rounded-md transition-all ${
                 activeTab === 'districts'
-                  ? 'bg-white text-primary shadow-xs font-bold'
+                  ? 'bg-white text-primary font-bold'
                   : 'text-neutral/60 hover:text-neutral'
               }`}
             >

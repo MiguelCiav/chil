@@ -192,7 +192,7 @@ function renderTableBodyContent({
               size="sm"
               onClick={onOpenCreate}
               icon={<Plus size={16} />}
-              className="mt-2 shadow-sm"
+              className="mt-2"
             >
               Nuevo Reconocimiento
             </Button>
@@ -383,14 +383,14 @@ export const RecognitionCatalog: React.FC = () => {
           variant="primary"
           onClick={handleOpenCreateModal}
           icon={<Plus size={18} />}
-          className="shadow-sm flex-shrink-0"
+          className="flex-shrink-0"
         >
           Nuevo Reconocimiento
         </Button>
       </div>
 
       {/* Filter and Search Bar */}
-      <Card className="shadow-sm border-gray-200">
+      <Card className="border-gray-200">
         <CardBody className="p-4">
           {/* Search input */}
           <div className="relative w-full md:w-80">
@@ -417,7 +417,7 @@ export const RecognitionCatalog: React.FC = () => {
       </Card>
 
       {/* Main Table */}
-      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-sm">
+      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white">
         <div className="overflow-x-auto min-h-[260px] pb-6">
           <table className="w-full text-left border-collapse">
             <thead>

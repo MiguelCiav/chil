@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   ClipboardList,
@@ -145,10 +145,10 @@ function splitFullName(name: string): { first_names: string; last_names: string 
 
 function getStepCircleClasses(currentStep: number, itemStep: number): string {
   if (currentStep === itemStep) {
-    return 'bg-[#1b7a37] border-[#1b7a37] text-white shadow-md ring-4 ring-[#1b7a37]/15 scale-105';
+    return 'bg-secondary border-primary text-primary ring-4 ring-primary/20 scale-105';
   }
   if (currentStep > itemStep) {
-    return 'bg-[#e8f5e9] border-[#a5d6a7] text-[#2e7d32] shadow-xs';
+    return 'bg-emerald-50 border-emerald-300 text-emerald-700';
   }
   return 'bg-white border-gray-300 text-gray-400 hover:border-primary/50';
 }
@@ -325,7 +325,7 @@ async function syncAndFinalizeStep2Members(
 
   const deletePromises = dbMembers
     .filter(m => !cedulaSet.has(m.identity))
-    .map(m => deleteMember(m.identity));
+    .map(m => deleteMember(m.recognition_code || m.identity, m.identity));
   await Promise.all(deletePromises);
 
   const members = await getMembersByBatchId(batchId);
@@ -787,19 +787,7 @@ export const NewBatchWizard: React.FC = () => {
       {/* STEP 1: CONFIGURATION OF METADATA */}
       {currentStep === 1 && (
         <div data-walkthrough="wizard-step-container" className="space-y-4">
-          <div className="bg-amber-50/80 border border-amber-200 rounded-2xl px-4 py-3 text-xs sm:text-sm text-neutral/80 flex items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2">
-              <span>¿Solo vas a emitir un reconocimiento individual?</span>
-            </div>
-            <Link
-              to="/lotes/rapido"
-              className="font-bold text-primary hover:underline inline-flex items-center gap-1 flex-shrink-0"
-            >
-              Usa la Emisión Rápida ➔
-            </Link>
-          </div>
-
-          <Card className="shadow-lg border-primary/10">
+          <Card className="border-primary/10">
             <CardHeader className="bg-primary/5 border-b border-primary/10 flex items-center gap-3">
               Configuración del Lote
             </CardHeader>

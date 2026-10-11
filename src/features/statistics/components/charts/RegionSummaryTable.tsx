@@ -200,7 +200,7 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
   const displayedStandardRegions = getDisplayedStandardRegions(hasYoY, regions, showAll);
 
   return (
-    <div className="bg-white border border-primary/20 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
+    <div className="bg-white border border-primary/20 rounded-2xl p-5 space-y-4 font-sans">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ import { StatKpiGrid } from './StatKpiGrid';
 import { FilterBar } from './FilterBar';
 import { RegionSummaryTable } from './charts/RegionSummaryTable';
 import { DistrictSummaryTable } from './charts/DistrictSummaryTable';
+import { GroupSummaryTable } from './charts/GroupSummaryTable';
 import { UnitDistributionCard } from './charts/UnitDistributionCard';
 import { DemographicsDonut } from './charts/DemographicsDonut';
 import { MonthlyTrendChart } from './charts/MonthlyTrendChart';
@@ -57,7 +58,7 @@ export const StatisticsDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="max-w-xl mx-auto my-16 p-6 bg-white border border-red-200 rounded-2xl shadow-sm text-center space-y-4">
+      <div className="max-w-xl mx-auto my-16 p-6 bg-white border border-red-200 rounded-2xl text-center space-y-4">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
         <h2 className="text-lg font-bold text-neutral">Error al cargar estadísticas</h2>
         <p className="text-xs text-neutral/70">{error}</p>
@@ -107,6 +108,11 @@ export const StatisticsDashboard: React.FC = () => {
       {/* Section 2: Tabla de reconocimientos entregados por Distrito */}
       <div>
         <DistrictSummaryTable districts={stats.geographic.districts} yoy={yoyComparison} />
+      </div>
+
+      {/* Section 2b: Tabla de reconocimientos entregados por Grupo Scout */}
+      <div>
+        <GroupSummaryTable groups={stats.geographic.groups} />
       </div>
 
       {/* Section 3: Tabla de reconocimientos entregados por Unidad */}

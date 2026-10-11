@@ -67,6 +67,34 @@ describe('MainLayout', () => {
     expect(screen.queryByRole('button', { name: /Abrir menú/i })).not.toBeInTheDocument();
   });
 
+  it('does NOT render Sidebar or mobile header on "/login" auth route', () => {
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <MainLayout>
+          <div>Login Content</div>
+        </MainLayout>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Login Content')).toBeInTheDocument();
+    expect(screen.queryByTestId('mock-sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Abrir menú/i })).not.toBeInTheDocument();
+  });
+
+  it('does NOT render Sidebar or mobile header on "/registro" auth route', () => {
+    render(
+      <MemoryRouter initialEntries={['/registro']}>
+        <MainLayout>
+          <div>Register Content</div>
+        </MainLayout>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Register Content')).toBeInTheDocument();
+    expect(screen.queryByTestId('mock-sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Abrir menú/i })).not.toBeInTheDocument();
+  });
+
   it('renders Sidebar and mobile header on internal application routes like "/lotes"', () => {
     render(
       <MemoryRouter initialEntries={['/lotes']}>

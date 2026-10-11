@@ -13,6 +13,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user } = useAuth();
   const isLandingPage = location.pathname === '/' || location.pathname === '/inicio';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/registro';
+  const isPublicPage = isLandingPage || isAuthPage;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(location.pathname);
 
@@ -22,10 +24,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     setIsMobileMenuOpen(false);
   }
 
-  if (isLandingPage) {
+  if (isPublicPage) {
     return (
       <div className="min-h-screen bg-primary/5 flex flex-col font-sans">
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main className={`flex-1 ${isLandingPage ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
           {children}
         </main>
       </div>

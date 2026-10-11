@@ -18,15 +18,13 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
-env:
-  HUSKY: 0
-
 jobs:
-  lint-and-test:
-    if: "!startsWith(github.head_ref, 'changeset-release/')"
+  verify:
+    name: Lint, Test & Quality Scan
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,55 +52,15 @@ jobs:
       - name: Build Frontend
         run: npm run build
 
-      - name: Upload Build Artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-          retention-days: 1
-
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
 
-  release-planner:
-    needs: lint-and-test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    outputs:
-      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
-      published: ${{ steps.changesets.outputs.published }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Create Release Pull Request or Publish
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: npm run version-packages
-          publish: npm run release
-          createGithubReleases: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   deploy:
-    needs: [lint-and-test, release-planner]
-    if: github.ref == 'refs/heads/main' && needs.release-planner.outputs.hasChangesets != 'true'
+    name: Deploy to Firebase
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -112,15 +70,15 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
 
       - name: Install functions dependencies
         run: npm ci --prefix functions
 
-      - name: Download Build Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist
+      - name: Build Frontend
+        run: npm run build
 
       - name: Deploy to Firebase
         run: npx firebase-tools deploy

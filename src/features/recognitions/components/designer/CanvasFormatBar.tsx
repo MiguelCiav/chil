@@ -13,9 +13,9 @@ export const CanvasFormatBar: React.FC<CanvasFormatBarProps> = ({
   fieldCount
 }) => {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+    <div className="bg-white border border-gray-200 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-xs">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
           <Layers className="w-3.5 h-3.5" />
           <span>{formatBadgeText}</span>
         </span>

@@ -175,7 +175,7 @@ export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
         top: `${position.top}px`,
         left: `${position.left}px`
       }}
-      className={`fixed z-50 w-[calc(100vw-32px)] max-w-[380px] bg-white rounded-2xl shadow-2xl border border-primary/20 p-5 font-sans pointer-events-auto transition-all duration-200 m-0 ${className}`}
+      className={`fixed z-50 w-[calc(100vw-32px)] max-w-[380px] bg-white rounded-2xl border border-primary/20 p-5 font-sans pointer-events-auto transition-all duration-200 m-0 ${className}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -225,7 +225,7 @@ export const WalkthroughDialog: React.FC<WalkthroughDialogProps> = ({
           <button
             type="button"
             onClick={onNext}
-            className="px-3.5 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+            className="px-3.5 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
           >
             {isLastStep ? '¡Entendido!' : 'Siguiente ▶'}
           </button>

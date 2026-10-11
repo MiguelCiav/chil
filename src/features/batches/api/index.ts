@@ -7,7 +7,9 @@ import {
   query,
   where,
   writeBatch,
-  deleteDoc
+  deleteDoc,
+  DocumentReference,
+  DocumentData
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { jsPDF } from 'jspdf';
@@ -361,7 +363,7 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
   // 2. Member reassignment
   for (const { batch: sourceBatch, members } of membersByBatch) {
     for (const member of members) {
-      const memberRef = doc(db, 'scout_members', member.identity);
+      const memberRef = doc(db, 'scout_members', member.recognition_code || member.identity);
       const memberGroupId = member.group_id !== undefined && !Number.isNaN(member.group_id)
         ? member.group_id
         : (sourceBatch.group_id !== undefined && !Number.isNaN(sourceBatch.group_id) ? sourceBatch.group_id : 0);
@@ -444,8 +446,8 @@ export async function createMember(member: ScoutMember, userId?: string): Promis
     newMember.user_id = targetUserId;
   }
 
-  // Use member.identity (the unique national ID/cédula) as the document key to perform safe upserts
-  await setDoc(doc(db, "scout_members", member.identity), newMember);
+  // Use member.recognition_code or identity as document key to perform safe upserts
+  await setDoc(doc(db, "scout_members", member.recognition_code || member.identity), newMember);
   return newMember;
 }
 
@@ -475,12 +477,38 @@ export async function updateMember(member: ScoutMember, userId?: string): Promis
     updatedMember.user_id = targetUserId;
   }
 
-  await setDoc(doc(db, "scout_members", member.identity), updatedMember);
+  const targetDocId = member.recognition_code || member.identity;
+  await setDoc(doc(db, "scout_members", targetDocId), updatedMember);
+
+  // If this member now has a recognition_code that differs from identity,
+  // delete any pre-existing document keyed by identity for this batch to prevent duplicate records
+  if (member.recognition_code && member.identity && member.recognition_code !== member.identity) {
+    try {
+      const tempDocRef = doc(db, "scout_members", member.identity);
+      const tempDocSnap = await getDoc(tempDocRef);
+      if (tempDocSnap && typeof tempDocSnap.exists === 'function' && tempDocSnap.exists()) {
+        const data = tempDocSnap.data();
+        if (data && data.batch_id === member.batch_id) {
+          await deleteDoc(tempDocRef);
+        }
+      }
+    } catch (cleanErr) {
+      console.warn("Failed to check/cleanup temporary member doc:", cleanErr);
+    }
+  }
+
   return updatedMember;
 }
 
-export async function deleteMember(identity: string): Promise<void> {
-  await deleteDoc(doc(db, "scout_members", identity));
+export async function deleteMember(identityOrCode: string, alternativeKey?: string): Promise<void> {
+  await deleteDoc(doc(db, "scout_members", identityOrCode));
+  if (alternativeKey && alternativeKey !== identityOrCode) {
+    try {
+      await deleteDoc(doc(db, "scout_members", alternativeKey));
+    } catch {
+      // Ignore if alternative doc does not exist
+    }
+  }
 }
 
 export function buildBatchQueryForUser(userId: string) {
@@ -495,14 +523,103 @@ export function buildMembersQueryForBatchChunk(batchIds: number[]) {
   return query(collection(db, "scout_members"), where("batch_id", "in", batchIds));
 }
 
+export function isGenericIdentity(id?: string): boolean {
+  if (!id) return true;
+  const clean = id.trim().toUpperCase();
+  return (
+    clean === '' ||
+    clean === 'S/C' ||
+    clean === 'N/A' ||
+    clean === 'NO_DISPONIBLE' ||
+    clean === 'SIN CEDULA' ||
+    clean === 'NONE'
+  );
+}
+
+interface FirestoreDocLike {
+  id?: string;
+  ref?: DocumentReference<DocumentData>;
+  data?: () => unknown;
+}
+
 export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[]> {
   const q = buildMembersQueryForBatch(batchId);
   const querySnapshot = await getDocs(q);
-  const members: ScoutMember[] = [];
-  querySnapshot.forEach((docSnapshot) => {
-    members.push(docSnapshot.data() as ScoutMember);
+
+  const rawDocs: FirestoreDocLike[] = [];
+  if (Array.isArray(querySnapshot?.docs)) {
+    rawDocs.push(...querySnapshot.docs);
+  } else if (typeof querySnapshot?.forEach === 'function') {
+    querySnapshot.forEach(docSnap => rawDocs.push(docSnap));
+  }
+
+  const docs = rawDocs.map(docSnapshot => {
+    const rawData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot;
+    return {
+      docId: docSnapshot.id || '',
+      docRef: docSnapshot.ref,
+      member: rawData as ScoutMember
+    };
   });
-  return members;
+
+  const withCode = docs.filter(d => Boolean(d.member.recognition_code && d.member.recognition_code.trim() !== ''));
+  const withoutCode = docs.filter(d => !d.member.recognition_code || d.member.recognition_code.trim() === '');
+
+  if (withCode.length > 0) {
+    // Collect finalized recognition codes (unique by recognition_code)
+    const finalizedMap = new Map<string, ScoutMember>();
+    for (const d of withCode) {
+      if (!finalizedMap.has(d.member.recognition_code!)) {
+        finalizedMap.set(d.member.recognition_code!, d.member);
+      }
+    }
+
+    // Set of finalized identities (excluding generic placeholders like 'S/C')
+    const finalizedIdentities = new Set<string>();
+    for (const d of withCode) {
+      const id = d.member.identity?.trim().toUpperCase();
+      if (id && !isGenericIdentity(id)) {
+        finalizedIdentities.add(id);
+      }
+    }
+
+    // Identify stale draft docs left over from Step 2 to delete and discard
+    const staleDocsToDelete: DocumentReference<DocumentData>[] = [];
+    const nonDuplicateWithoutCode: ScoutMember[] = [];
+
+    for (const d of withoutCode) {
+      const id = d.member.identity?.trim().toUpperCase();
+      const isStale = (id && finalizedIdentities.has(id)) || finalizedIdentities.has(d.docId.trim().toUpperCase());
+      if (isStale) {
+        if (d.docRef) staleDocsToDelete.push(d.docRef);
+      } else {
+        nonDuplicateWithoutCode.push(d.member);
+      }
+    }
+
+    if (staleDocsToDelete.length > 0) {
+      Promise.all(staleDocsToDelete.map(ref => deleteDoc(ref))).catch(err => {
+        console.warn("Failed to delete duplicate member docs:", err);
+      });
+    }
+
+    return [...Array.from(finalizedMap.values()), ...nonDuplicateWithoutCode];
+  }
+
+  // If batch is still in draft mode (none have recognition_code)
+  const draftMap = new Map<string, ScoutMember>();
+  const genericDrafts: ScoutMember[] = [];
+
+  for (const d of docs) {
+    const id = d.member.identity?.trim().toUpperCase() || d.docId;
+    if (isGenericIdentity(id)) {
+      genericDrafts.push(d.member);
+    } else if (!draftMap.has(id)) {
+      draftMap.set(id, d.member);
+    }
+  }
+
+  return [...Array.from(draftMap.values()), ...genericDrafts];
 }
 
 export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
@@ -523,10 +640,70 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
   const memberPromises = chunks.map(async (chunk) => {
     const q = buildMembersQueryForBatchChunk(chunk);
     const snap = await getDocs(q);
-    return snap.docs.map(docSnapshot => docSnapshot.data() as ScoutMember);
+    const snapDocs: FirestoreDocLike[] = [];
+    if (Array.isArray(snap?.docs)) {
+      snapDocs.push(...snap.docs);
+    } else if (typeof snap?.forEach === 'function') {
+      snap.forEach(docSnap => snapDocs.push(docSnap));
+    }
+    return snapDocs.map(docSnapshot => (typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot) as ScoutMember);
   });
   const results = await Promise.all(memberPromises);
-  return results.flat();
+  const allRaw = results.flat();
+
+  // Deduplicate per batch preserving all unique recognition codes and generic identities (e.g. S/C)
+  const byBatch = new Map<number, ScoutMember[]>();
+  for (const m of allRaw) {
+    const bId = m.batch_id ?? 0;
+    if (!byBatch.has(bId)) {
+      byBatch.set(bId, []);
+    }
+    byBatch.get(bId)!.push(m);
+  }
+
+  const result: ScoutMember[] = [];
+  for (const [, batchMembers] of byBatch.entries()) {
+    const withCode = batchMembers.filter(m => Boolean(m.recognition_code && m.recognition_code.trim() !== ''));
+    const withoutCode = batchMembers.filter(m => !m.recognition_code || m.recognition_code.trim() === '');
+
+    if (withCode.length > 0) {
+      const seenCodes = new Set<string>();
+      for (const m of withCode) {
+        if (!seenCodes.has(m.recognition_code!)) {
+          seenCodes.add(m.recognition_code!);
+          result.push(m);
+        }
+      }
+
+      const finalizedIdentities = new Set<string>(
+        withCode
+          .map(m => m.identity?.trim().toUpperCase())
+          .filter(id => Boolean(id && !isGenericIdentity(id))) as string[]
+      );
+
+      for (const m of withoutCode) {
+        const id = m.identity?.trim().toUpperCase();
+        if (!id || !finalizedIdentities.has(id)) {
+          result.push(m);
+        }
+      }
+    } else {
+      const seenDraftIdentities = new Set<string>();
+      for (const m of withoutCode) {
+        const id = m.identity?.trim().toUpperCase();
+        if (id && !isGenericIdentity(id)) {
+          if (!seenDraftIdentities.has(id)) {
+            seenDraftIdentities.add(id);
+            result.push(m);
+          }
+        } else {
+          result.push(m);
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 export async function getAllBatches(userId?: string): Promise<Batch[]> {

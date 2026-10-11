@@ -157,7 +157,7 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
   const maxCount = computeUnitMaxCount(items, yoy, hasYoY);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4 font-sans">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -184,7 +184,7 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
       </div>
 
       {/* Segmented Stacked Progress Bar */}
-      <div className="w-full bg-gray-100 h-3.5 rounded-full overflow-hidden flex shadow-inner">
+      <div className="w-full bg-gray-100 h-3.5 rounded-full overflow-hidden flex">
         {items.map(item => {
           if (item.count === 0) return null;
           const barColor = UNIT_BAR_COLORS[item.unit] ?? 'bg-primary';

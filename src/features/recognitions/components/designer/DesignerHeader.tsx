@@ -37,7 +37,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
   return (
     <div
       data-walkthrough="designer-header"
-      className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-primary/20 rounded-2xl p-4 sm:p-5 shadow-sm"
+      className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-primary/20 rounded-2xl p-4 sm:p-5"
     >
       <div className="flex items-center gap-3">
         <Button
@@ -76,7 +76,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
             aria-label="Modo Edición"
             className={`p-2 rounded-lg text-xs font-semibold transition-all ${
               !isPreviewMode
-                ? 'bg-white text-neutral shadow-sm font-bold'
+                ? 'bg-white text-neutral font-bold'
                 : 'text-neutral/60 hover:text-neutral'
             }`}
           >
@@ -89,7 +89,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
             aria-label="Vista previa con datos de prueba"
             className={`p-2 rounded-lg text-xs font-semibold transition-all ${
               isPreviewMode
-                ? 'bg-white text-primary shadow-sm font-bold'
+                ? 'bg-white text-primary font-bold'
                 : 'text-neutral/60 hover:text-neutral'
             }`}
           >
@@ -119,7 +119,6 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
           onClick={onSave}
           disabled={isSaving}
           icon={<Save size={15} />}
-          className="shadow-sm"
         >
           {isSaving ? 'Guardando...' : 'Guardar Plantilla'}
         </Button>

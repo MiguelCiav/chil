@@ -127,7 +127,6 @@ firebase deploy
 ## Development Standards
 
 Chil follows strict development standards to maintain a clean history and automated semantic versioning:
-- **[Conventional Commits](https://www.conventionalcommits.org/)**: Enforced via `husky` and `@commitlint/config-conventional`.
-- **[Changesets](https://github.com/changesets/changesets)**: Used for automated versioning and changelog generation. (Run `npm run create-changeset` before opening a PR).
+- **[Conventional Commits](https://www.conventionalcommits.org/)**: Follow standard commit message formatting (`<type>(scope): <description>`).
 
 For a detailed guide on our workflow, please read the **[Contributing Guide](docs/CONTRIBUTING.md)**.

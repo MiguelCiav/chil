@@ -81,7 +81,7 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         {/* Register Card */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 space-y-6">
           {serverError && (
             <div
               className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 font-medium"
@@ -217,7 +217,7 @@ export const RegisterPage: React.FC = () => {
                 fullWidth
                 disabled={isSubmitting}
                 icon={<UserPlus className="w-4 h-4" />}
-                className="py-2.5 text-sm font-bold shadow-sm"
+                className="py-2.5 text-sm font-bold"
               >
                 {isSubmitting ? 'Creando cuenta...' : 'Crear Cuenta'}
               </Button>

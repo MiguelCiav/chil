@@ -76,42 +76,44 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ isCollapsed = 
   };
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <div className={`relative ${isCollapsed ? 'inline-block' : 'w-full'} text-left`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
-          isCollapsed ? 'justify-center' : ''
+        className={`w-full flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+          isCollapsed ? 'justify-center' : 'justify-between'
         }`}
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label="Menú de usuario"
         title={displayName}
       >
-        {user.photoURL ? (
-          <img
-            src={user.photoURL}
-            alt={displayName}
-            className="w-8 h-8 rounded-full object-cover border border-primary/20 shrink-0"
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-xs flex items-center justify-center shrink-0">
-            {initials}
-          </div>
-        )}
-        {!isCollapsed && (
-          <>
+        <div className="flex items-center gap-2 min-w-0">
+          {user.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt={displayName}
+              className="w-8 h-8 rounded-full object-cover border border-primary/20 shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-xs flex items-center justify-center shrink-0">
+              {initials}
+            </div>
+          )}
+          {!isCollapsed && (
             <span className="text-xs font-semibold text-neutral max-w-[120px] truncate">
               {displayName}
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-neutral/50 transition-transform duration-200 shrink-0" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }} />
-          </>
+          )}
+        </div>
+        {!isCollapsed && (
+          <ChevronDown className="w-3.5 h-3.5 text-neutral/50 transition-transform duration-200 shrink-0" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }} />
         )}
       </button>
 
       {isOpen && (
         <div
-          className={`origin-bottom-left absolute bottom-full ${isCollapsed ? 'left-0' : 'left-0 sm:left-auto sm:right-0'} mb-2 w-64 rounded-2xl shadow-lg bg-white border border-gray-200 py-2 z-50 focus:outline-none animate-in fade-in zoom-in-95 duration-100`}
+          className="origin-bottom-left absolute bottom-full left-0 mb-2 w-64 rounded-2xl shadow-lg bg-white border border-gray-200 py-2 z-50 focus:outline-none animate-in fade-in zoom-in-95 duration-100"
           role="menu"
           aria-orientation="vertical"
         >

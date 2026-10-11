@@ -26,7 +26,7 @@ We use the *Conventional Commits* standard to facilitate automatic generation of
 * **`feat`**: A new feature (e.g., `feat(ui): add folder selector`).
 * **`fix`**: A bug fix (e.g., `fix(db): solve unexpected closure`).
 * **`docs`**: Changes in documentation.
-* **`chore`**: Maintenance or configuration tasks (e.g., `chore: configure husky`).
+* **`chore`**: Maintenance or configuration tasks (e.g., `chore: update dependencies`).
 * **`refactor`**: Code changes that do not add features or fix bugs.
 * **`test`**: Add or fix unit tests.
 
@@ -44,59 +44,61 @@ git checkout -b feat/story-X
 
 ### Step 2: Development and Commits
 
-Make your changes following the commit standard. The system (Husky + Commitlint) will validate your messages automatically.
-
-### Step 3: Change Registration (Changeset)
-
-Before opening your Pull Request or merging, you must document the impact of your change for automated versioning:
-
+Make your changes following the commit standard:
 ```bash
-npx changeset
+git add .
+git commit -m "feat(module): descriptive message"
 ```
-*(Alternatively, you can run `npm run create-changeset`)*
 
-1. Select the affected package (e.g., `chil`).
-2. Define if it is a **patch** change (bugfix), **minor** (feature), or **major** (breaking change).
-3. Write a short summary of changes for `CHANGELOG.md`.
+### Step 3: Pull Request and Automated Checks
 
-### Step 4: Pull Request and Merge
-
-1. Commit the generated changeset file in your feature branch:
+1. Upload your branch to GitHub:
    ```bash
-   git add .changeset/
-   git commit -m "chore: add changeset"
+   git push origin feat/story-X
    ```
-2. Upload your branch and open a PR on GitHub.
-3. Once approved and after passing the automated CI checks, perform a **Squash Merge** to `main`. 
+2. Open a Pull Request targeting `main`.
+3. The CI/CD pipeline will automatically run the **Lint, Test & Quality Scan** job (ESLint, Vitest unit tests with coverage, TypeScript build check, and SonarQube quality analysis).
+
+### Step 4: Review and Merge
+
+1. Review and resolve any comments or test failures.
+2. Once approved and with all CI checks passing, perform a **Squash Merge** into `main`.
+3. Merging into `main` automatically triggers the **Deploy to Firebase** job.
 
 ---
 
-## 4. Automated Versioning and Releases
+## 4. CI/CD Pipeline Workflow
 
-Versioning follows the **SemVer** standard (Major.Minor.Patch). In the current phase of initial development, we use the **0.x.y** series. 
-
-The entire release process is fully automated via our **GitHub Actions CI/CD Pipeline**, eliminating manual versioning, changelog generation, manual tagging, or redundant CI runs.
-
-### Release Workflow
-
-The automated release workflow runs on every push or merge to the `main` branch:
+The repository uses a streamlined GitHub Actions workflow with two distinct triggers:
 
 ```mermaid
-graph TD
-    A[Feature PR Merged into main] --> B[CI/CD: lint-and-test runs]
-    B -->|Success & Upload Artifact| C{Are there outstanding changesets?}
-    C -->|Yes| D[release-planner: Opens/Updates 'Version Packages' PR]
-    D --> E[Maintainer Merges 'Version Packages' PR into main]
-    E --> F[CI/CD: lint-and-test runs & uploads artifact]
-    F --> G[release-planner: Tags repo & creates GitHub Release]
-    G --> H[deploy: Downloads artifact & deploys to Firebase]
-    C -->|No| H
+flowchart TD
+    subgraph Flow1["1. PR Verification (Pull Request -> main)"]
+        A[Open / Update PR] --> B[Lint: npm run lint]
+        B --> C[Tests: npm run test with coverage]
+        C --> D[Build: npm run build]
+        D --> E[SonarQube Quality Scan]
+        E --> F[PR Checks Pass]
+    end
+
+    subgraph Flow2["2. Production Deployment (Merge to main)"]
+        G[PR Merged to main] --> H[Setup Node & Dependencies]
+        H --> I[Build Frontend: npm run build]
+        I --> J[Deploy to Firebase Hosting & Cloud Functions]
+    end
 ```
 
-1. **Feature PR Merge & "Version Packages" PR**:
-   - When a feature branch with a changeset file is merged into `main`, the `release-planner` job creates or updates the **"Version Packages" Pull Request**.
-   - **Zero CI Waste**: PRs from `changeset-release/*` skip `lint-and-test` automatically, avoiding duplicate tests or SonarQube scans.
+### Flow 1: Verification on Pull Request (`verify`)
+* **Trigger:** Any Pull Request targeting `main`.
+* **Actions:**
+  - `npm run lint` (ESLint code standards)
+  - `npm run test -- --run --coverage` (Vitest unit tests & coverage)
+  - `npm run build` (TypeScript compilation & Vite bundle validation)
+  - **SonarQube Scan** (code quality, security, and coverage reporting)
 
-2. **Publishing and Immediate Deployment**:
-   - When the maintainer merges the **"Version Packages" PR** into `main`, `release-planner` detects no remaining changesets, tags the release (e.g., `v0.7.1`), and generates the GitHub Release.
-   - The `deploy` job downloads the pre-built `dist` artifact and deploys directly to **Firebase Hosting** and **Firebase Cloud Functions** without recompiling.
+### Flow 2: Continuous Deployment on Merge (`deploy`)
+* **Trigger:** Push / Merge into `main`.
+* **Actions:**
+  - Installs root and `functions/` dependencies.
+  - Builds the production frontend bundle (`npm run build`).
+  - Deploys the application directly to **Firebase Hosting** and **Firebase Cloud Functions** via `firebase-tools`.

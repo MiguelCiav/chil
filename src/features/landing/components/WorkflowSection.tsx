@@ -48,7 +48,7 @@ export const WorkflowSection: React.FC = () => {
           {steps.map((step, index) => (
             <div
               key={step.stepNumber}
-              className="relative bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-200/80 shadow-xs hover:shadow-md hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group"
+              className="relative bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-200/80 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group"
             >
               <div>
                 {/* Step Header */}

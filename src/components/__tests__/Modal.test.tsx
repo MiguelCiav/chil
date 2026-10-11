@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../Modal';
 
@@ -39,6 +39,54 @@ describe('Modal component', () => {
     expect(dialog).toHaveClass('flex');
     expect(dialog).toHaveClass('flex-col');
     expect(dialog).toHaveClass('max-h-[90vh]');
+  });
+
+  it('renders backdrop with refined transparency and entrance animations on backdrop and dialog', () => {
+    render(
+      <Modal isOpen={true} onClose={vi.fn()}>
+        <div>Animated Modal</div>
+      </Modal>
+    );
+
+    const backdrop = screen.getByTestId('modal-backdrop');
+    expect(backdrop).toHaveClass('bg-neutral/50');
+    expect(backdrop).toHaveClass('backdrop-blur-xs');
+    expect(backdrop).toHaveClass('animate-modal-backdrop');
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveClass('animate-modal-pop');
+  });
+
+  it('applies exit animations when isOpen changes from true to false and unmounts after timeout', () => {
+    vi.useFakeTimers();
+    const { rerender } = render(
+      <Modal isOpen={true} onClose={vi.fn()}>
+        <div>Closing Modal</div>
+      </Modal>
+    );
+
+    expect(screen.getByTestId('modal-backdrop')).toHaveClass('animate-modal-backdrop');
+    expect(screen.getByRole('dialog')).toHaveClass('animate-modal-pop');
+
+    // Trigger closing
+    act(() => {
+      rerender(
+        <Modal isOpen={false} onClose={vi.fn()}>
+          <div>Closing Modal</div>
+        </Modal>
+      );
+    });
+
+    expect(screen.getByTestId('modal-backdrop')).toHaveClass('animate-modal-backdrop-out');
+    expect(screen.getByRole('dialog')).toHaveClass('animate-modal-pop-out');
+
+    // Fast-forward 150ms
+    act(() => {
+      vi.advanceTimersByTime(160);
+    });
+
+    expect(screen.queryByText('Closing Modal')).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it('sets document.body.style.overflow to hidden when open and resets to unset when unmounted', () => {

@@ -23,7 +23,7 @@ export const QuickRecognitionSuccess: React.FC<QuickRecognitionSuccessProps> = (
   const navigate = useNavigate();
 
   return (
-    <Card className="shadow-sm border border-gray-200 overflow-hidden bg-white">
+    <Card className="border border-gray-200 overflow-hidden bg-white">
       <div className="bg-primary/5 border-b border-primary/10 p-8 text-center">
         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
           <CheckCircle2 className="w-10 h-10 text-primary" />
@@ -90,7 +90,7 @@ export const QuickRecognitionSuccess: React.FC<QuickRecognitionSuccessProps> = (
             variant="primary"
             onClick={onEmitAnother}
             icon={<Zap className="w-4 h-4" />}
-            className="w-full sm:w-auto shadow-sm"
+            className="w-full sm:w-auto"
           >
             Emitir otro reconocimiento rápido
           </Button>
@@ -99,7 +99,7 @@ export const QuickRecognitionSuccess: React.FC<QuickRecognitionSuccessProps> = (
             variant="outline"
             onClick={() => navigate(`/lotes/${successData.batch.id}`)}
             icon={<FileText className="w-4 h-4" />}
-            className="w-full sm:w-auto shadow-sm"
+            className="w-full sm:w-auto"
           >
             Ver Lote Creado
           </Button>

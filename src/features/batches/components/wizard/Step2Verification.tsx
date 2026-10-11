@@ -488,7 +488,7 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
 
   return (
     <>
-      <Card data-walkthrough="wizard-step-container" className="shadow-lg border-primary/10">
+      <Card data-walkthrough="wizard-step-container" className="border-primary/10">
         <CardHeader className="bg-primary/5 border-b border-primary/10">
           <div>
             <div className="text-lg font-bold text-neutral">Verificación de Cédulas</div>
@@ -531,7 +531,7 @@ export const Step2Verification: React.FC<Step2VerificationProps> = ({
           {filteredVerificationList.length > 0 && (
             <div className="space-y-4">
               <div className="text-md font-bold text-neutral">Resultados de la Verificación</div>
-              <div className="max-h-[354px] overflow-y-auto border border-primary/20 rounded-2xl bg-white shadow-inner">
+              <div className="max-h-[354px] overflow-y-auto border border-primary/20 rounded-2xl bg-white">
                 <Table 
                   columns={columns} 
                   data={filteredVerificationList} 

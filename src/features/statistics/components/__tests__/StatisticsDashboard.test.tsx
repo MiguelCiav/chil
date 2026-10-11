@@ -129,9 +129,9 @@ describe('StatisticsDashboard Component', () => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    // Verify Top 5 Executive KPI Cards
+    // Verify Top 4 Executive KPI Cards
     expect(screen.getAllByText('Total Reconocimientos').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Total Lotes')).toBeInTheDocument();
+    expect(screen.queryByText('Total Lotes')).not.toBeInTheDocument();
     expect(screen.getByText('Más Entregado')).toBeInTheDocument();
     expect(screen.getByText('Regiones y Distritos')).toBeInTheDocument();
     expect(screen.getAllByText('Demografía').length).toBeGreaterThanOrEqual(1);
@@ -139,6 +139,7 @@ describe('StatisticsDashboard Component', () => {
     // Verify 5 Sections
     expect(screen.getByText('Reconocimientos entregados por Región')).toBeInTheDocument();
     expect(screen.getByText('Reconocimientos entregados por Distrito')).toBeInTheDocument();
+    expect(screen.getByText('Reconocimientos entregados por Grupo Scout')).toBeInTheDocument();
     expect(screen.getByText('Reconocimientos entregados por Unidad')).toBeInTheDocument();
     expect(screen.getByText('Resumen de reconocimientos entregados a Jóvenes y Adultos')).toBeInTheDocument();
     expect(screen.getByText('Resumen Mensual de Reconocimientos')).toBeInTheDocument();

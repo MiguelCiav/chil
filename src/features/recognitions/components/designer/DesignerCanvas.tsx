@@ -53,10 +53,9 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
           ref={canvasRef}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          className="relative w-full max-w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-300 select-none transition-all"
+          className="relative w-full max-w-full bg-white rounded-2xl overflow-hidden border border-gray-300 select-none transition-all"
           style={{
-            aspectRatio: canvasAspectRatioStyle,
-            boxShadow: '0 20px 45px -12px rgba(0, 0, 0, 0.18)'
+            aspectRatio: canvasAspectRatioStyle
           }}
         >
           {/* Background Layer: Custom Image or Scout Decorative Graphic */}
@@ -124,7 +123,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
             activeGuides.map((guide, idx) => {
               const isCenter = guide.type === 'canvas-center';
               const borderClass = isCenter
-                ? 'border-emerald-500 shadow-sm'
+                ? 'border-emerald-500'
                 : 'border-emerald-400/80';
 
               if (guide.orientation === 'horizontal') {
@@ -136,7 +135,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
                     style={{ top: `${guide.position}%` }}
                   >
                     {isCenter && (
-                      <span className="absolute right-2 -top-2.5 bg-emerald-600 text-white text-[9px] font-bold px-1 rounded shadow-xs">
+                      <span className="absolute right-2 -top-2.5 bg-emerald-600 text-white text-[9px] font-bold px-1 rounded">
                         50%
                       </span>
                     )}
@@ -152,7 +151,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
                   style={{ left: `${guide.position}%` }}
                 >
                   {isCenter && (
-                    <span className="absolute bottom-2 -left-3 bg-emerald-600 text-white text-[9px] font-bold px-1 rounded shadow-xs">
+                    <span className="absolute bottom-2 -left-3 bg-emerald-600 text-white text-[9px] font-bold px-1 rounded">
                       50%
                     </span>
                   )}

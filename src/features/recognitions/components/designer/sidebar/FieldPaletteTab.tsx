@@ -80,7 +80,7 @@ export const FieldPaletteTab: React.FC<FieldPaletteTabProps> = ({
   onResetFields
 }) => {
   return (
-    <Card className="shadow-sm border-gray-200">
+    <Card className="border-gray-200">
       <CardHeader className="py-3 px-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <PaletteIcon className="w-4 h-4 text-primary" />

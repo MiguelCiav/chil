@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../Sidebar';
@@ -34,7 +34,7 @@ describe('Sidebar component', () => {
     });
   });
 
-  it('renders logo, title, navigation links, and UserProfileMenu when authenticated', () => {
+  it('renders logo, title, navigation links in correct order, and UserProfileMenu when authenticated', () => {
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
 
     render(
@@ -47,12 +47,15 @@ describe('Sidebar component', () => {
     const logoImg = screen.getByAltText('Chil Logo');
     expect(logoImg.closest('a')).toHaveAttribute('href', '/lotes');
 
-    expect(screen.getByText('Lotes')).toBeInTheDocument();
-    expect(screen.getByText('Emisión Rápida')).toBeInTheDocument();
-    expect(screen.getByText('Nuevo Lote')).toBeInTheDocument();
-    expect(screen.getByText('Reconocimientos')).toBeInTheDocument();
-    expect(screen.getByText('Resumen')).toBeInTheDocument();
-    expect(screen.getByText('Estadísticas')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: /Navegación principal/i });
+    const links = within(nav).getAllByRole('link');
+    expect(links[0]).toHaveTextContent('Emisión Rápida');
+    expect(links[1]).toHaveTextContent('Lotes');
+    expect(links[2]).toHaveTextContent('Nuevo Lote');
+    expect(links[3]).toHaveTextContent('Reconocimientos');
+    expect(links[4]).toHaveTextContent('Resumen');
+    expect(links[5]).toHaveTextContent('Estadísticas');
+
     expect(screen.getByTestId('user-profile-menu')).toBeInTheDocument();
     expect(screen.getByLabelText(/Ajustes de Credenciales Scraper/i)).toBeInTheDocument();
   });
@@ -98,10 +101,11 @@ describe('Sidebar component', () => {
     fireEvent.click(collapseBtn);
 
     expect(localStorage.getItem('chil_sidebar_collapsed')).toBe('true');
-    expect(screen.getByRole('button', { name: /Expandir barra lateral/i })).toBeInTheDocument();
-
-    // Expand again
+    // When collapsed, the reduced logo acts as the expand button without a separate arrow
     const expandBtn = screen.getByRole('button', { name: /Expandir barra lateral/i });
+    expect(within(expandBtn).getByAltText('Chil Logo')).toBeInTheDocument();
+
+    // Expand again by clicking the reduced logo
     fireEvent.click(expandBtn);
 
     expect(localStorage.getItem('chil_sidebar_collapsed')).toBe('false');
@@ -162,7 +166,7 @@ describe('Sidebar component', () => {
     expect(handleClose).toHaveBeenCalledTimes(2);
   });
 
-  it('highlights active links with Scout green styling and special styling for Emisión Rápida', () => {
+  it('highlights active links with Scout primary brown styling and special styling for Emisión Rápida', () => {
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
 
     render(
@@ -172,8 +176,8 @@ describe('Sidebar component', () => {
     );
 
     const lotesLink = screen.getByRole('link', { name: /Lotes/i });
-    expect(lotesLink).toHaveClass('bg-emerald-50');
-    expect(lotesLink).toHaveClass('text-emerald-700');
+    expect(lotesLink).toHaveClass('bg-primary/10');
+    expect(lotesLink).toHaveClass('text-primary');
 
     const rapidoLink = screen.getByRole('link', { name: /Emisión Rápida/i });
     expect(rapidoLink).toHaveClass('bg-amber-100');

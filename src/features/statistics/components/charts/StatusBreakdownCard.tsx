@@ -18,7 +18,7 @@ export const StatusBreakdownCard: React.FC<StatusBreakdownCardProps> = ({ data }
   } = data;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -44,7 +44,7 @@ export const StatusBreakdownCard: React.FC<StatusBreakdownCardProps> = ({ data }
       </div>
 
       {/* Segmented Stacked Progress Bar */}
-      <div className="w-full bg-gray-100 h-4 rounded-full overflow-hidden flex shadow-inner">
+      <div className="w-full bg-gray-100 h-4 rounded-full overflow-hidden flex">
         {activeCount > 0 && (
           <div
             className="bg-emerald-500 h-full transition-all duration-500 hover:opacity-90"
