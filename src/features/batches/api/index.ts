@@ -534,11 +534,17 @@ export function isGenericIdentity(id?: string): boolean {
   );
 }
 
+interface FirestoreDocLike {
+  id?: string;
+  ref?: unknown;
+  data?: () => unknown;
+}
+
 export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[]> {
   const q = buildMembersQueryForBatch(batchId);
   const querySnapshot = await getDocs(q);
 
-  const rawDocs: any[] = [];
+  const rawDocs: FirestoreDocLike[] = [];
   if (Array.isArray(querySnapshot?.docs)) {
     rawDocs.push(...querySnapshot.docs);
   } else if (typeof querySnapshot?.forEach === 'function') {
@@ -632,7 +638,7 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
   const memberPromises = chunks.map(async (chunk) => {
     const q = buildMembersQueryForBatchChunk(chunk);
     const snap = await getDocs(q);
-    const snapDocs: any[] = [];
+    const snapDocs: FirestoreDocLike[] = [];
     if (Array.isArray(snap?.docs)) {
       snapDocs.push(...snap.docs);
     } else if (typeof snap?.forEach === 'function') {

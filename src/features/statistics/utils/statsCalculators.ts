@@ -47,6 +47,7 @@ export function resolveMemberHierarchy(
   districts?: District[],
   _regions?: Region[]
 ): EffectiveHierarchy {
+  void _regions;
   const gList = groups && groups.length > 0 ? groups : (hierarchyData.groups as ScoutGroup[]);
   const dList = districts && districts.length > 0 ? districts : (hierarchyData.districts as District[]);
 
