@@ -45,8 +45,8 @@ src/features/batches/
 ```
 
 ### Feature Guidelines
-* **Isolation**: Features should be as self-contained as possible. Avoid importing internal components or utilities directly from another feature. If a component is needed in multiple features, hoist it to `src/components/` or standard utilities to `src/lib/`.
-* **Layout & Navigation**: Core authenticated navigation uses a responsive, collapsible `Sidebar` (`src/components/Sidebar.tsx`) with a mobile slide-over drawer and top-positioned toggle button.
+* **Isolation**: Features should be as self-contained as possible. Avoid importing internal components or utilities directly from another feature. If a component is needed in multiple features, hoist it to `src/components/` or standard utilities to `src/lib/`. Transversal domain entities and interfaces are centralized under `src/types/`, and shared fixtures/seeds are located in `src/data/`.
+* **Layout & Navigation**: Core authenticated navigation uses a responsive, collapsible `Sidebar` (`src/components/navigation/Sidebar.tsx`) with a mobile slide-over drawer and top-positioned toggle button.
 * **Typography**: Visual hierarchy is enforced using institutional font `Scouts-GT-Planar-Bold` for headings and `Noto Sans` for body text, tables, and form inputs.
 * **State Management**: Form validation should be done using **Zod** schemas in `types/` combined with **React Hook Form** inside `hooks/` or `components/`.
 * **Data Displays**: Tables displaying records must use **TanStack Table (`@tanstack/react-table`)** to ensure clean sorting, filtering, and pagination support. Table column definitions and cell renderers are placed outside component bodies to maintain optimal rendering performance.
@@ -57,7 +57,7 @@ src/features/batches/
   ```typescript
   import { doc, setDoc } from 'firebase/firestore';
   import { db } from '../../../lib/firebase';
-  import { Batch, BatchCreationParams } from '../types';
+  import { Batch, BatchCreationParams } from '../../../types';
 
   export async function createBatch(params: BatchCreationParams): Promise<Batch> {
     const array = new Uint32Array(1);
@@ -115,3 +115,10 @@ To handle errors robustly across the application:
 All data security and query requirements are defined via Firebase configuration files:
 * **`firestore.rules`**: Controls read/write permissions for Firestore collections based on authentication status and user roles.
 * **`firestore.indexes.json`**: Configures single-field and composite indexes required for complex queries (e.g., querying `scout_members` by `batch_id`).
+
+---
+
+## 6. Maintenance Scripts & Migrations (`scripts/`)
+
+* **Active Operations (`scripts/`)**: Recurring maintenance tools such as `seed-hierarchy.mjs` (`npm run seed-hierarchy`), which syncs the institutional structure in `src/data/hierarchy.json` into Firestore.
+* **Archived Migrations (`scripts/migrations/`)**: Historical, one-off scripts used for specific data backfills and batch imports. Keep these isolated from regular application scripts.
