@@ -1,33 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowRight,
-  ClipboardList,
-  Users,
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle
-} from 'lucide-react';
+import { ArrowRight, AlertCircle } from 'lucide-react';
 
 import { Card, CardHeader, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
 
 import {
   getHierarchyData,
   createBatch,
   updateBatch,
   getMemberStatus,
-  createMember,
   updateMember,
-  deleteMember,
   getMembersByBatchId,
   hasScraperCredentials,
   loginScraper,
-  assignBatchRecognitionCodes,
   ScraperMemberDetails
 } from '../api';
 import {
@@ -39,300 +27,33 @@ import {
   BatchUnitScope,
   ScoutUnit
 } from '../types';
-import { inferBatchMemberUnits } from '../utils/unitInference';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { useAuth } from '../../auth';
 import {
   useWalkthrough,
   WalkthroughOverlay,
-  WalkthroughHelpButton,
-  WalkthroughStep
+  WalkthroughHelpButton
 } from '../../../components/walkthrough';
 
-import { Step1Org } from './wizard/Step1Org';
-import { Step2Verification } from './wizard/Step2Verification';
-import { Step3Review } from './wizard/Step3Review';
-
-const NEW_BATCH_WIZARD_TOUR_STEPS: WalkthroughStep[] = [
-  {
-    id: 'wizard-header',
-    targetSelector: '[data-walkthrough="wizard-header"]',
-    title: 'Asistente de Creación de Lote',
-    content: 'Crea y emite lotes masivos de reconocimientos scouts mediante un proceso guiado y seguro en 3 sencillos pasos.',
-    placement: 'bottom'
-  },
-  {
-    id: 'wizard-stepper',
-    targetSelector: '[data-walkthrough="wizard-stepper"]',
-    title: 'Progreso del Asistente',
-    content: 'El flujo se compone de: 1. Configuración del Lote, 2. Carga y Verificación en el Sistema de Registro, y 3. Revisión de Códigos y Emisión Final.',
-    placement: 'bottom'
-  },
-  {
-    id: 'wizard-step-container',
-    targetSelector: '[data-walkthrough="wizard-step-container"]',
-    title: 'Configuración y Alcance de Unidad',
-    content: 'Define el tipo de reconocimiento a otorgar, la estructura geográfica (Región, Distrito, Grupo) y el alcance (Lote Mixto o exclusivo de Manada, Tropa, Caminantes, Clan, Institucional o No Scout).',
-    placement: 'bottom'
-  },
-  {
-    id: 'wizard-navigation-buttons',
-    targetSelector: '[data-walkthrough="wizard-navigation-buttons"]',
-    title: 'Avance entre Pasos',
-    content: "Usa 'Siguiente paso' para avanzar. En el paso 2 pegarás las cédulas a verificar, y en el paso 3 el sistema inferirá las unidades por edad y generará los códigos oficiales.",
-    placement: 'top'
-  }
-];
-
-// Step 1 Validation Schema
-const step1Schema = z
-  .object({
-    comment: z.string().optional(),
-    regionId: z.string().optional(),
-    districtId: z.string().optional(),
-    groupId: z.string().optional(),
-    recognitionType: z.string().min(1, 'Debe seleccionar un tipo de reconocimiento'),
-    unitScope: z.string().optional()
-  })
-  .refine(
-    (data) => data.unitScope === 'no_scout' || Boolean(data.regionId && data.regionId.trim() !== ''),
-    {
-      message: 'Debe seleccionar una región',
-      path: ['regionId']
-    }
-  )
-  .refine(
-    (data) => data.unitScope === 'no_scout' || Boolean(data.districtId && data.districtId.trim() !== ''),
-    {
-      message: 'Debe seleccionar un distrito',
-      path: ['districtId']
-    }
-  )
-  .refine(
-    (data) => data.unitScope === 'no_scout' || Boolean(data.groupId && data.groupId.trim() !== ''),
-    {
-      message: 'Debe seleccionar un grupo scout',
-      path: ['groupId']
-    }
-  );
-
-type Step1FormData = z.infer<typeof step1Schema>;
-
-function splitFullName(name: string): { first_names: string; last_names: string } {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 4) {
-    return {
-      first_names: parts.slice(0, 2).join(' '),
-      last_names: parts.slice(2).join(' ')
-    };
-  } else if (parts.length === 3) {
-    return {
-      first_names: parts[0],
-      last_names: parts.slice(1).join(' ')
-    };
-  } else if (parts.length === 2) {
-    return {
-      first_names: parts[0],
-      last_names: parts[1]
-    };
-  } else {
-    return {
-      first_names: name,
-      last_names: ''
-    };
-  }
-}
-
-function getStepCircleClasses(currentStep: number, itemStep: number): string {
-  if (currentStep === itemStep) {
-    return 'bg-secondary border-primary text-primary ring-4 ring-primary/20 scale-105';
-  }
-  if (currentStep > itemStep) {
-    return 'bg-emerald-50 border-emerald-300 text-emerald-700';
-  }
-  return 'bg-white border-gray-300 text-gray-400 hover:border-primary/50';
-}
-
-function handleScrapeErrorResult(
-  err: unknown
-): { name: string; status: 'No registrado' | 'Error de red'; isUnregistered: boolean } {
-  const errStr = err instanceof Error ? err.message : String(err);
-  const isUnregistered = errStr.includes("No registrado");
-  return {
-    name: isUnregistered ? 'Usuario No Registrado' : 'Error de conexión',
-    status: isUnregistered ? 'No registrado' : 'Error de red',
-    isUnregistered
-  };
-}
-
-function getInitialMemberUnit(
-  explicitUnit: ScoutUnit | undefined,
-  batchUnitScope: BatchUnitScope,
-  type: 'young' | 'adult'
-): ScoutUnit {
-  if (explicitUnit) return explicitUnit;
-  if (batchUnitScope !== 'mixed') return batchUnitScope as ScoutUnit;
-  return type === 'young' ? 'tropa' : 'institucional';
-}
-
-function upsertVerificationItem(
-  list: MemberVerificationResult[],
-  item: MemberVerificationResult
-): MemberVerificationResult[] {
-  const idx = list.findIndex(existing => existing.cedula === item.cedula);
-  if (idx > -1) {
-    const copy = [...list];
-    copy[idx] = item;
-    return copy;
-  }
-  return [...list, item];
-}
-
-function parseCedulaEntries(youngsText: string, adultsText: string) {
-  const youngs = youngsText
-    .split('\n')
-    .map(c => c.trim().replace(/[^0-9]/g, ''))
-    .filter(Boolean);
-  const adults = adultsText
-    .split('\n')
-    .map(c => c.trim().replace(/[^0-9]/g, ''))
-    .filter(Boolean);
-  const allCedulas = [
-    ...youngs.map(c => ({ cedula: c, type: 'young' as const })),
-    ...adults.map(c => ({ cedula: c, type: 'adult' as const }))
-  ];
-  const cedulaSet = new Set([...youngs, ...adults]);
-  return { youngs, adults, allCedulas, cedulaSet };
-}
-
-interface InitialMemberHierarchy {
-  region_id?: number;
-  district_id?: number;
-  group_id?: number;
-}
-
-async function saveNoScoutMemberToDb(
-  cedula: string,
-  type: 'young' | 'adult',
-  batchId: number | null,
-  userId?: string,
-  hierarchy?: InitialMemberHierarchy
-): Promise<void> {
-  if (!batchId) return;
-  try {
-    await createMember(
-      {
-        identity: cedula,
-        first_names: 'Colaborador',
-        last_names: 'No Scout',
-        birth_date: '1990-01-01',
-        member_type: type,
-        unit: 'no_scout',
-        status: 'active',
-        verified_in_registry: false,
-        batch_id: batchId,
-        user_id: userId,
-        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
-        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
-        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
-      },
-      userId
-    );
-  } catch (dbErr) {
-    console.error("Database save failed for no_scout member:", dbErr);
-  }
-}
-
-async function saveUnregisteredMemberToDb(
-  cedula: string,
-  type: 'young' | 'adult',
-  memberUnit: ScoutUnit,
-  batchId: number | null,
-  userId?: string,
-  hierarchy?: InitialMemberHierarchy
-): Promise<void> {
-  if (!batchId) return;
-  try {
-    await createMember(
-      {
-        identity: cedula,
-        first_names: 'Usuario',
-        last_names: 'No Registrado',
-        birth_date: '1990-01-01',
-        member_type: type,
-        unit: memberUnit,
-        status: 'pending',
-        verified_in_registry: true,
-        batch_id: batchId,
-        user_id: userId,
-        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
-        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
-        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
-      },
-      userId
-    );
-  } catch (dbErr) {
-    console.error("Database save failed for unregistered member:", dbErr);
-  }
-}
-
-async function saveScrapedMemberToDb(
-  cedula: string,
-  res: ScraperMemberDetails,
-  type: 'young' | 'adult',
-  memberUnit: ScoutUnit,
-  batchId: number | null,
-  userId?: string,
-  hierarchy?: InitialMemberHierarchy
-): Promise<void> {
-  if (!batchId) return;
-  try {
-    const { first_names, last_names } = splitFullName(res.nombre_completo);
-    const isScrapedActive = res.status?.toLowerCase() === 'activo';
-    await createMember(
-      {
-        identity: cedula,
-        first_names,
-        last_names,
-        birth_date: res.fecha_nacimiento || '1990-01-01',
-        email: res.correo_electronico,
-        phone: res.telefono,
-        member_type: type,
-        unit: memberUnit,
-        status: isScrapedActive ? 'active' : 'pending',
-        verified_in_registry: true,
-        batch_id: batchId,
-        user_id: userId,
-        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
-        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
-        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
-      },
-      userId
-    );
-  } catch (dbErr) {
-    console.error("Database save failed for active/inactive member:", dbErr);
-  }
-}
-
-async function syncAndFinalizeStep2Members(
-  batchId: number,
-  youngCedulas: string,
-  adultCedulas: string,
-  batchUnitScope: BatchUnitScope
-): Promise<ScoutMember[]> {
-  const { cedulaSet } = parseCedulaEntries(youngCedulas, adultCedulas);
-  const dbMembers = await getMembersByBatchId(batchId);
-
-  const deletePromises = dbMembers
-    .filter(m => !cedulaSet.has(m.identity))
-    .map(m => deleteMember(m.recognition_code || m.identity, m.identity));
-  await Promise.all(deletePromises);
-
-  const members = await getMembersByBatchId(batchId);
-  const normalizedMembers = inferBatchMemberUnits(members, batchUnitScope);
-  await Promise.all(normalizedMembers.map(m => updateMember(m)));
-  return assignBatchRecognitionCodes(normalizedMembers, 'auto');
-}
+import {
+  Step1Org,
+  Step2Verification,
+  Step3Review,
+  WizardStepper,
+  ScraperAlertModals,
+  NEW_BATCH_WIZARD_TOUR_STEPS,
+  step1Schema,
+  Step1FormData,
+  getInitialMemberUnit,
+  upsertVerificationItem,
+  handleScrapeErrorResult,
+  parseCedulaEntries,
+  InitialMemberHierarchy,
+  saveNoScoutMemberToDb,
+  saveUnregisteredMemberToDb,
+  saveScrapedMemberToDb,
+  syncAndFinalizeStep2Members
+} from './wizard';
 
 export const NewBatchWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -458,8 +179,8 @@ export const NewBatchWizard: React.FC = () => {
       setBatchGroupId(group_id);
       setCurrentStep(2);
     } catch (err) {
-      console.error("Failed to save batch:", err);
-      alert("Error al guardar el lote. Inténtelo de nuevo.");
+      console.error('Failed to save batch:', err);
+      alert('Error al guardar el lote. Inténtelo de nuevo.');
     }
   };
 
@@ -474,32 +195,36 @@ export const NewBatchWizard: React.FC = () => {
 
     // If member is 'no_scout', completely bypass Sistema de Registro scraper query and mark as active
     if (memberUnit === 'no_scout') {
-      setVerificationList(prev => upsertVerificationItem(prev, {
-        cedula,
-        name: 'Colaborador No Scout',
-        status: 'Registro válido',
-        type,
-        unit: 'no_scout',
-        region_id: initialHierarchy.region_id,
-        district_id: initialHierarchy.district_id,
-        group_id: initialHierarchy.group_id
-      }));
+      setVerificationList((prev) =>
+        upsertVerificationItem(prev, {
+          cedula,
+          name: 'Colaborador No Scout',
+          status: 'Registro válido',
+          type,
+          unit: 'no_scout',
+          region_id: initialHierarchy.region_id,
+          district_id: initialHierarchy.district_id,
+          group_id: initialHierarchy.group_id
+        })
+      );
 
       await saveNoScoutMemberToDb(cedula, type, batchId, user?.uid, initialHierarchy);
-      setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      setVerifyProgress((prev) => ({ ...prev, current: prev.current + 1 }));
       return;
     }
 
     // 1. Set to Consultando status
-    setVerificationList(prev => upsertVerificationItem(prev, {
-      cedula,
-      status: 'Consultando...',
-      type,
-      unit: memberUnit,
-      region_id: initialHierarchy.region_id,
-      district_id: initialHierarchy.district_id,
-      group_id: initialHierarchy.group_id
-    }));
+    setVerificationList((prev) =>
+      upsertVerificationItem(prev, {
+        cedula,
+        status: 'Consultando...',
+        type,
+        unit: memberUnit,
+        region_id: initialHierarchy.region_id,
+        district_id: initialHierarchy.district_id,
+        group_id: initialHierarchy.group_id
+      })
+    );
 
     let scrapedResult: ScraperMemberDetails | null = null;
     let scrapeError: Error | null = null;
@@ -513,20 +238,22 @@ export const NewBatchWizard: React.FC = () => {
     if (scrapeError) {
       const { name, status, isUnregistered } = handleScrapeErrorResult(scrapeError);
 
-      setVerificationList(prev => prev.map(item =>
-        item.cedula === cedula
-          ? {
-              cedula,
-              name,
-              status,
-              type,
-              unit: memberUnit,
-              region_id: item.region_id ?? initialHierarchy.region_id,
-              district_id: item.district_id ?? initialHierarchy.district_id,
-              group_id: item.group_id ?? initialHierarchy.group_id
-            }
-          : item
-      ));
+      setVerificationList((prev) =>
+        prev.map((item) =>
+          item.cedula === cedula
+            ? {
+                cedula,
+                name,
+                status,
+                type,
+                unit: memberUnit,
+                region_id: item.region_id ?? initialHierarchy.region_id,
+                district_id: item.district_id ?? initialHierarchy.district_id,
+                group_id: item.group_id ?? initialHierarchy.group_id
+              }
+            : item
+        )
+      );
 
       if (isUnregistered) {
         await saveUnregisteredMemberToDb(cedula, type, memberUnit, batchId, user?.uid, initialHierarchy);
@@ -540,33 +267,35 @@ export const NewBatchWizard: React.FC = () => {
       const isScrapedActive = res.status?.toLowerCase() === 'activo';
       const rowStatus = isScrapedActive ? 'Registro válido' : 'No registrado';
 
-      setVerificationList(prev => prev.map(item =>
-        item.cedula === cedula
-          ? {
-              cedula,
-              name: res.nombre_completo,
-              status: rowStatus,
-              type,
-              unit: memberUnit,
-              details: res,
-              region_id: item.region_id ?? initialHierarchy.region_id,
-              district_id: item.district_id ?? initialHierarchy.district_id,
-              group_id: item.group_id ?? initialHierarchy.group_id
-            }
-          : item
-      ));
+      setVerificationList((prev) =>
+        prev.map((item) =>
+          item.cedula === cedula
+            ? {
+                cedula,
+                name: res.nombre_completo,
+                status: rowStatus,
+                type,
+                unit: memberUnit,
+                details: res,
+                region_id: item.region_id ?? initialHierarchy.region_id,
+                district_id: item.district_id ?? initialHierarchy.district_id,
+                group_id: item.group_id ?? initialHierarchy.group_id
+              }
+            : item
+        )
+      );
 
       await saveScrapedMemberToDb(cedula, res, type, memberUnit, batchId, user?.uid, initialHierarchy);
     }
 
-    setVerifyProgress(prev => ({ ...prev, current: prev.current + 1 }));
+    setVerifyProgress((prev) => ({ ...prev, current: prev.current + 1 }));
   };
 
   const handleVerify = async () => {
     const { allCedulas } = parseCedulaEntries(youngCedulas, adultCedulas);
 
     if (allCedulas.length === 0) {
-      alert("Ingrese al menos una cédula para verificar.");
+      alert('Ingrese al menos una cédula para verificar.');
       return;
     }
 
@@ -595,43 +324,43 @@ export const NewBatchWizard: React.FC = () => {
       }
 
       setVerifyProgress({ current: 0, total: allCedulas.length });
-      const promises = allCedulas.map(item => verifyCedula(item.cedula, item.type));
+      const promises = allCedulas.map((item) => verifyCedula(item.cedula, item.type));
       await Promise.all(promises);
     } catch (err) {
-      console.error("Verification main flow error:", err);
-      alert("Hubo un error inesperado al iniciar la verificación.");
+      console.error('Verification main flow error:', err);
+      alert('Hubo un error inesperado al iniciar la verificación.');
     } finally {
       setIsVerifying(false);
     }
   };
 
   const handleToggleMemberType = async (cedula: string) => {
-    const currentItem = verificationList.find(item => item.cedula === cedula);
+    const currentItem = verificationList.find((item) => item.cedula === cedula);
     if (!currentItem) return;
 
     const originalType = currentItem.type;
-    const nextType = originalType === 'young' ? 'adult' as const : 'young' as const;
+    const nextType = originalType === 'young' ? ('adult' as const) : ('young' as const);
 
-    setVerificationList(prev => prev.map(item =>
-      item.cedula === cedula ? { ...item, type: nextType } : item
-    ));
+    setVerificationList((prev) =>
+      prev.map((item) => (item.cedula === cedula ? { ...item, type: nextType } : item))
+    );
 
     if (batchId) {
       try {
         const members = await getMembersByBatchId(batchId);
-        const currentMember = members.find(m => m.identity === cedula);
+        const currentMember = members.find((m) => m.identity === cedula);
         if (currentMember) {
           currentMember.member_type = nextType;
           await updateMember(currentMember);
         } else {
-          throw new Error("Miembro no encontrado en la base de datos.");
+          throw new Error('Miembro no encontrado en la base de datos.');
         }
       } catch (err) {
-        console.error("Error al actualizar tipo de miembro en DB:", err);
-        setVerificationList(prev => prev.map(item =>
-          item.cedula === cedula ? { ...item, type: originalType } : item
-        ));
-        alert("No se pudo actualizar el tipo de miembro en la base de datos. Se ha revertido el cambio.");
+        console.error('Error al actualizar tipo de miembro en DB:', err);
+        setVerificationList((prev) =>
+          prev.map((item) => (item.cedula === cedula ? { ...item, type: originalType } : item))
+        );
+        alert('No se pudo actualizar el tipo de miembro en la base de datos. Se ha revertido el cambio.');
       }
     }
   };
@@ -640,7 +369,7 @@ export const NewBatchWizard: React.FC = () => {
     cedula: string,
     hierarchy: { region_id?: number; district_id?: number; group_id?: number }
   ) => {
-    const currentItem = verificationList.find(item => item.cedula === cedula);
+    const currentItem = verificationList.find((item) => item.cedula === cedula);
     if (!currentItem) return;
 
     const originalRegionId = currentItem.region_id;
@@ -651,21 +380,23 @@ export const NewBatchWizard: React.FC = () => {
     const targetDistrictId = hierarchy.district_id === 0 ? undefined : hierarchy.district_id;
     const targetGroupId = hierarchy.group_id === 0 ? undefined : hierarchy.group_id;
 
-    setVerificationList(prev => prev.map(item =>
-      item.cedula === cedula
-        ? {
-            ...item,
-            region_id: targetRegionId,
-            district_id: targetDistrictId,
-            group_id: targetGroupId
-          }
-        : item
-    ));
+    setVerificationList((prev) =>
+      prev.map((item) =>
+        item.cedula === cedula
+          ? {
+              ...item,
+              region_id: targetRegionId,
+              district_id: targetDistrictId,
+              group_id: targetGroupId
+            }
+          : item
+      )
+    );
 
     if (batchId) {
       try {
         const members = await getMembersByBatchId(batchId);
-        const currentMember = members.find(m => m.identity === cedula);
+        const currentMember = members.find((m) => m.identity === cedula);
         if (currentMember) {
           currentMember.region_id = targetRegionId;
           currentMember.district_id = targetDistrictId;
@@ -673,24 +404,26 @@ export const NewBatchWizard: React.FC = () => {
           await updateMember(currentMember);
         }
       } catch (err) {
-        console.error("Error al actualizar jerarquía de miembro en DB:", err);
-        setVerificationList(prev => prev.map(item =>
-          item.cedula === cedula
-            ? {
-                ...item,
-                region_id: originalRegionId,
-                district_id: originalDistrictId,
-                group_id: originalGroupId
-              }
-            : item
-        ));
-        alert("No se pudo actualizar la estructura scout del miembro en la base de datos.");
+        console.error('Error al actualizar jerarquía de miembro en DB:', err);
+        setVerificationList((prev) =>
+          prev.map((item) =>
+            item.cedula === cedula
+              ? {
+                  ...item,
+                  region_id: originalRegionId,
+                  district_id: originalDistrictId,
+                  group_id: originalGroupId
+                }
+              : item
+          )
+        );
+        alert('No se pudo actualizar la estructura scout del miembro en la base de datos.');
       }
     }
   };
 
   const handleUpdateMemberGroup = (cedula: string, newGroupId: number) => {
-    const currentItem = verificationList.find(item => item.cedula === cedula);
+    const currentItem = verificationList.find((item) => item.cedula === cedula);
     handleUpdateMemberHierarchy(cedula, {
       region_id: currentItem?.region_id,
       district_id: currentItem?.district_id,
@@ -718,7 +451,6 @@ export const NewBatchWizard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
-
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
@@ -728,7 +460,10 @@ export const NewBatchWizard: React.FC = () => {
       )}
 
       {/* Header */}
-      <div data-walkthrough="wizard-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+      <div
+        data-walkthrough="wizard-header"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2"
+      >
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight flex items-center gap-2">
@@ -743,46 +478,7 @@ export const NewBatchWizard: React.FC = () => {
       </div>
 
       {/* Premium Step Wizard Navigation Bar */}
-      <div data-walkthrough="wizard-stepper" className="relative">
-        {/* Background connector bar */}
-        <div className="absolute top-6 left-6 right-6 h-1 bg-gray-200 -translate-y-1/2 rounded-full z-0" />
-        <div
-          className="absolute top-6 left-6 h-1 bg-primary -translate-y-1/2 rounded-full transition-all duration-500 z-0"
-          style={{ width: `calc(${(currentStep - 1) / 2} * (100% - 3rem))` }}
-        />
-
-        <div className="relative z-10 flex justify-between">
-          {[
-            { step: 1, title: 'Organización', desc: 'Metadatos del Lote', icon: <ClipboardList className="w-5 h-5" /> },
-            { step: 2, title: 'Miembros', desc: 'Verificación y Carga', icon: <Users className="w-5 h-5" /> },
-            { step: 3, title: 'Generación', desc: 'Revisión y Cierre', icon: <CheckCircle2 className="w-5 h-5" /> }
-          ].map(item => (
-            <button
-              type="button"
-              key={item.step}
-              onClick={() => {
-                // Only allow navigating backward to steps already completed
-                if (item.step < currentStep) {
-                  setCurrentStep(item.step as 1 | 2 | 3);
-                }
-              }}
-              className="flex flex-col items-center group focus:outline-none"
-              disabled={item.step >= currentStep}
-            >
-              <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${getStepCircleClasses(currentStep, item.step)}`}
-              >
-                {item.icon}
-              </div>
-              <span className={`mt-2.5 text-sm font-bold transition-colors ${currentStep === item.step ? 'text-primary' : 'text-neutral/70'
-                }`}>
-                {item.title}
-              </span>
-              <span className="text-xs text-neutral/40 font-medium hidden sm:inline">{item.desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <WizardStepper currentStep={currentStep} onStepClick={setCurrentStep} />
 
       {/* STEP 1: CONFIGURATION OF METADATA */}
       {currentStep === 1 && (
@@ -793,7 +489,6 @@ export const NewBatchWizard: React.FC = () => {
             </CardHeader>
             <CardBody>
               <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-6">
-
                 <Step1Org
                   register={register}
                   setValue={setValue}
@@ -806,8 +501,10 @@ export const NewBatchWizard: React.FC = () => {
                   recognitionTypes={recognitionTypes}
                 />
 
-                <div data-walkthrough="wizard-navigation-buttons" className="flex justify-end pt-4 border-t border-primary/10">
-
+                <div
+                  data-walkthrough="wizard-navigation-buttons"
+                  className="flex justify-end pt-4 border-t border-primary/10"
+                >
                   <Button
                     type="submit"
                     variant="primary"
@@ -818,7 +515,6 @@ export const NewBatchWizard: React.FC = () => {
                     Siguiente paso
                   </Button>
                 </div>
-
               </form>
             </CardBody>
           </Card>
@@ -863,64 +559,13 @@ export const NewBatchWizard: React.FC = () => {
         />
       )}
 
-      {/* Scraper Authorization Alert Modal */}
-      <Modal isOpen={showAuthAlert} onClose={() => setShowAuthAlert(false)} className="max-w-md">
-        <ModalHeader onClose={() => setShowAuthAlert(false)}>
-          <span className="flex items-center gap-2 text-amber-600 font-bold">
-            <AlertTriangle className="w-5 h-5" />
-            Autenticación del Scraper Requerida
-          </span>
-        </ModalHeader>
-        <ModalBody className="space-y-4 text-neutral">
-          <p className="text-sm">
-            Para realizar la consulta automatizada en el Registro Nacional de Scouts, primero debe configurar su correo y contraseña institucional en los Ajustes del sistema.
-          </p>
-          <p className="text-xs text-neutral/60 bg-amber-50 border border-amber-100 p-3 rounded-xl font-medium">
-            ⚠️ Las credenciales del scraper se guardan localmente de forma segura para las consultas consecutivas del lote.
-          </p>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="outline" onClick={() => setShowAuthAlert(false)}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setShowAuthAlert(false);
-              // Trigger settings button click on Navbar
-              const settingsBtn = document.querySelector('button[aria-label="Ajustes de Credenciales Scraper"]') as HTMLButtonElement | null;
-              if (settingsBtn) {
-                settingsBtn.click();
-              }
-            }}
-          >
-            Configurar Credenciales
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Scraper Connection Auth Error Modal */}
-      <Modal isOpen={authError !== null} onClose={() => setAuthError(null)} className="max-w-md">
-        <ModalHeader onClose={() => setAuthError(null)}>
-          <span className="flex items-center gap-2 text-red-600 font-bold">
-            <AlertCircle className="w-5 h-5" />
-            Error de Autenticación
-          </span>
-        </ModalHeader>
-        <ModalBody className="space-y-4 text-neutral">
-          <p className="text-sm">
-            La conexión con el Scraper de la ASV falló debido a credenciales inválidas o expiración de la sesión en el servidor.
-          </p>
-          <div className="bg-red-50 text-red-800 text-xs border border-red-100 p-3 rounded-xl max-h-32 overflow-y-auto font-mono">
-            {authError}
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="outline" onClick={() => setAuthError(null)}>
-            Cerrar
-          </Button>
-        </ModalFooter>
-      </Modal>
+      {/* Scraper Authorization and Error Modals */}
+      <ScraperAlertModals
+        showAuthAlert={showAuthAlert}
+        onCloseAuthAlert={() => setShowAuthAlert(false)}
+        authError={authError}
+        onCloseAuthError={() => setAuthError(null)}
+      />
 
       {/* Walkthrough Interactive Guide Overlay */}
       <WalkthroughOverlay
@@ -934,8 +579,8 @@ export const NewBatchWizard: React.FC = () => {
         onSkip={skipTour}
         onClose={skipTour}
       />
-
     </div>
   );
 };
+
 export default NewBatchWizard;

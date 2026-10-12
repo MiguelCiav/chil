@@ -6,14 +6,10 @@ import { Region, District, ScoutGroup } from '../../types';
 import { Field } from '../../../../components/Field';
 import { SearchSelectorModal } from '../../../../components/SearchSelectorModal';
 
-export interface Step1FormData {
-  comment?: string;
-  regionId?: string;
-  districtId?: string;
-  groupId?: string;
-  recognitionType: string;
-  unitScope?: string;
-}
+import { Step1FormData } from './wizardSchema';
+
+export type { Step1FormData };
+
 
 interface Step1OrgProps {
   register: UseFormRegister<Step1FormData>;
