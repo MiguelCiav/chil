@@ -75,4 +75,30 @@ describe('lookup scraper module', () => {
       fecha_nacimiento: '2004-10-25'
     });
   });
+
+  it('successfully parses member details from modern Impeesa fixture', async () => {
+    const fs = require('fs');
+    const path = require('path');
+    const fixtureHtml = fs.readFileSync(
+      path.join(__dirname, 'fixtures/sample_member_impeesa.html'),
+      'utf-8'
+    );
+
+    vi.spyOn(axios, 'get').mockResolvedValueOnce({
+      status: 200,
+      headers: {},
+      data: fixtureHtml
+    });
+
+    const member = await fetchMemberStatusWithCookies({ _session_id: 'valid' }, '11926931');
+
+    expect(member).toEqual({
+      nombre_completo: 'Irene del socorro Monsalve Sulbaran',
+      status: 'Activo',
+      telefono: '04123473083',
+      correo_electronico: 'irenescoutsdb@gmail.com',
+      fecha_nacimiento: '1972-09-04'
+    });
+  });
 });
+
