@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { Settings, LogIn, UserPlus } from 'lucide-react';
-import logo from '../assets/CHIL_LOGO.png';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from './Modal';
-import { Button } from './Button';
-import { Field } from './Field';
-import { hasScraperCredentials, saveScraperCredentials } from '../features/batches/api';
-import { useAuth, UserProfileMenu } from '../features/auth';
+import logo from '../../assets/CHIL_LOGO.png';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../Modal';
+import { Button } from '../Button';
+import { Field } from '../Field';
+import { hasScraperCredentials, saveScraperCredentials } from '../../features/batches/api';
+import { useAuth, UserProfileMenu } from '../../features/auth';
 
 export const Navbar: React.FC = () => {
   const { user } = useAuth();

@@ -1,6 +1,6 @@
 import { Batch, ScoutMember, Region, District, ScoutGroup, ScoutUnit, SCOUT_UNITS } from '../../../types';
 import { getRecognitionBadgeStyle, getRecognitionName, RecognitionTypeInfo } from '../../batches/api';
-import hierarchyData from '../../batches/api/hierarchy.json';
+import hierarchyData from '../../../data/hierarchy.json';
 import {
   KpiMetrics,
   MonthlyTrendData,

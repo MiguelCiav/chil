@@ -14,7 +14,7 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { jsPDF } from 'jspdf';
 import { db, functions, auth } from '../../../lib/firebase';
-import hierarchyData from './hierarchy.json';
+import hierarchyData from '../../../data/hierarchy.json';
 import {
   Batch,
   ScoutMember,

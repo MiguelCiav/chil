@@ -2,7 +2,7 @@ import React, { ReactNode, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import logo from '../assets/CHIL_LOGO.png';
-import { Sidebar } from '../components/Sidebar';
+import { Sidebar } from '../components/navigation';
 import { useAuth } from '../features/auth';
 
 interface MainLayoutProps {

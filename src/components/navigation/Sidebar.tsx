@@ -13,12 +13,12 @@ import {
   ChevronLeft,
   X
 } from 'lucide-react';
-import logo from '../assets/CHIL_LOGO.png';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from './Modal';
-import { Button } from './Button';
-import { Field } from './Field';
-import { hasScraperCredentials, saveScraperCredentials } from '../features/batches/api';
-import { useAuth, UserProfileMenu } from '../features/auth';
+import logo from '../../assets/CHIL_LOGO.png';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../Modal';
+import { Button } from '../Button';
+import { Field } from '../Field';
+import { hasScraperCredentials, saveScraperCredentials } from '../../features/batches/api';
+import { useAuth, UserProfileMenu } from '../../features/auth';
 
 const SIDEBAR_COLLAPSED_KEY = 'chil_sidebar_collapsed';
 

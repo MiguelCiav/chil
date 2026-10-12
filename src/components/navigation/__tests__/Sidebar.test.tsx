@@ -2,15 +2,15 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../Sidebar';
-import * as api from '../../features/batches/api';
-import * as authFeature from '../../features/auth';
+import * as api from '../../../features/batches/api';
+import * as authFeature from '../../../features/auth';
 
-vi.mock('../../features/batches/api', () => ({
+vi.mock('../../../features/batches/api', () => ({
   hasScraperCredentials: vi.fn(),
   saveScraperCredentials: vi.fn()
 }));
 
-vi.mock('../../features/auth', () => ({
+vi.mock('../../../features/auth', () => ({
   useAuth: vi.fn(),
   UserProfileMenu: () => <div data-testid="user-profile-menu">User Profile Menu</div>
 }));

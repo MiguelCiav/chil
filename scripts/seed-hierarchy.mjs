@@ -26,7 +26,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const hierarchyPath = join(__dirname, '../src/features/batches/api/hierarchy.json');
+const hierarchyPath = join(__dirname, '../src/data/hierarchy.json');
 const hierarchyData = JSON.parse(readFileSync(hierarchyPath, 'utf8'));
 
 async function syncCollection(collectionName, localItems, idField = 'id', compareFields = ['name']) {
