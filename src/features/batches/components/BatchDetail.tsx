@@ -1,35 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ColumnDef,
-  CellContext,
   getCoreRowModel,
   getPaginationRowModel,
-  useReactTable,
-  flexRender,
-  Row
+  useReactTable
 } from '@tanstack/react-table';
-import {
-  Download,
-  Search,
-  Award,
-  AlertCircle,
-  Edit2,
-  CheckCircle2,
-  Eye,
-  MoreVertical,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Trash2
-} from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 import { Button } from '../../../components/Button';
 import {
   useWalkthrough,
-  WalkthroughOverlay,
-  WalkthroughHelpButton,
-  WalkthroughStep
+  WalkthroughOverlay
 } from '../../../components/walkthrough';
 import {
   getBatchById,
@@ -45,10 +26,7 @@ import {
   ScoutMember,
   Region,
   District,
-  ScoutGroup,
-  MemberStatus,
-  ScoutUnit,
-  getUnitBadge
+  ScoutGroup
 } from '../types';
 import {
   generateBatchCertificatesZip,
@@ -58,279 +36,17 @@ import {
 } from '../../recognitions';
 import { useAuth } from '../../auth';
 
-import { BatchSummaryCards } from './detail/BatchSummaryCards';
-import { EditMemberModal } from './detail/EditMemberModal';
-import { MemberQuickViewModal } from './detail/MemberQuickViewModal';
-import { DeleteBatchModal } from './detail/DeleteBatchModal';
-
-const BATCH_DETAIL_TOUR_STEPS: WalkthroughStep[] = [
-  {
-    id: 'batch-detail-header',
-    targetSelector: '[data-walkthrough="batch-detail-header"]',
-    title: 'Detalle y Acciones del Lote',
-    content:
-      'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista o eliminar el lote si es necesario.',
-    placement: 'bottom'
-  },
-  {
-    id: 'batch-detail-summary-cards',
-    targetSelector: '[data-walkthrough="batch-detail-summary-cards"]',
-    title: 'Resumen y Observaciones',
-    content:
-      'Revisa la estructura geográfica, el tipo de reconocimiento otorgado, el desglose demográfico de miembros (Jóvenes y Adultos) y los comentarios u observaciones registradas.',
-    placement: 'bottom'
-  },
-  {
-    id: 'batch-detail-members-table',
-    targetSelector: '[data-walkthrough="batch-detail-members-table"]',
-    title: 'Listado de Homenajeados',
-    content:
-      'Visualiza todos los miembros del lote con su cédula, nombres, unidad scout (Manada, Tropa, No Scout, etc.), estatus y código oficial de reconocimiento.',
-    placement: 'top'
-  },
-  {
-    id: 'batch-detail-table-actions',
-    targetSelector: '[data-walkthrough="batch-detail-table-actions"]',
-    title: 'Gestión Individual de Miembros',
-    content:
-      'Desde el menú de 3 puntos en cada fila puedes descargar el reconocimiento individual en PDF, consultar la vista rápida o editar los datos (incluyendo la autorización con justificación para casos excepcionales).',
-    placement: 'left'
-  }
-];
-
-function renderMemberIdentityCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  return (
-    <span className="font-mono text-xs sm:text-sm text-neutral/80">
-      {info.getValue() as string}
-    </span>
-  );
-}
-
-function renderMemberNameCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const rowData = info.row.original;
-  return (
-    <span className="font-bold text-neutral">
-      {rowData.first_names} {rowData.last_names}
-    </span>
-  );
-}
-
-function renderMemberUnitCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const unit = info.getValue() as ScoutUnit | undefined;
-  const badge = getUnitBadge(unit);
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}
-    >
-      {badge.label}
-    </span>
-  );
-}
-
-function renderMemberTypeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const val = info.getValue() as 'young' | 'adult';
-  return (
-    <span className="text-neutral/70 font-medium text-sm">
-      {val === 'young' ? 'Joven' : 'Adulto'}
-    </span>
-  );
-}
-
-function renderMemberStatusCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const val = info.getValue() as MemberStatus;
-  if (val === 'active') {
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
-        <span>Registro Válido</span>
-      </span>
-    );
-  }
-  if (val === 'exceptional') {
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
-        <span>Emisión Excepcional</span>
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
-      <span>Registro Inválido</span>
-    </span>
-  );
-}
-
-function renderMemberCodeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const rowData = info.row.original;
-  const code =
-    (info.getValue() as string) ||
-    (rowData.status === 'active' || rowData.status === 'exceptional'
-      ? `REC-${rowData.identity.slice(-4)}`
-      : '-');
-  return <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>;
-}
-
-interface MemberActionsCellProps {
-  row: Row<ScoutMember>;
-  table: ReturnType<typeof useReactTable<ScoutMember>>;
-  activeMenuMemberId: string | null;
-  setActiveMenuMemberId: React.Dispatch<React.SetStateAction<string | null>>;
-  setViewingMember: (member: ScoutMember) => void;
-  handleEditClick: (member: ScoutMember) => void;
-  handleDownloadSingleRecognition: (member: ScoutMember) => void;
-}
-
-function renderMemberActionsCell(props: MemberActionsCellProps) {
-  const {
-    row,
-    table,
-    activeMenuMemberId,
-    setActiveMenuMemberId,
-    setViewingMember,
-    handleEditClick,
-    handleDownloadSingleRecognition
-  } = props;
-  const rowData = row.original;
-  const menuKey = rowData.recognition_code || rowData.identity;
-  const isMenuOpen = activeMenuMemberId === menuKey;
-  const totalRows = table.getRowModel().rows.length;
-  const isNearBottom =
-    (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
-  const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
-
-  return (
-    <div
-      data-walkthrough="batch-detail-table-actions"
-      className="flex items-center gap-2 relative"
-    >
-      {/* Quick View Eye Icon Button */}
-      <button
-        type="button"
-        onClick={() => setViewingMember(rowData)}
-        className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-        title="Ver detalle del miembro"
-        aria-label={`Ver detalle de ${rowData.first_names} ${rowData.last_names}`}
-      >
-        <Eye className="w-4 h-4" />
-      </button>
-
-      {/* Actions 3-Dots Menu */}
-      <div className="relative inline-block">
-        <button
-          type="button"
-          onClick={() => setActiveMenuMemberId(isMenuOpen ? null : menuKey)}
-          className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
-          aria-label={`Opciones de ${rowData.first_names} ${rowData.last_names}`}
-        >
-          <MoreVertical className="w-4 h-4" />
-        </button>
-
-        {isMenuOpen && (
-          <div
-            className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}
-          >
-            <button
-              type="button"
-              onClick={() => handleEditClick(rowData)}
-              className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-            >
-              <Edit2 className="w-3.5 h-3.5 text-primary" />
-              Editar
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveMenuMemberId(null);
-                setViewingMember(rowData);
-              }}
-              className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-            >
-              <Eye className="w-3.5 h-3.5 text-primary" />
-              Ver Ficha
-            </button>
-            {(rowData.status === 'active' || rowData.status === 'exceptional') && (
-              <button
-                type="button"
-                onClick={() => handleDownloadSingleRecognition(rowData)}
-                className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
-              >
-                <Award className="w-3.5 h-3.5 text-primary" />
-                Descargar Reconocimiento (PDF)
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function createBatchDetailColumns(
-  actionsProps: Omit<MemberActionsCellProps, 'row' | 'table'>,
-  groups: ScoutGroup[],
-  batch: Batch | null
-): ColumnDef<ScoutMember>[] {
-  return [
-    {
-      accessorKey: 'identity',
-      header: 'CÉDULA',
-      cell: renderMemberIdentityCell
-    },
-    {
-      accessorKey: 'name',
-      header: 'NOMBRE',
-      cell: renderMemberNameCell
-    },
-    {
-      id: 'group',
-      header: 'GRUPO',
-      cell: (info) => {
-        const memberGroupId = info.row.original.group_id ?? batch?.group_id;
-        if (!memberGroupId || memberGroupId === 0) {
-          return <span className="text-xs sm:text-sm text-neutral/50 font-medium">No aplica</span>;
-        }
-        const found = groups.find(g => g.id === memberGroupId);
-        return (
-          <span className="text-xs sm:text-sm font-medium text-neutral/80">
-            {found?.name ?? `Grupo ${memberGroupId}`}
-          </span>
-        );
-      }
-    },
-    {
-      accessorKey: 'unit',
-      header: 'UNIDAD',
-      cell: renderMemberUnitCell
-    },
-    {
-      accessorKey: 'member_type',
-      header: 'TIPO',
-      cell: renderMemberTypeCell
-    },
-    {
-      accessorKey: 'status',
-      header: 'ESTATUS',
-      cell: renderMemberStatusCell
-    },
-    {
-      accessorKey: 'recognition_code',
-      header: 'CÓDIGO REC.',
-      cell: renderMemberCodeCell
-    },
-    {
-      id: 'actions',
-      header: 'ACCIONES',
-      cell: ({ row, table }) =>
-        renderMemberActionsCell({
-          row,
-          table,
-          ...actionsProps
-        })
-    }
-  ];
-}
+import {
+  BATCH_DETAIL_TOUR_STEPS,
+  createBatchDetailColumns,
+  BatchDetailHeader,
+  BatchMembersTable,
+  BatchSummaryCards,
+  DeleteBatchModal,
+  EditMemberModal,
+  MemberQuickViewModal,
+  BatchDetailTotals
+} from './detail';
 
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -529,7 +245,7 @@ export const BatchDetail: React.FC = () => {
   };
 
   // Totals calculations
-  const totals = useMemo(() => {
+  const totals: BatchDetailTotals = useMemo(() => {
     return {
       total: members.length,
       young: members.filter((m) => m.member_type === 'young').length,
@@ -581,10 +297,6 @@ export const BatchDetail: React.FC = () => {
     }
   });
 
-  const currentPageRows = table.getRowModel().rows;
-  const pageIndex = table.getState().pagination.pageIndex;
-  const pageCount = table.getPageCount();
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px] font-sans text-neutral/50">
@@ -620,61 +332,16 @@ export const BatchDetail: React.FC = () => {
       )}
 
       {/* Header with Title and Action Buttons */}
-      <div
-        data-walkthrough="batch-detail-header"
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2"
-      >
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
-              Lote #{batch.id}
-            </h1>
-            <WalkthroughHelpButton onClick={() => startTour()} />
-            <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
-              {`LT-${new Date(batch.created_at).getFullYear()}-${String(batch.id).padStart(3, '0')}`}
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
-            Revisión y gestión de reconocimientos del lote actual.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setIsDeleteModalOpen(true)}
-            icon={<Trash2 size={16} />}
-            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-          >
-            Eliminar Lote
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={handleDownloadMemberListPDF}
-            disabled={downloadingReport}
-            icon={<Download size={16} />}
-            className="border-gray-200 hover:bg-gray-50 text-neutral"
-          >
-            {downloadingReport ? 'Generando PDF...' : 'Descargar lista'}
-          </Button>
-
-          <Button
-            variant="primary"
-            onClick={handleDownloadPDF}
-            disabled={downloading || totals.eligible === 0}
-            title={
-              totals.eligible === 0
-                ? 'No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos'
-                : undefined
-            }
-            icon={<FileText size={16} />}
-            className="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
-          >
-            {downloading ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
-          </Button>
-        </div>
-      </div>
+      <BatchDetailHeader
+        batch={batch}
+        startTour={() => startTour()}
+        onDeleteClick={() => setIsDeleteModalOpen(true)}
+        onDownloadMemberList={handleDownloadMemberListPDF}
+        downloadingReport={downloadingReport}
+        onDownloadCertificatesZip={handleDownloadPDF}
+        downloadingCertificatesZip={downloading}
+        isEligibleZero={totals.eligible === 0}
+      />
 
       {/* Top 4 Information Cards */}
       <BatchSummaryCards
@@ -686,127 +353,14 @@ export const BatchDetail: React.FC = () => {
         groups={groups}
       />
 
-      {/* Members Table Container ("Miembros del Lote") */}
-      <div
-        data-walkthrough="batch-detail-members-table"
-        className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white"
-      >
-        {/* Table Header with Search Input */}
-        <div className="p-4 sm:p-5 border-b border-primary/20 bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-base sm:text-lg font-bold text-neutral">Miembros del Lote</h2>
-
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Buscar miembro..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-[#faf8f5] text-neutral text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-neutral/40"
-            />
-          </div>
-        </div>
-
-        {/* TanStack Table */}
-        <div className="overflow-x-auto min-h-[260px] pb-12">
-          <table className="w-full text-left border-collapse font-sans">
-            <thead>
-              <tr className="bg-primary/10 border-b border-primary/20">
-                {table.getHeaderGroups().map((headerGroup) =>
-                  headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider"
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {currentPageRows.length > 0 ? (
-                currentPageRows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-primary/5 transition-colors bg-white"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="px-6 py-4 text-sm whitespace-nowrap text-neutral"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={columns.length} className="px-6 py-12 text-center text-neutral/50">
-                    No se encontraron miembros para el criterio de búsqueda.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer with Numbered Pagination Controls */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-neutral/60">
-          <div>
-            Mostrando{' '}
-            {currentPageRows.length > 0
-              ? `${pageIndex * 10 + 1}-${Math.min(
-                  (pageIndex + 1) * 10,
-                  filteredMembers.length
-                )}`
-              : 0}{' '}
-            de {filteredMembers.length} miembros
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Página anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            {Array.from({ length: pageCount }, (_, i) => i)
-              .slice(0, 5)
-              .map((idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => table.setPageIndex(idx)}
-                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
-                    pageIndex === idx
-                      ? 'bg-[#743e1d] text-white'
-                      : 'text-neutral/70 hover:bg-gray-100'
-                  }`}
-                >
-                  {idx + 1}
-                </button>
-              ))}
-
-            {pageCount > 5 && <span className="px-1 text-neutral/40">...</span>}
-
-            <button
-              type="button"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Página siguiente"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Members Table Container */}
+      <BatchMembersTable
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        table={table}
+        columnsCount={columns.length}
+        totalMembersCount={filteredMembers.length}
+      />
 
       {/* Manual Member Edit Modal */}
       <EditMemberModal
@@ -824,7 +378,11 @@ export const BatchDetail: React.FC = () => {
         member={viewingMember}
         onClose={() => setViewingMember(null)}
         groups={groups}
-        batchGroup={batch.group_id ? (groups.find(g => g.id === batch.group_id)?.name ?? `Grupo ${batch.group_id}`) : (batch.region_id === 0 ? 'No aplica' : 'Multigrupo')}
+        batchGroup={
+          batch.group_id
+            ? (groups.find((g) => g.id === batch.group_id)?.name ?? `Grupo ${batch.group_id}`)
+            : (batch.region_id === 0 ? 'No aplica' : 'Multigrupo')
+        }
       />
 
       {/* Modal: Confirmar Eliminación de Lote */}
