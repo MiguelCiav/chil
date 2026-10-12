@@ -1,0 +1,506 @@
+<html lang="en"><head><style type="text/css">.turbo-progress-bar {
+  position: fixed;
+  display: block;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: #0076ff;
+  z-index: 2147483647;
+  transition:
+    width 300ms ease-out,
+    opacity 150ms 150ms ease-in;
+  transform: translate3d(0, 0, 0);
+}
+</style>
+  <meta charset="utf-8">
+  <title>Impeesa - Scouts Venezuela</title>
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+  <meta content="" name="description">
+  <meta content="" name="author">
+
+  <meta name="csrf-param" content="authenticity_token">
+<meta name="csrf-token" content="qtO0ZtpjyIM2ROyUs9zwQNFaFSwuKjjzFJ4lP6A-cdYtZjWiJA-NSF28IoAKJIuXozMWQJ6K-41xTi8764oN8w">
+  
+  <link rel="stylesheet" href="/assets/application-76630791f5c94d81bbd30845542bbc4188beb9f211c46f32cb4a8d4a9863f6c1.css" data-turbo-track="reload">
+  <script src="/assets/application-879b365ff439c28f71d940157bf1b6f80649870683d7764256fd2152757f2ebc.js" data-turbo-track="reload"></script>
+
+  <!-- ================== BEGIN core-css ================== -->
+  <link href="/css/vendor.min.css" rel="stylesheet">
+  <link href="/css/default/app.min.css" rel="stylesheet">
+
+  <!-- ================== END core-css ================== -->
+</head>
+<body class="pace-done "><div class="pace pace-inactive"><div class="pace-progress" data-progress-text="100%" data-progress="99" style="transform: translate3d(100%, 0px, 0px);">
+  <div class="pace-progress-inner"></div>
+</div>
+<div class="pace-activity"></div></div>
+  <!-- BEGIN #app -->
+  <div id="app" class="app app-header-fixed app-sidebar-fixed">
+    
+    <div data-controller="container">
+          <!-- BEGIN #header -->
+<div id="header" class="app-header">
+  <!-- BEGIN navbar-header -->
+  <div class="navbar-header">
+    <a class="navbar-brand d-flex align-items-center" href="/">
+      <img class="navbar-brand-logo" alt="Scouts Venezuela" ssl_detected="true" src="/assets/world_scouting-d224548facbbe53d93db59522087077c6188ba741ff5456702ec0dfe27563831.png">
+</a>    <button type="button" class="navbar-mobile-toggler" data-toggle="app-sidebar-mobile">
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+    </button>
+  </div>
+  <!-- END navbar-header -->
+  <!-- BEGIN header-nav -->
+  <div class="navbar-nav">
+    <div class="navbar-item navbar-user dropdown" data-controller="dropdown">
+      <a href="#" class="navbar-link dropdown-toggle d-flex align-items-center" data-action="click-&gt;dropdown#toggle" data-dropdown-target="toggle">
+          <img ssl_detected="true" src="/assets/user-13-c3c66898b065180ee81f12e1db5d59029545368160efa98bf35e05f8bc6545bf.jpg">
+        <span>
+          <span class="d-none d-md-inline">Miguel Angel Angel Ciavato</span>
+          <b class="caret"></b>
+        </span>
+      </a>
+      <div class="dropdown-menu dropdown-menu-end me-1 shadow-sm" data-dropdown-target="menu">
+        <a class=" dropdown-item d-flex align-items-center" href="/users/profiles">
+          <i class="fa fa-user-circle fa-fw me-2 text-gray-500"></i>
+          <span>Perfil</span>
+</a>        <div class="dropdown-divider my-1"></div>
+        <a data-turbo-method="delete" data-turbo-confirm="Confirma cerrar sesión." class="dropdown-item d-flex align-items-center text-danger" href="/users/sign_out">
+          <i class="fa fa-sign-out-alt fa-fw me-2"></i>
+          <span>Cerrar Sesión</span>
+</a>      </div>
+    </div>
+  </div>
+  <!-- END header-nav -->
+</div>
+<!-- END #header -->
+
+          <!-- BEGIN #sidebar -->
+<div id="sidebar" class="app-sidebar" data-bs-theme="dark">
+  <!-- BEGIN scrollbar -->
+  <div class="app-sidebar-content ps" data-scrollbar="true" data-height="100%" style="height: 100%;">
+    <!-- BEGIN menu -->
+    <div class="menu">
+      <!-- Profile Header -->
+      <div class="menu-profile">
+        <a href="javascript:;" class="menu-profile-link" data-toggle="app-sidebar-profile" data-target="#appSidebarProfileMenu">
+          <div class="menu-profile-cover with-shadow" style="background-image: url('/assets/cover-sidebar-user-5aa33197ca48e6235f5dbea37b11ae686d3d2f8a2aec508ee8e4d016d5203b51.jpg'); background-size: cover; background-position: center;"></div>
+          <div class="menu-profile-image">
+              <img ssl_detected="true" src="/assets/user-13-c3c66898b065180ee81f12e1db5d59029545368160efa98bf35e05f8bc6545bf.jpg">
+          </div>
+          <div class="menu-profile-info">
+            <div class="d-flex align-items-center">
+              <div class="flex-grow-1">
+                Miguel Angel Angel Ciavato
+              </div>
+              <div class="menu-caret ms-auto"></div>
+            </div>
+            <small>V - 30541929</small>
+          </div>
+        </a>
+      </div>
+      <div id="appSidebarProfileMenu" class="collapse ">
+        <div class="menu-item pt-5px ">
+          <a class="menu-link" href="/users/profiles">
+            <div class="menu-icon"><i class="fa fa-user-circle"></i></div>
+            <div class="menu-text">Perfil</div>
+</a>        </div>
+        <div class="menu-divider m-0"></div>
+      </div>
+
+      <div class="menu-header">Inicio</div>
+
+      <!-- ========================================== -->
+      <!-- DASHBOARD (INICIO)                         -->
+      <!-- ========================================== -->
+      <div class=" menu-item">
+        <a class="menu-link" href="/">
+          <div class="menu-icon">
+            <i class="fa fa-sitemap"></i>
+          </div>
+          <div class="menu-text">Dashboard</div>
+</a></div>
+      <!-- ========================================== -->
+      <!-- CENTRO DE SOPORTE TÉCNICO (FLAG)           -->
+      <!-- ========================================== -->
+
+      <!-- ========================================== -->
+      <!-- 1. ADMINISTRACIÓN (MENU LEVEL)            -->
+      <!-- ========================================== -->
+
+      <!-- ========================================== -->
+      <!-- 2. ESTRUCTURA SCOUT (MENU LEVEL)          -->
+      <!-- ========================================== -->
+        <div class="active expand menu-item has-sub">
+          <a href="javascript:;" class="menu-link">
+            <div class="menu-icon"><i class="fa fa-cubes"></i></div>
+            <div class="menu-text">Estructura Scout</div>
+            <div class="menu-caret"></div>
+          </a>
+          <div class="menu-submenu" style="display: block;">
+              <div class="active menu-item">
+                <a class="menu-link" href="/members/status_member">
+                  <div class="menu-text">Consultar Membresía</div>
+</a></div>
+
+
+          </div>
+</div>
+      <!-- ========================================== -->
+      <!-- 3. FINANZAS (MENU LEVEL)                  -->
+      <!-- ========================================== -->
+
+      <!-- ========================================== -->
+      <!-- 4. PROGRAMA Y FORMACIÓN (MENU LEVEL)       -->
+      <!-- ========================================== -->
+
+      <!-- ========================================== -->
+      <!-- 5. REPORTES (MENU LEVEL)                   -->
+      <!-- ========================================== -->
+
+      <!-- ========================================== -->
+      <!-- 6. SALUD (MENU LEVEL)                      -->
+      <!-- ========================================== -->
+
+      <!-- BEGIN minify-button -->
+      <div class="menu-item d-flex">
+        <a href="javascript:;" class="app-sidebar-minify-btn ms-auto d-flex align-items-center text-decoration-none" data-toggle="app-sidebar-minify"><i class="fa fa-angle-double-left"></i></a>
+      </div>
+      <!-- END minify-button -->
+    </div>
+    <!-- END menu -->
+  <div class="ps__rail-x" style="left: 0px; bottom: 0px;"><div class="ps__thumb-x" tabindex="0" style="left: 0px; width: 0px;"></div></div><div class="ps__rail-y" style="top: 0px; right: 0px;"><div class="ps__thumb-y" tabindex="0" style="top: 0px; height: 0px;"></div></div></div>
+  <!-- END scrollbar -->
+</div>
+<div class="app-sidebar-bg" data-bs-theme="dark"></div>
+<div class="app-sidebar-mobile-backdrop"><a href="#" data-dismiss="app-sidebar-mobile" class="stretched-link"></a></div>
+<!-- END #sidebar -->
+
+      <div id="content" class="app-content ">
+          
+
+<!-- BEGIN profile -->
+<div class="profile" style="margin: -20px -30px 20px -30px;">
+  <div class="profile-header">
+    <!-- BEGIN profile-header-cover -->
+    <div class="profile-header-cover" style="background-image: url('/assets/profile-cover-cfb1853d4bc4122beeda07e78cedf4e5433b335755ad5163bd86cd5cb1cc6377.jpg');"></div>
+    <!-- END profile-header-cover -->
+    <!-- BEGIN profile-header-content -->
+    <div class="profile-header-content d-flex justify-content-between align-items-center">
+      <!-- BEGIN profile-header-info -->
+      <div class="profile-header-info">
+        <h4 class="mt-0 mb-1">Unidad Conductor de Grupo / Cooperador Nacional de la Iniciativa de Programa: Anti Robots Letales</h4>
+        <p class="mb-1">Grupo DON BOSCO 21 / Distrito AVILA / Región DISTRITO CAPITAL</p>
+        <p class="mb-0">Válido 2027-05-30</p>
+      </div>
+        <div class="profile-header-info">
+            <a class="btn btn-primary" target="_blank" href="/members/download_card.pdf">Descargar Carnet</a>
+        </div>
+    </div>
+    <!-- END profile-header-content -->
+  </div>
+</div>
+<!-- END profile -->
+        <ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="/">Inicio</a></li>
+  <li class="breadcrumb-item"><a href="javascript:;">Estructura Scout</a></li>
+  <li class="breadcrumb-item active">Consultar Membresía</li>
+</ol>
+
+<h1 class="page-header">Consultar Membresía <small>Verificación institucional de solvencia, censo y progresión por cédula</small></h1>
+
+<!-- Panel de Búsqueda Destacada -->
+<div class="panel panel-inverse mb-4" data-sortable-id="member-status-search">
+  <div class="panel-heading">
+    <h4 class="panel-title"><i class="fa fa-id-card me-2"></i> Búsqueda de Miembro por Cédula de Identidad</h4>
+  </div>
+  <div class="panel-body">
+    <form data-turbo="false" action="/members/status_member_submit" accept-charset="UTF-8" method="get">
+      <div class="row g-2 align-items-center">
+        <div class="col-md-9">
+          <div class="input-group input-group-lg">
+            <span class="input-group-text bg-light text-muted border-end-0"><i class="fa fa-id-card"></i></span>
+            <input value="11926931" autofocus="autofocus" required="required" placeholder="Ingrese la cédula (Ej: 12345678 o V-12345678)" class="form-control border-start-0" type="text" name="cedula" id="cedula">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <input type="submit" name="commit" value="Consultar Membresía" class="btn btn-scout-purple btn-lg w-100 fw-bold shadow-sm" data-disable-with="Consultar Membresía">
+        </div>
+      </div>
+</form>  </div>
+</div>
+
+
+  <!-- Tarjeta Hero de Identidad y Resumen de Solvencia -->
+  <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid var(--scout-purple, #622599) !important;">
+    <div class="card-body p-4">
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <div class="rounded-circle text-white d-flex align-items-center justify-content-center shadow-sm overflow-hidden" style="width: 72px; height: 72px; font-size: 26px; font-weight: bold; background: linear-gradient(135deg, #622599 0%, #3f1366 100%);">
+              IM
+          </div>
+        </div>
+        <div class="col">
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <h3 class="mb-0 fw-bold text-dark">
+              Irene del socorro Monsalve Sulbaran
+            </h3>
+            <span class="badge bg-secondary fs-12px">Grupo</span>
+            <span class="badge bg-dark fs-12px">
+              <i class="fa fa-user-tie me-1"></i>
+              Adulto Scout
+            </span>
+              <span class="badge bg-success fs-12px"><i class="fa fa-check-circle me-1"></i> Usuario Activo</span>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-3 text-muted fs-13px mt-2">
+            <div>
+              <strong class="text-dark"><i class="fa fa-id-card text-scout-purple me-1"></i> Cédula:</strong>
+              E-11.926.931
+            </div>
+            <span class="text-muted opacity-50 d-none d-sm-inline">•</span>
+            <div>
+              <strong class="text-dark"><i class="fa fa-birthday-cake text-scout-purple me-1"></i> Edad:</strong>
+              54 años
+            </div>
+            <span class="text-muted opacity-50 d-none d-sm-inline">•</span>
+            <div>
+              <strong class="text-dark"><i class="fa fa-map-marked-alt text-scout-purple me-1"></i> Región:</strong>
+              <span class="badge bg-scout-purple text-white px-2 py-1">DISTRITO CAPITAL</span>
+            </div>
+            <span class="text-muted opacity-50 d-none d-sm-inline">•</span>
+            <div>
+              <strong class="text-dark"><i class="fa fa-compass text-scout-purple me-1"></i> Distrito:</strong>
+              <span class="badge bg-info text-white px-2 py-1">AVILA</span>
+            </div>
+            <span class="text-muted opacity-50 d-none d-sm-inline">•</span>
+            <div>
+              <strong class="text-dark"><i class="fa fa-campground text-scout-purple me-1"></i> Grupo:</strong>
+              <span class="badge bg-success text-white px-2 py-1">ARISTIDES ROJAS</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-auto mt-3 mt-lg-0 text-lg-end">
+          <div class="mb-2">
+              <span class="badge bg-success-transparent-2 text-success border border-success p-2 fs-12px">
+                <i class="fa fa-shield-alt me-1"></i> Solvente hasta 21/05/2027
+              </span>
+          </div>
+          <div class="d-flex flex-wrap justify-content-lg-end gap-1">
+              <a target="_blank" class="btn btn-scout-purple btn-sm fw-bold shadow-sm" href="/members/download_card.pdf?member_id=ef39034a-dae7-4f1c-ae01-879bf88ab7a7">
+                <i class="fa fa-id-badge me-1"></i> Carnet PDF
+</a>            <a target="_blank" class="btn btn-outline-danger btn-sm fw-bold shadow-sm" href="/members/ef39034a-dae7-4f1c-ae01-879bf88ab7a7/medical_file_pdf.pdf">
+              <i class="fa fa-file-pdf me-1"></i> Ficha Médica PDF
+</a>          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Completitud del Perfil -->
+      <div class="mt-3 pt-3 border-top">
+        <div class="d-flex justify-content-between text-muted fs-12px mb-1">
+          <span><i class="fa fa-tasks me-1"></i> Completitud de la Ficha del Miembro</span>
+          <span class="fw-bold text-dark">100.0%</span>
+        </div>
+        <div class="progress" style="height: 6px;">
+          <div class="progress-bar bg-success" role="progressbar" style="width: 100.0%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cuadrícula de 3 Paneles Detallados -->
+  <div class="row">
+    <!-- Panel 1: Datos Personales y Contacto -->
+    <div class="col-xl-4 col-md-6 mb-4 ui-sortable">
+      <div class="panel panel-inverse h-100" data-sortable-id="member-status-p1">
+        <div class="panel-heading ui-sortable-handle">
+          <h4 class="panel-title"><i class="fa fa-user me-2 text-scout-purple"></i> Datos Personales y Contacto</h4>
+        </div>
+        <div class="panel-body p-0">
+          <table class="table table-panel table-hover mb-0 align-middle">
+            <tbody>
+              <tr>
+                <td class="text-muted fw-bold" width="40%">Cédula de Identidad</td>
+                <td><strong>E-11.926.931</strong></td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Género</td>
+                <td>Femenino</td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Fecha Nacimiento</td>
+                <td>04/09/1972</td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Teléfono</td>
+                <td>
+                    <a href="tel:04123473083" class="text-decoration-none"><i class="fa fa-phone me-1 text-success"></i> 04123473083</a>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Correo de Usuario</td>
+                <td>
+                    <a href="mailto:irenescoutsdb@gmail.com" class="text-decoration-none text-truncate d-block" style="max-width: 200px;">
+                      <i class="fa fa-envelope me-1 text-primary"></i> irenescoutsdb@gmail.com
+                    </a>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Correo Secundario</td>
+                <td>monsalveirene63@gmail.com</td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Ubicación / Estado</td>
+                <td>Distrito Capital - Libertador</td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Dirección</td>
+                <td class="text-wrap">Av Libertador Santa Rosa</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Estructura Scout Territorial -->
+    <div class="col-xl-4 col-md-6 mb-4 ui-sortable">
+      <div class="panel panel-inverse h-100" data-sortable-id="member-status-p2">
+        <div class="panel-heading ui-sortable-handle">
+          <h4 class="panel-title"><i class="fa fa-sitemap me-2 text-info"></i> Estructura Territorial Scout</h4>
+        </div>
+        <div class="panel-body p-0">
+          <table class="table table-panel table-hover mb-0 align-middle">
+            <tbody>
+              <tr>
+                <td class="text-muted fw-bold" width="40%">Región</td>
+                <td>
+                  <span class="badge bg-scout-purple">
+                    <i class="fa fa-map-marked-alt me-1"></i> DISTRITO CAPITAL
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Distrito</td>
+                <td>
+                  <span class="badge bg-info">
+                    <i class="fa fa-compass me-1"></i> AVILA
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Grupo Scout</td>
+                <td>
+                  <span class="badge bg-success">
+                    <i class="fa fa-campground me-1"></i> ARISTIDES ROJAS
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Unidad</td>
+                <td>
+                  <span class="badge bg-warning text-dark">
+                    <i class="fa fa-layer-group me-1"></i> Comunidad
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Cargo en Grupo</td>
+                <td><strong>Adulto de Programa</strong></td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Cargo Institucional</td>
+                <td>Cooperador Nacional de Soporte</td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Tipo de Miembro</td>
+                <td><span class="badge bg-secondary">Grupo</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 3: Progresión Scout y Fechas Clave -->
+    <div class="col-xl-4 col-md-12 mb-4 ui-sortable">
+      <div class="panel panel-inverse h-100" data-sortable-id="member-status-p3">
+        <div class="panel-heading ui-sortable-handle">
+          <h4 class="panel-title"><i class="fa fa-award me-2 text-warning"></i> Progresión y Formación Scout</h4>
+        </div>
+        <div class="panel-body p-0">
+          <table class="table table-panel table-hover mb-0 align-middle">
+            <tbody>
+              <tr>
+                <td class="text-muted fw-bold" width="40%">Progresión Actual</td>
+                <td>
+                    <span class="text-muted">Sin progresión registrada</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Fecha de Ingreso</td>
+                <td>01/08/2009</td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Fecha de Promesa</td>
+                <td>
+                    <span class="text-success fw-bold"><i class="fa fa-check me-1"></i> 18/09/2009</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Religión</td>
+                <td>Budistas</td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Nivel Educativo</td>
+                <td>Superior</td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Ocupación</td>
+                <td>Directora de Despacho Decanato </td>
+              </tr>
+              <tr>
+                <td class="text-muted fw-bold">Rol en Sistema</td>
+                <td><span class="badge badge-scout-purple">Coop/Direc - Nacional - Consulta</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+</div>    </div>
+  </div>
+  <!-- END #app -->
+
+  <!-- ================== BEGIN CDN jquery 3.7.1 ================== -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer" data-turbo-eval="false"></script>
+  <!-- ================== END CDN jquery 3.7.1 ================== -->
+
+  <!-- ================== BEGIN CDN jquery-ui 1.13.3 ================== -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.3/jquery-ui.min.js" integrity="sha512-Ww1y9OuQ2kehgVWSD/3nhgfrb424O3802QYP/A5gPXoM4+rRjiKrjHdGxQKrMGQykmsJ/86oGdHszfcVgUr4hA==" crossorigin="anonymous" referrerpolicy="no-referrer" data-turbo-eval="false"></script>
+  <!-- ================== END CDN jquery-ui 1.13.3 ================== -->
+
+  <!-- ================== BEGIN core-js ================== -->
+  <script src="/js/vendor.min.js" data-turbo-eval="false"></script>
+  <script src="/js/app.min.js" data-turbo-eval="false"></script>
+
+
+  <!-- ================== END core-js ================== -->
+
+
+  <script data-turbo-eval="false">
+    document.addEventListener("turbo:load", () => {
+      if (typeof App !== 'undefined' && typeof App.init === 'function') {
+        App.init();
+      }
+    });
+  </script>
+
+
+
+</body></html>
