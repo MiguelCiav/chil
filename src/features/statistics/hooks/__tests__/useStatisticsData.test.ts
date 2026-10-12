@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useStatisticsData } from '../useStatisticsData';
 import * as batchApi from '../../../batches/api';
 import * as recognitionApi from '../../../recognitions/api';
-import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../../../types';
 import { RecognitionType } from '../../../recognitions';
 
 vi.mock('../../../batches/api', () => ({

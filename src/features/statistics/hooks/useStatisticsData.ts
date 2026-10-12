@@ -5,7 +5,7 @@ import {
   getHierarchyData
 } from '../../batches/api';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
-import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../../types';
 import { StatisticsFilterState } from '../types';
 import { buildStatisticsDataset, calculateYoYComparison, resolveMemberHierarchy } from '../utils/statsCalculators';
 import { FilterSummaryLabels } from '../utils/statsPdfExport';

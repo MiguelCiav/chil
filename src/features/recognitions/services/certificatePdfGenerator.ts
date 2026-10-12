@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
-import { Batch, ScoutMember, Region, District, ScoutGroup, getUnitLabel } from '../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup, getUnitLabel } from '../../../types';
 import { getHierarchyData } from '../../batches/api';
 import { getRecognitionTypeById } from '../api';
 import {

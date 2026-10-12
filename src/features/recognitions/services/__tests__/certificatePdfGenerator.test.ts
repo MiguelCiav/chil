@@ -11,7 +11,7 @@ import {
   renderCertificatePage,
   getPdfFontFamily
 } from '../certificatePdfGenerator';
-import { Batch, ScoutMember } from '../../../batches/types';
+import { Batch, ScoutMember } from '../../../../types';
 import { RecognitionType, CertificateTemplate } from '../../types';
 import * as firestore from 'firebase/firestore';
 import { jsPDF } from 'jspdf';

@@ -2,7 +2,7 @@ import React from 'react';
 import { Download, RotateCcw, Filter } from 'lucide-react';
 import { Button } from '../../../components/Button';
 import { StatisticsFilterState, StatisticsDataset } from '../types';
-import { Region, District } from '../../batches/types';
+import { Region, District } from '../../../types';
 import { RecognitionType } from '../../recognitions';
 import { exportStatisticsPdf, FilterSummaryLabels } from '../utils/statsPdfExport';
 

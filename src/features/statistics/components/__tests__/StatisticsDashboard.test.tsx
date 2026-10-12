@@ -4,7 +4,7 @@ import { StatisticsDashboard } from '../StatisticsDashboard';
 import * as batchApi from '../../../batches/api';
 import * as recognitionApi from '../../../recognitions/api';
 import * as statsPdfExport from '../../utils/statsPdfExport';
-import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../../../types';
 import { RecognitionType } from '../../../recognitions';
 
 vi.mock('../../../batches/api', () => ({

@@ -1,4 +1,4 @@
-import { Batch, ScoutMember, Region, District, ScoutGroup, ScoutUnit, SCOUT_UNITS } from '../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup, ScoutUnit, SCOUT_UNITS } from '../../../types';
 import { getRecognitionBadgeStyle, getRecognitionName, RecognitionTypeInfo } from '../../batches/api';
 import hierarchyData from '../../batches/api/hierarchy.json';
 import {
