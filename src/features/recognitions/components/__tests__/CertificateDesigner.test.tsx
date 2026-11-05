@@ -758,4 +758,51 @@ describe('CertificateDesigner component', () => {
     expect(screen.queryByText('Guardar Plantilla Oficial')).not.toBeInTheDocument();
     expect(localStorage.getItem('chil_tour_certificate-designer-tour_test-user-id')).toBe('true');
   });
+
+  it('supports Undo and Redo via header toolbar buttons and keyboard shortcuts (Ctrl+Z / Ctrl+Y)', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognitionWithTemplate);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    const undoBtn = screen.getByRole('button', { name: 'Deshacer' });
+    const redoBtn = screen.getByRole('button', { name: 'Rehacer' });
+
+    // Initial loaded template does not push to undo stack
+    expect(undoBtn).toBeDisabled();
+    expect(redoBtn).toBeDisabled();
+
+    // Add 'identity' field
+    const addIdentityBtn = screen.getByLabelText('Añadir Cédula de Identidad');
+    fireEvent.click(addIdentityBtn);
+    expect(screen.getByText('[Cédula de Identidad]')).toBeInTheDocument();
+    expect(undoBtn).not.toBeDisabled();
+
+    // Undo via toolbar button
+    fireEvent.click(undoBtn);
+    expect(screen.queryByText('[Cédula de Identidad]')).not.toBeInTheDocument();
+    expect(redoBtn).not.toBeDisabled();
+
+    // Redo via toolbar button
+    fireEvent.click(redoBtn);
+    expect(screen.getByText('[Cédula de Identidad]')).toBeInTheDocument();
+
+    // Undo via Ctrl+Z keyboard shortcut
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+    expect(screen.queryByText('[Cédula de Identidad]')).not.toBeInTheDocument();
+
+    // Redo via Ctrl+Y keyboard shortcut
+    fireEvent.keyDown(window, { key: 'y', ctrlKey: true });
+    expect(screen.getByText('[Cédula de Identidad]')).toBeInTheDocument();
+
+    // Undo via Meta+Z and Redo via Meta+Shift+Z
+    fireEvent.keyDown(window, { key: 'z', metaKey: true });
+    expect(screen.queryByText('[Cédula de Identidad]')).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Z', metaKey: true, shiftKey: true });
+    expect(screen.getByText('[Cédula de Identidad]')).toBeInTheDocument();
+  });
 });

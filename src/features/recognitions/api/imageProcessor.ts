@@ -10,6 +10,18 @@ export interface ProcessedBackgroundResult {
   orientation: 'landscape' | 'portrait';
 }
 
+export const PDF_UPLOAD_NOT_SUPPORTED_MESSAGE =
+  'Formato PDF no soportado directamente como imagen de fondo. Por favor suba una imagen PNG, JPG o WebP.';
+
+export const INVALID_IMAGE_FORMAT_MESSAGE =
+  'Formato de archivo no soportado. Por favor suba una imagen PNG, JPG o WebP.';
+
+/**
+ * Maximum safe Base64 character length (~750 KB) to guarantee the serialized
+ * template stays well below Cloud Firestore's 1 MB (1,048,576 bytes) document limit.
+ */
+export const MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH = 750_000;
+
 function extractErrorMessage(err: unknown): string {
   if (err instanceof Error) {
     return err.message;
@@ -20,32 +32,100 @@ function extractErrorMessage(err: unknown): string {
   return 'Error al procesar la imagen';
 }
 
+/**
+ * Samples pixel alpha channel on a 2D canvas context to detect transparency.
+ */
+function hasAlphaTransparency(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number
+): boolean {
+  if (typeof ctx.getImageData !== 'function') {
+    return false;
+  }
+  try {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    if (!data || data.length === 0) {
+      return false;
+    }
+    // Sample every 16th pixel (stride = 64 bytes) for fast transparency detection
+    for (let i = 3; i < data.length; i += 64) {
+      if (data[i] < 250) {
+        return true;
+      }
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/**
+ * Encodes canvas into a jsPDF-compatible JPEG or PNG data URL while capping
+ * the output size below Firestore's 1 MB document limit.
+ */
+function encodeNormalizedCanvas(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  width: number,
+  height: number,
+  mimeType: string
+): string {
+  const mightHaveAlpha = mimeType === 'image/png' || mimeType === 'image/webp';
+  if (mightHaveAlpha && hasAlphaTransparency(ctx, width, height)) {
+    try {
+      const pngDataUrl = canvas.toDataURL('image/png');
+      if (
+        pngDataUrl?.startsWith('data:image/png') &&
+        pngDataUrl.length <= MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH
+      ) {
+        return pngDataUrl;
+      }
+    } catch {
+      // Fallback to JPEG encoding below
+    }
+  }
+
+  // Composite onto an opaque white surface before JPEG encoding so transparent regions don't turn black
+  if (typeof ctx.fillRect === 'function') {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+  }
+
+  const qualitySteps = [0.82, 0.72, 0.6, 0.5];
+  let encoded = '';
+
+  for (const quality of qualitySteps) {
+    try {
+      encoded = canvas.toDataURL('image/jpeg', quality);
+      if (encoded.length <= MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH) {
+        return encoded;
+      }
+    } catch {
+      // Continue to fallback
+    }
+  }
+
+  return encoded || canvas.toDataURL('image/jpeg', 0.5);
+}
+
 export async function processBackgroundImageFile(
   file: File,
   maxWidth = 1920,
-  maxHeight = 1440
+  maxHeight = 1080
 ): Promise<ProcessedBackgroundResult> {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        resolve({
-          dataUrl,
-          width: 297,
-          height: 210,
-          naturalWidth: 297,
-          naturalHeight: 210,
-          normalizedWidth: 297,
-          normalizedHeight: 210,
-          aspectRatio: Math.round((297 / 210) * 1000) / 1000,
-          orientation: 'landscape'
-        });
-      };
-      reader.onerror = (err) => {
-        reject(new Error(extractErrorMessage(err)));
-      };
-      reader.readAsDataURL(file);
+    const lowerName = file.name?.toLowerCase() ?? '';
+    if (file.type === 'application/pdf' || lowerName.endsWith('.pdf')) {
+      reject(new Error(PDF_UPLOAD_NOT_SUPPORTED_MESSAGE));
+      return;
+    }
+
+    if (!file.type || !file.type.startsWith('image/')) {
+      reject(new Error(INVALID_IMAGE_FORMAT_MESSAGE));
       return;
     }
 
@@ -97,7 +177,8 @@ export async function processBackgroundImageFile(
           const naturalWidth = img.naturalWidth || img.width || 1920;
           const naturalHeight = img.naturalHeight || img.height || 1080;
           const aspectRatio = Math.round((naturalWidth / naturalHeight) * 1000) / 1000;
-          const orientation: 'landscape' | 'portrait' = naturalWidth >= naturalHeight ? 'landscape' : 'portrait';
+          const orientation: 'landscape' | 'portrait' =
+            naturalWidth >= naturalHeight ? 'landscape' : 'portrait';
 
           let normalizedWidth: number;
           let normalizedHeight: number;
@@ -112,8 +193,11 @@ export async function processBackgroundImageFile(
           let width = naturalWidth;
           let height = naturalHeight;
 
-          if (width > maxWidth || height > maxHeight) {
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
+          const boundWidth = orientation === 'portrait' ? Math.min(maxWidth, maxHeight) : maxWidth;
+          const boundHeight = orientation === 'portrait' ? Math.max(maxWidth, maxHeight) : maxHeight;
+
+          if (width > boundWidth || height > boundHeight) {
+            const ratio = Math.min(boundWidth / width, boundHeight / height);
             width = Math.round(width * ratio);
             height = Math.round(height * ratio);
           }
@@ -138,27 +222,17 @@ export async function processBackgroundImageFile(
           }
 
           ctx.drawImage(img, 0, 0, width, height);
-          try {
-            const webpData = canvas.toDataURL('image/webp', 0.88);
-            if (webpData?.startsWith('data:image/webp')) {
-              resolve({
-                dataUrl: webpData,
-                width: naturalWidth,
-                height: naturalHeight,
-                naturalWidth,
-                naturalHeight,
-                normalizedWidth,
-                normalizedHeight,
-                aspectRatio,
-                orientation
-              });
-              return;
-            }
-          } catch {
-            // Fallback if webp unsupported
-          }
+          const encodedDataUrl = encodeNormalizedCanvas(
+            canvas,
+            ctx,
+            img,
+            width,
+            height,
+            file.type
+          );
+
           resolve({
-            dataUrl: canvas.toDataURL('image/jpeg', 0.88),
+            dataUrl: encodedDataUrl,
             width: naturalWidth,
             height: naturalHeight,
             naturalWidth,

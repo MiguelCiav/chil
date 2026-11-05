@@ -92,4 +92,59 @@ describe('DesignerHeader component', () => {
     expect(screen.getByRole('button', { name: /Subiendo\.\.\./i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Guardando\.\.\./i })).toBeDisabled();
   });
+
+  it('renders Undo and Redo toolbar buttons and triggers onUndo/onRedo when enabled', () => {
+    const onUndo = vi.fn();
+    const onRedo = vi.fn();
+
+    const { rerender } = render(
+      <DesignerHeader
+        recognitionName="Insignia de Madera"
+        isPreviewMode={false}
+        isSaving={false}
+        isUploadingBg={false}
+        hasBackground={false}
+        canUndo={false}
+        canRedo={false}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onTogglePreview={vi.fn()}
+        onUploadClick={vi.fn()}
+        onSave={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    const undoBtn = screen.getByRole('button', { name: 'Deshacer' });
+    const redoBtn = screen.getByRole('button', { name: 'Rehacer' });
+    expect(undoBtn).toBeDisabled();
+    expect(redoBtn).toBeDisabled();
+
+    rerender(
+      <DesignerHeader
+        recognitionName="Insignia de Madera"
+        isPreviewMode={false}
+        isSaving={false}
+        isUploadingBg={false}
+        hasBackground={false}
+        canUndo={true}
+        canRedo={true}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onTogglePreview={vi.fn()}
+        onUploadClick={vi.fn()}
+        onSave={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    expect(undoBtn).not.toBeDisabled();
+    expect(redoBtn).not.toBeDisabled();
+
+    fireEvent.click(undoBtn);
+    expect(onUndo).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(redoBtn);
+    expect(onRedo).toHaveBeenCalledTimes(1);
+  });
 });

@@ -16,6 +16,8 @@ import {
   CertificateTemplate
 } from '../types';
 
+export const MAX_FIRESTORE_TEMPLATE_BYTES = 950_000;
+
 export function generateRecognitionId(name: string): string {
   const normalized = name
     .toLowerCase()
@@ -23,7 +25,7 @@ export function generateRecognitionId(name: string): string {
     .replace(/[\u0300-\u036f]/g, '') // remove accents
     .replace(/[^a-z0-9_-]/g, '-') // replace non-alphanumeric with hyphen
     .replace(/-+/g, '-') // collapse consecutive hyphens
-    .replace(/^-|-$/g, ''); // trim leading/trailing hyphens
+    .replace(/^[-]+|[-]+$/g, ''); // trim leading/trailing hyphens
 
   return `sct-${normalized || 'custom'}`;
 }
@@ -125,10 +127,16 @@ export async function saveCertificateTemplate(
   recognitionId: string,
   template: CertificateTemplate
 ): Promise<void> {
+  if (
+    template.background_url &&
+    template.background_url.length > MAX_FIRESTORE_TEMPLATE_BYTES
+  ) {
+    throw new Error(
+      'La imagen de fondo excede el límite máximo de almacenamiento permitido (1 MB). Por favor suba una imagen más ligera.'
+    );
+  }
   const docRef = doc(db, 'recognition_types', recognitionId);
   await setDoc(docRef, { template }, { merge: true });
 }
 
 export * from './imageProcessor';
-
-

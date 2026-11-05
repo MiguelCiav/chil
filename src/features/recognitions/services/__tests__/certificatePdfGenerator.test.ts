@@ -9,7 +9,16 @@ import {
   generateBatchCertificatesPdf,
   generateBatchCertificatesZip,
   renderCertificatePage,
-  getPdfFontFamily
+  getPdfFontFamily,
+  getImageFormatFromUrl,
+  registerCustomFonts,
+  applyFieldTypography,
+  setCachedScoutsPlanarFontBase64,
+  getCachedScoutsPlanarFontBase64,
+  loadScoutsPlanarFontBase64,
+  CERTIFICATE_BG_IMAGE_ALIAS,
+  SCOUTS_PLANAR_FONT_FILE,
+  SCOUTS_PLANAR_FONT_NAME
 } from '../certificatePdfGenerator';
 import { Batch, ScoutMember } from '../../../../types';
 import { RecognitionType, CertificateTemplate } from '../../types';
@@ -60,6 +69,7 @@ vi.mock('jspdf', () => {
 describe('certificatePdfGenerator service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setCachedScoutsPlanarFontBase64(null);
   });
 
   describe('hexToRgb helper', () => {
@@ -106,7 +116,7 @@ describe('certificatePdfGenerator service', () => {
   describe('getNormalizedPageDimensions helper', () => {
     it('normalizes high resolution portrait image (e.g. 2657 x 3438) to standard millimeter print dimensions', () => {
       const portraitTemplate: CertificateTemplate = {
-        background_url: 'data:image/webp;base64,portraitImage',
+        background_url: 'data:image/jpeg;base64,portraitImage',
         page_width: 2657,
         page_height: 3438,
         aspect_ratio: 2657 / 3438,
@@ -123,7 +133,7 @@ describe('certificatePdfGenerator service', () => {
 
     it('normalizes 4K landscape image (e.g. 3840 x 2160) to standard millimeter print dimensions', () => {
       const landscapeTemplate: CertificateTemplate = {
-        background_url: 'data:image/webp;base64,4kImage',
+        background_url: 'data:image/jpeg;base64,4kImage',
         page_width: 3840,
         page_height: 2160,
         aspect_ratio: 3840 / 2160,
@@ -367,7 +377,7 @@ describe('certificatePdfGenerator service', () => {
       );
     });
 
-    it('generates certificate with custom template dimensions, background image, and custom field styling', async () => {
+    it('generates certificate with custom template dimensions, background image alias, and custom field styling', async () => {
       const customTemplate: CertificateTemplate = {
         background_url: 'data:image/webp;base64,UklGRkAAAABXRUJQVlA4IDQAAADwAQCdASoFAAUAPm0ukUekIicTIAA/v81t',
         page_width: 320,
@@ -431,14 +441,15 @@ describe('certificatePdfGenerator service', () => {
         hierarchy: mockHierarchy
       });
 
-      // Check that custom background image was injected with normalized millimeter dimensions
+      // Check that custom background image was injected with normalized millimeter dimensions and XObject alias
       expect(mockDocInstance.addImage).toHaveBeenCalledWith(
         customTemplate.background_url,
         'WEBP',
         0,
         0,
         297,
-        222.75
+        222.75,
+        CERTIFICATE_BG_IMAGE_ALIAS
       );
 
       // Check field 1: full_name (times, bold, 28pt, #1b7a37 -> 27, 122, 55, x=148.5, y=89.1)
@@ -507,14 +518,15 @@ describe('certificatePdfGenerator service', () => {
         hierarchy: mockHierarchy
       });
 
-      // Normalized portrait dimensions: 229.53 x 297 mm
+      // Normalized portrait dimensions: 229.53 x 297 mm with cert_bg_image alias
       expect(mockDocInstance.addImage).toHaveBeenCalledWith(
         highResPortraitTemplate.background_url,
         'JPEG',
         0,
         0,
         229.53,
-        297
+        297,
+        CERTIFICATE_BG_IMAGE_ALIAS
       );
 
       // Check field 1: x = 50% * 229.53 = 114.77, y = 45% * 297 = 133.65
@@ -585,7 +597,6 @@ describe('certificatePdfGenerator service', () => {
       expect(fileName).toBe('Reconocimiento_V-18_234_567_Lote_45_insignia_de_madera.pdf');
       expect(mockDocInstance.save).toHaveBeenCalledWith('Reconocimiento_V-18_234_567_Lote_45_insignia_de_madera.pdf');
     });
-  });
 
     it('generates single certificate for exceptional member', async () => {
       const exceptionalMember: ScoutMember = {
@@ -615,6 +626,7 @@ describe('certificatePdfGenerator service', () => {
         expect.any(Object)
       );
     });
+  });
 
   describe('generateBatchCertificatesPdf', () => {
     it('generates multi-page PDF for active and exceptional members and excludes pending members', async () => {
@@ -668,6 +680,115 @@ describe('certificatePdfGenerator service', () => {
         expect.any(Number),
         expect.any(Object)
       );
+    });
+
+    it('reuses deterministic cert_bg_image alias across all pages in multi-page batch renders', async () => {
+      const templateWithBg: CertificateTemplate = {
+        background_url: 'data:image/jpeg;base64,sharedBatchBackground',
+        page_width: 297,
+        page_height: 210,
+        orientation: 'landscape',
+        fields: []
+      };
+
+      const recognitionWithBg: RecognitionType = {
+        ...mockRecognition,
+        template: templateWithBg
+      };
+
+      const members = [
+        mockActiveMember,
+        {
+          ...mockActiveMember,
+          identity: 'V-15.111.222',
+          first_names: 'Mariana',
+          last_names: 'Rojas'
+        },
+        {
+          ...mockActiveMember,
+          identity: 'V-19.333.444',
+          first_names: 'Luis',
+          last_names: 'Bello'
+        }
+      ];
+
+      await generateBatchCertificatesPdf({
+        batch: mockBatch,
+        members,
+        recognition: recognitionWithBg,
+        hierarchy: mockHierarchy
+      });
+
+      expect(mockDocInstance.addImage).toHaveBeenCalledTimes(3);
+      for (let i = 1; i <= 3; i++) {
+        expect(mockDocInstance.addImage).toHaveBeenNthCalledWith(
+          i,
+          templateWithBg.background_url,
+          'JPEG',
+          0,
+          0,
+          297,
+          210,
+          'cert_bg_image'
+        );
+      }
+    });
+
+    it('invokes onProgress callback per member and supports chunked execution', async () => {
+      const members = Array.from({ length: 6 }, (_, idx) => ({
+        ...mockActiveMember,
+        identity: `V-10.000.00${idx + 1}`,
+        first_names: `Scout ${idx + 1}`
+      }));
+
+      const progressUpdates: Array<{ current: number; total: number; percentage: number }> = [];
+
+      await generateBatchCertificatesPdf(
+        {
+          batch: mockBatch,
+          members,
+          recognition: mockRecognition,
+          hierarchy: mockHierarchy
+        },
+        {
+          chunkSize: 2,
+          onProgress: (p) => progressUpdates.push(p)
+        }
+      );
+
+      expect(progressUpdates).toHaveLength(6);
+      expect(progressUpdates[0]).toEqual({ current: 1, total: 6, percentage: 17 });
+      expect(progressUpdates[2]).toEqual({ current: 3, total: 6, percentage: 50 });
+      expect(progressUpdates[5]).toEqual({ current: 6, total: 6, percentage: 100 });
+    });
+
+    it('aborts batch PDF generation when AbortSignal is triggered', async () => {
+      const controller = new AbortController();
+      const members = [
+        mockActiveMember,
+        { ...mockActiveMember, identity: 'V-22.222.222', first_names: 'Segundo' }
+      ];
+
+      await expect(
+        generateBatchCertificatesPdf(
+          {
+            batch: mockBatch,
+            members,
+            recognition: mockRecognition,
+            hierarchy: mockHierarchy
+          },
+          {
+            signal: controller.signal,
+            onProgress: ({ current }) => {
+              if (current === 1) {
+                controller.abort();
+              }
+            }
+          }
+        )
+      ).rejects.toThrow(/cancelada/i);
+
+      expect(mockDocInstance.save).not.toHaveBeenCalled();
     });
 
     it('throws an error if no active or exceptional members exist in the batch', async () => {
@@ -725,6 +846,52 @@ describe('certificatePdfGenerator service', () => {
       );
     });
 
+    it('notifies progress per member and supports AbortSignal in generateBatchCertificatesZip', async () => {
+      const members = [
+        mockActiveMember,
+        { ...mockActiveMember, identity: 'V-15.111.222', first_names: 'Mariana' },
+        { ...mockActiveMember, identity: 'V-16.333.444', first_names: 'Luis' }
+      ];
+
+      const progressEvents: Array<{ current: number; total: number; percentage: number }> = [];
+
+      const fileName = await generateBatchCertificatesZip(
+        {
+          batch: mockBatch,
+          members,
+          recognition: mockRecognition,
+          hierarchy: mockHierarchy
+        },
+        {
+          chunkSize: 1,
+          onProgress: (p) => progressEvents.push(p)
+        }
+      );
+
+      expect(fileName).toBe('Reconocimientos_Lote_45_insignia_de_madera.zip');
+      expect(progressEvents).toEqual([
+        { current: 1, total: 3, percentage: 33 },
+        { current: 2, total: 3, percentage: 67 },
+        { current: 3, total: 3, percentage: 100 }
+      ]);
+
+      // Verify aborting mid-zip throws AbortError
+      const abortController = new AbortController();
+      abortController.abort();
+
+      await expect(
+        generateBatchCertificatesZip(
+          {
+            batch: mockBatch,
+            members,
+            recognition: mockRecognition,
+            hierarchy: mockHierarchy
+          },
+          { signal: abortController.signal }
+        )
+      ).rejects.toThrow(/cancelada/i);
+    });
+
     it('throws an error if no active or exceptional members exist in the batch when generating zip', async () => {
       const onlyPendingMembers = [mockPendingMember];
 
@@ -739,8 +906,8 @@ describe('certificatePdfGenerator service', () => {
     });
   });
 
-  describe('renderCertificatePage edge cases', () => {
-    it('detects PNG and JPEG background formats correctly', () => {
+  describe('renderCertificatePage & background format validation', () => {
+    it('detects PNG and JPEG background formats correctly and passes cert_bg_image alias', () => {
       const pngTemplate: CertificateTemplate = {
         background_url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
         page_width: 297,
@@ -763,7 +930,8 @@ describe('certificatePdfGenerator service', () => {
         0,
         0,
         297,
-        210
+        210,
+        CERTIFICATE_BG_IMAGE_ALIAS
       );
 
       const jpegTemplate: CertificateTemplate = {
@@ -788,15 +956,102 @@ describe('certificatePdfGenerator service', () => {
         0,
         0,
         297,
-        210
+        210,
+        CERTIFICATE_BG_IMAGE_ALIAS
       );
+    });
+
+    it('guards against invalid data:application/pdf URLs and falls back cleanly to standard Scout border', () => {
+      expect(getImageFormatFromUrl('data:application/pdf;base64,JVBERi0xLjQ=')).toBeNull();
+      expect(getImageFormatFromUrl('https://example.com/template.pdf')).toBeNull();
+      expect(getImageFormatFromUrl('')).toBeNull();
+
+      const pdfUrlTemplate: CertificateTemplate = {
+        background_url: 'data:application/pdf;base64,JVBERi0xLjQ=',
+        page_width: 297,
+        page_height: 210,
+        orientation: 'landscape',
+        fields: []
+      };
+
+      renderCertificatePage(mockDocInstance as unknown as jsPDF, {
+        member: mockActiveMember,
+        batch: mockBatch,
+        template: pdfUrlTemplate,
+        width: 297,
+        height: 210
+      });
+
+      // Must NOT call addImage with a PDF data URL, and must draw standard border instead
+      expect(mockDocInstance.addImage).not.toHaveBeenCalled();
+      expect(mockDocInstance.rect).toHaveBeenCalledWith(10, 10, 277, 190);
     });
   });
 
-  describe('getPdfFontFamily helper', () => {
-    it('maps scouts-gt-planar-bold and Scouts GT Planar to helvetica', () => {
+  describe('TrueType Font Embedding & getPdfFontFamily helper', () => {
+    it('maps scouts-gt-planar-bold and Scouts GT Planar to helvetica when custom font is not registered', () => {
       expect(getPdfFontFamily('scouts-gt-planar-bold')).toBe('helvetica');
       expect(getPdfFontFamily('Scouts GT Planar')).toBe('helvetica');
+    });
+
+    it('maps scouts-gt-planar-bold and Scouts GT Planar to Scouts GT Planar when custom font is registered', () => {
+      expect(getPdfFontFamily('scouts-gt-planar-bold', true)).toBe('Scouts GT Planar');
+      expect(getPdfFontFamily('Scouts GT Planar', true)).toBe('Scouts GT Planar');
+    });
+
+    it('registers Scouts-GT-Planar-Bold.ttf in VFS and applies custom font when addFileToVFS and addFont exist', () => {
+      const mockVfsDoc = {
+        ...mockDocInstance,
+        addFileToVFS: vi.fn(),
+        addFont: vi.fn(),
+        setFont: vi.fn(),
+        setFontSize: vi.fn(),
+        setTextColor: vi.fn()
+      };
+
+      setCachedScoutsPlanarFontBase64('AAEAAAASAQAABAAgR0RFRrRCsIIAAjGsAAACYkdQT1M=');
+      expect(getCachedScoutsPlanarFontBase64()).toBe('AAEAAAASAQAABAAgR0RFRrRCsIIAAjGsAAACYkdQT1M=');
+
+      const registered = registerCustomFonts(mockVfsDoc as unknown as jsPDF);
+      expect(registered).toBe(true);
+      expect(mockVfsDoc.addFileToVFS).toHaveBeenCalledWith(
+        SCOUTS_PLANAR_FONT_FILE,
+        'AAEAAAASAQAABAAgR0RFRrRCsIIAAjGsAAACYkdQT1M='
+      );
+      expect(mockVfsDoc.addFont).toHaveBeenCalledWith(
+        SCOUTS_PLANAR_FONT_FILE,
+        SCOUTS_PLANAR_FONT_NAME,
+        'bold'
+      );
+
+      applyFieldTypography(mockVfsDoc as unknown as jsPDF, {
+        id: 'field-title',
+        field_key: 'recognition_name',
+        label: 'Tipo',
+        x: 50,
+        y: 35,
+        font_family: 'scouts-gt-planar-bold',
+        font_size: 24,
+        font_weight: 'bold',
+        color: '#1b7a37',
+        align: 'center'
+      });
+
+      expect(mockVfsDoc.setFont).toHaveBeenCalledWith(SCOUTS_PLANAR_FONT_NAME, 'bold');
+    });
+
+    it('loads font via fetch and caches Base64 string', async () => {
+      const fakeFontBytes = new Uint8Array([0, 1, 0, 0, 65, 66, 67, 68]).buffer;
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: async () => fakeFontBytes
+      } as Response);
+
+      const loaded = await loadScoutsPlanarFontBase64('/fonts/Scouts-GT-Planar-Bold.ttf');
+      expect(loaded).toBeTruthy();
+      expect(fetchSpy).toHaveBeenCalledWith('/fonts/Scouts-GT-Planar-Bold.ttf');
+
+      fetchSpy.mockRestore();
     });
 
     it('maps noto-sans to helvetica', () => {

@@ -213,4 +213,41 @@ describe('RecognitionFormModal Component', () => {
     fireEvent.click(closeHeaderBtn);
     expect(handleClose).toHaveBeenCalledTimes(2);
   });
+
+  it('clears stale error states and resets form values cleanly when switching recognition or reopening', async () => {
+    vi.mocked(api.createRecognitionType).mockRejectedValueOnce(new Error('Network error'));
+
+    const { rerender } = render(
+      <RecognitionFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />
+    );
+
+    const input = screen.getByPlaceholderText(/Ej\. Medalla al Mérito Scout/i);
+    fireEvent.change(input, { target: { value: 'Reconocimiento Temporal' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Crear Reconocimiento$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /Ocurrió un error al guardar el reconocimiento/i
+      );
+    });
+
+    // Switch modal to edit an existing recognition -> stale error is cleared and input pre-populates
+    rerender(
+      <RecognitionFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        recognition={mockRecognition}
+        onSuccess={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Ej\. Medalla al Mérito Scout/i)).toHaveValue(
+      'Insignia de Madera'
+    );
+  });
 });

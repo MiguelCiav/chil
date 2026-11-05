@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
@@ -12,7 +12,7 @@ import {
 import { createRecognitionType, updateRecognitionType } from '../api';
 import { useAuth } from '../../auth';
 
-interface RecognitionFormModalProps {
+export interface RecognitionFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   recognition?: RecognitionType | null;
@@ -27,8 +27,15 @@ function getSubmitButtonText(loading: boolean, isEdit: boolean): string {
   return 'Crear Reconocimiento';
 }
 
-export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
-  isOpen,
+interface RecognitionFormContentProps {
+  onClose: () => void;
+  recognition?: RecognitionType | null;
+  onSuccess?: (saved: RecognitionType, isEdit?: boolean) => void;
+  onCreateSuccess?: (saved: RecognitionType) => void;
+  onEditSuccess?: (saved: RecognitionType) => void;
+}
+
+const RecognitionFormContent: React.FC<RecognitionFormContentProps> = ({
   onClose,
   recognition,
   onSuccess,
@@ -48,36 +55,23 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
   } = useForm<RecognitionFormData>({
     resolver: zodResolver(recognitionFormSchema),
     defaultValues: {
-      name: ''
+      name: recognition?.name ?? ''
     }
   });
 
   const handleClose = () => {
     if (!loading) {
       setErrorMsg(null);
+      reset({ name: recognition?.name ?? '' });
       onClose();
     }
   };
-
-  useEffect(() => {
-    if (isOpen) {
-      if (recognition) {
-        reset({
-          name: recognition.name
-        });
-      } else {
-        reset({
-          name: ''
-        });
-      }
-    }
-  }, [isOpen, recognition, reset]);
 
   const onSubmit = async (data: RecognitionFormData) => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      if (isEdit && recognition) {
+      if (recognition) {
         const updated = await updateRecognitionType(
           recognition.id,
           {
@@ -97,6 +91,7 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
         onCreateSuccess?.(created);
         onSuccess?.(created, false);
       }
+      reset({ name: '' });
       onClose();
     } catch (err) {
       console.error('Error saving recognition type:', err);
@@ -107,49 +102,78 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-lg">
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col flex-1 overflow-hidden min-h-0">
-        <ModalHeader onClose={handleClose}>
-          {isEdit ? 'Editar Tipo de Reconocimiento' : 'Nuevo Tipo de Reconocimiento'}
-        </ModalHeader>
-        <ModalBody className="space-y-4">
-          {errorMsg && (
-            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
-              {errorMsg}
-            </div>
-          )}
-
-          {/* Nombre Field */}
-          <div>
-            <Field
-              label="Nombre *"
-              placeholder="Ej. Medalla al Mérito Scout"
-              disabled={loading}
-              variant={errors.name ? 'error' : 'default'}
-              errorText={errors.name?.message}
-              {...register('name')}
-            />
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="flex flex-col flex-1 overflow-hidden min-h-0"
+    >
+      <ModalHeader onClose={handleClose}>
+        {isEdit ? 'Editar Tipo de Reconocimiento' : 'Nuevo Tipo de Reconocimiento'}
+      </ModalHeader>
+      <ModalBody className="space-y-4">
+        {errorMsg && (
+          <div
+            role="alert"
+            className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200"
+          >
+            {errorMsg}
           </div>
-        </ModalBody>
+        )}
 
-        <ModalFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
+        {/* Nombre Field */}
+        <div>
+          <Field
+            label="Nombre *"
+            placeholder="Ej. Medalla al Mérito Scout"
             disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={loading}
-          >
-            {getSubmitButtonText(loading, isEdit)}
-          </Button>
-        </ModalFooter>
-      </form>
+            variant={errors.name ? 'error' : 'default'}
+            errorText={errors.name?.message}
+            {...register('name')}
+          />
+        </div>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleClose}
+          disabled={loading}
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={loading}
+        >
+          {getSubmitButtonText(loading, isEdit)}
+        </Button>
+      </ModalFooter>
+    </form>
+  );
+};
+
+export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
+  isOpen,
+  onClose,
+  recognition,
+  onSuccess,
+  onCreateSuccess,
+  onEditSuccess
+}) => {
+  const formKey = `${isOpen ? 'open' : 'closed'}-${recognition?.id ?? 'create'}-${recognition?.name ?? ''}`;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-lg">
+      <RecognitionFormContent
+        key={formKey}
+        onClose={onClose}
+        recognition={recognition}
+        onSuccess={onSuccess}
+        onCreateSuccess={onCreateSuccess}
+        onEditSuccess={onEditSuccess}
+      />
     </Modal>
   );
 };

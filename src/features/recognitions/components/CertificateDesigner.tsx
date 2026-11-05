@@ -23,6 +23,13 @@ import {
   ProcessedBackgroundResult
 } from '../api';
 import { useCanvasScale, useCanvasDrag } from '../hooks';
+import {
+  useDesignerReducer,
+  buildDefaultField,
+  buildDefaultTemplateFields,
+  normalizeLoadedTemplate,
+  getMissingTemplateFields
+} from '../hooks/useDesignerReducer';
 import { DesignerHeader, DesignerCanvas, DesignerSidebar } from './designer';
 
 const CERTIFICATE_DESIGNER_TOUR_STEPS: WalkthroughStep[] = [
@@ -76,59 +83,6 @@ const CERTIFICATE_DESIGNER_TOUR_STEPS: WalkthroughStep[] = [
   }
 ];
 
-function buildDefaultField(def: (typeof AVAILABLE_TEMPLATE_FIELDS)[number]): RecognitionFieldConfig {
-  return {
-    id: `field-${def.field_key}`,
-    field_key: def.field_key,
-    label: def.label,
-    x: def.default_x,
-    y: def.default_y,
-    font_family: def.default_font_family,
-    font_size: def.default_font_size,
-    font_weight: def.default_font_weight,
-    color: def.default_color,
-    align: def.default_align
-  };
-}
-
-function buildDefaultTemplateFields(): RecognitionFieldConfig[] {
-  return AVAILABLE_TEMPLATE_FIELDS.map(buildDefaultField);
-}
-
-function normalizeLoadedTemplate(template?: Partial<CertificateTemplate> | null): CertificateTemplate {
-  if (template && Array.isArray(template.fields)) {
-    const pageWidth = template.page_width || 297;
-    const pageHeight = template.page_height || 210;
-    const aspectRatio =
-      template.aspect_ratio ||
-      (template.page_width && template.page_height ? template.page_width / template.page_height : 297 / 210);
-
-    return {
-      ...template,
-      background_url: template.background_url || '',
-      page_width: pageWidth,
-      page_height: pageHeight,
-      aspect_ratio: aspectRatio,
-      orientation: template.orientation || 'landscape',
-      fields: template.fields
-    };
-  }
-
-  return {
-    background_url: '',
-    page_width: 297,
-    page_height: 210,
-    aspect_ratio: 297 / 210,
-    orientation: 'landscape',
-    fields: buildDefaultTemplateFields()
-  };
-}
-
-function getMissingTemplateFields(currentFields: RecognitionFieldConfig[]): RecognitionFieldConfig[] {
-  const currentKeys = new Set(currentFields.map((f) => f.field_key));
-  return AVAILABLE_TEMPLATE_FIELDS.filter((def) => !currentKeys.has(def.field_key)).map(buildDefaultField);
-}
-
 function extractBackgroundTemplatePatch(
   result: ProcessedBackgroundResult | string
 ): Partial<CertificateTemplate> {
@@ -174,7 +128,22 @@ export const CertificateDesigner: React.FC = () => {
   });
 
   const [recognition, setRecognition] = useState<RecognitionType | null>(null);
-  const [template, setTemplate] = useState<CertificateTemplate>(DEFAULT_CERTIFICATE_TEMPLATE);
+  const {
+    template,
+    canUndo,
+    canRedo,
+    loadTemplate,
+    addField,
+    addFields,
+    removeField,
+    updateFieldProps,
+    moveFieldCoordinates,
+    resetFields,
+    setBackground,
+    clearBackground,
+    undo,
+    redo
+  } = useDesignerReducer(DEFAULT_CERTIFICATE_TEMPLATE);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
   const [activeSidebarTab, setActiveSidebarTab] = useState<'palette' | 'properties' | 'format'>('palette');
@@ -184,13 +153,61 @@ export const CertificateDesigner: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToast({ message, type });
-    setTimeout(() => {
+    toastTimerRef.current = setTimeout(() => {
       setToast(null);
+      toastTimerRef.current = null;
     }, 4000);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (!(e.ctrlKey || e.metaKey)) return;
+
+      const key = e.key.toLowerCase();
+      if (key === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          redo();
+        } else {
+          e.preventDefault();
+          undo();
+        }
+      } else if (key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [undo, redo]);
 
   const { canvasRef, fontScale, normalizedDimensions } = useCanvasScale(template);
 
@@ -199,12 +216,7 @@ export const CertificateDesigner: React.FC = () => {
       canvasRef,
       fields: template.fields,
       isPreviewMode,
-      onUpdateFieldCoordinates: (fieldId, x, y) => {
-        setTemplate((prev) => ({
-          ...prev,
-          fields: prev.fields.map((f) => (f.id === fieldId ? { ...f, x, y } : f))
-        }));
-      },
+      onUpdateFieldCoordinates: moveFieldCoordinates,
       onSelectField: (fieldId) => {
         setSelectedFieldId(fieldId);
         setActiveSidebarTab('properties');
@@ -227,7 +239,7 @@ export const CertificateDesigner: React.FC = () => {
 
         setRecognition(item);
         const normalized = normalizeLoadedTemplate(item.template);
-        setTemplate(normalized);
+        loadTemplate(normalized);
         if (normalized.fields.length > 0) {
           setSelectedFieldId(normalized.fields[0].id);
         }
@@ -246,7 +258,7 @@ export const CertificateDesigner: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [id, showNotification]);
+  }, [id, loadTemplate, showNotification]);
 
   const selectedField = template.fields.find((f) => f.id === selectedFieldId) || null;
 
@@ -262,10 +274,7 @@ export const CertificateDesigner: React.FC = () => {
     }
 
     const newField = buildDefaultField(def);
-    setTemplate((prev) => ({
-      ...prev,
-      fields: [...prev.fields, newField]
-    }));
+    addField(newField);
     setSelectedFieldId(newField.id);
     setActiveSidebarTab('properties');
     showNotification(`Campo "${def.label}" añadido a la plantilla.`);
@@ -273,10 +282,7 @@ export const CertificateDesigner: React.FC = () => {
 
   const handleRemoveField = (fieldId: string) => {
     const fieldToRemove = template.fields.find((f) => f.id === fieldId);
-    setTemplate((prev) => ({
-      ...prev,
-      fields: prev.fields.filter((f) => f.id !== fieldId)
-    }));
+    removeField(fieldId);
     if (selectedFieldId === fieldId) {
       setSelectedFieldId(null);
     }
@@ -289,10 +295,7 @@ export const CertificateDesigner: React.FC = () => {
     const toAdd = getMissingTemplateFields(template.fields);
     if (toAdd.length === 0) return;
 
-    setTemplate((prev) => ({
-      ...prev,
-      fields: [...prev.fields, ...toAdd]
-    }));
+    addFields(toAdd);
     setSelectedFieldId(toAdd[0].id);
     setActiveSidebarTab('properties');
     showNotification(`Se añadieron ${toAdd.length} campos a la plantilla.`);
@@ -300,10 +303,7 @@ export const CertificateDesigner: React.FC = () => {
 
   const handleResetFields = () => {
     const defaultFields = buildDefaultTemplateFields();
-    setTemplate((prev) => ({
-      ...prev,
-      fields: defaultFields
-    }));
+    resetFields(defaultFields);
     if (defaultFields.length > 0) {
       setSelectedFieldId(defaultFields[0].id);
       setActiveSidebarTab('properties');
@@ -313,10 +313,7 @@ export const CertificateDesigner: React.FC = () => {
 
   const updateSelectedField = (patch: Partial<RecognitionFieldConfig>) => {
     if (!selectedFieldId) return;
-    setTemplate((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) => (f.id === selectedFieldId ? { ...f, ...patch } : f))
-    }));
+    updateFieldProps(selectedFieldId, patch);
   };
 
   const handleBackgroundUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -327,7 +324,7 @@ export const CertificateDesigner: React.FC = () => {
     try {
       const result = await processBackgroundImageFile(file);
       const bgPatch = extractBackgroundTemplatePatch(result);
-      setTemplate((prev) => ({ ...prev, ...bgPatch }));
+      setBackground(bgPatch);
       showNotification('Imagen de fondo cargada y optimizada exitosamente.');
     } catch (err) {
       console.error('Error uploading background image:', err);
@@ -341,14 +338,7 @@ export const CertificateDesigner: React.FC = () => {
   };
 
   const handleRemoveBackground = () => {
-    setTemplate((prev) => ({
-      ...prev,
-      background_url: '',
-      page_width: 297,
-      page_height: 210,
-      aspect_ratio: 297 / 210,
-      orientation: 'landscape'
-    }));
+    clearBackground();
     showNotification('Fondo personalizado eliminado.');
   };
 
@@ -433,6 +423,10 @@ export const CertificateDesigner: React.FC = () => {
         isSaving={isSaving}
         isUploadingBg={isUploadingBg}
         hasBackground={Boolean(template.background_url)}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
         onTogglePreview={setIsPreviewMode}
         onUploadClick={() => fileInputRef.current?.click()}
         onSave={handleSaveTemplate}
@@ -454,6 +448,7 @@ export const CertificateDesigner: React.FC = () => {
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerDownField={handlePointerDown}
+          onUpdateFieldCoordinates={moveFieldCoordinates}
           onSelectField={(fieldId) => {
             setSelectedFieldId(fieldId);
             setActiveSidebarTab('properties');
