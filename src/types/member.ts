@@ -1,3 +1,5 @@
+import type { ScraperMemberDetails } from '../features/batches/api/scraperApi';
+
 export type ScoutUnit = 'manada' | 'tropa' | 'caminantes' | 'clan' | 'institucional' | 'no_scout';
 
 export const SCOUT_UNITS: Record<ScoutUnit, { label: string; badgeClass: string }> = {
@@ -51,13 +53,35 @@ export interface ScoutMember {
   birth_date: string;
   email?: string;
   phone?: string;
+
+  // Territorial Hierarchy
   region_id?: number;
+  region_name?: string;
   district_id?: number;
+  district_name?: string;
   group_id?: number;
+  group_name?: string;
+
+  // Unit & Positions
   unit_id?: number;
   unit?: ScoutUnit;
   member_type: 'young' | 'adult';
+  member_category?: string;
+  position_in_group?: string;
+  institutional_position?: string;
+  scout_progression?: string;
+
+  // Status & Solvency
   status: MemberStatus;
+  is_solvent?: boolean;
+  solvent_until?: string;
+  avatar_url?: string;
+  impeesa_uuid?: string;
+  admission_date?: string;
+  entry_date?: string;
+  promise_date?: string;
+
+  // Batch & Reference
   batch_id?: number;
   recognition_code?: string;
   user_id?: string;
@@ -74,11 +98,5 @@ export interface MemberVerificationResult {
   region_id?: number;
   district_id?: number;
   group_id?: number;
-  details?: {
-    nombre_completo: string;
-    status: string;
-    telefono: string;
-    correo_electronico: string;
-    fecha_nacimiento: string;
-  };
+  details?: ScraperMemberDetails;
 }

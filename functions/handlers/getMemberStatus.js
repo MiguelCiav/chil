@@ -41,6 +41,7 @@ const getMemberStatusHandler = async (request) => {
     try {
       logger.info(`Attempting lookup for ${cedula} with cached cookies...`);
       const member = await lookup.fetchMemberStatusWithCookies(cachedCookies, cedula);
+      logger.info(`Member ${cedula} resolved: ${member.nombre_completo} [Solvente: ${member.solvente_hasta || 'N/A'}]`);
       return member;
     } catch (error) {
       if (error.message === "No registrado") {
@@ -57,6 +58,7 @@ const getMemberStatusHandler = async (request) => {
     auth.setCachedCookies(credentials, cookies);
 
     const member = await lookup.fetchMemberStatusWithCookies(cookies, cedula);
+    logger.info(`Member ${cedula} resolved: ${member.nombre_completo} [Solvente: ${member.solvente_hasta || 'N/A'}]`);
     return member;
   } catch (error) {
     logger.error(`getMemberStatus failed for ${cedula}:`, error);

@@ -2,11 +2,50 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../../lib/firebase';
 
 export interface ScraperMemberDetails {
+  // Legacy Core Fields (100% Backwards Compatible)
   nombre_completo: string;
   status: string;
   telefono: string;
   correo_electronico: string;
   fecha_nacimiento: string;
+
+  // Enhanced Identity & Verification
+  cedula?: string;
+  cedula_raw?: string;
+  member_uuid?: string;
+  avatar_url?: string;
+  genero?: string;
+  fecha_nacimiento_raw?: string;
+  edad?: number | null;
+
+  // Territorial Structure from Portal
+  region?: string;
+  distrito?: string;
+  grupo?: string;
+
+  // Scout Unit & Positions
+  unidad?: string;
+  cargo_grupo?: string;
+  cargo_institucional?: string;
+  tipo_miembro?: string;
+
+  // Solvency & Scout History
+  solvente_hasta?: string;
+  solvente_hasta_raw?: string;
+  progresion_actual?: string;
+  fecha_ingreso?: string;
+  fecha_promesa?: string;
+  rol_sistema?: string;
+
+  // Contact & Demographics
+  correo_secundario?: string;
+  ubicacion_estado?: string;
+  direccion?: string;
+  religion?: string;
+  nivel_educativo?: string;
+  ocupacion?: string;
+  carnet_pdf_url?: string;
+  medical_pdf_url?: string;
 }
 
 export interface ScraperCredentials {
