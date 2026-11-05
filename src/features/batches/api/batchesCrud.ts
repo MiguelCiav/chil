@@ -6,19 +6,38 @@ import {
   setDoc,
   query,
   where,
-  writeBatch
+  writeBatch,
+  WriteBatch
 } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { Batch, BatchCreationParams, ScoutMember } from '../types';
-import { getMembersByBatchId } from './membersCrud';
+import { getMembersByBatchId, getMemberDocId } from './membersCrud';
 
-function generateSecureBatchId(): number {
+export function generateSecureBatchId(): number {
+  const MIN_BATCH_ID = 100_000_000;
+  const RANGE = 900_000_000; // 100_000_000 to 999_999_999
   const array = new Uint32Array(1);
   if (typeof globalThis !== 'undefined' && globalThis.crypto?.getRandomValues) {
     globalThis.crypto.getRandomValues(array);
-    return (array[0] % 1_000_000) + 1;
+    return (array[0] % RANGE) + MIN_BATCH_ID;
   }
-  return (Date.now() % 1_000_000) + 1;
+  return (Date.now() % RANGE) + MIN_BATCH_ID;
+}
+
+export async function commitChunkedBatches(
+  operations: ((batch: WriteBatch) => void)[],
+  chunkSize = 450
+): Promise<void> {
+  if (!operations || operations.length === 0) {
+    return;
+  }
+  const safeChunkSize = chunkSize > 0 ? chunkSize : 450;
+  for (let i = 0; i < operations.length; i += safeChunkSize) {
+    const batch = writeBatch(db);
+    const chunk = operations.slice(i, i + safeChunkSize);
+    chunk.forEach((op) => op(batch));
+    await batch.commit();
+  }
 }
 
 export function buildBatchQueryForUser(userId: string) {
@@ -79,15 +98,21 @@ export async function deleteBatch(batchId: number): Promise<void> {
   const membersQuery = query(collection(db, "scout_members"), where("batch_id", "==", batchId));
   const membersSnapshot = await getDocs(membersQuery);
 
-  const batchOp = writeBatch(db);
-  membersSnapshot.forEach((docSnapshot) => {
-    batchOp.delete(docSnapshot.ref);
-  });
+  const operations: ((batch: WriteBatch) => void)[] = [];
+  if (Array.isArray(membersSnapshot?.docs)) {
+    membersSnapshot.docs.forEach((docSnapshot) => {
+      operations.push((batchOp) => batchOp.delete(docSnapshot.ref));
+    });
+  } else if (typeof membersSnapshot?.forEach === 'function') {
+    membersSnapshot.forEach((docSnapshot) => {
+      operations.push((batchOp) => batchOp.delete(docSnapshot.ref));
+    });
+  }
 
   const batchDocRef = doc(db, "batches", String(batchId));
-  batchOp.delete(batchDocRef);
+  operations.push((batchOp) => batchOp.delete(batchDocRef));
 
-  await batchOp.commit();
+  await commitChunkedBatches(operations);
 }
 
 export async function getAllBatches(userId?: string): Promise<Batch[]> {
@@ -189,16 +214,15 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
     })
   );
 
-  const batchOp = writeBatch(db);
+  const operations: ((batch: WriteBatch) => void)[] = [];
 
   // 1. Create the new merged batch
   const newBatchRef = doc(db, 'batches', String(newNumericId));
-  batchOp.set(newBatchRef, mergedBatch);
+  operations.push((batchOp) => batchOp.set(newBatchRef, mergedBatch));
 
   // 2. Member reassignment
   for (const { batch: sourceBatch, members } of membersByBatch) {
     for (const member of members) {
-      const memberRef = doc(db, 'scout_members', member.recognition_code || member.identity);
       const memberGroupId = member.group_id !== undefined && !Number.isNaN(member.group_id)
         ? member.group_id
         : (sourceBatch.group_id !== undefined && !Number.isNaN(sourceBatch.group_id) ? sourceBatch.group_id : 0);
@@ -209,17 +233,28 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
         group_id: memberGroupId,
         ...(targetUserId ? { user_id: targetUserId } : {})
       };
-      batchOp.set(memberRef, updatedMember);
+      const newDocId = getMemberDocId(updatedMember);
+      const memberRef = doc(db, 'scout_members', newDocId);
+      operations.push((batchOp) => batchOp.set(memberRef, updatedMember));
+
+      const oldDocId = getMemberDocId({
+        ...member,
+        batch_id: member.batch_id ?? sourceBatch.id
+      });
+      if (oldDocId !== newDocId) {
+        const oldMemberRef = doc(db, 'scout_members', oldDocId);
+        operations.push((batchOp) => batchOp.delete(oldMemberRef));
+      }
     }
   }
 
   // 3. Delete original batches
   for (const sourceBatch of existingBatches) {
     const oldBatchRef = doc(db, 'batches', String(sourceBatch.id));
-    batchOp.delete(oldBatchRef);
+    operations.push((batchOp) => batchOp.delete(oldBatchRef));
   }
 
-  await batchOp.commit();
+  await commitChunkedBatches(operations);
 
   return mergedBatch;
 }

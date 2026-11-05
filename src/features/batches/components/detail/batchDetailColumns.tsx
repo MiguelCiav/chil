@@ -76,12 +76,7 @@ export function renderMemberStatusCell(info: CellContext<ScoutMember, unknown>):
 }
 
 export function renderMemberCodeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const rowData = info.row.original;
-  const code =
-    (info.getValue() as string) ||
-    (rowData.status === 'active' || rowData.status === 'exceptional'
-      ? `REC-${rowData.identity.slice(-4)}`
-      : '-');
+  const code = (info.getValue() as string) || '-';
   return <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>;
 }
 

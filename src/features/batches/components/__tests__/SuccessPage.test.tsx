@@ -6,6 +6,7 @@ import * as api from '../../api';
 import * as recognitions from '../../../recognitions';
 
 vi.mock('../../api', () => ({
+  getAllBatches: vi.fn(() => Promise.resolve([])),
   getBatchById: vi.fn(),
   getMembersByBatchId: vi.fn(),
   getHierarchyData: vi.fn(() => Promise.resolve({ regions: [], districts: [], groups: [] })),
@@ -229,17 +230,17 @@ describe('SuccessPage component', () => {
     alertSpy.mockRestore();
   });
 
-  it('falls back to loading last batch from localStorage when batchId is omitted from state', async () => {
-    const mockStorageBatch = {
+  it('falls back to loading latest batch from Firestore when batchId is omitted from state', async () => {
+    const mockFirestoreBatch = {
       id: 777,
-      comment: 'Lote Guardado en LocalStorage',
+      comment: 'Lote Guardado en Firestore',
       region_id: 1,
       district_id: 10,
       group_id: 100,
       created_at: '2026-08-20T00:00:00.000Z'
     };
 
-    localStorage.setItem('chil_batches', JSON.stringify([mockStorageBatch]));
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce([mockFirestoreBatch]);
 
     vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
       {
@@ -264,8 +265,6 @@ describe('SuccessPage component', () => {
       expect(screen.getByText('#777')).toBeInTheDocument();
       expect(screen.getByText('Luis Rojas')).toBeInTheDocument();
     });
-
-    localStorage.clear();
   });
 
   it('renders pending members alert and enables clicking Ver detalles and preview eye button', async () => {

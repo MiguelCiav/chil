@@ -18,7 +18,13 @@ import { Button } from '../../../components/Button';
 import { Table } from '../../../components/Table';
 import { ColumnDef, CellContext } from '@tanstack/react-table';
 
-import { getBatchById, getMembersByBatchId, getHierarchyData, generateBatchReport } from '../api';
+import {
+  getAllBatches,
+  getBatchById,
+  getMembersByBatchId,
+  getHierarchyData,
+  generateBatchReport
+} from '../api';
 import { Batch, ScoutMember } from '../types';
 import {
   generateBatchCertificatesZip,
@@ -53,24 +59,6 @@ const StatSummaryCard: React.FC<StatSummaryCardProps> = ({
     </CardBody>
   </Card>
 );
-
-async function loadFallbackBatch(): Promise<{ batch: Batch | null; members: ScoutMember[] }> {
-  let batches: Batch[] = [];
-  try {
-    if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
-      batches = JSON.parse(localStorage.getItem('chil_batches') || '[]');
-    }
-  } catch {
-    batches = [];
-  }
-
-  if (batches.length > 0) {
-    const lastBatch = batches.at(-1)!;
-    const lastBatchMembers = await getMembersByBatchId(lastBatch.id);
-    return { batch: lastBatch, members: lastBatchMembers };
-  }
-  return { batch: null, members: [] };
-}
 
 function renderSuccessIdentityCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
   return <span className="font-mono text-xs sm:text-sm text-neutral/80">{info.getValue() as string}</span>;
@@ -198,15 +186,21 @@ export const SuccessPage: React.FC = () => {
 
   useEffect(() => {
     const loadBatchData = async () => {
-      if (!batchId) {
-        const fallback = await loadFallbackBatch();
-        setBatch(fallback.batch);
-        setMembers(fallback.members);
-        setLoading(false);
-        return;
-      }
-
       try {
+        if (!batchId) {
+          const allBatches = typeof getAllBatches === 'function' ? await getAllBatches() : [];
+          const latestBatch = allBatches[0] ?? null;
+          if (latestBatch) {
+            const latestMembers = await getMembersByBatchId(latestBatch.id);
+            setBatch(latestBatch);
+            setMembers(latestMembers);
+          } else {
+            setBatch(null);
+            setMembers([]);
+          }
+          return;
+        }
+
         const [b, m] = await Promise.all([
           getBatchById(batchId),
           getMembersByBatchId(batchId)

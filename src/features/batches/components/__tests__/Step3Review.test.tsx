@@ -9,6 +9,7 @@ vi.mock('../../api', async (importOriginal) => {
   return {
     ...actual,
     updateMember: vi.fn(),
+    batchUpdateMembers: vi.fn(),
     getMembersByBatchId: vi.fn()
   };
 });
@@ -208,8 +209,8 @@ describe('Step3Review component', () => {
     });
   });
 
-  it('commits all member documents to Firestore and calls handleFinalizeBatch on Generar Lote', async () => {
-    vi.mocked(api.updateMember).mockResolvedValue(sampleMembers[0]);
+  it('commits all member documents to Firestore via batchUpdateMembers and calls handleFinalizeBatch on Generar Lote', async () => {
+    vi.mocked(api.batchUpdateMembers).mockResolvedValue(sampleMembers);
 
     render(<Step3Review {...defaultProps} />);
 
@@ -217,7 +218,7 @@ describe('Step3Review component', () => {
     fireEvent.click(finalizeBtn);
 
     await waitFor(() => {
-      expect(api.updateMember).toHaveBeenCalledTimes(sampleMembers.length);
+      expect(api.batchUpdateMembers).toHaveBeenCalledWith(sampleMembers);
       expect(defaultProps.handleFinalizeBatch).toHaveBeenCalled();
     });
   });

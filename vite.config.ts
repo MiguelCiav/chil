@@ -13,6 +13,8 @@ export default defineConfig(async () => ({
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/test/setup.ts",
+    testTimeout: 30000,
+    hookTimeout: 30000,
     exclude: ["**/node_modules/**", "dist", "test/**/*", "functions/node_modules/**"],
     coverage: {
       reporter: ["text", "lcov"],

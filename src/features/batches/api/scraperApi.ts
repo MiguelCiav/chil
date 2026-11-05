@@ -14,42 +14,96 @@ export interface ScraperCredentials {
   password: string;
 }
 
-// Helper to check and print browser environment details for storage
+const SCRAPER_CREDENTIALS_KEY = 'chil_scraper_credentials';
+
 const safeGetItem = (key: string): string | null => {
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      return window.localStorage.getItem(key);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      return window.sessionStorage.getItem(key);
     }
   } catch (e) {
-    console.warn("Storage item fetch failed", e);
+    console.warn("Session storage item fetch failed", e);
   }
   return null;
 };
 
 const safeSetItem = (key: string, value: string): void => {
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(key, value);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.setItem(key, value);
     }
   } catch (e) {
-    console.warn("Storage item write failed", e);
+    console.warn("Session storage item write failed", e);
+  }
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Ignore localStorage cleanup failure
   }
 };
 
+const safeRemoveItem = (key: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.removeItem(key);
+    }
+  } catch (e) {
+    console.warn("Session storage item removal failed", e);
+  }
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Ignore localStorage cleanup failure
+  }
+};
+
+export function getScraperCredentials(): ScraperCredentials | null {
+  const credentialsJson = safeGetItem(SCRAPER_CREDENTIALS_KEY);
+  if (!credentialsJson) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(credentialsJson) as Partial<ScraperCredentials>;
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      typeof parsed.email === 'string' &&
+      typeof parsed.password === 'string'
+    ) {
+      return {
+        email: parsed.email,
+        password: parsed.password
+      };
+    }
+    return null;
+  } catch (e) {
+    console.warn("Failed to parse scraper credentials from sessionStorage:", e);
+    safeRemoveItem(SCRAPER_CREDENTIALS_KEY);
+    return null;
+  }
+}
+
+export async function clearScraperCredentials(): Promise<void> {
+  safeRemoveItem(SCRAPER_CREDENTIALS_KEY);
+}
+
 export async function saveScraperCredentials(credentials: ScraperCredentials): Promise<void> {
-  safeSetItem('chil_scraper_credentials', JSON.stringify(credentials));
+  safeSetItem(SCRAPER_CREDENTIALS_KEY, JSON.stringify(credentials));
 }
 
 export async function hasScraperCredentials(): Promise<boolean> {
-  return safeGetItem('chil_scraper_credentials') !== null;
+  return getScraperCredentials() !== null;
 }
 
 export async function loginScraper(): Promise<void> {
-  const credentialsJson = safeGetItem('chil_scraper_credentials');
-  if (!credentialsJson) {
+  const credentials = getScraperCredentials();
+  if (!credentials) {
     throw new Error("No hay credenciales configuradas");
   }
-  const credentials = JSON.parse(credentialsJson);
 
   try {
     const loginFn = httpsCallable<{ credentials: ScraperCredentials }, void>(
@@ -65,11 +119,10 @@ export async function loginScraper(): Promise<void> {
 }
 
 export async function getMemberStatus(cedula: string): Promise<ScraperMemberDetails> {
-  const credentialsJson = safeGetItem('chil_scraper_credentials');
-  const credentials = credentialsJson ? JSON.parse(credentialsJson) : null;
+  const credentials = getScraperCredentials();
 
   try {
-    const getStatusFn = httpsCallable<{ cedula: string; credentials?: ScraperCredentials }, ScraperMemberDetails>(
+    const getStatusFn = httpsCallable<{ cedula: string; credentials?: ScraperCredentials | null }, ScraperMemberDetails>(
       functions,
       'getMemberStatus'
     );

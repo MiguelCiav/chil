@@ -546,9 +546,9 @@ export const NewBatchWizard: React.FC = () => {
       )}
 
       {/* STEP 3: REVIEW & CONFIRM */}
-      {currentStep === 3 && (
+      {currentStep === 3 && batchId !== null && (
         <Step3Review
-          batchId={batchId!}
+          batchId={batchId}
           savedMembers={savedMembers}
           onMembersUpdated={setSavedMembers}
           handleFinalizeBatch={handleFinalizeBatch}

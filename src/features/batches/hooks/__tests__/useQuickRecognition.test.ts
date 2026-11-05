@@ -1,6 +1,10 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useQuickRecognition, executeQuickEmission } from '../useQuickRecognition';
+import {
+  useQuickRecognition,
+  executeQuickEmission,
+  validateQuickRecognitionFields
+} from '../useQuickRecognition';
 import * as batchesApi from '../../api';
 import * as recognitionsApi from '../../../recognitions';
 import * as authFeature from '../../../auth';
@@ -193,5 +197,51 @@ describe('useQuickRecognition hook', () => {
       }),
       'user-123'
     );
+  });
+
+  it('cleans up toast timer on unmount without leaking state updates', () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+    const { result, unmount } = renderHook(() => useQuickRecognition());
+
+    act(() => {
+      result.current.triggerToast('Mensaje de prueba', 'success');
+    });
+
+    expect(result.current.showToast).toBe(true);
+    expect(result.current.toastMessage).toBe('Mensaje de prueba');
+
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    vi.useRealTimers();
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it('validates fields using Zod schema in validateQuickRecognitionFields', () => {
+    const errors = validateQuickRecognitionFields({
+      recognitionType: '',
+      unit: 'tropa',
+      regionId: '',
+      districtId: '',
+      groupId: '',
+      identity: '',
+      scraperStatus: 'idle',
+      verifiedCedula: null,
+      firstNames: '',
+      lastNames: '',
+      recognitionCode: ''
+    });
+
+    expect(errors).toEqual({
+      recognitionType: 'Debe seleccionar un tipo de reconocimiento',
+      regionId: 'Debe seleccionar una región',
+      districtId: 'Debe seleccionar un distrito',
+      groupId: 'Debe seleccionar un grupo scout',
+      identity: 'Debe ingresar la cédula de identidad',
+      firstNames: 'Debe ingresar el o los nombres',
+      lastNames: 'Debe ingresar el o los apellidos',
+      recognitionCode: 'Debe generar o ingresar un código de reconocimiento'
+    });
   });
 });
