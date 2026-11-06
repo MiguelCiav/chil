@@ -136,6 +136,31 @@ describe('hierarchyMatcher', () => {
     it('classifies members >= 21 as adult even if unit looks young', () => {
       const adultInTropa = classifyScoutUnitAndType({ unidad: 'Tropa', edad: 22 });
       expect(adultInTropa.member_type).toBe('adult');
+      expect(adultInTropa.unit).toBe('tropa');
+    });
+
+    it('correctly classifies adult leader in Comunidad as caminantes / adult (test case 11926931)', () => {
+      const irene = classifyScoutUnitAndType({
+        unidad: 'Comunidad',
+        cargo_grupo: 'Adulto de Programa',
+        cargo_institucional: 'Cooperador Nacional de Soporte',
+        tipo_miembro: 'Grupo',
+        fecha_nacimiento: '1972-09-04'
+      });
+      expect(irene.unit).toBe('caminantes');
+      expect(irene.member_type).toBe('adult');
+    });
+
+    it('correctly classifies group leader as institucional / adult without youth unit (test case 12484964)', () => {
+      const jose = classifyScoutUnitAndType({
+        unidad: 'Conductor de Grupo',
+        cargo_grupo: 'Jefe De Grupo',
+        cargo_institucional: 'Ninguno',
+        tipo_miembro: 'Grupo',
+        fecha_nacimiento: '1975-12-16'
+      });
+      expect(jose.unit).toBe('institucional');
+      expect(jose.member_type).toBe('adult');
     });
 
     it('handles No Scout unit', () => {

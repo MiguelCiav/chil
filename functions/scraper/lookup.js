@@ -154,6 +154,23 @@ async function fetchMemberStatusWithCookies(cookies, cedula) {
       const carnet_pdf_url = heroCard.find("a[href*='download_card.pdf']").attr("href") || "";
       const medical_pdf_url = heroCard.find("a[href*='medical_file_pdf']").attr("href") || "";
 
+      // Fallback extraction from Hero Card metadata badges if table rows are missing
+      let heroRegion = "";
+      let heroDistrito = "";
+      let heroGrupo = "";
+      heroCard.find("div").each((_, div) => {
+        const text = cleanText($(div).text());
+        if (text.includes("Región:") || text.includes("Region:")) {
+          heroRegion = cleanText($(div).find(".badge").text());
+        }
+        if (text.includes("Distrito:")) {
+          heroDistrito = cleanText($(div).find(".badge").text());
+        }
+        if (text.includes("Grupo:")) {
+          heroGrupo = cleanText($(div).find(".badge").text());
+        }
+      });
+
       return {
         // Core Legacy Fields (100% Backwards Compatible)
         nombre_completo,
@@ -172,9 +189,9 @@ async function fetchMemberStatusWithCookies(cookies, cedula) {
         edad,
 
         // Territorial Hierarchy (Auto-Assignment)
-        region: tableData["Región"] || tableData["Region"] || "",
-        distrito: tableData["Distrito"] || "",
-        grupo: tableData["Grupo Scout"] || tableData["Grupo"] || "",
+        region: tableData["Región"] || tableData["Region"] || heroRegion || "",
+        distrito: tableData["Distrito"] || heroDistrito || "",
+        grupo: tableData["Grupo Scout"] || tableData["Grupo"] || heroGrupo || "",
 
         // Scout Unit & Positions
         unidad: tableData["Unidad"] || "",

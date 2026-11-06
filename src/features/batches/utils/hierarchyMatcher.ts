@@ -142,6 +142,44 @@ export function matchHierarchy(
 }
 
 /**
+ * Calcula la edad en años a partir de una fecha en formato YYYY-MM-DD o DD/MM/YYYY
+ */
+function calculateAgeFromBirthDate(birthDateStr?: string): number | null {
+  if (!birthDateStr) return null;
+  const isoMatch = birthDateStr.match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const month = parseInt(isoMatch[2], 10) - 1;
+    const day = parseInt(isoMatch[3], 10);
+    const birthDate = new Date(year, month, day);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : null;
+  }
+
+  const dmyMatch = birthDateStr.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    const birthDate = new Date(year, month, day);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? age : null;
+  }
+
+  return null;
+}
+
+/**
  * Clasifica la unidad y el tipo de miembro (joven vs adulto) a partir de los datos Impeesa
  */
 export function classifyScoutUnitAndType(scraped: {
@@ -150,12 +188,17 @@ export function classifyScoutUnitAndType(scraped: {
   cargo_institucional?: string;
   tipo_miembro?: string;
   edad?: number | null;
+  fecha_nacimiento?: string;
 }): { unit: ScoutUnit; member_type: 'young' | 'adult' } {
+  let edad = scraped.edad ?? null;
+  if (edad === null && scraped.fecha_nacimiento) {
+    edad = calculateAgeFromBirthDate(scraped.fecha_nacimiento);
+  }
+
   const normUnit = (scraped.unidad || '').toLowerCase();
   const normCargo = (scraped.cargo_grupo || '').toLowerCase();
   const normCargoInst = (scraped.cargo_institucional || '').toLowerCase();
   const normTipo = (scraped.tipo_miembro || '').toLowerCase();
-  const edad = scraped.edad ?? null;
 
   // 0. Caso especial No Scout
   if (normUnit.includes('no scout') || normUnit.includes('no_scout')) {
@@ -171,8 +214,13 @@ export function classifyScoutUnitAndType(scraped: {
     normCargo.includes('dirigente') ||
     normCargo.includes('jefe') ||
     normCargo.includes('colaborador') ||
+    normCargo.includes('cooperador') ||
+    normCargo.includes('asistente') ||
+    normCargo.includes('scouter') ||
     normCargoInst.includes('nacional') ||
     normCargoInst.includes('distrital') ||
+    normCargoInst.includes('regional') ||
+    normCargoInst.includes('comisionado') ||
     normTipo.includes('institucional') ||
     normTipo.includes('distrito') ||
     normTipo.includes('nacional') ||
@@ -182,30 +230,32 @@ export function classifyScoutUnitAndType(scraped: {
   const isAdult = isAdultRole || isAdultAge;
 
   // 2. Mapeo de Unidad Scout
+  // Si la persona pertenece explícitamente a una rama juvenil (incluso como adulto dirigente de rama),
+  // se respeta esa unidad (Manada, Tropa, Caminantes/Comunidad, Clan).
   let unit: ScoutUnit = 'institucional';
 
   if (
     normUnit.includes('manada') ||
     normUnit.includes('lobato') ||
     normUnit.includes('lobezna') ||
-    (edad !== null && edad >= 7 && edad < 11)
+    (!isAdult && edad !== null && edad >= 7 && edad < 11)
   ) {
     unit = 'manada';
   } else if (
     normUnit.includes('tropa') ||
-    (edad !== null && edad >= 11 && edad < 16)
+    (!isAdult && edad !== null && edad >= 11 && edad < 16)
   ) {
     unit = 'tropa';
   } else if (
     normUnit.includes('comunidad') ||
     normUnit.includes('caminante') ||
-    (edad !== null && edad >= 16 && edad < 18)
+    (!isAdult && edad !== null && edad >= 16 && edad < 18)
   ) {
     unit = 'caminantes';
   } else if (
     normUnit.includes('clan') ||
     normUnit.includes('rover') ||
-    (edad !== null && edad >= 18 && edad < 21)
+    (!isAdult && edad !== null && edad >= 18 && edad < 21)
   ) {
     unit = 'clan';
   } else if (normUnit.includes('conductor') || isAdult) {
