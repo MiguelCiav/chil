@@ -36,10 +36,10 @@ export function matchHierarchy(
   const normDistrict = normalizeScoutName(districtStr);
   const normGroup = normalizeScoutName(groupStr);
 
-  // 1. Coincidencia de Región
-  let matchedRegion = normRegion
+  // 1. Coincidencia de Región (UUID o Nombre)
+  let matchedRegion = regionStr
     ? hierarchyData.regions.find(
-        (r) => r.id !== 0 && normalizeScoutName(r.name) === normRegion
+        (r) => r.id !== 0 && (r.uuid === regionStr || (normRegion && normalizeScoutName(r.name) === normRegion))
       )
     : undefined;
 
@@ -52,16 +52,16 @@ export function matchHierarchy(
     );
   }
 
-  // 2. Coincidencia de Distrito (prioriza la región encontrada)
+  // 2. Coincidencia de Distrito (prioriza la región encontrada, soporta UUID o Nombre)
   let matchedDistrict = null;
-  if (matchedRegion && normDistrict) {
+  if (matchedRegion && districtStr) {
     matchedDistrict = hierarchyData.districts.find(
       (d) =>
         d.id !== 0 &&
         d.region_id === matchedRegion!.id &&
-        normalizeScoutName(d.name) === normDistrict
+        (d.uuid === districtStr || (normDistrict && normalizeScoutName(d.name) === normDistrict))
     );
-    if (!matchedDistrict) {
+    if (!matchedDistrict && normDistrict) {
       matchedDistrict = hierarchyData.districts.find(
         (d) =>
           d.id !== 0 &&
@@ -71,11 +71,11 @@ export function matchHierarchy(
       );
     }
   }
-  if (!matchedDistrict && normDistrict) {
+  if (!matchedDistrict && districtStr) {
     matchedDistrict = hierarchyData.districts.find(
-      (d) => d.id !== 0 && normalizeScoutName(d.name) === normDistrict
+      (d) => d.id !== 0 && (d.uuid === districtStr || (normDistrict && normalizeScoutName(d.name) === normDistrict))
     );
-    if (!matchedDistrict) {
+    if (!matchedDistrict && normDistrict) {
       matchedDistrict = hierarchyData.districts.find(
         (d) =>
           d.id !== 0 &&
@@ -88,18 +88,18 @@ export function matchHierarchy(
     }
   }
 
-  // 3. Coincidencia de Grupo Scout
+  // 3. Coincidencia de Grupo Scout (UUID o Nombre)
   let matchedGroup = null;
-  if (matchedDistrict && normGroup) {
-    // 3.1 Coincidencia exacta dentro del distrito
+  if (matchedDistrict && groupStr) {
+    // 3.1 Coincidencia exacta dentro del distrito (UUID o Nombre)
     matchedGroup = hierarchyData.groups.find(
       (g) =>
         g.id !== 0 &&
         g.district_id === matchedDistrict!.id &&
-        normalizeScoutName(g.name) === normGroup
+        (g.uuid === groupStr || (normGroup && normalizeScoutName(g.name) === normGroup))
     );
     // 3.2 Coincidencia parcial/subcadena
-    if (!matchedGroup) {
+    if (!matchedGroup && normGroup) {
       matchedGroup = hierarchyData.groups.find(
         (g) =>
           g.id !== 0 &&
@@ -108,12 +108,12 @@ export function matchHierarchy(
             normGroup.includes(normalizeScoutName(g.name)))
       );
     }
-  } else if (normGroup) {
+  } else if (groupStr) {
     // 3.3 Búsqueda global de grupo si no hubo distrito previo
     matchedGroup = hierarchyData.groups.find(
-      (g) => g.id !== 0 && normalizeScoutName(g.name) === normGroup
+      (g) => g.id !== 0 && (g.uuid === groupStr || (normGroup && normalizeScoutName(g.name) === normGroup))
     );
-    if (!matchedGroup) {
+    if (!matchedGroup && normGroup) {
       matchedGroup = hierarchyData.groups.find(
         (g) =>
           g.id !== 0 &&

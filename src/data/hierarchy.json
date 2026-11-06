@@ -2,51 +2,63 @@
   "regions": [
     {
       "id": 0,
-      "name": "No aplica"
+      "name": "No aplica",
+      "uuid": "f3eb9cb3-539f-4ef8-8a57-c7a7acd593c1"
     },
     {
       "id": 1,
-      "name": "ANZOATEGUI"
+      "name": "ANZOATEGUI",
+      "uuid": "4b3f78cf-538c-4396-b79d-a7d6ddd15eb0"
     },
     {
       "id": 2,
-      "name": "ARAGUA"
+      "name": "ARAGUA",
+      "uuid": "1f263d48-ecee-4f22-9256-099fd343958c"
     },
     {
       "id": 3,
-      "name": "ATENDIDOS POR LA OSN"
+      "name": "ATENDIDOS POR LA OSN",
+      "uuid": "a98ca022-fbf5-4ac0-8428-15b34deca911"
     },
     {
       "id": 4,
-      "name": "CARABOBO"
+      "name": "CARABOBO",
+      "uuid": "9a1c192e-2315-4334-a75b-fb001e2a3017"
     },
     {
       "id": 5,
-      "name": "DISTRITO CAPITAL"
+      "name": "DISTRITO CAPITAL",
+      "uuid": "9ed1879c-2b40-4f5e-877c-0f2755d0f89b"
     },
     {
       "id": 6,
-      "name": "LARA"
+      "name": "LARA",
+      "uuid": "2ab1ead5-bef8-4cea-af42-2783c8be053f"
     },
     {
       "id": 7,
-      "name": "MERIDA"
+      "name": "MERIDA",
+      "uuid": "11b90219-fcf1-46a1-a839-f5860a6147b1"
     },
     {
       "id": 8,
-      "name": "METROPOLITANA"
+      "name": "METROPOLITANA",
+      "uuid": "efcaf1b3-6380-4dce-933b-108f1553ec55"
     },
     {
       "id": 9,
-      "name": "MIRANDA"
+      "name": "MIRANDA",
+      "uuid": "46704c43-99d3-4ca8-8c24-31033b4b5b9d"
     },
     {
       "id": 10,
-      "name": "TACHIRA"
+      "name": "TACHIRA",
+      "uuid": "6a4da96f-1acb-4b00-baed-db6e82903af2"
     },
     {
       "id": 11,
-      "name": "ZULIA"
+      "name": "ZULIA",
+      "uuid": "5b936a12-4c59-485a-bc0f-1ed78974281b"
     }
   ],
   "districts": [
@@ -63,7 +75,8 @@
     {
       "id": 2,
       "name": "PUERTO LA CRUZ",
-      "region_id": 1
+      "region_id": 3,
+      "uuid": "5c5b3286-5b56-4684-97f4-8c9f45f34784"
     },
     {
       "id": 3,
@@ -73,7 +86,8 @@
     {
       "id": 4,
       "name": "HENRI PITTIER",
-      "region_id": 2
+      "region_id": 2,
+      "uuid": "501767ab-93a2-4d0c-bfe2-7b702dd7bc10"
     },
     {
       "id": 5,
@@ -118,7 +132,8 @@
     {
       "id": 13,
       "name": "PORTUGUESA",
-      "region_id": 3
+      "region_id": 3,
+      "uuid": "784dd32e-76e1-459c-b01d-e3a1a3c1b8a5"
     },
     {
       "id": 14,
@@ -128,22 +143,26 @@
     {
       "id": 15,
       "name": "YARACUY",
-      "region_id": 3
+      "region_id": 3,
+      "uuid": "0ef751d2-cf43-4b3b-8470-5153c229dcf8"
     },
     {
       "id": 16,
       "name": "GUACARA",
-      "region_id": 4
+      "region_id": 4,
+      "uuid": "8fef096d-9b45-4f9a-9839-8315c86a9ba2"
     },
     {
       "id": 17,
       "name": "SAN ESTEBAN",
-      "region_id": 4
+      "region_id": 4,
+      "uuid": "8edf5984-cbdf-42f3-b133-3e99ff1a564d"
     },
     {
       "id": 18,
       "name": "VALENCIA NORTE",
-      "region_id": 4
+      "region_id": 4,
+      "uuid": "5cdbe8c9-9d9b-499a-9d67-f9a3b3ea3c37"
     },
     {
       "id": 19,
@@ -158,17 +177,20 @@
     {
       "id": 21,
       "name": "AVILA",
-      "region_id": 5
+      "region_id": 5,
+      "uuid": "58d2c5c6-3306-41b4-9dfe-68a399a80e6d"
     },
     {
       "id": 22,
       "name": "CARICUAO",
-      "region_id": 5
+      "region_id": 5,
+      "uuid": "1d174bd6-1780-421d-a249-3d1e988f6874"
     },
     {
       "id": 23,
       "name": "JOSE ANTONIO PAEZ",
-      "region_id": 5
+      "region_id": 5,
+      "uuid": "0b487926-239f-4687-84aa-4613c9c0a70a"
     },
     {
       "id": 24,
@@ -183,12 +205,14 @@
     {
       "id": 26,
       "name": "MARISCAL SUCRE",
-      "region_id": 5
+      "region_id": 5,
+      "uuid": "0b24a849-fc03-4729-a7da-ab5502dc8498"
     },
     {
       "id": 27,
       "name": "SANTIAGO DE LEON",
-      "region_id": 5
+      "region_id": 5,
+      "uuid": "3525c026-b325-4a89-a9bb-c07a9ee2eb93"
     },
     {
       "id": 28,
@@ -198,7 +222,8 @@
     {
       "id": 29,
       "name": "CATEDRAL",
-      "region_id": 6
+      "region_id": 6,
+      "uuid": "936b050c-1955-40ed-a23d-6de5ff4bcd4f"
     },
     {
       "id": 30,
@@ -208,27 +233,32 @@
     {
       "id": 31,
       "name": "PALAVECINO",
-      "region_id": 6
+      "region_id": 6,
+      "uuid": "ce681fe7-75a9-4cfb-b65d-d600c6fac452"
     },
     {
       "id": 32,
       "name": "CARI",
-      "region_id": 7
+      "region_id": 7,
+      "uuid": "67b1d977-f237-496f-bc4a-80b3d773a545"
     },
     {
       "id": 33,
       "name": "LIBERTADOR",
-      "region_id": 7
+      "region_id": 7,
+      "uuid": "04a1d182-216c-4ac8-a154-f188766876a6"
     },
     {
       "id": 34,
       "name": "NO APLICA",
-      "region_id": 7
+      "region_id": 7,
+      "uuid": "723b35b9-b519-429b-9783-0cea3edf9bfc"
     },
     {
       "id": 35,
       "name": "BARUTA",
-      "region_id": 8
+      "region_id": 8,
+      "uuid": "863577ce-e954-4d29-b073-dcea1fc91df7"
     },
     {
       "id": 36,
@@ -238,37 +268,44 @@
     {
       "id": 37,
       "name": "SUCRE NORTE",
-      "region_id": 8
+      "region_id": 8,
+      "uuid": "c7b38dc9-ab87-4f1e-85b5-396181c33bf2"
     },
     {
       "id": 38,
       "name": "SUCRE SUR",
-      "region_id": 8
+      "region_id": 8,
+      "uuid": "faed6643-785b-40b3-830e-9e78b544c67e"
     },
     {
       "id": 39,
       "name": "ALTOS MIRANDINOS",
-      "region_id": 9
+      "region_id": 9,
+      "uuid": "1a68b26d-09f7-4cae-8092-81bfdec503eb"
     },
     {
       "id": 40,
       "name": "GUARENAS GUATIRE",
-      "region_id": 9
+      "region_id": 9,
+      "uuid": "5ac75e0f-9878-4ad1-a45b-18c4e29c49f9"
     },
     {
       "id": 41,
       "name": "VALLES DEL TUY",
-      "region_id": 9
+      "region_id": 9,
+      "uuid": "271545af-4514-4dfe-a9fb-f62282fb32a2"
     },
     {
       "id": 42,
       "name": "RIO TORBES",
-      "region_id": 10
+      "region_id": 10,
+      "uuid": "2b57c3e0-50b2-43f4-b797-19fb16a072b2"
     },
     {
       "id": 43,
       "name": "SAN CRISTOBAL ESTE",
-      "region_id": 10
+      "region_id": 10,
+      "uuid": "e486b3e2-c9ca-44ad-b525-21bac8a2309a"
     },
     {
       "id": 44,
@@ -278,7 +315,8 @@
     {
       "id": 45,
       "name": "COQUIVACOA",
-      "region_id": 11
+      "region_id": 11,
+      "uuid": "e2ca1fbf-e88c-4565-a6ab-02896db4c47d"
     },
     {
       "id": 46,
@@ -293,17 +331,140 @@
     {
       "id": 48,
       "name": "SAMUEL MARTINEZ",
-      "region_id": 11
+      "region_id": 11,
+      "uuid": "3d88e65f-b2b7-4fc3-88c4-5b490d1019b0"
     },
     {
       "id": 49,
       "name": "SAN FRANCISCO",
-      "region_id": 11
+      "region_id": 11,
+      "uuid": "ae2f479d-7eba-4d10-883f-ca0b4399a9c9"
     },
     {
       "id": 50,
       "name": "ZULIA ORIENTAL",
-      "region_id": 11
+      "region_id": 11,
+      "uuid": "5f419407-d3b2-44b7-964e-c25e1de4895b"
+    },
+    {
+      "id": 51,
+      "name": "NO APLICA",
+      "region_id": 1,
+      "uuid": "d060190f-f085-40a2-8800-2db2f9072095"
+    },
+    {
+      "id": 52,
+      "name": "ATENDIDOS POR LA REGION",
+      "region_id": 2,
+      "uuid": "3d06dbe2-5073-4c02-8930-23be7f257b89"
+    },
+    {
+      "id": 53,
+      "name": "NO APLICA",
+      "region_id": 2,
+      "uuid": "884b87fb-0c3d-485e-9b70-e4b739420101"
+    },
+    {
+      "id": 54,
+      "name": "ATENDIDOS POR LA OSN",
+      "region_id": 3,
+      "uuid": "e9572edb-2d43-41a4-896e-24c3fef9dbb3"
+    },
+    {
+      "id": 55,
+      "name": "INSULAR",
+      "region_id": 3,
+      "uuid": "c14fc949-a9b8-44bf-b3a6-2e0208caef50"
+    },
+    {
+      "id": 56,
+      "name": "NO APLICA",
+      "region_id": 3,
+      "uuid": "061d8297-6afe-4323-8afa-67dbb0936e22"
+    },
+    {
+      "id": 57,
+      "name": "ATENDIDOS POR LA REGION",
+      "region_id": 4,
+      "uuid": "32482c92-970e-4502-8c7a-f865fa04f813"
+    },
+    {
+      "id": 58,
+      "name": "NO APLICA",
+      "region_id": 4,
+      "uuid": "484e4277-23c0-4601-b9ec-12fde500a9c6"
+    },
+    {
+      "id": 59,
+      "name": "ATENDIDOS POR LA REGION",
+      "region_id": 5,
+      "uuid": "83817dba-28a6-4597-afe3-849708285933"
+    },
+    {
+      "id": 60,
+      "name": "NO APLICA",
+      "region_id": 5,
+      "uuid": "e6b3ef65-8a81-44ff-b24b-be9f048acc1d"
+    },
+    {
+      "id": 61,
+      "name": "ATENDIDOS POR LA REGION",
+      "region_id": 6,
+      "uuid": "dcc6276b-a85d-4fe2-b833-de1ab6603903"
+    },
+    {
+      "id": 62,
+      "name": "NO APLICA",
+      "region_id": 6,
+      "uuid": "7819a48e-e1b2-4727-80d4-e7808437ff5e"
+    },
+    {
+      "id": 63,
+      "name": "ATENDIDOS POR LA REGION",
+      "region_id": 7,
+      "uuid": "61b0bf5f-4762-48bc-b238-1df7b2f903b0"
+    },
+    {
+      "id": 64,
+      "name": "ATENDIDOS POR LA REGION",
+      "region_id": 8,
+      "uuid": "46b64f62-4020-4c80-b75b-ee07b91d0900"
+    },
+    {
+      "id": 65,
+      "name": "NO APLICA",
+      "region_id": 8,
+      "uuid": "d6751459-adb2-41df-b9e8-6c5419382a56"
+    },
+    {
+      "id": 66,
+      "name": "NO APLICA",
+      "region_id": 9,
+      "uuid": "b8b6ce72-65ca-44e1-9a4c-6e4916e2b23c"
+    },
+    {
+      "id": 67,
+      "name": "ATENDIDOS POR LA REGION",
+      "region_id": 10,
+      "uuid": "d98e4d4b-3ad2-497b-b55e-133f5c7ff6d7"
+    },
+    {
+      "id": 68,
+      "name": "NO APLICA",
+      "region_id": 10,
+      "uuid": "cb45ef16-58ee-4aa7-a605-684b4d381463"
+    },
+    {
+      "id": 69,
+      "name": "ATENDIDOS POR LA REGION",
+      "region_id": 11,
+      "uuid": "d4ebbaf8-d949-4b56-918c-32d44a9ab270"
+    },
+    {
+      "id": 70,
+      "name": "NO APLICA",
+      "region_id": 11,
+      "uuid": "f29af74f-a6ee-4dae-945c-17a27b3e3df9"
     }
   ],
   "groups": [
@@ -315,707 +476,848 @@
     {
       "id": 22,
       "name": "KENYA",
-      "district_id": 9
+      "district_id": 54,
+      "uuid": "37f4aff1-ef56-4c11-95a0-9977d48af7c6"
     },
     {
       "id": 23,
       "name": "SAN FRANCISCO DE ASIS",
-      "district_id": 9
+      "district_id": 54,
+      "uuid": "729f7380-14ab-48c8-ba75-b885a5ec06f3"
     },
     {
       "id": 24,
       "name": "SOROCAIMA",
-      "district_id": 9
+      "district_id": 54,
+      "uuid": "bf340cae-c6a4-45c8-8f84-361654065ace"
     },
     {
       "id": 25,
       "name": "GENAZARET",
-      "district_id": 10
+      "district_id": 54,
+      "uuid": "2c7f930a-f03e-44ee-b6b2-88c7ffe89eea"
     },
     {
       "id": 26,
       "name": "FRANCISCO DE MIRANDA",
-      "district_id": 11
+      "district_id": 54,
+      "uuid": "670f3dd6-b3d5-483a-8a1a-b9c365455a8f"
     },
     {
       "id": 27,
       "name": "POSEIDON",
-      "district_id": 11
+      "district_id": 54,
+      "uuid": "1beebaf1-3e8d-44c0-8d95-6dc40431082a"
     },
     {
       "id": 28,
       "name": "CECILIO ACOSTA",
-      "district_id": 12
+      "district_id": 54,
+      "uuid": "f5eeef76-1f04-4f7b-8c0e-8eb174e26f87"
     },
     {
       "id": 29,
       "name": "MORICHE",
-      "district_id": 12
+      "district_id": 54,
+      "uuid": "4f332008-ae31-4c13-9361-c3a226f914a8"
     },
     {
       "id": 30,
       "name": "TIPURO",
-      "district_id": 12
+      "district_id": 54,
+      "uuid": "423e066e-346e-463c-af8c-b3c83b1e7457"
     },
     {
       "id": 31,
       "name": "VILLA DE MORICHAL",
-      "district_id": 12
+      "district_id": 54,
+      "uuid": "5e4466e0-46f1-45ba-aa39-fa3c34500e4b"
     },
     {
       "id": 32,
       "name": "BADEN POWELL",
-      "district_id": 13
+      "district_id": 13,
+      "uuid": "5b2c3eba-39e3-403e-8c2d-bb178977225a"
     },
     {
       "id": 33,
       "name": "CENTAURO DE LOS LLANOS",
-      "district_id": 13
+      "district_id": 13,
+      "uuid": "3c7a6921-b5d0-4664-9429-ed0a346c8206"
     },
     {
       "id": 34,
       "name": "GUANAGUANARE",
-      "district_id": 13
+      "district_id": 13,
+      "uuid": "229607b2-ccf8-40b8-829f-04c6f32d5dd6"
     },
     {
       "id": 35,
       "name": "TAMANACO",
-      "district_id": 13
+      "district_id": 13,
+      "uuid": "a8dd356c-ebd4-42af-843e-a735472f3447"
     },
     {
       "id": 36,
       "name": "HEROES DE ESCUQUE",
-      "district_id": 14
+      "district_id": 54,
+      "uuid": "d4840afd-de76-41ae-97ca-a8f71bc88126"
     },
     {
       "id": 37,
       "name": "SANTA TERESITA",
-      "district_id": 14
+      "district_id": 54,
+      "uuid": "bb33e4fe-1a0f-46bd-9e95-f987ff673ebf"
     },
     {
       "id": 38,
       "name": "BOGDAN PLEGUNOV TOMM",
-      "district_id": 15
+      "district_id": 15,
+      "uuid": "a1fd5767-35e3-444e-a7eb-e18b5b84039d"
     },
     {
       "id": 39,
       "name": "ELIGIO VARGAS OCHOA",
-      "district_id": 15
+      "district_id": 15,
+      "uuid": "4602eb32-12a0-43ac-8b3b-1eadfad5b68a"
     },
     {
       "id": 40,
       "name": "PIONEROS DE YARACUY",
-      "district_id": 15
+      "district_id": 15,
+      "uuid": "d4744a2d-d1dc-4944-9435-5da46e07baf9"
     },
     {
       "id": 41,
       "name": "ROLAND ERASMUS PHILIPPS",
-      "district_id": 15
+      "district_id": 15,
+      "uuid": "57ca110e-3160-4d2d-8616-b6ef083a40a6"
     },
     {
       "id": 42,
       "name": "GEA",
-      "district_id": 16
+      "district_id": 16,
+      "uuid": "6ed04e72-cea0-486a-8202-22d932d30d8e"
     },
     {
       "id": 43,
       "name": "PADRE JORGE DEVOS",
-      "district_id": 16
+      "district_id": 16,
+      "uuid": "4be6fe1b-ce4b-430c-800c-c0457d5d76e9"
     },
     {
       "id": 44,
       "name": "SAN AGUSTIN",
-      "district_id": 16
+      "district_id": 16,
+      "uuid": "fc1a0070-d425-492b-bfcc-a3d5f55f2d70"
     },
     {
       "id": 45,
       "name": "EXPLORADORES DE BROWNSEA",
-      "district_id": 17
+      "district_id": 17,
+      "uuid": "6ee7476e-6e78-41b2-a9bc-51170b48e4f2"
     },
     {
       "id": 46,
       "name": "INAGUANAGOA",
-      "district_id": 17
+      "district_id": 17,
+      "uuid": "ae64ed1a-7f9c-4b1d-8a64-a74dc7e63951"
     },
     {
       "id": 47,
       "name": "LIBERTADOR",
-      "district_id": 17
+      "district_id": 17,
+      "uuid": "77ab8117-07b0-4b49-8dcb-2befa1b12295"
     },
     {
       "id": 48,
       "name": "NUESTRA SEÑORA DE BEGOÑA",
-      "district_id": 17
+      "district_id": 17,
+      "uuid": "3154eb29-87e7-4706-9f77-ff9fd6ae6547"
     },
     {
       "id": 49,
       "name": "RELAMPAGO DEL CATATUMBO",
-      "district_id": 17
+      "district_id": 17,
+      "uuid": "76945493-3396-4ab6-9717-5383261e44de"
     },
     {
       "id": 50,
       "name": "SAN DIEGO DE ALCALA",
-      "district_id": 17
+      "district_id": 17,
+      "uuid": "2764b615-a087-4bfb-9f1c-c85fa08f16de"
     },
     {
       "id": 51,
       "name": "VALENCIA DEL REY",
-      "district_id": 17
+      "district_id": 17,
+      "uuid": "7667e529-a3e0-4732-82be-9bfe99bf3d77"
     },
     {
       "id": 52,
       "name": "ACUARIUS",
-      "district_id": 18
+      "district_id": 18,
+      "uuid": "5b87c834-f699-486a-a57a-180937c851d1"
     },
     {
       "id": 53,
       "name": "BATALLA DE CARABOBO",
-      "district_id": 18
+      "district_id": 18,
+      "uuid": "6509f1d0-a80b-4f47-9732-0a5d126564b9"
     },
     {
       "id": 54,
       "name": "CASUPO",
-      "district_id": 18
+      "district_id": 18,
+      "uuid": "01fdfc20-947e-4636-9974-1accbf8e7881"
     },
     {
       "id": 55,
       "name": "DON BOSCO",
-      "district_id": 18
+      "district_id": 18,
+      "uuid": "90313b28-2eac-4525-9024-03751c106130"
     },
     {
       "id": 56,
       "name": "JUPITER",
-      "district_id": 18
+      "district_id": 18,
+      "uuid": "3bd5d88c-83de-4a2e-a93a-ffcbc3bc520a"
     },
     {
       "id": 57,
       "name": "LA SALLE GUAPARO",
-      "district_id": 18
+      "district_id": 18,
+      "uuid": "875c9904-6ba8-4110-8b1d-8edf3bdc0f24"
     },
     {
       "id": 58,
       "name": "HIGINIO PEDRO",
-      "district_id": 19
+      "district_id": 57,
+      "uuid": "3af939dc-62cf-46b2-b69f-684190eff05e"
     },
     {
       "id": 59,
       "name": "MONSEÑOR AROCHA",
-      "district_id": 19
+      "district_id": 57,
+      "uuid": "49318e8f-809d-4067-bbcf-c3e23d33c5f9"
     },
     {
       "id": 60,
       "name": "RAFAEL URDANETA",
-      "district_id": 19
+      "district_id": 57,
+      "uuid": "059c2f59-aa86-4b40-a4a8-0dae275ae830"
     },
     {
       "id": 61,
       "name": "JEAN CARLOS GUEVARA",
-      "district_id": 20
+      "district_id": 57,
+      "uuid": "246b1c60-39e1-4a80-8084-25d01ae418a4"
     },
     {
       "id": 62,
       "name": "ARISTIDES ROJAS",
-      "district_id": 21
+      "district_id": 21,
+      "uuid": "8fb3a56e-e733-4e34-8b44-6c00a58843fc"
     },
     {
       "id": 63,
       "name": "BICENTENARIO",
-      "district_id": 21
+      "district_id": 21,
+      "uuid": "c30ec026-f971-4fd1-a6c7-5c7d2e43f3b4"
     },
     {
       "id": 64,
       "name": "DON BOSCO 21",
-      "district_id": 21
+      "district_id": 21,
+      "uuid": "42f1d0c3-7a7d-4474-adb8-6dbbdbd13323"
     },
     {
       "id": 65,
       "name": "HENRI PITTIER",
-      "district_id": 21
+      "district_id": 21,
+      "uuid": "64d1de83-cf4b-4a8f-b6c5-a2526c3ceaaa"
     },
     {
       "id": 66,
       "name": "LA SALLE LA COLINA",
-      "district_id": 21
+      "district_id": 21,
+      "uuid": "57e4a4ab-3f04-4463-9c4f-c651744bc1ea"
     },
     {
       "id": 67,
       "name": "NEPTUNO",
-      "district_id": 21
+      "district_id": 21,
+      "uuid": "87dc74bd-5bc4-4a35-b38d-8532873327ff"
     },
     {
       "id": 68,
       "name": "AGUSTINO",
-      "district_id": 22
+      "district_id": 22,
+      "uuid": "ce15c7e9-6a3b-4e1f-8218-5b0731d00324"
     },
     {
       "id": 69,
       "name": "CLAUDIO FELICIANO",
-      "district_id": 22
+      "district_id": 22,
+      "uuid": "9b4d5f64-4088-4107-a701-82a232ad0b32"
     },
     {
       "id": 70,
       "name": "SAN AGUSTIN",
-      "district_id": 22
+      "district_id": 22,
+      "uuid": "a7007d16-0139-4846-8f38-19cff9099fcc"
     },
     {
       "id": 71,
       "name": "SAN BENITO 20",
-      "district_id": 22
+      "district_id": 22,
+      "uuid": "7c7ba78f-1db4-4da2-bba4-941f63fef0d8"
     },
     {
       "id": 72,
       "name": "SAN BENITO XIV",
-      "district_id": 22
+      "district_id": 22,
+      "uuid": "ed1c5400-a87b-4877-9070-b3788a233a05"
     },
     {
       "id": 73,
       "name": "TOMAS SANABRIA",
-      "district_id": 22
+      "district_id": 22,
+      "uuid": "032ce503-fed3-4015-9630-8153b7d121a7"
     },
     {
       "id": 74,
       "name": "ANDROMEDA",
-      "district_id": 23
+      "district_id": 23,
+      "uuid": "02a50429-0df9-4c03-b93c-6e00f4876206"
     },
     {
       "id": 75,
       "name": "CARACAS RIMOR",
-      "district_id": 23
+      "district_id": 23,
+      "uuid": "b9d6a9d3-66f1-4faf-9472-d961581faea2"
     },
     {
       "id": 76,
       "name": "DON BOSCO",
-      "district_id": 23
+      "district_id": 23,
+      "uuid": "f49551b6-2847-4957-b7e9-ecfaeace4f84"
     },
     {
       "id": 77,
       "name": "SIMON BOLIVAR",
-      "district_id": 23
+      "district_id": 23,
+      "uuid": "8e5e6919-08ce-4470-b849-2097deba0fd7"
     },
     {
       "id": 78,
       "name": "TARAMAS",
-      "district_id": 24
+      "district_id": 59,
+      "uuid": "85fd0af3-5595-453d-aa21-6af9e1d48e85"
     },
     {
       "id": 79,
       "name": "FRANCISCO DE MIRANDA",
-      "district_id": 25
+      "district_id": 59,
+      "uuid": "8b75ece0-048a-4d51-ba39-592e86da6fb1"
     },
     {
       "id": 80,
       "name": "RORAIMA",
-      "district_id": 25
+      "district_id": 59,
+      "uuid": "87f0c462-def7-42b7-add4-ee53bc114671"
     },
     {
       "id": 81,
       "name": "ALDEBARAN",
-      "district_id": 26
+      "district_id": 26,
+      "uuid": "4a627862-7001-41dd-8c2b-8214e8433b35"
     },
     {
       "id": 82,
       "name": "COMETA",
-      "district_id": 26
+      "district_id": 26,
+      "uuid": "05bf928c-4321-4444-a86a-020ab9724fac"
     },
     {
       "id": 83,
       "name": "RENACER",
-      "district_id": 26
+      "district_id": 26,
+      "uuid": "1be44b18-f4b1-4dc0-9a1a-9b60ffd37242"
     },
     {
       "id": 84,
       "name": "SAN JOSE DE CALASANZ 38",
-      "district_id": 26
+      "district_id": 26,
+      "uuid": "894f860d-0ead-4e93-aafb-786f140fce49"
     },
     {
       "id": 85,
       "name": "SAN JOSE DE CALASANZ 40",
-      "district_id": 26
+      "district_id": 26,
+      "uuid": "2f4a8d48-fc7a-4a49-b1be-53d9424c8872"
     },
     {
       "id": 86,
       "name": "LA SALLE TIENDA HONDA",
-      "district_id": 27
+      "district_id": 27,
+      "uuid": "c31ffb28-feec-4680-8c9c-c1de52662cbf"
     },
     {
       "id": 87,
       "name": "LIBERTADOR",
-      "district_id": 27
+      "district_id": 27,
+      "uuid": "48ff0022-888a-4ed2-9ca6-a5285e1b564e"
     },
     {
       "id": 88,
       "name": "MADRE RAFOLS",
-      "district_id": 27
+      "district_id": 27,
+      "uuid": "48c751f9-d036-4917-bbfc-c24a22ce3222"
     },
     {
       "id": 89,
       "name": "SAN BENITO 18",
-      "district_id": 27
+      "district_id": 27,
+      "uuid": "3c3b97ec-01ce-4647-8df2-028014a9346f"
     },
     {
       "id": 90,
       "name": "GUERREROS DE YACAMBU",
-      "district_id": 28
+      "district_id": 61,
+      "uuid": "c396c934-ab1f-4147-80db-b7250d3d1857"
     },
     {
       "id": 91,
       "name": "GENERAL JACINTO LARA",
-      "district_id": 29
+      "district_id": 29,
+      "uuid": "e0fd6f98-2790-413f-bd05-15eb3000fa65"
     },
     {
       "id": 92,
       "name": "LA SALLE",
-      "district_id": 29
+      "district_id": 29,
+      "uuid": "ab1f8fd4-7e3b-4e1d-abca-8f7dc2deece6"
     },
     {
       "id": 93,
       "name": "NUEVA SEGOVIA",
-      "district_id": 29
+      "district_id": 29,
+      "uuid": "6044a228-3071-4dbd-be8f-7fe1379d9bb7"
     },
     {
       "id": 94,
       "name": "SIMON BOLIVAR",
-      "district_id": 29
+      "district_id": 29,
+      "uuid": "3412d0a5-2a50-4a72-b0d3-90266fae7a10"
     },
     {
       "id": 95,
       "name": "CARLOS LAURER",
-      "district_id": 30
+      "district_id": 61,
+      "uuid": "06dc8236-c0b8-40c8-89d9-84559f0e6eb8"
     },
     {
       "id": 96,
       "name": "HERMANO JUAN",
-      "district_id": 30
+      "district_id": 61,
+      "uuid": "aa2c6e8a-e79b-41f7-b964-134c8cf7ce35"
     },
     {
       "id": 97,
       "name": "MONSEÑOR ROMERO",
-      "district_id": 30
+      "district_id": 61,
+      "uuid": "45f4eb0c-f8df-4a53-81d9-56335b27cb6b"
     },
     {
       "id": 98,
       "name": "LISANDRO ALVARADO",
-      "district_id": 31
+      "district_id": 31,
+      "uuid": "d011dd9c-c6fa-4566-b9fe-598bbfe23b52"
     },
     {
       "id": 99,
       "name": "TEREPAIMA",
-      "district_id": 31
+      "district_id": 31,
+      "uuid": "3c6cf704-0c42-4e77-9a46-bbca38079dbe"
     },
     {
       "id": 100,
       "name": "GUAKES",
-      "district_id": 32
+      "district_id": 32,
+      "uuid": "08256104-374f-4038-95bb-078843723fff"
     },
     {
       "id": 101,
       "name": "JOSE FELIX RIBAS",
-      "district_id": 32
+      "district_id": 32,
+      "uuid": "f2ea047f-0e62-4795-83ba-9dd230d73b0e"
     },
     {
       "id": 102,
       "name": "YUKOS",
-      "district_id": 32
+      "district_id": 32,
+      "uuid": "7045525c-cf38-43ef-b026-df9726c07c1f"
     },
     {
       "id": 103,
       "name": "LIBERTADOR",
-      "district_id": 33
+      "district_id": 33,
+      "uuid": "bee7e5b5-8075-4843-8dbb-93d3680c1eab"
     },
     {
       "id": 104,
       "name": "ORION LXXII",
-      "district_id": 33
+      "district_id": 33,
+      "uuid": "51304d2f-3bc3-4b7d-b114-75072dcb0be6"
     },
     {
       "id": 105,
       "name": "SANTIAGO DE LOS CABALLEROS",
-      "district_id": 33
+      "district_id": 33,
+      "uuid": "8dd3fedb-57cf-4198-8191-d3c302083371"
     },
     {
       "id": 106,
       "name": "ZUHE",
-      "district_id": 33
+      "district_id": 33,
+      "uuid": "dab39a05-053c-43d4-a016-d52481cb4232"
     },
     {
       "id": 107,
       "name": "ELITE",
-      "district_id": 34
+      "district_id": 63,
+      "uuid": "5f27617f-f7a3-4532-8c45-19302eeb3cfb"
     },
     {
       "id": 108,
       "name": "AUTANA",
-      "district_id": 35
+      "district_id": 35,
+      "uuid": "fa665e41-35e9-48fe-91f5-9c6e9eeba97f"
     },
     {
       "id": 109,
       "name": "DIPAHO",
-      "district_id": 35
+      "district_id": 35,
+      "uuid": "56223f40-002a-45f0-bde0-d59d4fded8f1"
     },
     {
       "id": 110,
       "name": "KURENAN",
-      "district_id": 35
+      "district_id": 35,
+      "uuid": "49cd9540-312c-4243-a7ea-f98a7230f5a3"
     },
     {
       "id": 111,
       "name": "SANTA ROSALIA DE PALERMO",
-      "district_id": 35
+      "district_id": 35,
+      "uuid": "493fa324-3ffb-4b44-bd67-ec19e9bfad32"
     },
     {
       "id": 112,
       "name": "SEONEE",
-      "district_id": 35
+      "district_id": 35,
+      "uuid": "07431bc5-37b4-420e-9464-5bf7e9fd0713"
     },
     {
       "id": 113,
       "name": "DON BOSCO",
-      "district_id": 36
+      "district_id": 64,
+      "uuid": "3e20c12c-df3f-4783-803c-9032d497fefe"
     },
     {
       "id": 114,
       "name": "SANTO TOMAS DE AQUINO",
-      "district_id": 36
+      "district_id": 64,
+      "uuid": "74892a1a-806f-44fc-9b70-49fd3bdc03f5"
     },
     {
       "id": 115,
       "name": "CLARET",
-      "district_id": 37
+      "district_id": 37,
+      "uuid": "636a2cdd-84d2-4dc8-abd6-6617db841e32"
     },
     {
       "id": 116,
       "name": "DOMINGO SAVIO",
-      "district_id": 37
+      "district_id": 37,
+      "uuid": "271f72ad-9798-4330-ab2d-77cc54218b0f"
     },
     {
       "id": 117,
       "name": "MACONDO",
-      "district_id": 37
+      "district_id": 37,
+      "uuid": "34ba81cd-84a3-490b-8706-ae443183464b"
     },
     {
       "id": 118,
       "name": "SAN CAYETANO",
-      "district_id": 37
+      "district_id": 37,
+      "uuid": "a4efec80-861f-4c31-b8b4-715199d71c4e"
     },
     {
       "id": 119,
       "name": "AMAZONIA",
-      "district_id": 38
+      "district_id": 38,
+      "uuid": "48c16e38-70eb-4dde-bd58-d7ad6b5996fc"
     },
     {
       "id": 120,
       "name": "MAFEKING 100",
-      "district_id": 38
+      "district_id": 38,
+      "uuid": "56173d77-0e45-47d1-b7f4-e23b5cf23397"
     },
     {
       "id": 121,
       "name": "PLEYADES 7",
-      "district_id": 38
+      "district_id": 38,
+      "uuid": "ae317ffd-85f6-4443-a3e0-21e614eb67fa"
     },
     {
       "id": 122,
       "name": "SIGUANOI",
-      "district_id": 38
+      "district_id": 38,
+      "uuid": "d8208499-718d-475f-98ea-3332dfe93dd7"
     },
     {
       "id": 123,
       "name": "CAYAURIMA",
-      "district_id": 39
+      "district_id": 39,
+      "uuid": "5145ff94-5882-4a5d-902c-6f7d2c5ff6fc"
     },
     {
       "id": 124,
       "name": "DON BOSCO",
-      "district_id": 39
+      "district_id": 39,
+      "uuid": "19b2c453-9711-4678-bbd8-156608eb2a77"
     },
     {
       "id": 125,
       "name": "LOS NUEVOS TEQUES",
-      "district_id": 39
+      "district_id": 39,
+      "uuid": "0d915f0f-d58e-4e10-ae4a-7319c6d1201f"
     },
     {
       "id": 126,
       "name": "MIRANDA",
-      "district_id": 39
+      "district_id": 39,
+      "uuid": "c3591b7d-732b-4834-9549-c1368eb75ac0"
     },
     {
       "id": 127,
       "name": "PARAMACONI",
-      "district_id": 39
+      "district_id": 39,
+      "uuid": "6c52958c-e417-4a54-a393-e3219397e06f"
     },
     {
       "id": 128,
       "name": "AGUATIRI",
-      "district_id": 40
+      "district_id": 40,
+      "uuid": "f1fde482-0517-4161-bd9a-ffb650e87860"
     },
     {
       "id": 129,
       "name": "ALIANZA",
-      "district_id": 40
+      "district_id": 40,
+      "uuid": "8cfc179e-9379-4f32-96b4-41bc31115a8e"
     },
     {
       "id": 130,
       "name": "GAMMA",
-      "district_id": 40
+      "district_id": 40,
+      "uuid": "8f6c4593-f63a-4435-8096-e85f6bb27efa"
     },
     {
       "id": 131,
       "name": "MAFEKING100",
-      "district_id": 40
+      "district_id": 40,
+      "uuid": "f643bf25-28df-4538-bf15-64207caf582c"
     },
     {
       "id": 132,
       "name": "ORION 84",
-      "district_id": 40
+      "district_id": 40,
+      "uuid": "19d1c043-d0e4-44f5-9529-5dae76a52690"
     },
     {
       "id": 133,
       "name": "SIRIO 23",
-      "district_id": 40
+      "district_id": 40,
+      "uuid": "2975a78b-3d96-4170-a44f-d9082ae8fe2f"
     },
     {
       "id": 134,
       "name": "CACIQUE CUE",
-      "district_id": 41
+      "district_id": 41,
+      "uuid": "5de416a2-62cc-43eb-a093-4e8437568eb5"
     },
     {
       "id": 135,
       "name": "CHARALLAVE",
-      "district_id": 41
+      "district_id": 41,
+      "uuid": "bbd88ca3-51ae-4b8d-aa33-d6f4c27b00ce"
     },
     {
       "id": 136,
       "name": "RAMON OCANDO PEREZ",
-      "district_id": 41
+      "district_id": 41,
+      "uuid": "66ddb36d-305d-4b20-bd0c-a14288198f5e"
     },
     {
       "id": 137,
       "name": "BADEN POWELL G.S DON BOSCO",
-      "district_id": 42
+      "district_id": 42,
+      "uuid": "285e4568-a10b-4e98-bb14-ae45d3b69e8d"
     },
     {
       "id": 138,
       "name": "LAS VEGAS DE TARIBA",
-      "district_id": 42
+      "district_id": 42,
+      "uuid": "2a45cd3d-da8a-4767-bead-a1ee515be724"
     },
     {
       "id": 139,
       "name": "SAN FRANCISCO DE ASIS",
-      "district_id": 42
+      "district_id": 42,
+      "uuid": "f55167dd-6767-4d13-bb34-43a23e5a5191"
     },
     {
       "id": 140,
       "name": "ASOGATA",
-      "district_id": 43
+      "district_id": 43,
+      "uuid": "ac36553c-0a1d-4047-b888-601f2b9889d7"
     },
     {
       "id": 141,
       "name": "CAPROU",
-      "district_id": 43
+      "district_id": 43,
+      "uuid": "213f6482-6873-4632-aec1-c5db6c963e27"
     },
     {
       "id": 142,
       "name": "FRANKLIN EDUARDO VILLAMIZAR VELAZCO",
-      "district_id": 43
+      "district_id": 43,
+      "uuid": "a545b63a-493e-45a2-9eaa-0012b9a99e22"
     },
     {
       "id": 143,
       "name": "FUNTHA SIND",
-      "district_id": 43
+      "district_id": 43,
+      "uuid": "24a6390b-2967-406c-a365-65217eb22969"
     },
     {
       "id": 144,
       "name": "POOLE DE DORSET",
-      "district_id": 43
+      "district_id": 43,
+      "uuid": "8aede766-019b-4cf9-9f55-e4c4350386ab"
     },
     {
       "id": 145,
       "name": "BADEN POWELL XVIII",
-      "district_id": 44
+      "district_id": 67,
+      "uuid": "e2342e04-b3f7-4c32-9412-782d4ec1953b"
     },
     {
       "id": 146,
       "name": "CIPRIANO CASTRO",
-      "district_id": 44
+      "district_id": 67,
+      "uuid": "0064a1be-ce2a-4a26-a6d7-b5de50820471"
     },
     {
       "id": 147,
       "name": "GISA",
-      "district_id": 44
+      "district_id": 67,
+      "uuid": "f801f871-2985-4e6a-a0a7-b22cad5d9955"
     },
     {
       "id": 148,
       "name": "ROBERTO RAMIREZ G.",
-      "district_id": 44
+      "district_id": 67,
+      "uuid": "697e1209-4160-4476-9e07-ca806d00b535"
     },
     {
       "id": 149,
       "name": "INDEPENDENCIA",
-      "district_id": 45
+      "district_id": 45,
+      "uuid": "12863814-4554-470b-8e49-c0d77d7fe473"
     },
     {
       "id": 150,
       "name": "LUCILA PALACIOS",
-      "district_id": 45
+      "district_id": 45,
+      "uuid": "d46d319f-05a0-43e1-b2f5-6565a2fc15fc"
     },
     {
       "id": 151,
       "name": "PAOLA PRINCE",
-      "district_id": 45
+      "district_id": 45,
+      "uuid": "253eaf59-d6e4-400d-8398-3bf8d34086ac"
     },
     {
       "id": 152,
       "name": "SANTA BARBARA",
-      "district_id": 45
+      "district_id": 45,
+      "uuid": "7e348780-fac5-4dba-b8b1-701e13272024"
     },
     {
       "id": 153,
       "name": "MARANATHA",
-      "district_id": 46
+      "district_id": 69,
+      "uuid": "68851921-6096-4f97-a3f1-6111b1eebcb0"
     },
     {
       "id": 154,
       "name": "SAN JORGE",
-      "district_id": 47
+      "district_id": 69,
+      "uuid": "6220727e-10e5-4f2e-8111-01bb92703330"
     },
     {
       "id": 155,
       "name": "SAN SEBASTIAN",
-      "district_id": 47
+      "district_id": 69,
+      "uuid": "4a581f4a-5903-475d-8a86-ca134d1b5bbe"
     },
     {
       "id": 156,
       "name": "SAN SIMON DE BELLAS ARTES",
-      "district_id": 47
+      "district_id": 69,
+      "uuid": "aa5b9427-86cf-4d1e-99a7-5130abe25e1d"
     },
     {
       "id": 157,
       "name": "CIUDADELA FARIA",
-      "district_id": 48
+      "district_id": 48,
+      "uuid": "004c7df4-f072-4674-b651-9bffaa250777"
     },
     {
       "id": 158,
       "name": "L.U.Z",
-      "district_id": 48
+      "district_id": 48,
+      "uuid": "7d07856d-5dde-4659-b751-2bd2a17b9f38"
     },
     {
       "id": 159,
       "name": "LA VICTORIA",
-      "district_id": 48
+      "district_id": 48,
+      "uuid": "2184e096-3a8e-4b89-af4c-a72a22fc4a31"
     },
     {
       "id": 160,
       "name": "LOS OLIVOS",
-      "district_id": 48
+      "district_id": 48,
+      "uuid": "fea0c96e-dfb3-4ebe-b26b-90e90ad1e5ab"
     },
     {
       "id": 161,
       "name": "RAFAEL URDANETA",
-      "district_id": 48
+      "district_id": 48,
+      "uuid": "611e6bf9-98ef-474e-a9d2-bcbe74f9f53a"
     },
     {
       "id": 162,
       "name": "ADRIEL ENRIQUE",
-      "district_id": 49
+      "district_id": 49,
+      "uuid": "78b61775-25f2-441b-88de-a33fd34a1a8c"
     },
     {
       "id": 163,
@@ -1025,37 +1327,44 @@
     {
       "id": 164,
       "name": "MANAURE",
-      "district_id": 49
+      "district_id": 49,
+      "uuid": "136abf00-8595-4381-98a9-0c998029e1f7"
     },
     {
       "id": 165,
       "name": "MARA",
-      "district_id": 49
+      "district_id": 49,
+      "uuid": "d9f5783e-60e6-4d47-b392-42d05066be7d"
     },
     {
       "id": 166,
       "name": "MARISCAL SUCRE",
-      "district_id": 49
+      "district_id": 49,
+      "uuid": "d674e729-bd1e-4608-863f-e02e1ade6231"
     },
     {
       "id": 167,
       "name": "VENEZUELA",
-      "district_id": 49
+      "district_id": 49,
+      "uuid": "7f0e02a0-ec82-4a0a-89a9-d077a639914c"
     },
     {
       "id": 168,
       "name": "COPAIBA",
-      "district_id": 50
+      "district_id": 50,
+      "uuid": "f11c8e5c-800b-4bb2-bde8-270dfffc3ae6"
     },
     {
       "id": 169,
       "name": "OMEGA",
-      "district_id": 50
+      "district_id": 50,
+      "uuid": "056f6b51-cc34-49db-87f2-0238b38a141e"
     },
     {
       "id": 170,
       "name": "SANTA RITA",
-      "district_id": 50
+      "district_id": 50,
+      "uuid": "d23f67ad-3661-4bb6-b121-a3c270c1e993"
     },
     {
       "id": 171,
@@ -1070,107 +1379,284 @@
     {
       "id": 174,
       "name": "ARAUCA",
-      "district_id": 1
+      "district_id": 2,
+      "uuid": "9f56c510-1bc2-4d75-b3cf-a6ceb52a1b29"
     },
     {
       "id": 175,
       "name": "CIVO",
-      "district_id": 1
+      "district_id": 2,
+      "uuid": "2158b0df-0b98-4cd5-927f-b3f638b5fb3e"
     },
     {
       "id": 176,
       "name": "ANDRES ELOY BLANCO",
-      "district_id": 2
+      "district_id": 2,
+      "uuid": "bc671872-3205-461b-aff9-9bdabb31fde6"
     },
     {
       "id": 177,
       "name": "DON BOSCO VII",
-      "district_id": 2
+      "district_id": 2,
+      "uuid": "67c9e729-9774-420d-8459-dffc534b4e48"
     },
     {
       "id": 178,
       "name": "MARIA AUXILIADORA",
-      "district_id": 2
+      "district_id": 2,
+      "uuid": "83335787-53f6-4656-b185-f1ee0755a75b"
     },
     {
       "id": 179,
       "name": "PADRE JOSE MARIA VELAZ",
-      "district_id": 2
+      "district_id": 2,
+      "uuid": "5eeb8c3b-2a1f-4caf-a40e-fb26ccfe21cc"
     },
     {
       "id": 180,
-      "name": "INDEPENDENCIA",
-      "district_id": 3
+      "name": "INDEPENDENCIA GUARICO",
+      "district_id": 52,
+      "uuid": "e94c128a-fc55-43d4-b496-b45921f66b45"
     },
     {
       "id": 181,
       "name": "ARAGUANEY",
-      "district_id": 4
+      "district_id": 4,
+      "uuid": "b5c2b6c1-6009-4758-b4ff-5bd5d664eeb2"
     },
     {
       "id": 182,
       "name": "CIUDAD JARDIN",
-      "district_id": 4
+      "district_id": 4,
+      "uuid": "d158b1e2-dd7c-499c-b370-4f93ab67ed05"
     },
     {
       "id": 183,
       "name": "HUMBOLDT",
-      "district_id": 4
+      "district_id": 4,
+      "uuid": "c17b9e8a-ea84-430a-87b6-b96c6d277055"
     },
     {
       "id": 184,
       "name": "JOSE SMITH",
-      "district_id": 4
+      "district_id": 4,
+      "uuid": "15b9794d-8a5f-40c7-b185-eb9210f66182"
     },
     {
       "id": 185,
       "name": "LIBERTADOR",
-      "district_id": 4
+      "district_id": 4,
+      "uuid": "ba785b87-1e4f-4ce0-8204-b5c7f463896b"
     },
     {
       "id": 186,
       "name": "GUSTAVO JOSE VOLLMER H.",
-      "district_id": 5
+      "district_id": 52,
+      "uuid": "6ceb0bfe-43c0-4905-9a60-d0ec27b61cce"
     },
     {
       "id": 187,
       "name": "GRAN MARISCAL DE AYACUCHO",
-      "district_id": 6
+      "district_id": 52,
+      "uuid": "1e4d84f0-5869-4bf4-a0c5-d5f196359cf6"
     },
     {
       "id": 188,
       "name": "LA SAGRADA FAMILIA",
-      "district_id": 6
+      "district_id": 52,
+      "uuid": "61f3332d-b5a9-4d59-a7a1-580d248e4c3e"
     },
     {
       "id": 189,
       "name": "SAN BENITO",
-      "district_id": 6
+      "district_id": 52,
+      "uuid": "bc2bd2b2-21d9-4a3f-873a-f5b0f26c19fc"
     },
     {
       "id": 190,
       "name": "GENERAL SANTIAGO MARIÑO",
-      "district_id": 7
+      "district_id": 52,
+      "uuid": "65fd422b-c497-4357-8d9a-5ac8431cd8ad"
     },
     {
       "id": 191,
-      "name": "INDEPENDENCIA",
-      "district_id": 7
+      "name": "INDEPENDENCIA SANTIAGO MARIÑO",
+      "district_id": 52,
+      "uuid": "5d538dc8-274b-42c9-ae73-c18d56d2b53d"
     },
     {
       "id": 192,
       "name": "ORION",
-      "district_id": 7
+      "district_id": 52,
+      "uuid": "df83b72d-e462-4039-9a62-8e4f71093ccc"
     },
     {
       "id": 193,
       "name": "AGUSTÍN CODAZZI",
-      "district_id": 8
+      "district_id": 52,
+      "uuid": "19fe798d-132d-4535-b9b1-802c6933bf0e"
     },
     {
       "id": 194,
       "name": "FRANCISCO DE MIRANDA",
-      "district_id": 8
+      "district_id": 52,
+      "uuid": "12763b7c-4277-42fd-a278-0b0c394b6c3f"
+    },
+    {
+      "id": 195,
+      "name": "FLOR DE LIS",
+      "district_id": 54,
+      "uuid": "e430832d-a201-4aab-a708-936bc5caef8d"
+    },
+    {
+      "id": 196,
+      "name": "MUKAS",
+      "district_id": 54,
+      "uuid": "2ed33296-0d94-4938-93ab-e02ef3984402"
+    },
+    {
+      "id": 197,
+      "name": "NAZARET",
+      "district_id": 54,
+      "uuid": "88850c00-9dcb-4a61-8c52-313e2a1404ad"
+    },
+    {
+      "id": 198,
+      "name": "DOMINGO SAVIO",
+      "district_id": 54,
+      "uuid": "508bce92-26dc-4179-8b1a-29b0a20c9ae4"
+    },
+    {
+      "id": 199,
+      "name": "GUAIQUERI",
+      "district_id": 54,
+      "uuid": "e85335cb-74bc-42b1-aa48-d03ee9a81e07"
+    },
+    {
+      "id": 200,
+      "name": "TUCUPITA",
+      "district_id": 54,
+      "uuid": "033f2981-4ac9-4343-a5a4-264487ba42e4"
+    },
+    {
+      "id": 201,
+      "name": "JOHN STELZER",
+      "district_id": 13,
+      "uuid": "705f8da5-cc5a-495d-be68-5e98d2cdda61"
+    },
+    {
+      "id": 202,
+      "name": "BROWNSEA",
+      "district_id": 2,
+      "uuid": "e7e6ab28-39c5-413f-8006-3d857d4192e2"
+    },
+    {
+      "id": 203,
+      "name": "LA SALLE SAN JOSE",
+      "district_id": 57,
+      "uuid": "26a66fcc-dcc8-40c5-b550-52e487b358ca"
+    },
+    {
+      "id": 204,
+      "name": "ALMIRANTE LUIS BRION",
+      "district_id": 57,
+      "uuid": "fa8b9582-b83a-420d-ae44-6efbc67acbcd"
+    },
+    {
+      "id": 205,
+      "name": "HEROES DE BADEN POWELL",
+      "district_id": 17,
+      "uuid": "bbe366be-4260-40f4-94c9-b04846895c2e"
+    },
+    {
+      "id": 206,
+      "name": "HERMANDAD",
+      "district_id": 17,
+      "uuid": "ae56bdff-391d-4ff1-b32f-e2cfa40a0f9d"
+    },
+    {
+      "id": 207,
+      "name": "TANAGUARENA",
+      "district_id": 59,
+      "uuid": "482290ad-7b12-43df-a9b9-454693023868"
+    },
+    {
+      "id": 208,
+      "name": "SAN MIGUEL ARCANGEL 01",
+      "district_id": 59,
+      "uuid": "aa2db072-60ca-4a3c-8ec1-edc11038244a"
+    },
+    {
+      "id": 209,
+      "name": "FENIX",
+      "district_id": 59,
+      "uuid": "6d84534a-e7bd-43bc-bf2a-11f63e6f5ba4"
+    },
+    {
+      "id": 210,
+      "name": "CLARET",
+      "district_id": 29,
+      "uuid": "4d854364-c2e6-4036-8589-54ef934c06dd"
+    },
+    {
+      "id": 211,
+      "name": "CATATUMBO",
+      "district_id": 64,
+      "uuid": "a0eac788-d51a-42c1-a9bf-7078cdfc02cd"
+    },
+    {
+      "id": 212,
+      "name": "RORAIMA",
+      "district_id": 37,
+      "uuid": "1bd45754-4b48-49e3-a830-296d81d23fe9"
+    },
+    {
+      "id": 213,
+      "name": "WARAIRAREPANO",
+      "district_id": 38,
+      "uuid": "6b4c6f28-34b3-4639-9ef5-2e3599759174"
+    },
+    {
+      "id": 214,
+      "name": "PEDRO MARIA UREÑA",
+      "district_id": 67,
+      "uuid": "9f2b818d-3da0-4f85-946a-e5fc43e71f00"
+    },
+    {
+      "id": 215,
+      "name": "VICTOR LABRADOR",
+      "district_id": 67,
+      "uuid": "50cc1fdd-71cd-4da7-b44e-94563d966fe2"
+    },
+    {
+      "id": 216,
+      "name": "ALCALDIA DE SAN CRISTOBAL",
+      "district_id": 43,
+      "uuid": "38ca5547-d5a7-4582-a031-c429aec06c73"
+    },
+    {
+      "id": 217,
+      "name": "LA TRINIDAD",
+      "district_id": 45,
+      "uuid": "747bbd7c-9c97-499a-8f5d-42244ca5674f"
+    },
+    {
+      "id": 218,
+      "name": "BRAVOS DE PAEZ",
+      "district_id": 45,
+      "uuid": "5a784592-0a7c-4fb1-98d3-84d5f1e46ce4"
+    },
+    {
+      "id": 219,
+      "name": "BADEN POWELL",
+      "district_id": 49,
+      "uuid": "6fa86d4f-2a26-474c-bbf0-920315c4f8ce"
+    },
+    {
+      "id": 220,
+      "name": "ALONSO DE OJEDA",
+      "district_id": 50,
+      "uuid": "06947416-537c-4a2b-8f5b-2289ddcb6375"
     }
   ]
 }

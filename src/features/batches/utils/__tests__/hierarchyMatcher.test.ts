@@ -26,6 +26,30 @@ describe('hierarchyMatcher', () => {
       expect(result.group_name).toBe('DON BOSCO 21');
     });
 
+    it('matches entities using their Impeesa UUIDs', () => {
+      const result = matchHierarchy(
+        '9ed1879c-2b40-4f5e-877c-0f2755d0f89b',
+        '58d2c5c6-3306-41b4-9dfe-68a399a80e6d',
+        '8fb3a56e-e733-4e34-8b44-6c00a58843fc'
+      );
+      expect(result.region_id).toBe(5);
+      expect(result.region_name).toBe('DISTRITO CAPITAL');
+      expect(result.district_id).toBe(21);
+      expect(result.district_name).toBe('AVILA');
+      expect(result.group_id).toBe(62);
+      expect(result.group_name).toBe('ARISTIDES ROJAS');
+    });
+
+    it('matches groups in reorganized districts such as ATENDIDOS POR LA REGION', () => {
+      const result = matchHierarchy('ARAGUA', 'ATENDIDOS POR LA REGION', 'INDEPENDENCIA GUARICO');
+      expect(result.region_id).toBe(2);
+      expect(result.region_name).toBe('ARAGUA');
+      expect(result.district_id).toBe(52);
+      expect(result.district_name).toBe('ATENDIDOS POR LA REGION');
+      expect(result.group_id).toBe(180);
+      expect(result.group_name).toBe('INDEPENDENCIA GUARICO');
+    });
+
     it('matches case-insensitively with accents', () => {
       const result = matchHierarchy('distrito capital', 'ÁVILA', 'don bosco 21');
       expect(result.region_id).toBe(5);
