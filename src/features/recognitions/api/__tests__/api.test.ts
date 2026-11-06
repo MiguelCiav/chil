@@ -8,7 +8,11 @@ import {
   deleteRecognitionType,
   saveCertificateTemplate,
   processBackgroundImageFile,
-  generateRecognitionId
+  generateRecognitionId,
+  PDF_UPLOAD_NOT_SUPPORTED_MESSAGE,
+  INVALID_IMAGE_FORMAT_MESSAGE,
+  MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH,
+  MAX_FIRESTORE_TEMPLATE_BYTES
 } from '../index';
 import { CertificateTemplate } from '../../types';
 
@@ -259,7 +263,7 @@ describe('Recognition Types API Layer', () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
 
       const mockTemplate: CertificateTemplate = {
-        background_url: 'data:image/webp;base64,mockdata',
+        background_url: 'data:image/jpeg;base64,mockdata',
         page_width: 297,
         page_height: 210,
         orientation: 'landscape',
@@ -288,6 +292,21 @@ describe('Recognition Types API Layer', () => {
       );
     });
 
+    it('rejects template payload exceeding Firestore 1 MB document limit', async () => {
+      const oversizedTemplate: CertificateTemplate = {
+        background_url: `data:image/jpeg;base64,${'A'.repeat(MAX_FIRESTORE_TEMPLATE_BYTES + 100)}`,
+        page_width: 297,
+        page_height: 210,
+        orientation: 'landscape',
+        fields: []
+      };
+
+      await expect(saveCertificateTemplate('sct-wood-badge', oversizedTemplate)).rejects.toThrow(
+        'La imagen de fondo excede el límite máximo de almacenamiento permitido (1 MB)'
+      );
+      expect(firestore.setDoc).not.toHaveBeenCalled();
+    });
+
     it('throws error when setDoc fails in saveCertificateTemplate', async () => {
       vi.mocked(firestore.setDoc).mockRejectedValueOnce(new Error('Template save error'));
 
@@ -304,37 +323,24 @@ describe('Recognition Types API Layer', () => {
   });
 
   describe('processBackgroundImageFile', () => {
-    it('processes non-image file using FileReader directly and returns metadata', async () => {
+    it('rejects application/pdf files with explicit validation error message', async () => {
       const mockFile = new File(['%PDF-1.4 mock content'], 'certificate.pdf', {
         type: 'application/pdf'
       });
 
-      const result = await processBackgroundImageFile(mockFile);
-      expect(result).toBeDefined();
-      expect(typeof result.dataUrl).toBe('string');
-      expect(result.width).toBe(297);
-      expect(result.height).toBe(210);
-      expect(result.aspectRatio).toBeCloseTo(1.414, 2);
-      expect(result.orientation).toBe('landscape');
+      await expect(processBackgroundImageFile(mockFile)).rejects.toThrow(
+        PDF_UPLOAD_NOT_SUPPORTED_MESSAGE
+      );
     });
 
-    it('rejects when non-image FileReader fails', async () => {
-      const mockFile = new File(['mock content'], 'test.pdf', { type: 'application/pdf' });
-      const originalFileReader = global.FileReader;
+    it('rejects unsupported non-image MIME types with validation error', async () => {
+      const mockFile = new File(['plain text content'], 'notes.txt', {
+        type: 'text/plain'
+      });
 
-      class FailingFileReader {
-        onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => unknown) | null = null;
-        onerror: ((err: unknown) => unknown) | null = null;
-        readAsDataURL() {
-          setTimeout(() => {
-            if (this.onerror) this.onerror(new Error('FileReader non-image failed'));
-          }, 0);
-        }
-      }
-
-      global.FileReader = FailingFileReader as unknown as typeof FileReader;
-      await expect(processBackgroundImageFile(mockFile)).rejects.toThrow();
-      global.FileReader = originalFileReader;
+      await expect(processBackgroundImageFile(mockFile)).rejects.toThrow(
+        INVALID_IMAGE_FORMAT_MESSAGE
+      );
     });
 
     it('processes image file and returns image metadata for PNG', async () => {
@@ -371,7 +377,7 @@ describe('Recognition Types API Layer', () => {
       expect(typeof result.dataUrl).toBe('string');
     });
 
-    it('handles image onload with simulated Image element for landscape and canvas webp export', async () => {
+    it('normalizes opaque landscape image onto JPEG canvas output', async () => {
       const originalImage = global.Image;
       const originalCreateElement = document.createElement.bind(document);
 
@@ -396,7 +402,12 @@ describe('Recognition Types API Layer', () => {
         width: 0,
         height: 0,
         getContext: vi.fn(() => ({
-          drawImage: vi.fn()
+          fillStyle: '',
+          fillRect: vi.fn(),
+          drawImage: vi.fn(),
+          getImageData: vi.fn(() => ({
+            data: new Uint8ClampedArray([255, 255, 255, 255])
+          }))
         })),
         toDataURL: vi.fn((type: string) => `data:${type};base64,mockcanvasdata`)
       };
@@ -414,13 +425,64 @@ describe('Recognition Types API Layer', () => {
       expect(result.naturalWidth).toBe(2400);
       expect(result.orientation).toBe('landscape');
       expect(result.normalizedWidth).toBe(297);
-      expect(result.dataUrl).toContain('data:image/webp');
+      expect(result.dataUrl).toContain('data:image/jpeg');
 
       global.Image = originalImage;
       vi.restoreAllMocks();
     });
 
-    it('handles image onload with simulated portrait Image and fallback to jpeg when webp throws', async () => {
+    it('preserves PNG format when alpha transparency is detected on image', async () => {
+      const originalImage = global.Image;
+      const originalCreateElement = document.createElement.bind(document);
+
+      class MockTransparentImage {
+        src = '';
+        naturalWidth = 1200;
+        naturalHeight = 800;
+        width = 1200;
+        height = 800;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor() {
+          setTimeout(() => {
+            if (this.onload) this.onload();
+          }, 10);
+        }
+      }
+
+      global.Image = MockTransparentImage as unknown as typeof Image;
+
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: vi.fn(() => ({
+          fillStyle: '',
+          fillRect: vi.fn(),
+          drawImage: vi.fn(),
+          getImageData: vi.fn(() => ({
+            data: new Uint8ClampedArray([255, 255, 255, 0]) // alpha = 0 (transparent)
+          }))
+        })),
+        toDataURL: vi.fn((type: string) => `data:${type};base64,mocktransparentpng`)
+      };
+
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          return mockCanvas as unknown as HTMLCanvasElement;
+        }
+        return originalCreateElement(tagName);
+      });
+
+      const mockFile = new File(['mock transparent png'], 'transparent.png', { type: 'image/png' });
+      const result = await processBackgroundImageFile(mockFile, 1920, 1080);
+
+      expect(result.dataUrl).toContain('data:image/png');
+
+      global.Image = originalImage;
+      vi.restoreAllMocks();
+    });
+
+    it('handles portrait image and steps down JPEG quality if initial payload exceeds Firestore limit', async () => {
       const originalImage = global.Image;
       const originalCreateElement = document.createElement.bind(document);
 
@@ -445,13 +507,15 @@ describe('Recognition Types API Layer', () => {
         width: 0,
         height: 0,
         getContext: vi.fn(() => ({
+          fillStyle: '',
+          fillRect: vi.fn(),
           drawImage: vi.fn()
         })),
-        toDataURL: vi.fn((type: string) => {
-          if (type === 'image/webp') {
-            throw new Error('WebP not supported');
+        toDataURL: vi.fn((_type: string, quality?: number) => {
+          if (quality && quality > 0.7) {
+            return `data:image/jpeg;base64,${'X'.repeat(MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH + 500)}`;
           }
-          return 'data:image/jpeg;base64,mockjpegdata';
+          return 'data:image/jpeg;base64,compactjpegdata';
         })
       };
 
@@ -467,7 +531,7 @@ describe('Recognition Types API Layer', () => {
 
       expect(result.orientation).toBe('portrait');
       expect(result.normalizedHeight).toBe(297);
-      expect(result.dataUrl).toContain('data:image/jpeg');
+      expect(result.dataUrl).toBe('data:image/jpeg;base64,compactjpegdata');
 
       global.Image = originalImage;
       vi.restoreAllMocks();
@@ -562,5 +626,3 @@ describe('Recognition Types API Layer', () => {
     });
   });
 });
-
-

@@ -10,7 +10,7 @@ Failure to follow these guidelines, or writing sloppy/untested code, is **comple
 
 ### 🛡️ Rule 1: Rigorous Software Engineering & Quality (No Bad Code)
 * **Write Production-Grade Code**: You are expected to write clean, highly modular, self-documenting, and industry-standard code (React 19 + TypeScript + Firebase).
-* **Follow Architecture Patterns**: Every line of code must strictly adhere to the layers defined in [ARCHITECTURE.md](file:///home/miguel-ciavato/Documents/github-repos/chil/docs/agent_docs/ARCHITECTURE.md):
+* **Follow Architecture Patterns**: Every line of code must strictly adhere to the layers defined in [ARCHITECTURE.md](./ARCHITECTURE.md):
   * **Frontend**: Feature-driven architecture under `src/features/<feature_name>/` (split into `api/`, `components/`, `hooks/`, `types/`, `utils/`). Utilize **Zod** + **React Hook Form** for forms and **TanStack Table** for data display.
   * **API Layer**: All Firebase Firestore operations and Cloud Function invocations must be kept within the feature's `api/` directory. **Never perform raw Firebase calls directly inside UI components.**
   * **Backend (Cloud Functions)**: Node.js HTTPS callable functions located inside `functions/` (e.g. `loginScraper` and `getMemberStatus`).
@@ -20,8 +20,8 @@ Failure to follow these guidelines, or writing sloppy/untested code, is **comple
 ---
 
 ### 🚦 Rule 2: Mandatory Rule Acknowledgment
-* **Read this First**: You are **required** to read this `WELCOME.md` file and [CONTEXT.md](file:///home/miguel-ciavato/Documents/github-repos/chil/docs/agent_docs/CONTEXT.md) at the very beginning of your session.
-* **Acknowledge and Align**: In your first message to the user, briefly acknowledge the operational state described in [CONTEXT.md](file:///home/miguel-ciavato/Documents/github-repos/chil/docs/agent_docs/CONTEXT.md), aligning your planned approach with the architectural and formatting rules of the project.
+* **Read this First**: You are **required** to read this `WELCOME.md` file and [CONTEXT.md](./CONTEXT.md) at the very beginning of your session.
+* **Acknowledge and Align**: In your first message to the user, briefly acknowledge the operational state described in [CONTEXT.md](./CONTEXT.md), aligning your planned approach with the architectural and formatting rules of the project.
 
 ---
 
@@ -31,7 +31,7 @@ When diving into a specific domain, refer to the documentation mapping below:
 
 | Resource | Scope / Description | Target Audience |
 | :--- | :--- | :--- |
-| [WELCOME.md](file:///home/miguel-ciavato/Documents/github-repos/chil/docs/agent_docs/WELCOME.md) | Standard operational guidelines and Golden Rules for AI Agents | Incoming Agents |
-| [CONTEXT.md](file:///home/miguel-ciavato/Documents/github-repos/chil/docs/agent_docs/CONTEXT.md) | Functional summary of modules across `functions/` and `src/` | Incoming Agents / Maintainers |
-| [ARCHITECTURE.md](file:///home/miguel-ciavato/Documents/github-repos/chil/docs/agent_docs/ARCHITECTURE.md) | Layer-by-layer design guidelines (Frontend feature-driven & Backend Cloud Functions & Firestore models) | All Collaborators |
-| [CONTRIBUTING.md](file:///home/miguel-ciavato/Documents/github-repos/chil/docs/CONTRIBUTING.md) | Branching strategy, conventional commits, and automated CI/CD pipeline | All Collaborators |
+| [WELCOME.md](./WELCOME.md) | Standard operational guidelines and Golden Rules for AI Agents | Incoming Agents |
+| [CONTEXT.md](./CONTEXT.md) | Functional summary of modules across `functions/` and `src/` | Incoming Agents / Maintainers |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Layer-by-layer design guidelines (Frontend feature-driven & Backend Cloud Functions & Firestore models) | All Collaborators |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Branching strategy, conventional commits, and automated CI/CD pipeline | All Collaborators |

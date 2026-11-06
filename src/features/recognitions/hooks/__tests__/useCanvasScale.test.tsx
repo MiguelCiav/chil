@@ -1,6 +1,6 @@
 import { render, act } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { useCanvasScale } from '../useCanvasScale';
+import { useCanvasScale, computeFontScale } from '../useCanvasScale';
 import { CertificateTemplate } from '../../types';
 
 describe('useCanvasScale hook', () => {
@@ -59,5 +59,31 @@ describe('useCanvasScale hook', () => {
     expect(hookResult?.canvasPixelWidth).toBe(900);
 
     global.ResizeObserver = originalObserver;
+  });
+
+  it('returns finite fontScale = 1 when docWidthPt = 0 or non-positive instead of Infinity', () => {
+    expect(computeFontScale(800, 0)).toBe(1);
+    expect(computeFontScale(0, 0)).toBe(1);
+    expect(computeFontScale(800, -100)).toBe(1);
+    expect(computeFontScale(800, Number.NaN)).toBe(1);
+
+    const zeroWidthTemplate: CertificateTemplate = {
+      ...mockTemplate,
+      page_width: 0,
+      page_height: 0,
+      aspect_ratio: 0
+    };
+
+    let hookResult: ReturnType<typeof useCanvasScale> | undefined;
+
+    const TestComponent = () => {
+      hookResult = useCanvasScale(zeroWidthTemplate);
+      return <div ref={hookResult.canvasRef} />;
+    };
+
+    render(<TestComponent />);
+
+    expect(Number.isFinite(hookResult?.fontScale)).toBe(true);
+    expect(hookResult?.fontScale).toBe(1);
   });
 });

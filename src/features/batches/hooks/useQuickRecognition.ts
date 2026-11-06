@@ -1,14 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   getHierarchyData,
-  createBatch,
-  createMember,
   getMemberStatus,
   RECOGNITION_TYPES
 } from '../api';
 import {
-  Batch,
-  ScoutMember,
   Region,
   District,
   ScoutGroup,
@@ -19,212 +15,35 @@ import { splitFullName } from '../utils/nameHelper';
 import { calculateAge } from '../utils/unitInference';
 import {
   getAllRecognitionTypes,
-  downloadSingleCertificatePdf,
   RecognitionType
 } from '../../recognitions';
 import { useAuth } from '../../auth';
+import {
+  validateQuickRecognitionFields,
+  QuickRecognitionValidationParams,
+  quickRecognitionSchema
+} from './quickRecognitionSchema';
+import {
+  SuccessEmissionData,
+  QuickEmissionExecutionParams,
+  sanitizeQuickCedula,
+  getScraperErrorMessage,
+  resolveQuickRecognitionType,
+  executeQuickEmission
+} from './quickRecognitionHelpers';
 
-export interface SuccessEmissionData {
-  batch: Batch;
-  member: ScoutMember;
-  recognitionName: string;
-}
-
-export interface QuickRecognitionValidationParams {
-  recognitionType: string;
-  unit: ScoutUnit;
-  regionId: string;
-  districtId: string;
-  groupId: string;
-  identity: string;
-  scraperStatus: 'idle' | 'success' | 'error';
-  verifiedCedula: string | null;
-  firstNames: string;
-  lastNames: string;
-  recognitionCode: string;
-}
-
-function validateHierarchyFields(
-  regionId: string,
-  districtId: string,
-  groupId: string,
-  isNoScout: boolean
-): Record<string, string> {
-  if (isNoScout) return {};
-  const errors: Record<string, string> = {};
-  if (!regionId && regionId !== '0') errors.regionId = 'Debe seleccionar una región';
-  if (!districtId && districtId !== '0') errors.districtId = 'Debe seleccionar un distrito';
-  if (!groupId && groupId !== '0') errors.groupId = 'Debe seleccionar un grupo scout';
-  return errors;
-}
-
-function validateIdentityField(
-  identity: string,
-  isNoScout: boolean,
-  scraperStatus: string,
-  verifiedCedula: string | null
-): Record<string, string> {
-  const clean = identity.trim();
-  if (!clean) return { identity: 'Debe ingresar la cédula de identidad' };
-  if (!isNoScout && (scraperStatus !== 'success' || verifiedCedula !== clean)) {
-    return { identity: 'Debe consultar el sistema de registro para verificar la cédula del scout antes de emitir el reconocimiento.' };
-  }
-  return {};
-}
-
-function validatePersonalFields(firstNames: string, lastNames: string, recognitionCode: string): Record<string, string> {
-  const errors: Record<string, string> = {};
-  if (!firstNames.trim()) errors.firstNames = 'Debe ingresar el o los nombres';
-  if (!lastNames.trim()) errors.lastNames = 'Debe ingresar el o los apellidos';
-  if (!recognitionCode.trim()) errors.recognitionCode = 'Debe generar o ingresar un código de reconocimiento';
-  return errors;
-}
-
-export function validateQuickRecognitionFields(params: QuickRecognitionValidationParams): Record<string, string> {
-  const isNoScout = params.unit === 'no_scout';
-  const errors: Record<string, string> = {};
-
-  if (!params.recognitionType) {
-    errors.recognitionType = 'Debe seleccionar un tipo de reconocimiento';
-  }
-
-  Object.assign(errors, validateHierarchyFields(params.regionId, params.districtId, params.groupId, isNoScout));
-  Object.assign(errors, validateIdentityField(params.identity, isNoScout, params.scraperStatus, params.verifiedCedula));
-  Object.assign(errors, validatePersonalFields(params.firstNames, params.lastNames, params.recognitionCode));
-
-  return errors;
-}
-
-export function getScraperErrorMessage(err: unknown): string {
-  const errorMsg = err instanceof Error ? err.message : String(err);
-  if (errorMsg.includes('No registrado')) {
-    return 'Usuario no registrado en Sistema de Registro.';
-  }
-  if (
-    errorMsg.includes('Credenciales') ||
-    errorMsg.includes('unauthenticated') ||
-    errorMsg.includes('UNAUTHENTICATED')
-  ) {
-    return 'Credenciales de scraper incorrectas o sesión expirada.';
-  }
-  if (errorMsg.toLowerCase().includes('internal')) {
-    return 'Error del servicio de verificación. Verifique las credenciales del scraper.';
-  }
-  return 'Error al consultar Sistema de Registro.';
-}
-
-export function resolveQuickRecognitionType(
-  recognitionType: string,
-  availableRecognitionTypes: (RecognitionType | { id: string; name: string })[]
-): RecognitionType {
-  const found = availableRecognitionTypes.find(r => r.id === recognitionType);
-  return {
-    id: found?.id ?? recognitionType,
-    name: found?.name ?? recognitionType,
-    created_at: (found && 'created_at' in found && found.created_at) ? (found as RecognitionType).created_at : new Date().toISOString(),
-    ...(found && 'template' in found && found.template ? { template: (found as RecognitionType).template } : {})
-  };
-}
-
-export interface QuickEmissionExecutionParams {
-  comment: string;
-  regionId: string;
-  districtId: string;
-  groupId: string;
-  unit: ScoutUnit;
-  memberType: 'young' | 'adult';
-  recognitionType: string;
-  identity: string;
-  firstNames: string;
-  lastNames: string;
-  birthDate: string;
-  email: string;
-  phone: string;
-  recognitionCode: string;
-  userId?: string;
-  availableRecognitionTypes: (RecognitionType | { id: string; name: string })[];
-  regions: Region[];
-  districts: District[];
-  groups: ScoutGroup[];
-}
-
-export async function executeQuickEmission(params: QuickEmissionExecutionParams): Promise<SuccessEmissionData> {
-  const {
-    comment,
-    regionId,
-    districtId,
-    groupId,
-    unit,
-    memberType,
-    recognitionType,
-    identity,
-    firstNames,
-    lastNames,
-    birthDate,
-    email,
-    phone,
-    recognitionCode,
-    userId,
-    availableRecognitionTypes,
-    regions,
-    districts,
-    groups
-  } = params;
-
-  const isNoScout = unit === 'no_scout';
-  const parsedRegion = Number(regionId);
-  const parsedDistrict = Number(districtId);
-  const parsedGroup = Number(groupId);
-
-  const finalRegionId = (isNoScout && (!regionId || regionId === '')) ? 0 : (Number.isNaN(parsedRegion) ? 0 : parsedRegion);
-  const finalDistrictId = (isNoScout && (!districtId || districtId === '')) ? 0 : (Number.isNaN(parsedDistrict) ? 0 : parsedDistrict);
-  const finalGroupId = (isNoScout && (!groupId || groupId === '')) ? 0 : (Number.isNaN(parsedGroup) ? 0 : parsedGroup);
-
-  // 1. Create single-member Batch
-  const createdBatch = await createBatch({
-    comment: comment.trim() || undefined,
-    region_id: finalRegionId,
-    district_id: finalDistrictId,
-    group_id: finalGroupId,
-    unit_scope: unit,
-    recognition_type: recognitionType,
-    user_id: userId
-  }, userId);
-
-  // 2. Create Member
-  const createdMember = await createMember({
-    identity: identity.trim(),
-    first_names: firstNames.trim(),
-    last_names: lastNames.trim(),
-    birth_date: birthDate || '2000-01-01',
-    ...(email ? { email: email.trim() } : {}),
-    ...(phone ? { phone: phone.trim() } : {}),
-    unit,
-    member_type: memberType,
-    status: 'active',
-    verified_in_registry: unit !== 'no_scout',
-    batch_id: createdBatch.id,
-    recognition_code: recognitionCode.trim(),
-    ...(userId ? { user_id: userId } : {})
-  }, userId);
-
-  // 3. Resolve Recognition Object
-  const resolvedRec = resolveQuickRecognitionType(recognitionType, availableRecognitionTypes);
-
-  // 4. Download Single Certificate PDF
-  await downloadSingleCertificatePdf({
-    member: createdMember,
-    batch: createdBatch,
-    recognition: resolvedRec,
-    hierarchy: { regions, districts, groups }
-  });
-
-  return {
-    batch: createdBatch,
-    member: createdMember,
-    recognitionName: resolvedRec.name
-  };
-}
+export {
+  validateQuickRecognitionFields,
+  quickRecognitionSchema,
+  getScraperErrorMessage,
+  resolveQuickRecognitionType,
+  executeQuickEmission
+};
+export type {
+  SuccessEmissionData,
+  QuickRecognitionValidationParams,
+  QuickEmissionExecutionParams
+};
 
 export function useQuickRecognition() {
   const { user } = useAuth();
@@ -265,26 +84,53 @@ export function useQuickRecognition() {
   const [toastMessage, setToastMessage] = useState<string>('');
   const [showToast, setShowToast] = useState<boolean>(false);
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Success State
   const [successData, setSuccessData] = useState<SuccessEmissionData | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
   const triggerToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
+    if (toastTimerRef.current !== null) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToastMessage(msg);
     setToastType(type);
     setShowToast(true);
-    setTimeout(() => {
+    toastTimerRef.current = setTimeout(() => {
       setShowToast(false);
+      toastTimerRef.current = null;
     }, 4000);
+  }, []);
+
+  const clearErrorFields = useCallback((fields: string[]) => {
+    setErrors((prev) => {
+      const hasAny = fields.some((field) => field in prev);
+      if (!hasAny) return prev;
+      const next = { ...prev };
+      for (const field of fields) {
+        delete next[field];
+      }
+      return next;
+    });
   }, []);
 
   // Fetch initial hierarchy and recognition types
   useEffect(() => {
+    let isMounted = true;
     Promise.all([
       getHierarchyData(),
       getAllRecognitionTypes(user?.uid)
     ])
       .then(([hierarchy, recTypes]) => {
+        if (!isMounted) return;
         setRegions(hierarchy.regions ?? []);
         setDistricts(hierarchy.districts ?? []);
         setGroups(hierarchy.groups ?? []);
@@ -294,91 +140,78 @@ export function useQuickRecognition() {
         console.error('Error loading quick recognition metadata:', err);
       })
       .finally(() => {
-        setLoadingHierarchy(false);
+        if (isMounted) {
+          setLoadingHierarchy(false);
+        }
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, [user?.uid]);
 
   // Filtered dropdown lists
   const filteredDistricts = useMemo(() => {
     if (!regionId || regionId === '0') return [];
-    const dists = districts.filter(d => d.id !== 0 && d.region_id === Number(regionId));
+    const dists = districts.filter((d) => d.id !== 0 && d.region_id === Number(regionId));
     return [{ id: 0, name: 'No aplica', region_id: Number(regionId) }, ...dists];
   }, [districts, regionId]);
 
   const filteredGroups = useMemo(() => {
     if (!districtId || districtId === '0') return [];
-    const grps = groups.filter(g => g.id !== 0 && g.district_id === Number(districtId));
+    const grps = groups.filter((g) => g.id !== 0 && g.district_id === Number(districtId));
     return [{ id: 0, name: 'No aplica', district_id: Number(districtId) }, ...grps];
   }, [groups, districtId]);
 
   const availableRecognitionTypes = recognitionTypes.length > 0 ? recognitionTypes : RECOGNITION_TYPES;
 
   // Region change cascading handler
-  const handleRegionChange = useCallback((val: string) => {
-    setRegionId(val);
-    if (val === '0') {
-      setDistrictId('0');
-      setGroupId('0');
-    } else {
-      setDistrictId('');
-      setGroupId('');
-    }
-    setErrors(prev => {
-      if (prev.regionId || prev.districtId || prev.groupId) {
-        const next = { ...prev };
-        delete next.regionId;
-        delete next.districtId;
-        delete next.groupId;
-        return next;
+  const handleRegionChange = useCallback(
+    (val: string) => {
+      setRegionId(val);
+      if (val === '0') {
+        setDistrictId('0');
+        setGroupId('0');
+      } else {
+        setDistrictId('');
+        setGroupId('');
       }
-      return prev;
-    });
-  }, []);
+      clearErrorFields(['regionId', 'districtId', 'groupId']);
+    },
+    [clearErrorFields]
+  );
 
   // District change cascading handler
-  const handleDistrictChange = useCallback((val: string) => {
-    setDistrictId(val);
-    if (val === '0') {
-      setGroupId('0');
-    } else {
-      setGroupId('');
-    }
-    setErrors(prev => {
-      if (prev.districtId || prev.groupId) {
-        const next = { ...prev };
-        delete next.districtId;
-        delete next.groupId;
-        return next;
+  const handleDistrictChange = useCallback(
+    (val: string) => {
+      setDistrictId(val);
+      if (val === '0') {
+        setGroupId('0');
+      } else {
+        setGroupId('');
       }
-      return prev;
-    });
-  }, []);
+      clearErrorFields(['districtId', 'groupId']);
+    },
+    [clearErrorFields]
+  );
 
   // Group change handler
-  const handleGroupChange = useCallback((val: string) => {
-    setGroupId(val);
-    setErrors(prev => {
-      if (prev.groupId) {
-        const next = { ...prev };
-        delete next.groupId;
-        return next;
-      }
-      return prev;
-    });
-  }, []);
+  const handleGroupChange = useCallback(
+    (val: string) => {
+      setGroupId(val);
+      clearErrorFields(['groupId']);
+    },
+    [clearErrorFields]
+  );
 
   // Recognition type change handler
-  const handleRecognitionTypeChange = useCallback((val: string) => {
-    setRecognitionType(val);
-    setErrors(prev => {
-      if (prev.recognitionType) {
-        const next = { ...prev };
-        delete next.recognitionType;
-        return next;
-      }
-      return prev;
-    });
-  }, []);
+  const handleRecognitionTypeChange = useCallback(
+    (val: string) => {
+      setRecognitionType(val);
+      clearErrorFields(['recognitionType']);
+    },
+    [clearErrorFields]
+  );
 
   // Unit change handler
   const handleUnitChange = useCallback((newUnit: ScoutUnit) => {
@@ -398,82 +231,57 @@ export function useQuickRecognition() {
     setMemberType(newType);
   }, []);
 
-  const sanitizeQuickCedula = (val: string) => val.replace(/[^0-9vV-]/g, '');
-
   // Identity change handler
-  const handleIdentityChange = useCallback((val: string) => {
-    const sanitized = sanitizeQuickCedula(val);
-    setIdentity(sanitized);
-    setVerifiedCedula(null);
-    setScraperStatus('idle');
-    setScraperMsg('');
-    setErrors(prev => {
-      if (prev.identity) {
-        const next = { ...prev };
-        delete next.identity;
-        return next;
-      }
-      return prev;
-    });
-  }, []);
+  const handleIdentityChange = useCallback(
+    (val: string) => {
+      const sanitized = sanitizeQuickCedula(val);
+      setIdentity(sanitized);
+      setVerifiedCedula(null);
+      setScraperStatus('idle');
+      setScraperMsg('');
+      clearErrorFields(['identity']);
+    },
+    [clearErrorFields]
+  );
 
   // First names change handler
-  const handleFirstNamesChange = useCallback((val: string) => {
-    setFirstNames(val);
-    setErrors(prev => {
-      if (prev.firstNames) {
-        const next = { ...prev };
-        delete next.firstNames;
-        return next;
-      }
-      return prev;
-    });
-  }, []);
+  const handleFirstNamesChange = useCallback(
+    (val: string) => {
+      setFirstNames(val);
+      clearErrorFields(['firstNames']);
+    },
+    [clearErrorFields]
+  );
 
   // Last names change handler
-  const handleLastNamesChange = useCallback((val: string) => {
-    setLastNames(val);
-    setErrors(prev => {
-      if (prev.lastNames) {
-        const next = { ...prev };
-        delete next.lastNames;
-        return next;
-      }
-      return prev;
-    });
-  }, []);
+  const handleLastNamesChange = useCallback(
+    (val: string) => {
+      setLastNames(val);
+      clearErrorFields(['lastNames']);
+    },
+    [clearErrorFields]
+  );
 
   // Recognition code change handler
-  const handleRecognitionCodeChange = useCallback((val: string) => {
-    setRecognitionCode(val.toUpperCase());
-    setErrors(prev => {
-      if (prev.recognitionCode) {
-        const next = { ...prev };
-        delete next.recognitionCode;
-        return next;
-      }
-      return prev;
-    });
-  }, []);
+  const handleRecognitionCodeChange = useCallback(
+    (val: string) => {
+      setRecognitionCode(val.toUpperCase());
+      clearErrorFields(['recognitionCode']);
+    },
+    [clearErrorFields]
+  );
 
   // Regenerate code handler
   const handleRegenerateCode = useCallback(() => {
     setRecognitionCode(generateRecognitionCode('REC'));
-    setErrors(prev => {
-      if (prev.recognitionCode) {
-        const next = { ...prev };
-        delete next.recognitionCode;
-        return next;
-      }
-      return prev;
-    });
-  }, []);
+    clearErrorFields(['recognitionCode']);
+  }, [clearErrorFields]);
 
   // Scraper Lookup
   const handleConsult = useCallback(async () => {
     const cleanCedula = identity.trim();
     if (!cleanCedula) {
-      setErrors(prev => ({ ...prev, identity: 'Ingrese una cédula para consultar' }));
+      setErrors((prev) => ({ ...prev, identity: 'Ingrese una cédula para consultar' }));
       return;
     }
 
@@ -500,13 +308,7 @@ export function useQuickRecognition() {
         setScraperStatus('success');
         setVerifiedCedula(cleanCedula);
         setScraperMsg(`✓ Miembro encontrado: ${details.nombre_completo}`);
-        setErrors(prev => {
-          const next = { ...prev };
-          delete next.identity;
-          delete next.firstNames;
-          delete next.lastNames;
-          return next;
-        });
+        clearErrorFields(['identity', 'firstNames', 'lastNames']);
         triggerToast('Datos obtenidos de Sistema de Registro exitosamente', 'success');
       } else {
         setScraperStatus('error');
@@ -520,7 +322,7 @@ export function useQuickRecognition() {
     } finally {
       setIsSearchingScraper(false);
     }
-  }, [identity, triggerToast]);
+  }, [identity, clearErrorFields, triggerToast]);
 
   const validateForm = useCallback((): boolean => {
     const newErrors = validateQuickRecognitionFields({
@@ -539,68 +341,83 @@ export function useQuickRecognition() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [recognitionType, unit, regionId, districtId, groupId, identity, scraperStatus, verifiedCedula, firstNames, lastNames, recognitionCode]);
-
-  const handleSubmit = useCallback(async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      const result = await executeQuickEmission({
-        comment,
-        regionId,
-        districtId,
-        groupId,
-        unit,
-        memberType,
-        recognitionType,
-        identity,
-        firstNames,
-        lastNames,
-        birthDate,
-        email,
-        phone,
-        recognitionCode,
-        userId: user?.uid,
-        availableRecognitionTypes,
-        regions,
-        districts,
-        groups
-      });
-
-      setSuccessData(result);
-      triggerToast('¡Reconocimiento emitido y descargado exitosamente!', 'success');
-    } catch (err) {
-      console.error('Error in quick recognition emission:', err);
-      triggerToast('Ocurrió un error al emitir el reconocimiento.', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
   }, [
-    validateForm,
-    comment,
+    recognitionType,
+    unit,
     regionId,
     districtId,
     groupId,
-    unit,
-    memberType,
-    recognitionType,
     identity,
+    scraperStatus,
+    verifiedCedula,
     firstNames,
     lastNames,
-    birthDate,
-    email,
-    phone,
-    recognitionCode,
-    user,
-    availableRecognitionTypes,
-    regions,
-    districts,
-    groups,
-    triggerToast
+    recognitionCode
   ]);
+
+  const handleSubmit = useCallback(
+    async (e: React.SyntheticEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!validateForm()) return;
+
+      setIsSubmitting(true);
+
+      try {
+        const result = await executeQuickEmission({
+          comment,
+          regionId,
+          districtId,
+          groupId,
+          unit,
+          memberType,
+          recognitionType,
+          identity,
+          firstNames,
+          lastNames,
+          birthDate,
+          email,
+          phone,
+          recognitionCode,
+          userId: user?.uid,
+          availableRecognitionTypes,
+          regions,
+          districts,
+          groups
+        });
+
+        setSuccessData(result);
+        triggerToast('¡Reconocimiento emitido y descargado exitosamente!', 'success');
+      } catch (err) {
+        console.error('Error in quick recognition emission:', err);
+        triggerToast('Ocurrió un error al emitir el reconocimiento.', 'error');
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [
+      validateForm,
+      comment,
+      regionId,
+      districtId,
+      groupId,
+      unit,
+      memberType,
+      recognitionType,
+      identity,
+      firstNames,
+      lastNames,
+      birthDate,
+      email,
+      phone,
+      recognitionCode,
+      user,
+      availableRecognitionTypes,
+      regions,
+      districts,
+      groups,
+      triggerToast
+    ]
+  );
 
   const handleEmitAnother = useCallback(() => {
     setSuccessData(null);

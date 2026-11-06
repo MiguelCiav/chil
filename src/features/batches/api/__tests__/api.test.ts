@@ -8,10 +8,17 @@ import {
   getBatchById,
   createMember,
   updateMember,
+  batchUpdateMembers,
+  batchSaveMembers,
   deleteMember,
   getMembersByBatchId,
   getAllMembers,
+  getMemberDocId,
+  commitChunkedBatches,
+  generateSecureBatchId,
   saveScraperCredentials,
+  getScraperCredentials,
+  clearScraperCredentials,
   hasScraperCredentials,
   loginScraper,
   getMemberStatus,
@@ -26,7 +33,7 @@ import {
 import * as firestore from 'firebase/firestore';
 import * as functionsSdk from 'firebase/functions';
 
-const storageMock = (() => {
+const createStorageMock = () => {
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] || null,
@@ -40,10 +47,18 @@ const storageMock = (() => {
       store = {};
     }
   };
-})();
+};
+
+const localStorageMock = createStorageMock();
+const sessionStorageMock = createStorageMock();
 
 Object.defineProperty(window, 'localStorage', {
-  value: storageMock,
+  value: localStorageMock,
+  writable: true
+});
+
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock,
   writable: true
 });
 
@@ -61,6 +76,7 @@ vi.mock('firebase/firestore', async (importOriginal) => {
     where: vi.fn(),
     writeBatch: vi.fn(() => ({
       set: vi.fn(),
+      delete: vi.fn(),
       commit: vi.fn()
     })),
     deleteDoc: vi.fn()
@@ -86,6 +102,7 @@ describe('Batches API Layer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    window.sessionStorage.clear();
   });
 
   describe('getHierarchyData', () => {
@@ -148,8 +165,16 @@ describe('Batches API Layer', () => {
     });
   });
 
-  describe('Batch CRUD operations', () => {
-    it('creates a new batch with secure numeric ID and recognition type', async () => {
+  describe('Batch CRUD & Chunked Operations', () => {
+    it('generates a collision-resistant 9-digit batch ID between 100,000,000 and 999,999,999', () => {
+      for (let i = 0; i < 20; i++) {
+        const id = generateSecureBatchId();
+        expect(id).toBeGreaterThanOrEqual(100_000_000);
+        expect(id).toBeLessThanOrEqual(999_999_999);
+      }
+    });
+
+    it('creates a new batch with 9-digit secure numeric ID and recognition type', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
 
       const newBatch = await createBatch({
@@ -162,7 +187,8 @@ describe('Batches API Layer', () => {
       });
 
       expect(newBatch.comment).toBe('Nuevo lote');
-      expect(newBatch.id).toBeGreaterThan(0);
+      expect(newBatch.id).toBeGreaterThanOrEqual(100_000_000);
+      expect(newBatch.id).toBeLessThanOrEqual(999_999_999);
       expect(newBatch.recognition_type).toBe('sct-wood-badge');
       expect(newBatch.recognition_duration).toBe('3 años');
       expect(firestore.setDoc).toHaveBeenCalled();
@@ -227,7 +253,7 @@ describe('Batches API Layer', () => {
             { id: 1, created_at: '2026-01-01T00:00:00.000Z' },
             { id: 2, created_at: '2026-02-01T00:00:00.000Z' }
           ];
-          batches.forEach(b => cb({ data: () => b }));
+          batches.forEach((b) => cb({ data: () => b }));
         }
       } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
@@ -245,15 +271,16 @@ describe('Batches API Layer', () => {
       const b = await getBatchById(999);
       expect(b?.id).toBe(999);
     });
+
     it('deletes batch and all its associated scout members atomically', async () => {
       const deleteMock = vi.fn();
-      const commitMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
       vi.mocked(firestore.writeBatch).mockReturnValueOnce({
         delete: deleteMock,
         commit: commitMock
       } as unknown as ReturnType<typeof firestore.writeBatch>);
 
-      const mockMemberDocRef = { id: 'V-111' };
+      const mockMemberDocRef = { id: '101_V-111' };
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
         forEach: (cb: (doc: { ref: typeof mockMemberDocRef }) => void) => {
           cb({ ref: mockMemberDocRef });
@@ -264,7 +291,31 @@ describe('Batches API Layer', () => {
 
       expect(deleteMock).toHaveBeenCalledWith(mockMemberDocRef);
       expect(deleteMock).toHaveBeenCalledWith(expect.objectContaining({ path: 'batches/101' }));
-      expect(commitMock).toHaveBeenCalled();
+      expect(commitMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('commits operations in chunks when exceeding 450 items in commitChunkedBatches', async () => {
+      const setMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockImplementation(
+        () =>
+          ({
+            set: setMock,
+            delete: vi.fn(),
+            commit: commitMock
+          }) as unknown as ReturnType<typeof firestore.writeBatch>
+      );
+
+      // 1000 operations -> should split into 3 batches: 450 + 450 + 100
+      const operations = Array.from({ length: 1000 }, (_, idx) => (batch: firestore.WriteBatch) => {
+        batch.set({ id: `doc-${idx}` } as unknown as firestore.DocumentReference, { idx });
+      });
+
+      await commitChunkedBatches(operations);
+
+      expect(firestore.writeBatch).toHaveBeenCalledTimes(3);
+      expect(commitMock).toHaveBeenCalledTimes(3);
+      expect(setMock).toHaveBeenCalledTimes(1000);
     });
   });
 
@@ -294,7 +345,7 @@ describe('Batches API Layer', () => {
       );
     });
 
-    it('merges batches: computes newest timestamp, reassigns members preserving group, deletes old batches and creates merged batch', async () => {
+    it('merges batches: computes newest timestamp, reassigns members with composite IDs, deletes old docs and creates merged batch', async () => {
       const batch1 = {
         id: 101,
         comment: 'Lote Uno',
@@ -375,18 +426,13 @@ describe('Batches API Layer', () => {
 
       // Validations:
       // 1. Result batch structure
-      expect(result.id).toBeGreaterThan(0);
+      expect(result.id).toBeGreaterThanOrEqual(100_000_000);
       expect(result.comment).toBe('Lote consolidado agosto');
-      // Newest timestamp: 2026-08-15T12:00:00.000Z > 2026-08-01T10:00:00.000Z
       expect(result.created_at).toBe('2026-08-15T12:00:00.000Z');
-      // Region same -> 1, District same -> 10
       expect(result.region_id).toBe(1);
       expect(result.district_id).toBe(10);
-      // Groups differed (100 vs 200) -> 0
       expect(result.group_id).toBe(0);
-      // Units differed ('manada' vs 'tropa') -> 'mixed'
       expect(result.unit_scope).toBe('mixed');
-      // Recognition type same -> 'sct-wood-badge'
       expect(result.recognition_type).toBe('sct-wood-badge');
 
       // 2. batchOp.set called for new batch
@@ -395,9 +441,9 @@ describe('Batches API Layer', () => {
         result
       );
 
-      // 3. Member reassignment with batch_id updated and original group preserved
+      // 3. Member reassignment with composite doc IDs and original group preserved
       expect(setMock).toHaveBeenCalledWith(
-        expect.objectContaining({ path: 'scout_members/V-111' }),
+        expect.objectContaining({ path: `scout_members/${result.id}_V-111` }),
         expect.objectContaining({
           batch_id: result.id,
           group_id: 100,
@@ -405,7 +451,7 @@ describe('Batches API Layer', () => {
         })
       );
       expect(setMock).toHaveBeenCalledWith(
-        expect.objectContaining({ path: 'scout_members/V-222' }),
+        expect.objectContaining({ path: `scout_members/${result.id}_V-222` }),
         expect.objectContaining({
           batch_id: result.id,
           group_id: 200,
@@ -413,7 +459,13 @@ describe('Batches API Layer', () => {
         })
       );
 
-      // 4. Old batches deleted
+      // 4. Old member docs and old batches deleted
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/101_V-111' })
+      );
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/102_V-222' })
+      );
       expect(deleteMock).toHaveBeenCalledWith(
         expect.objectContaining({ path: 'batches/101' })
       );
@@ -426,7 +478,7 @@ describe('Batches API Layer', () => {
     });
   });
 
-  describe('Member CRUD operations', () => {
+  describe('Member CRUD & Composite Key Operations', () => {
     const mockMember = {
       identity: 'V-12345678',
       first_names: 'Juan',
@@ -437,7 +489,20 @@ describe('Batches API Layer', () => {
       batch_id: 100
     };
 
-    it('creates a scout member without undefined fields', async () => {
+    it('constructs deterministic composite member doc IDs avoiding collisions across batches and S/C identities', () => {
+      expect(getMemberDocId({ identity: 'V-12345678', batch_id: 100 })).toBe('100_V-12345678');
+      expect(getMemberDocId({ identity: 'V-12345678', batch_id: 200 })).toBe('200_V-12345678');
+      expect(getMemberDocId({ identity: 'S/C', batch_id: 100, recognition_code: 'REC-001' })).toBe('100_REC-001');
+      expect(getMemberDocId({ identity: 'S/C', batch_id: 100, recognition_code: 'REC-002' })).toBe('100_REC-002');
+      expect(
+        getMemberDocId({ identity: 'S/C', batch_id: 100, first_names: 'Ana', last_names: 'Perez' })
+      ).toBe('100_SC_ANA_PEREZ');
+      expect(
+        getMemberDocId({ identity: 'S/C', batch_id: 100, first_names: 'Beto', last_names: 'Gomez' })
+      ).toBe('100_SC_BETO_GOMEZ');
+    });
+
+    it('creates a scout member with composite key and without undefined fields', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
       const res = await createMember({
         ...mockMember,
@@ -447,32 +512,63 @@ describe('Batches API Layer', () => {
       });
       expect(res.identity).toBe('V-12345678');
       expect(firestore.setDoc).toHaveBeenCalledWith(
-        expect.anything(),
+        expect.objectContaining({ path: 'scout_members/100_V-12345678' }),
         expect.not.objectContaining({
           email: undefined,
           phone: undefined,
           exceptional_reason: undefined
         })
       );
-      // Verify keys in the written object do not contain undefined values
       const writtenObject = vi.mocked(firestore.setDoc).mock.calls[0][1] as Record<string, unknown>;
-      Object.keys(writtenObject).forEach(key => {
+      Object.keys(writtenObject).forEach((key) => {
         expect(writtenObject[key]).not.toBeUndefined();
       });
     });
 
-    it('updates a scout member without undefined fields', async () => {
+    it('updates a scout member using composite key without undefined fields', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
       const res = await updateMember({
         ...mockMember,
+        recognition_code: 'REC-ABC123',
         email: undefined,
         phone: undefined
       });
       expect(res.identity).toBe('V-12345678');
+      expect(firestore.setDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/100_V-12345678' }),
+        expect.objectContaining({ recognition_code: 'REC-ABC123' })
+      );
       const writtenObject = vi.mocked(firestore.setDoc).mock.calls[0][1] as Record<string, unknown>;
-      Object.keys(writtenObject).forEach(key => {
+      Object.keys(writtenObject).forEach((key) => {
         expect(writtenObject[key]).not.toBeUndefined();
       });
+    });
+
+    it('persists members in chunks via batchUpdateMembers / batchSaveMembers', async () => {
+      const setMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockImplementation(
+        () =>
+          ({
+            set: setMock,
+            delete: vi.fn(),
+            commit: commitMock
+          }) as unknown as ReturnType<typeof firestore.writeBatch>
+      );
+
+      const largeMembersList = Array.from({ length: 500 }, (_, idx) => ({
+        ...mockMember,
+        identity: `V-${10000000 + idx}`,
+        recognition_code: `REC-${idx}`
+      }));
+
+      const saved = await batchUpdateMembers(largeMembersList, 'user-123');
+      expect(saved).toHaveLength(500);
+      expect(batchSaveMembers).toBe(batchUpdateMembers);
+      // 500 items with default chunkSize=450 -> 2 batch commits (450 + 50)
+      expect(firestore.writeBatch).toHaveBeenCalledTimes(2);
+      expect(commitMock).toHaveBeenCalledTimes(2);
+      expect(setMock).toHaveBeenCalledTimes(500);
     });
 
     it('deletes a scout member', async () => {
@@ -492,15 +588,8 @@ describe('Batches API Layer', () => {
       expect(list).toHaveLength(1);
       expect(list[0].identity).toBe('V-12345678');
     });
-    it('gets all members across batches', async () => {
-      // 1st getDocs: batches query
-      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
-        forEach: (cb: (doc: { data: () => unknown }) => void) => {
-          cb({ data: () => ({ id: 100, created_at: '2026-01-01T00:00:00.000Z' }) });
-        }
-      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
-      // 2nd getDocs: members in batch 100
+    it('gets all members directly by user_id in a single query without N+1 batch queries', async () => {
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
         docs: [{ data: () => mockMember }]
       } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
@@ -508,18 +597,20 @@ describe('Batches API Layer', () => {
       const list = await getAllMembers('test-user-uid');
       expect(list).toHaveLength(1);
       expect(list[0].identity).toBe('V-12345678');
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+      expect(firestore.where).toHaveBeenCalledWith('user_id', '==', 'test-user-uid');
     });
 
-    it('returns empty array when target user is empty or has no batches', async () => {
+    it('returns empty array when target user is empty or has no members', async () => {
       const listEmptyUser = await getAllMembers('');
       expect(listEmptyUser).toEqual([]);
 
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
-        forEach: () => {}
+        docs: []
       } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
-      const listNoBatches = await getAllMembers('no-batch-user');
-      expect(listNoBatches).toEqual([]);
+      const listNoMembers = await getAllMembers('no-member-user');
+      expect(listNoMembers).toEqual([]);
     });
 
     it('identifies generic identities correctly via isGenericIdentity', () => {
@@ -542,24 +633,24 @@ describe('Batches API Layer', () => {
 
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
         docs: [
-          { id: 'CCRL-01', ref: { id: 'CCRL-01' }, data: () => member1 },
-          { id: 'CCRL-02', ref: { id: 'CCRL-02' }, data: () => member2 }
+          { id: '100_CCRL-01', ref: { id: '100_CCRL-01' }, data: () => member1 },
+          { id: '100_CCRL-02', ref: { id: '100_CCRL-02' }, data: () => member2 }
         ]
       } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
       const list = await getMembersByBatchId(100);
       expect(list).toHaveLength(2);
-      expect(list.map(m => m.recognition_code)).toEqual(['CCRL-01', 'CCRL-02']);
+      expect(list.map((m) => m.recognition_code)).toEqual(['CCRL-01', 'CCRL-02']);
     });
 
-    it('removes stale draft document matching finalized member identity in getMembersByBatchId', async () => {
+    it('executes getMembersByBatchId as a pure read operation without calling deleteDoc even if duplicate records exist', async () => {
       const finalized = { ...mockMember, identity: '32991058', recognition_code: 'REC-FINAL', first_names: 'Rayel' };
       const staleDraft = { ...mockMember, identity: '32991058', recognition_code: '', first_names: 'Rayel' };
       const deleteDocMock = vi.mocked(firestore.deleteDoc);
 
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
         docs: [
-          { id: 'REC-FINAL', ref: { id: 'REC-FINAL' }, data: () => finalized },
+          { id: '100_REC-FINAL', ref: { id: '100_REC-FINAL' }, data: () => finalized },
           { id: '32991058', ref: { id: '32991058' }, data: () => staleDraft }
         ]
       } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
@@ -567,21 +658,13 @@ describe('Batches API Layer', () => {
       const list = await getMembersByBatchId(100);
       expect(list).toHaveLength(1);
       expect(list[0].recognition_code).toBe('REC-FINAL');
-      expect(deleteDocMock).toHaveBeenCalled();
+      expect(deleteDocMock).not.toHaveBeenCalled();
     });
 
     it('preserves multiple members with generic identity across batches in getAllMembers', async () => {
-      // 1st: getAllBatches query
-      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
-        forEach: (cb: (doc: { data: () => unknown }) => void) => {
-          cb({ data: () => ({ id: 100, created_at: '2026-01-01T00:00:00.000Z' }) });
-        }
-      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
-
       const member1 = { ...mockMember, identity: 'S/C', recognition_code: 'CCRL-01', first_names: 'Ana', batch_id: 100 };
       const member2 = { ...mockMember, identity: 'S/C', recognition_code: 'CCRL-02', first_names: 'Beto', batch_id: 100 };
 
-      // 2nd: members query chunk
       vi.mocked(firestore.getDocs).mockResolvedValueOnce({
         docs: [
           { data: () => member1 },
@@ -591,12 +674,11 @@ describe('Batches API Layer', () => {
 
       const list = await getAllMembers('test-user-uid');
       expect(list).toHaveLength(2);
-      expect(list.map(m => m.recognition_code)).toEqual(['CCRL-01', 'CCRL-02']);
+      expect(list.map((m) => m.recognition_code)).toEqual(['CCRL-01', 'CCRL-02']);
     });
   });
 
   describe('Recognition and Export Helpers', () => {
-
     it('returns proper recognition names and badge styles', () => {
       expect(getRecognitionName('sct-wood-badge')).toBe('Insignia de Madera');
       expect(getRecognitionName(undefined)).toBe('-');
@@ -627,15 +709,17 @@ describe('Batches API Layer', () => {
 
       exportMembersToCSV(
         { id: 101, region_id: 1, district_id: 1, group_id: 1, created_at: '2026-01-01' },
-        [{
-          identity: 'V-100',
-          first_names: 'Ana',
-          last_names: 'Silva',
-          birth_date: '2000-01-01',
-          member_type: 'young',
-          status: 'active',
-          batch_id: 101
-        }]
+        [
+          {
+            identity: 'V-100',
+            first_names: 'Ana',
+            last_names: 'Silva',
+            birth_date: '2000-01-01',
+            member_type: 'young',
+            status: 'active',
+            batch_id: 101
+          }
+        ]
       );
 
       expect(clickMock).toHaveBeenCalled();
@@ -685,10 +769,31 @@ describe('Batches API Layer', () => {
   });
 
   describe('Scraper Credentials & Cloud Functions', () => {
-    it('saves and checks scraper credentials', async () => {
+    it('saves scraper credentials in sessionStorage and clears legacy localStorage entry', async () => {
+      window.localStorage.setItem('chil_scraper_credentials', 'legacy-plaintext-entry');
       expect(await hasScraperCredentials()).toBe(false);
+
       await saveScraperCredentials({ email: 's@test.com', password: 'pass' });
+
       expect(await hasScraperCredentials()).toBe(true);
+      expect(window.sessionStorage.getItem('chil_scraper_credentials')).not.toBeNull();
+      expect(window.localStorage.getItem('chil_scraper_credentials')).toBeNull();
+      expect(getScraperCredentials()).toEqual({ email: 's@test.com', password: 'pass' });
+
+      await clearScraperCredentials();
+      expect(await hasScraperCredentials()).toBe(false);
+    });
+
+    it('handles corrupted JSON in sessionStorage gracefully without crashing', async () => {
+      window.sessionStorage.setItem('chil_scraper_credentials', '{corrupted-json');
+
+      expect(getScraperCredentials()).toBeNull();
+      expect(await hasScraperCredentials()).toBe(false);
+      // Corrupted entry is cleaned up automatically
+      expect(window.sessionStorage.getItem('chil_scraper_credentials')).toBeNull();
+
+      window.sessionStorage.setItem('chil_scraper_credentials', '{bad-json');
+      await expect(loginScraper()).rejects.toThrow('No hay credenciales configuradas');
     });
 
     it('throws when logging in without configured credentials', async () => {
@@ -698,7 +803,9 @@ describe('Batches API Layer', () => {
     it('calls loginScraper callable when credentials exist', async () => {
       await saveScraperCredentials({ email: 's@test.com', password: 'pass' });
       const callableMock = vi.fn().mockResolvedValueOnce({ data: { success: true } });
-      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>);
+      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
+        callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
+      );
 
       await loginScraper();
       expect(callableMock).toHaveBeenCalledWith({ credentials: { email: 's@test.com', password: 'pass' } });
@@ -707,12 +814,15 @@ describe('Batches API Layer', () => {
     it('handles loginScraper error', async () => {
       await saveScraperCredentials({ email: 's@test.com', password: 'pass' });
       const callableMock = vi.fn().mockRejectedValueOnce(new Error('Credenciales incorrectas'));
-      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>);
+      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
+        callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
+      );
 
       await expect(loginScraper()).rejects.toThrow('Credenciales incorrectas');
     });
 
-    it('fetches member status via callable function', async () => {
+    it('fetches member status via callable function even when storage had corrupted JSON', async () => {
+      window.sessionStorage.setItem('chil_scraper_credentials', 'not-valid-json');
       const callableMock = vi.fn().mockResolvedValueOnce({
         data: {
           nombre_completo: 'Carlos Test',
@@ -722,15 +832,20 @@ describe('Batches API Layer', () => {
           fecha_nacimiento: '2000-01-01'
         }
       });
-      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>);
+      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
+        callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
+      );
 
       const res = await getMemberStatus('12345678');
       expect(res.nombre_completo).toBe('Carlos Test');
+      expect(callableMock).toHaveBeenCalledWith({ cedula: '12345678', credentials: null });
     });
 
     it('handles getMemberStatus error', async () => {
       const callableMock = vi.fn().mockRejectedValueOnce(new Error('No registrado'));
-      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>);
+      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
+        callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
+      );
 
       await expect(getMemberStatus('99999999')).rejects.toThrow('No registrado');
     });

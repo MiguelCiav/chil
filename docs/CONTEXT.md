@@ -87,13 +87,36 @@ The frontend is a single-page application built on **React 19**, **TypeScript**,
 ### Core & Shared Modules (`src/`)
 
 #### 🧩 Shared Components (`src/components/`)
-* **Reusable UI**: `Button`, `Card`, `Field`, `Modal`, `Navbar`, `Sidebar`, `Table`, `FloatingTableScrollbar`, `SearchSelectorModal`.
+* **Atomic UI Primitives**: `Button`, `Card`, `Field`, `Modal`, `Table`, `FloatingTableScrollbar`, `SearchSelectorModal`.
+* **Navigation Subsystem (`src/components/navigation/`)**: Responsive `Sidebar` (with desktop collapsible mode and mobile slide-over drawer) and `Navbar`.
 * **Walkthrough Subsystem (`src/components/walkthrough/`)**: Interactive guided product tour and onboarding system (`WalkthroughDialog`, `WalkthroughOverlay`, `WalkthroughHelpButton`, `useWalkthrough`).
+* **Barrel Export**: `src/components/index.ts` re-exports all primitives and subsystems for unified consumption.
+
+#### 🏷️ Transversal Types (`src/types/`)
+* **Domain Models**: Centralized TypeScript types and constants shared across features to prevent cross-feature coupling:
+  * `hierarchy.ts`: `Region`, `District`, `ScoutGroup`.
+  * `member.ts`: `ScoutUnit`, `SCOUT_UNITS`, `getUnitLabel`, `getUnitBadge`, `MemberStatus`, `ScoutMember`, `MemberVerificationResult`.
+  * `batch.ts`: `BatchUnitScope`, `Batch`, `BatchCreationParams`.
+  * `filters.ts`: `DatePeriod`, `MemberTypeFilter`.
+  * `index.ts`: Unified barrel export.
+
+#### 🗃️ Domain Fixtures & Data (`src/data/`)
+* **`hierarchy.json`**: Official geographic hierarchy (regions, districts, and scout groups) used across batch creation, statistics aggregations, and database seeding.
 
 #### 📐 Layouts (`src/layouts/`)
-* **`MainLayout.tsx`**: Primary layout shell for authenticated users, combining the responsive `Sidebar`, `Navbar`, and content viewport.
+* **`MainLayout.tsx`**: Primary layout shell for authenticated users, combining the responsive `Sidebar`, mobile header bar, and content viewport. Renders a clean container on landing and authentication routes.
 
 #### ⚙️ Infrastructure & Configuration (`src/lib/` & root)
 * **`src/lib/firebase.ts`**: Centralized Firebase client SDK initialization (Auth, Firestore, and Functions).
 * **`src/App.tsx`**: Top-level application routing, route guards (`ProtectedRoute`), and layout bindings.
 * **`src/main.tsx`**: Application entrypoint rendering the React root into the DOM.
+
+---
+
+## 3. Maintenance Scripts & Tooling (`scripts/`)
+
+* **Active Operations (`scripts/`)**:
+  * `seed-hierarchy.mjs`: Synchronizes `src/data/hierarchy.json` into Firestore (`npm run seed-hierarchy`).
+  * `install-skill.sh`: Helper for installing agent skills into `.agent/skills/`.
+* **Historical Migrations (`scripts/migrations/`)**:
+  * `distribute-2025-units.mjs`, `import-robots-letales.mjs`, `verify-robots-letales.mjs`: One-off data migration and verification scripts.

@@ -1,4 +1,4 @@
-import { ScoutUnit } from '../../batches/types';
+import { ScoutUnit, ScoutMember, Batch, Region, District, ScoutGroup } from '../../../types';
 
 export interface StatisticsFilterState {
   period: 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';
@@ -181,13 +181,13 @@ export interface YoYComparisonData {
 }
 
 export interface CalculateYoYOptions {
-  currentMembers: import('../../batches/types').ScoutMember[];
-  previousMembers: import('../../batches/types').ScoutMember[];
-  currentBatches?: import('../../batches/types').Batch[];
-  previousBatches?: import('../../batches/types').Batch[];
-  regions?: import('../../batches/types').Region[];
-  districts?: import('../../batches/types').District[];
-  groups?: import('../../batches/types').ScoutGroup[];
+  currentMembers: ScoutMember[];
+  previousMembers: ScoutMember[];
+  currentBatches?: Batch[];
+  previousBatches?: Batch[];
+  regions?: Region[];
+  districts?: District[];
+  groups?: ScoutGroup[];
   currentYear?: number;
   previousYear?: number;
 }

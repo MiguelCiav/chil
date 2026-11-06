@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
-import { Batch, ScoutMember, Region, District, ScoutGroup, getUnitLabel } from '../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup, getUnitLabel } from '../../../types';
 import { getHierarchyData } from '../../batches/api';
 import { getRecognitionTypeById } from '../api';
 import {
@@ -11,10 +11,27 @@ import {
   AVAILABLE_TEMPLATE_FIELDS
 } from '../types';
 
+export const CERTIFICATE_BG_IMAGE_ALIAS = 'cert_bg_image';
+export const SCOUTS_PLANAR_FONT_FILE = 'Scouts-GT-Planar-Bold.ttf';
+export const SCOUTS_PLANAR_FONT_NAME = 'Scouts GT Planar';
+export const SCOUTS_PLANAR_FONT_URL = '/fonts/Scouts-GT-Planar-Bold.ttf';
+
 export interface HierarchyData {
   regions: Region[];
   districts: District[];
   groups: ScoutGroup[];
+}
+
+export interface BatchGenerationProgress {
+  current: number;
+  total: number;
+  percentage: number;
+}
+
+export interface BatchGenerationOptions {
+  onProgress?: (progress: BatchGenerationProgress) => void;
+  signal?: AbortSignal;
+  chunkSize?: number;
 }
 
 export interface SingleCertificateParams {
@@ -29,6 +46,113 @@ export interface BatchCertificatesParams {
   members: ScoutMember[];
   recognition?: RecognitionType | null;
   hierarchy?: HierarchyData;
+  onProgress?: (progress: BatchGenerationProgress) => void;
+  signal?: AbortSignal;
+}
+
+let cachedScoutsPlanarFontBase64: string | null = null;
+const docsWithCustomFont = new WeakSet<object>();
+
+export function setCachedScoutsPlanarFontBase64(base64: string | null): void {
+  cachedScoutsPlanarFontBase64 = base64;
+}
+
+export function getCachedScoutsPlanarFontBase64(): string | null {
+  return cachedScoutsPlanarFontBase64;
+}
+
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  if (typeof btoa === 'function') {
+    return btoa(binary);
+  }
+  return '';
+}
+
+export async function loadScoutsPlanarFontBase64(
+  fontUrl = SCOUTS_PLANAR_FONT_URL
+): Promise<string | null> {
+  if (cachedScoutsPlanarFontBase64) {
+    return cachedScoutsPlanarFontBase64;
+  }
+  if (typeof fetch !== 'function') {
+    return null;
+  }
+  try {
+    const response = await fetch(fontUrl);
+    if (!response || !response.ok || typeof response.arrayBuffer !== 'function') {
+      return null;
+    }
+    const buffer = await response.arrayBuffer();
+    if (!buffer || buffer.byteLength === 0) {
+      return null;
+    }
+    const base64 = arrayBufferToBase64(buffer);
+    if (base64) {
+      cachedScoutsPlanarFontBase64 = base64;
+      return base64;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Registers the institutional TrueType font (`Scouts-GT-Planar-Bold.ttf`) into a jsPDF instance's VFS
+ * when `addFileToVFS` and `addFont` are supported by the instance and font data is available.
+ */
+export function registerCustomFonts(
+  doc: jsPDF,
+  fontBase64: string | null = cachedScoutsPlanarFontBase64
+): boolean {
+  const base64 = fontBase64 ?? cachedScoutsPlanarFontBase64;
+  const docWithVfs = doc as unknown as {
+    addFileToVFS?: (filename: string, filecontent: string) => void;
+    addFont?: (postScriptName: string, id: string, fontStyle: string) => void;
+  };
+
+  if (
+    !base64 ||
+    typeof docWithVfs.addFileToVFS !== 'function' ||
+    typeof docWithVfs.addFont !== 'function'
+  ) {
+    return false;
+  }
+
+  try {
+    docWithVfs.addFileToVFS(SCOUTS_PLANAR_FONT_FILE, base64);
+    docWithVfs.addFont(SCOUTS_PLANAR_FONT_FILE, SCOUTS_PLANAR_FONT_NAME, 'bold');
+    docWithVfs.addFont(SCOUTS_PLANAR_FONT_FILE, SCOUTS_PLANAR_FONT_NAME, 'normal');
+    docsWithCustomFont.add(doc as unknown as object);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureCustomFontsRegistered(doc: jsPDF): Promise<boolean> {
+  const docWithVfs = doc as unknown as {
+    addFileToVFS?: (filename: string, filecontent: string) => void;
+    addFont?: (postScriptName: string, id: string, fontStyle: string) => void;
+  };
+  if (
+    typeof docWithVfs.addFileToVFS !== 'function' ||
+    typeof docWithVfs.addFont !== 'function'
+  ) {
+    return false;
+  }
+  const fontBase64 = cachedScoutsPlanarFontBase64 ?? (await loadScoutsPlanarFontBase64());
+  if (!fontBase64) {
+    return false;
+  }
+  return registerCustomFonts(doc, fontBase64);
 }
 
 /**
@@ -80,7 +204,7 @@ export function slugify(text: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9_]/g, '_')
     .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '');
+    .replace(/^_+|_+$/g, '');
 }
 
 /**
@@ -166,10 +290,28 @@ function drawStandardScoutBorder(doc: jsPDF, width: number, height: number): voi
   doc.text(`Formato ${width} × ${height} mm`, width - 16, height - 14, { align: 'right' });
 }
 
-function getImageFormatFromUrl(url: string): string {
-  if (url.startsWith('data:image/png')) return 'PNG';
-  if (url.startsWith('data:image/jpeg') || url.startsWith('data:image/jpg')) return 'JPEG';
-  return 'WEBP';
+export function getImageFormatFromUrl(url: string): 'PNG' | 'JPEG' | 'WEBP' | null {
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('data:')) {
+    if (trimmed.startsWith('data:image/png')) return 'PNG';
+    if (trimmed.startsWith('data:image/jpeg') || trimmed.startsWith('data:image/jpg')) return 'JPEG';
+    if (trimmed.startsWith('data:image/webp')) return 'WEBP';
+    return null;
+  }
+  const lower = trimmed.toLowerCase();
+  if (lower.endsWith('.pdf') || lower.includes('.pdf?')) return null;
+  if (lower.endsWith('.png') || lower.includes('.png?')) return 'PNG';
+  if (
+    lower.endsWith('.jpg') ||
+    lower.endsWith('.jpeg') ||
+    lower.includes('.jpg?') ||
+    lower.includes('.jpeg?')
+  ) {
+    return 'JPEG';
+  }
+  if (lower.endsWith('.webp') || lower.includes('.webp?')) return 'WEBP';
+  return 'JPEG';
 }
 
 function drawCertificateBackground(
@@ -180,10 +322,16 @@ function drawCertificateBackground(
 ): void {
   if (backgroundUrl && backgroundUrl.trim().length > 0) {
     const format = getImageFormatFromUrl(backgroundUrl);
-    doc.addImage(backgroundUrl, format, 0, 0, width, height);
-  } else {
-    drawStandardScoutBorder(doc, width, height);
+    if (format) {
+      try {
+        doc.addImage(backgroundUrl, format, 0, 0, width, height, CERTIFICATE_BG_IMAGE_ALIAS);
+        return;
+      } catch {
+        // Fallback cleanly to standard Scout border if addImage fails at runtime
+      }
+    }
   }
+  drawStandardScoutBorder(doc, width, height);
 }
 
 function resolveHierarchyName(id?: number, list?: Array<{ id: number; name: string }>): string {
@@ -246,7 +394,10 @@ export function resolveFieldsToRender(template?: CertificateTemplate): Recogniti
   }));
 }
 
-export function getPdfFontFamily(fontFamily?: string): 'helvetica' | 'times' | 'courier' {
+export function getPdfFontFamily(
+  fontFamily?: string,
+  customFontRegistered = false
+): 'helvetica' | 'times' | 'courier' | 'Scouts GT Planar' {
   switch (fontFamily) {
     case 'times':
       return 'times';
@@ -254,6 +405,7 @@ export function getPdfFontFamily(fontFamily?: string): 'helvetica' | 'times' | '
       return 'courier';
     case 'scouts-gt-planar-bold':
     case 'Scouts GT Planar':
+      return customFontRegistered ? SCOUTS_PLANAR_FONT_NAME : 'helvetica';
     case 'noto-sans':
     case 'helvetica':
     default:
@@ -270,6 +422,34 @@ function getFontWeight(fontWeight?: string, fontFamily?: string): 'bold' | 'ital
   return 'normal';
 }
 
+/**
+ * Applies field font family, weight, size, and RGB color onto the jsPDF instance,
+ * seamlessly using the registered TrueType font when available in VFS or falling back to standard fonts.
+ */
+export function applyFieldTypography(
+  doc: jsPDF,
+  field: RecognitionFieldConfig,
+  customFontRegistered?: boolean
+): void {
+  const isRegistered =
+    customFontRegistered ??
+    (docsWithCustomFont.has(doc as unknown as object) ||
+      Boolean(
+        (doc as unknown as { getFontList?: () => Record<string, unknown> }).getFontList?.()?.[
+          SCOUTS_PLANAR_FONT_NAME
+        ]
+      ));
+
+  const resolvedFamily = getPdfFontFamily(field.font_family, isRegistered);
+  const resolvedWeight = getFontWeight(field.font_weight, field.font_family);
+
+  doc.setFont(resolvedFamily, resolvedWeight);
+  doc.setFontSize(field.font_size);
+
+  const { r, g, b } = hexToRgb(field.color);
+  doc.setTextColor(r, g, b);
+}
+
 function drawSingleField(
   doc: jsPDF,
   field: RecognitionFieldConfig,
@@ -280,11 +460,7 @@ function drawSingleField(
   const x = Math.round(((field.x / 100) * width) * 100) / 100;
   const y = Math.round(((field.y / 100) * height) * 100) / 100;
 
-  doc.setFont(getPdfFontFamily(field.font_family), getFontWeight(field.font_weight, field.font_family));
-  doc.setFontSize(field.font_size);
-
-  const { r, g, b } = hexToRgb(field.color);
-  doc.setTextColor(r, g, b);
+  applyFieldTypography(doc, field);
 
   doc.text(value, x, y, {
     align: field.align,
@@ -312,6 +488,10 @@ export function renderCertificatePage(
   const width = options.width ?? normalized.width;
   const height = options.height ?? normalized.height;
 
+  if (cachedScoutsPlanarFontBase64 && !docsWithCustomFont.has(doc as unknown as object)) {
+    registerCustomFonts(doc, cachedScoutsPlanarFontBase64);
+  }
+
   drawCertificateBackground(doc, template?.background_url, width, height);
 
   const valuesMap = interpolateCertificateVariables({ member, batch, recognition, hierarchy });
@@ -338,6 +518,28 @@ async function resolvePdfContext(
   return { resolvedRecognition, resolvedHierarchy };
 }
 
+function createAbortError(): Error {
+  if (typeof DOMException !== 'undefined') {
+    return new DOMException(
+      'La generación de certificados fue cancelada por el usuario.',
+      'AbortError'
+    );
+  }
+  const err = new Error('La generación de certificados fue cancelada por el usuario.');
+  err.name = 'AbortError';
+  return err;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
+}
+
+async function yieldToMainThread(): Promise<void> {
+  await new Promise<void>(resolve => setTimeout(resolve, 0));
+}
+
 /**
  * Generates a single certificate jsPDF instance for a member.
  */
@@ -355,6 +557,8 @@ export async function generateSingleCertificatePdf(
     unit: 'mm',
     format: [width, height]
   });
+
+  await ensureCustomFontsRegistered(doc);
 
   renderCertificatePage(doc, {
     member,
@@ -389,9 +593,15 @@ export async function downloadSingleCertificatePdf(
  * Generates and downloads a multi-page certificate PDF containing all active and exceptional members of a batch.
  */
 export async function generateBatchCertificatesPdf(
-  params: BatchCertificatesParams
+  params: BatchCertificatesParams,
+  options?: BatchGenerationOptions
 ): Promise<string> {
   const { batch, members, recognition, hierarchy } = params;
+  const onProgress = options?.onProgress ?? params.onProgress;
+  const signal = options?.signal ?? params.signal;
+  const chunkSize = Math.max(1, options?.chunkSize ?? 5);
+
+  throwIfAborted(signal);
 
   const eligibleMembers = members.filter(m => m.status === 'active' || m.status === 'exceptional');
   if (eligibleMembers.length === 0) {
@@ -401,6 +611,7 @@ export async function generateBatchCertificatesPdf(
   }
 
   const { resolvedRecognition, resolvedHierarchy } = await resolvePdfContext(batch, recognition, hierarchy);
+  throwIfAborted(signal);
 
   const template = resolvedRecognition?.template;
   const { width, height, orientation } = getNormalizedPageDimensions(template);
@@ -411,10 +622,19 @@ export async function generateBatchCertificatesPdf(
     format: [width, height]
   });
 
-  eligibleMembers.forEach((member, index) => {
+  await ensureCustomFontsRegistered(doc);
+  throwIfAborted(signal);
+
+  const total = eligibleMembers.length;
+
+  for (let index = 0; index < total; index++) {
+    throwIfAborted(signal);
+    const member = eligibleMembers[index];
+
     if (index > 0) {
       doc.addPage([width, height], orientation);
     }
+
     renderCertificatePage(doc, {
       member,
       batch,
@@ -424,7 +644,17 @@ export async function generateBatchCertificatesPdf(
       width,
       height
     });
-  });
+
+    const current = index + 1;
+    const percentage = Math.round((current / total) * 100);
+    onProgress?.({ current, total, percentage });
+    throwIfAborted(signal);
+
+    if (current % chunkSize === 0 && current < total) {
+      await yieldToMainThread();
+      throwIfAborted(signal);
+    }
+  }
 
   const slug = slugify(resolvedRecognition?.name ?? batch.recognition_type ?? 'Reconocimientos');
   const fileName = `Reconocimientos_Lote_${batch.id}_${slug}.pdf`;
@@ -450,9 +680,15 @@ function triggerBlobDownload(blob: Blob, filename: string): void {
  * compresses them into a .zip file and triggers the browser download.
  */
 export async function generateBatchCertificatesZip(
-  params: BatchCertificatesParams
+  params: BatchCertificatesParams,
+  options?: BatchGenerationOptions
 ): Promise<string> {
   const { batch, members, recognition, hierarchy } = params;
+  const onProgress = options?.onProgress ?? params.onProgress;
+  const signal = options?.signal ?? params.signal;
+  const chunkSize = Math.max(1, options?.chunkSize ?? 5);
+
+  throwIfAborted(signal);
 
   const eligibleMembers = members.filter(m => m.status === 'active' || m.status === 'exceptional');
   if (eligibleMembers.length === 0) {
@@ -462,18 +698,26 @@ export async function generateBatchCertificatesZip(
   }
 
   const { resolvedRecognition, resolvedHierarchy } = await resolvePdfContext(batch, recognition, hierarchy);
+  throwIfAborted(signal);
+
   const template = resolvedRecognition?.template;
   const { width, height, orientation } = getNormalizedPageDimensions(template);
 
   const zip = new JSZip();
   const slug = slugify(resolvedRecognition?.name ?? batch.recognition_type ?? 'Reconocimiento');
+  const total = eligibleMembers.length;
 
-  for (const member of eligibleMembers) {
+  for (let index = 0; index < total; index++) {
+    throwIfAborted(signal);
+    const member = eligibleMembers[index];
+
     const doc = new jsPDF({
       orientation,
       unit: 'mm',
       format: [width, height]
     });
+
+    await ensureCustomFontsRegistered(doc);
 
     renderCertificatePage(doc, {
       member,
@@ -489,13 +733,27 @@ export async function generateBatchCertificatesZip(
     const sanitizedIdentity = member.identity.replace(/[^a-zA-Z0-9_-]/g, '_');
     const memberFileName = `Reconocimiento_${sanitizedIdentity}_Lote_${batch.id}_${slug}.pdf`;
     zip.file(memberFileName, pdfBuffer);
+
+    const current = index + 1;
+    const percentage = Math.round((current / total) * 100);
+    onProgress?.({ current, total, percentage });
+    throwIfAborted(signal);
+
+    if (current % chunkSize === 0 && current < total) {
+      await yieldToMainThread();
+      throwIfAborted(signal);
+    }
   }
+
+  throwIfAborted(signal);
 
   const zipBlob = await zip.generateAsync({
     type: 'blob',
     compression: 'DEFLATE',
     compressionOptions: { level: 6 }
   });
+
+  throwIfAborted(signal);
 
   const zipFileName = `Reconocimientos_Lote_${batch.id}_${slug}.zip`;
   triggerBlobDownload(zipBlob, zipFileName);

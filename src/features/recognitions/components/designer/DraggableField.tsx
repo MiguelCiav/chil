@@ -11,6 +11,8 @@ export interface DraggableFieldProps {
   displayText: string;
   onPointerDown: (e: React.PointerEvent<HTMLDivElement>, fieldId: string) => void;
   onSelect: (fieldId: string) => void;
+  onNudgeField?: (fieldId: string, deltaX: number, deltaY: number) => void;
+  onUpdateFieldCoordinates?: (fieldId: string, x: number, y: number) => void;
 }
 
 function getFieldClass(isPreviewMode: boolean, isSelected: boolean): string {
@@ -34,27 +36,101 @@ function getFieldFontStyle(fontWeight?: string): 'italic' | 'normal' {
   return fontWeight === 'italic' ? 'italic' : 'normal';
 }
 
-export const DraggableField: React.FC<DraggableFieldProps> = ({
-  field,
-  isSelected,
-  isPreviewMode,
-  fontScale,
-  displayText,
-  onPointerDown,
-  onSelect
-}) => {
-  const displayFontSizePx = Math.max(
-    8,
-    Math.round(field.font_size * fontScale * 100) / 100
-  );
+export const DraggableField: React.FC<DraggableFieldProps> = React.memo(
+  ({
+    field,
+    isSelected,
+    isPreviewMode,
+    fontScale,
+    displayText,
+    onPointerDown,
+    onSelect,
+    onNudgeField,
+    onUpdateFieldCoordinates
+  }) => {
+    const displayFontSizePx = Math.max(
+      8,
+      Math.round(field.font_size * fontScale * 100) / 100
+    );
 
-  const fieldTitle = isPreviewMode ? undefined : `${field.label} (${field.x}%, ${field.y}%)`;
-  const fieldPadding = isPreviewMode ? '0px' : '2px 6px';
+    const fieldTitle = isPreviewMode ? undefined : `${field.label} (${field.x}%, ${field.y}%)`;
+    const fieldPadding = isPreviewMode ? '0px' : '2px 6px';
 
-  if (isPreviewMode) {
+    if (isPreviewMode) {
+      return (
+        <div
+          className="absolute z-10 select-none cursor-default"
+          style={{
+            left: `${field.x}%`,
+            top: `${field.y}%`,
+            transform: getAlignTransform(field.align),
+            fontFamily: getFontFamilyStyle(field.font_family),
+            fontSize: `${displayFontSizePx}px`,
+            fontWeight: getFieldFontWeight(field.font_weight, field.font_family),
+            fontStyle: getFieldFontStyle(field.font_weight),
+            color: field.color,
+            textAlign: field.align,
+            padding: fieldPadding,
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {displayText}
+        </div>
+      );
+    }
+
     return (
-      <div
-        className="absolute z-10 select-none cursor-default"
+      <button
+        type="button"
+        tabIndex={0}
+        aria-label={field.label}
+        aria-pressed={isSelected}
+        onPointerDown={(e) => onPointerDown(e as unknown as React.PointerEvent<HTMLDivElement>, field.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(field.id);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect(field.id);
+            return;
+          }
+
+          const step = e.shiftKey ? 2.5 : 0.5;
+          let deltaX = 0;
+          let deltaY = 0;
+
+          if (e.key === 'ArrowLeft') {
+            deltaX = -step;
+          } else if (e.key === 'ArrowRight') {
+            deltaX = step;
+          } else if (e.key === 'ArrowUp') {
+            deltaY = -step;
+          } else if (e.key === 'ArrowDown') {
+            deltaY = step;
+          } else {
+            return;
+          }
+
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (!isSelected) {
+            onSelect(field.id);
+          }
+
+          const nextX = Math.max(2, Math.min(98, Math.round((field.x + deltaX) * 10) / 10));
+          const nextY = Math.max(2, Math.min(98, Math.round((field.y + deltaY) * 10) / 10));
+
+          if (onNudgeField) {
+            onNudgeField(field.id, deltaX, deltaY);
+          }
+          if (onUpdateFieldCoordinates) {
+            onUpdateFieldCoordinates(field.id, nextX, nextY);
+          }
+        }}
+        className={`absolute z-10 select-none transition-all border-0 outline-hidden ${getFieldClass(false, isSelected)}`}
         style={{
           left: `${field.x}%`,
           top: `${field.y}%`,
@@ -68,56 +144,22 @@ export const DraggableField: React.FC<DraggableFieldProps> = ({
           padding: fieldPadding,
           whiteSpace: 'nowrap'
         }}
+        title={fieldTitle}
       >
+        {/* Floating Position Badge when Selected */}
+        {isSelected && (
+          <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap flex items-center gap-1 pointer-events-none">
+            <Move className="w-2.5 h-2.5" />
+            <span>
+              {field.label} ({field.x}%, {field.y}%)
+            </span>
+          </span>
+        )}
+
         {displayText}
-      </div>
+      </button>
     );
   }
+);
 
-  return (
-    <button
-      type="button"
-      tabIndex={0}
-      aria-label={field.label}
-      aria-pressed={isSelected}
-      onPointerDown={(e) => onPointerDown(e as unknown as React.PointerEvent<HTMLDivElement>, field.id)}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(field.id);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect(field.id);
-        }
-      }}
-      className={`absolute z-10 select-none transition-all border-0 outline-hidden ${getFieldClass(false, isSelected)}`}
-      style={{
-        left: `${field.x}%`,
-        top: `${field.y}%`,
-        transform: getAlignTransform(field.align),
-        fontFamily: getFontFamilyStyle(field.font_family),
-        fontSize: `${displayFontSizePx}px`,
-        fontWeight: getFieldFontWeight(field.font_weight, field.font_family),
-        fontStyle: getFieldFontStyle(field.font_weight),
-        color: field.color,
-        textAlign: field.align,
-        padding: fieldPadding,
-        whiteSpace: 'nowrap'
-      }}
-      title={fieldTitle}
-    >
-      {/* Floating Position Badge when Selected */}
-      {isSelected && (
-        <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap flex items-center gap-1 pointer-events-none">
-          <Move className="w-2.5 h-2.5" />
-          <span>
-            {field.label} ({field.x}%, {field.y}%)
-          </span>
-        </span>
-      )}
-
-      {displayText}
-    </button>
-  );
-};
+DraggableField.displayName = 'DraggableField';

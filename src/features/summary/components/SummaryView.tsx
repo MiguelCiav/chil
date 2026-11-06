@@ -38,7 +38,7 @@ import {
   ScoutGroup,
   getUnitBadge,
   getUnitLabel
-} from '../../batches/types';
+} from '../../../types';
 import { SummaryRowData } from '../types';
 import { exportToExcel } from '../utils/excelExport';
 import { useAuth } from '../../auth';

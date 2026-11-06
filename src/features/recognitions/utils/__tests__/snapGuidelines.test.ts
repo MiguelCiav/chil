@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSnapGuidelines } from '../snapGuidelines';
+import { calculateSnapGuidelines, getFieldHorizontalEdges } from '../snapGuidelines';
 import { RecognitionFieldConfig } from '../../types';
 
 describe('calculateSnapGuidelines utility', () => {
@@ -111,5 +111,46 @@ describe('calculateSnapGuidelines utility', () => {
     expect(result.snappedX).toBe(12);
     expect(result.snappedY).toBe(15);
     expect(result.activeGuides).toEqual([]);
+  });
+
+  it('computes optical horizontal edges based on alignment and fieldWidths', () => {
+    expect(getFieldHorizontalEdges(20, 'left', 10)).toEqual({ left: 20, center: 25, right: 30 });
+    expect(getFieldHorizontalEdges(50, 'center', 10)).toEqual({ left: 45, center: 50, right: 55 });
+    expect(getFieldHorizontalEdges(80, 'right', 10)).toEqual({ left: 70, center: 75, right: 80 });
+
+    const fieldsWithAlign: RecognitionFieldConfig[] = [
+      {
+        ...mockFields[0],
+        id: 'field-left',
+        x: 20,
+        y: 30,
+        align: 'left'
+      },
+      {
+        ...mockFields[1],
+        id: 'field-center',
+        x: 50,
+        y: 70,
+        align: 'center'
+      }
+    ];
+
+    // Dragging field-left (width 10%, left=14.6, center=19.6, right=24.6) near field-center's left edge (50 - 10 = 40)
+    // Or dragging field-left to x=44.6 so its center (49.6) is within 1.5% of 50% canvas center
+    const snapResult = calculateSnapGuidelines({
+      currentX: 44.6,
+      currentY: 30,
+      fieldId: 'field-left',
+      fields: fieldsWithAlign,
+      threshold: 1.5,
+      fieldWidths: { 'field-left': 10, 'field-center': 20 }
+    });
+
+    expect(snapResult.snappedX).toBe(45);
+    expect(snapResult.activeGuides).toContainEqual({
+      orientation: 'vertical',
+      position: 50,
+      type: 'canvas-center'
+    });
   });
 });

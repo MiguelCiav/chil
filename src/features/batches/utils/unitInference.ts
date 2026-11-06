@@ -148,6 +148,10 @@ export function inferMemberUnit(
   isAdultCandidate: boolean,
   batchModeUnit: ScoutUnit
 ): ScoutUnit {
+  // If the member already has an explicitly assigned scout unit (e.g., caminantes, tropa, manada, clan), preserve it
+  if (member.unit && member.unit !== 'institucional') {
+    return member.unit;
+  }
   if (isAdultCandidate) {
     return batchModeUnit;
   }

@@ -147,6 +147,9 @@ describe('BatchDetail component', () => {
     // Check table rows
     expect(screen.getByText('Ana Perez')).toBeInTheDocument();
     expect(screen.getByText('Carlos Gomez')).toBeInTheDocument();
+    expect(screen.getByText('SP-5Y-001')).toBeInTheDocument();
+    expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('REC-2222')).not.toBeInTheDocument();
 
     // Check Member List PDF Export button
     const listBtn = screen.getByRole('button', { name: /Descargar lista/i });
@@ -942,6 +945,9 @@ describe('BatchDetail component', () => {
     expect(screen.getByText('Registro Válido')).toBeInTheDocument();
     expect(screen.getByText('Emisión Excepcional')).toBeInTheDocument();
     expect(screen.getByText('Registro Inválido')).toBeInTheDocument();
+    // Active member without recognition_code renders '-' instead of fabricated placeholder
+    expect(screen.queryByText('REC-1001')).not.toBeInTheDocument();
+    expect(screen.getAllByText('-').length).toBeGreaterThanOrEqual(2);
 
     // Open Quick View for exceptional member
     const viewBtn = screen.getByLabelText(/Ver detalle de Laura Excepcional/i);

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { MainLayout } from '../MainLayout';
 import * as authFeature from '../../features/auth';
 
-vi.mock('../../components/Sidebar', () => ({
+vi.mock('../../components/navigation', () => ({
   Sidebar: ({ isMobileOpen, onMobileClose }: { isMobileOpen?: boolean; onMobileClose?: () => void }) => (
     <div data-testid="mock-sidebar">
       <span>Mock Sidebar</span>

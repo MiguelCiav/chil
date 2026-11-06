@@ -5,7 +5,7 @@ import { SummaryView } from '../SummaryView';
 import * as batchApi from '../../../batches/api';
 import * as recognitionApi from '../../../recognitions';
 import * as excelExportModule from '../../utils/excelExport';
-import { Batch, ScoutMember } from '../../../batches/types';
+import { Batch, ScoutMember } from '../../../../types';
 import { RecognitionType } from '../../../recognitions';
 
 vi.mock('../../../batches/api', () => ({

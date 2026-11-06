@@ -12,7 +12,7 @@ import {
   calculateYoYComparison,
   buildStatisticsDataset
 } from '../statsCalculators';
-import { Batch, ScoutMember, Region, District } from '../../../batches/types';
+import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../../../types';
 import { RecognitionTypeInfo } from '../../../batches/api';
 
 describe('statsCalculators', () => {
@@ -483,7 +483,7 @@ describe('statsCalculators', () => {
   });
 
   describe('Mixed batch hierarchy resolution (resolveMemberHierarchy)', () => {
-    const testGroups: import('../../../batches/types').ScoutGroup[] = [
+    const testGroups: ScoutGroup[] = [
       { id: 501, name: 'Grupo San Sebastian', district_id: 301 },
       { id: 502, name: 'Grupo Chiquinquira', district_id: 302 }
     ];

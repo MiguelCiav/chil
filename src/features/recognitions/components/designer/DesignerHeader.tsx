@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Save, Upload, Eye, Edit3 } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Eye, Edit3, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '../../../../components/Button';
 import { WalkthroughHelpButton } from '../../../../components/walkthrough';
 
@@ -9,6 +9,10 @@ export interface DesignerHeaderProps {
   isSaving: boolean;
   isUploadingBg: boolean;
   hasBackground: boolean;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
   onTogglePreview: (preview: boolean) => void;
   onUploadClick: () => void;
   onSave: () => void;
@@ -28,6 +32,10 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
   isSaving,
   isUploadingBg,
   hasBackground,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
   onTogglePreview,
   onUploadClick,
   onSave,
@@ -64,6 +72,30 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
 
       {/* Global Action Controls */}
       <div className="flex flex-wrap items-center gap-2.5">
+        {/* Undo / Redo Toolbar Controls */}
+        <div className="inline-flex rounded-xl p-1 bg-gray-100 border border-gray-200">
+          <button
+            type="button"
+            onClick={() => onUndo?.()}
+            disabled={!canUndo}
+            title="Deshacer (Ctrl+Z)"
+            aria-label="Deshacer"
+            className="p-2 rounded-lg text-xs font-semibold text-neutral hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onRedo?.()}
+            disabled={!canRedo}
+            title="Rehacer (Ctrl+Y)"
+            aria-label="Rehacer"
+            className="p-2 rounded-lg text-xs font-semibold text-neutral hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+        </div>
+
         {/* Mode Switcher */}
         <div
           data-walkthrough="designer-mode-switch"

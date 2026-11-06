@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { useCanvasDrag } from '../useCanvasDrag';
+import { useCanvasDrag, clampFieldCoordinates } from '../useCanvasDrag';
 import { RecognitionFieldConfig } from '../../types';
 
 describe('useCanvasDrag hook', () => {
@@ -287,5 +287,78 @@ describe('useCanvasDrag hook', () => {
     });
 
     expect(result.current.activeGuides).toEqual([]);
+  });
+
+  it('releases pointer capture on the captured field element even when pointerup occurs on canvas container', () => {
+    const onUpdateFieldCoordinates = vi.fn();
+    const mockCanvas = document.createElement('div');
+    mockCanvas.releasePointerCapture = vi.fn();
+    const canvasRef = { current: mockCanvas };
+
+    const { result } = renderHook(() =>
+      useCanvasDrag({
+        canvasRef,
+        fields: mockFields,
+        isPreviewMode: false,
+        onUpdateFieldCoordinates
+      })
+    );
+
+    const mockFieldTarget = document.createElement('div');
+    mockFieldTarget.setPointerCapture = vi.fn();
+    mockFieldTarget.releasePointerCapture = vi.fn();
+
+    act(() => {
+      result.current.handlePointerDown(
+        {
+          currentTarget: mockFieldTarget,
+          clientX: 100,
+          clientY: 100,
+          pointerId: 7,
+          stopPropagation: vi.fn(),
+          preventDefault: vi.fn()
+        } as unknown as React.PointerEvent<HTMLDivElement>,
+        'field-1'
+      );
+    });
+
+    expect(mockFieldTarget.setPointerCapture).toHaveBeenCalledWith(7);
+
+    // Pointer up fires on the canvas container instead of the field button
+    act(() => {
+      result.current.handlePointerUp({
+        currentTarget: mockCanvas,
+        pointerId: 7
+      } as unknown as React.PointerEvent<HTMLDivElement>);
+    });
+
+    expect(mockFieldTarget.releasePointerCapture).toHaveBeenCalledWith(7);
+  });
+
+  it('supports alignment-aware coordinate clamping for center, left, and right aligned fields', () => {
+    // 20% width field:
+    // center-aligned -> [12, 88]
+    expect(
+      clampFieldCoordinates(95, 50, { align: 'center', fieldWidthPercent: 20 })
+    ).toEqual({ x: 88, y: 50 });
+    expect(
+      clampFieldCoordinates(5, 50, { align: 'center', fieldWidthPercent: 20 })
+    ).toEqual({ x: 12, y: 50 });
+
+    // left-aligned -> [2, 78]
+    expect(
+      clampFieldCoordinates(95, 50, { align: 'left', fieldWidthPercent: 20 })
+    ).toEqual({ x: 78, y: 50 });
+    expect(
+      clampFieldCoordinates(0, 50, { align: 'left', fieldWidthPercent: 20 })
+    ).toEqual({ x: 2, y: 50 });
+
+    // right-aligned -> [22, 98]
+    expect(
+      clampFieldCoordinates(5, 50, { align: 'right', fieldWidthPercent: 20 })
+    ).toEqual({ x: 22, y: 50 });
+    expect(
+      clampFieldCoordinates(99, 50, { align: 'right', fieldWidthPercent: 20 })
+    ).toEqual({ x: 98, y: 50 });
   });
 });

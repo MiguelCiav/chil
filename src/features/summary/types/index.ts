@@ -1,4 +1,4 @@
-import { ScoutUnit } from '../../batches/types';
+import { ScoutUnit } from '../../../types';
 
 export interface SummaryRowData {
   id: string; // member identity + batch id
