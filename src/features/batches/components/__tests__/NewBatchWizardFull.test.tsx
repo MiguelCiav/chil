@@ -15,9 +15,16 @@ vi.mock('../../api', async (importOriginal) => {
     createMember: vi.fn(),
     updateMember: vi.fn(),
     deleteMember: vi.fn(),
+    batchUpdateMembers: vi.fn(),
     getMembersByBatchId: vi.fn(),
     hasScraperCredentials: vi.fn(),
-    loginScraper: vi.fn()
+    loginScraper: vi.fn(),
+    assignBatchRecognitionCodes: vi.fn((members: Record<string, unknown>[]) =>
+      members.map((m, idx: number) => ({
+        ...m,
+        recognition_code: (m.recognition_code as string) || `REC-${String(idx + 1).padStart(3, '0')}`
+      }))
+    )
   };
 });
 
@@ -26,7 +33,8 @@ import * as recognitionsModule from '../../../recognitions';
 vi.mock('../../../recognitions', () => ({
   getAllRecognitionTypes: vi.fn().mockResolvedValue([
     { id: 'sct-wood-badge', name: 'Insignia de Madera', created_at: '2026-01-01' }
-  ])
+  ]),
+  downloadSingleCertificatePdf: vi.fn().mockResolvedValue('Certificado_29111222.pdf')
 }));
 
 vi.mock('../../../auth', () => ({
@@ -49,26 +57,27 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
-describe('NewBatchWizard full flow', () => {
+describe('NewBatchWizard full flow (2-Step Unified)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(recognitionsModule.getAllRecognitionTypes).mockResolvedValue([
       { id: 'sct-wood-badge', name: 'Insignia de Madera', created_at: '2026-01-01' }
     ]);
     vi.mocked(api.getHierarchyData).mockResolvedValue({
-      regions: [{ id: 1, name: 'Región Capital' }],
-      districts: [{ id: 10, name: 'Distrito Sucre', region_id: 1 }],
-      groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
+      regions: [{ id: 5, name: 'DISTRITO CAPITAL' }],
+      districts: [{ id: 21, name: 'AVILA', region_id: 5 }],
+      groups: [{ id: 64, name: 'DON BOSCO 21', district_id: 21 }]
     });
   });
 
-  it('completes full flow from Step 1 to Step 2 to Step 3 and redirects to success', async () => {
+  it('completes full flow from Step 1 to Step 2 and redirects to success', async () => {
     vi.mocked(api.createBatch).mockResolvedValue({
       id: 777,
       comment: 'Mi Lote Completo',
-      region_id: 1,
-      district_id: 10,
-      group_id: 100,
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      recognition_type: 'sct-wood-badge',
       created_at: '2026-08-21T12:00:00.000Z'
     });
 
@@ -79,7 +88,12 @@ describe('NewBatchWizard full flow', () => {
       status: 'activo',
       telefono: '04121234567',
       correo_electronico: 'c@g.com',
-      fecha_nacimiento: '2004-10-25'
+      fecha_nacimiento: '2004-10-25',
+      region: 'DISTRITO CAPITAL',
+      distrito: 'AVILA',
+      grupo: 'DON BOSCO 21',
+      unidad: 'Comunidad',
+      edad: 17
     });
     vi.mocked(api.createMember).mockResolvedValue({
       identity: '29111222',
@@ -87,8 +101,12 @@ describe('NewBatchWizard full flow', () => {
       last_names: 'Gomez Perez',
       birth_date: '2004-10-25',
       member_type: 'young',
+      unit: 'caminantes',
       status: 'active',
-      batch_id: 777
+      batch_id: 777,
+      group_name: 'DON BOSCO 21',
+      district_name: 'AVILA',
+      region_name: 'DISTRITO CAPITAL'
     });
     vi.mocked(api.getMembersByBatchId).mockResolvedValue([
       {
@@ -97,10 +115,15 @@ describe('NewBatchWizard full flow', () => {
         last_names: 'Gomez Perez',
         birth_date: '2004-10-25',
         member_type: 'young',
+        unit: 'caminantes',
         status: 'active',
-        batch_id: 777
+        batch_id: 777,
+        group_name: 'DON BOSCO 21',
+        district_name: 'AVILA',
+        region_name: 'DISTRITO CAPITAL'
       }
     ]);
+    vi.mocked(api.batchUpdateMembers).mockResolvedValue([]);
 
     render(
       <MemoryRouter>
@@ -108,309 +131,166 @@ describe('NewBatchWizard full flow', () => {
       </MemoryRouter>
     );
 
-    // Wait for hierarchy to load
+    // 1. Select Recognition Type
     await waitFor(() => {
-      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Tipo de Reconocimiento/i)).not.toBeDisabled();
     });
-
-    // 1. Select Region
-    const regionBtn = screen.getByLabelText(/Región Scout/i);
-    fireEvent.click(regionBtn);
-    const regionOpt = await screen.findByText('Región Capital');
-    fireEvent.click(regionOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Región Capital')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Distrito Scout/i)).not.toBeDisabled();
-    });
-
-    // 2. Select District
-    const districtBtn = screen.getByLabelText(/Distrito Scout/i);
-    fireEvent.click(districtBtn);
-    const districtOpt = await screen.findByText('Distrito Sucre');
-    fireEvent.click(districtOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Grupo Scout/i)).not.toBeDisabled();
-    });
-
-    // 3. Select Group
-    const groupBtn = screen.getByLabelText(/Grupo Scout/i);
-    fireEvent.click(groupBtn);
-    const groupOpt = await screen.findByText('Grupo San Luis');
-    fireEvent.click(groupOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
-    });
-
-    // 4. Select Recognition Type
-    const recSelect = screen.getByLabelText(/Tipo de Reconocimiento/i);
-    fireEvent.change(recSelect, {
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), {
       target: { value: 'sct-wood-badge' }
     });
 
-    // 5. Submit Step 1
-    const nextBtn = screen.getByText('Siguiente paso');
-    await waitFor(() => {
-      expect(nextBtn).not.toBeDisabled();
-    });
-    fireEvent.click(nextBtn);
-
-    // Step 2: Fill cedulas and verify
-    await waitFor(() => {
-      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
+    // 2. Set Comment
+    fireEvent.change(screen.getByLabelText(/Título o Comentario del Lote/i), {
+      target: { value: 'Mi Lote Completo' }
     });
 
-    const youngInput = screen.getByLabelText(/Cédulas de Jóvenes/i);
-    fireEvent.change(youngInput, { target: { value: '29111222' } });
+    // 3. Enter Cédula
+    const cedulaInput = screen.getByLabelText(/Cédulas de Identidad/i);
+    fireEvent.change(cedulaInput, { target: { value: '29111222' } });
 
-    const verifyBtn = screen.getByText('Iniciar Verificación');
+    // 4. Submit Step 1
+    const verifyBtn = screen.getByRole('button', { name: /Cargar y Verificar Miembros/i });
     fireEvent.click(verifyBtn);
 
+    // Step 2: Review & Confirm
     await waitFor(() => {
+      expect(screen.getByText('Revisión y Confirmación del Lote')).toBeInTheDocument();
       expect(screen.getByText('Carlos Eduardo Gomez Perez')).toBeInTheDocument();
-      expect(screen.getByText('Registro válido')).toBeInTheDocument();
+      expect(screen.getByText('Caminantes')).toBeInTheDocument();
     });
 
-    // Continue to Step 3
-    const continueBtn = screen.getByText('Validar y Continuar');
-    fireEvent.click(continueBtn);
-
-    // Step 3: Review & Finalize
-    await waitFor(() => {
-      expect(screen.getByText('Revisión Final del Lote')).toBeInTheDocument();
-    });
-
-    const finalizeBtn = screen.getByText('Generar Lote');
+    // 5. Finalize Batch
+    const finalizeBtn = screen.getByRole('button', { name: /Emitir Lote/i });
     fireEvent.click(finalizeBtn);
 
     await waitFor(() => {
+      expect(api.batchUpdateMembers).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('/lotes/exito', {
         state: { batchId: 777, name: 'Mi Lote Completo' }
       });
     });
   });
 
-  it('handles No Scout direct emission: selects No Scout unit scope, bypasses Sistema de Registro scraper, and saves active member', async () => {
+  it('supports single-member fast emission shortcut with Emitir y Descargar PDF button', async () => {
     vi.mocked(api.createBatch).mockResolvedValue({
       id: 888,
-      comment: 'Lote Directo No Scout',
-      region_id: 1,
-      district_id: 10,
-      group_id: 100,
-      unit_scope: 'no_scout',
-      created_at: '2026-08-21T12:00:00.000Z'
-    });
-
-    vi.mocked(api.createMember).mockResolvedValue({
-      identity: '30999888',
-      first_names: '30999888',
-      last_names: '',
-      birth_date: '2000-01-01',
-      member_type: 'adult',
-      unit: 'no_scout',
-      status: 'active',
-      batch_id: 888
-    });
-    vi.mocked(api.getMembersByBatchId).mockResolvedValue([
-      {
-        identity: '30999888',
-        first_names: '30999888',
-        last_names: '',
-        birth_date: '2000-01-01',
-        member_type: 'adult',
-        unit: 'no_scout',
-        status: 'active',
-        batch_id: 888
-      }
-    ]);
-
-    render(
-      <MemoryRouter>
-        <NewBatchWizard />
-      </MemoryRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
-    });
-
-    // 1. Select Region
-    const regionBtn = screen.getByLabelText(/Región Scout/i);
-    fireEvent.click(regionBtn);
-    const regionOpt = await screen.findByText('Región Capital');
-    fireEvent.click(regionOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Región Capital')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Distrito Scout/i)).not.toBeDisabled();
-    });
-
-    // 2. Select District
-    const districtBtn = screen.getByLabelText(/Distrito Scout/i);
-    fireEvent.click(districtBtn);
-    const districtOpt = await screen.findByText('Distrito Sucre');
-    fireEvent.click(districtOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Grupo Scout/i)).not.toBeDisabled();
-    });
-
-    // 3. Select Group
-    const groupBtn = screen.getByLabelText(/Grupo Scout/i);
-    fireEvent.click(groupBtn);
-    const groupOpt = await screen.findByText('Grupo San Luis');
-    fireEvent.click(groupOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
-    });
-
-    // 4. Select Alcance de Unidad -> No Scout
-    const unitScopeSelect = screen.getByLabelText(/Alcance de Unidad/i);
-    fireEvent.change(unitScopeSelect, { target: { value: 'no_scout' } });
-    expect(unitScopeSelect).toHaveValue('no_scout');
-
-    // 5. Select Recognition Type
-    const recSelect = screen.getByLabelText(/Tipo de Reconocimiento/i);
-    fireEvent.change(recSelect, {
-      target: { value: 'sct-wood-badge' }
-    });
-
-    // Submit Step 1
-    const nextBtn = screen.getByText('Siguiente paso');
-    await waitFor(() => {
-      expect(nextBtn).not.toBeDisabled();
-    });
-    fireEvent.click(nextBtn);
-
-    // Verify batch was created with unit_scope: 'no_scout'
-    await waitFor(() => {
-      expect(api.createBatch).toHaveBeenCalledWith(
-        expect.objectContaining({
-          unit_scope: 'no_scout'
-        }),
-        'test-user-id'
-      );
-      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
-    });
-
-    // Step 2: Fill adult cedulas
-    const adultInput = screen.getByLabelText(/Cédulas de Adultos/i);
-    fireEvent.change(adultInput, { target: { value: '30999888' } });
-
-    const verifyBtn = screen.getByText('Iniciar Verificación');
-    fireEvent.click(verifyBtn);
-
-    await waitFor(() => {
-      // Scraper is bypassed, so getMemberStatus should NOT be called
-      expect(api.getMemberStatus).not.toHaveBeenCalled();
-      // Should show valid status in Step 2 (UNIDAD column is hidden in Step 2)
-      expect(screen.getByText('Registro válido')).toBeInTheDocument();
-    });
-
-    // Continue to Step 3
-    const continueBtn = screen.getByText('Validar y Continuar');
-    fireEvent.click(continueBtn);
-
-    // Step 3: Review & Finalize
-    await waitFor(() => {
-      expect(screen.getByText('Revisión Final del Lote')).toBeInTheDocument();
-      expect(screen.getByText('No scout')).toBeInTheDocument();
-    });
-  });
-
-  it('infers age-based units in Step 3 for mixed batch', async () => {
-    const todayYear = new Date().getFullYear();
-
-    vi.mocked(api.createBatch).mockResolvedValue({
-      id: 999,
-      comment: 'Lote Mixto Edades',
-      region_id: 1,
-      district_id: 10,
-      group_id: 100,
-      unit_scope: 'mixed',
+      comment: 'Emisión Rápida Individual',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      recognition_type: 'sct-wood-badge',
       created_at: '2026-08-21T12:00:00.000Z'
     });
 
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
     vi.mocked(api.loginScraper).mockResolvedValue();
-    vi.mocked(api.getMemberStatus)
-      .mockResolvedValueOnce({
-        nombre_completo: 'Lobato Martinez',
-        status: 'activo',
-        fecha_nacimiento: `${todayYear - 8}-01-01`,
-        telefono: '04121234567',
-        correo_electronico: 'lobato@example.com'
-      })
-      .mockResolvedValueOnce({
-        nombre_completo: 'Scout Silva',
-        status: 'activo',
-        fecha_nacimiento: `${todayYear - 13}-01-01`,
-        telefono: '04121234568',
-        correo_electronico: 'scout1@example.com'
-      })
-      .mockResolvedValueOnce({
-        nombre_completo: 'Scout Romero',
-        status: 'activo',
-        fecha_nacimiento: `${todayYear - 14}-01-01`,
-        telefono: '04121234569',
-        correo_electronico: 'scout2@example.com'
-      })
-      .mockResolvedValueOnce({
-        nombre_completo: 'Dirigente Adulto',
-        status: 'activo',
-        fecha_nacimiento: `${todayYear - 35}-01-01`,
-        telefono: '04121234570',
-        correo_electronico: 'dirigente@example.com'
-      });
-
+    vi.mocked(api.getMemberStatus).mockResolvedValue({
+      nombre_completo: 'Miguel Ciavato',
+      status: 'activo',
+      telefono: '04121234567',
+      correo_electronico: 'm@c.com',
+      fecha_nacimiento: '2005-05-15',
+      unidad: 'Caminantes',
+      edad: 17
+    });
     vi.mocked(api.createMember).mockResolvedValue({
-      identity: '111',
-      first_names: 'Lobato',
-      last_names: 'Martinez',
-      birth_date: `${todayYear - 8}-01-01`,
+      identity: '30541929',
+      first_names: 'Miguel',
+      last_names: 'Ciavato',
+      birth_date: '2005-05-15',
       member_type: 'young',
+      unit: 'caminantes',
+      status: 'active',
+      batch_id: 888
+    });
+    vi.mocked(api.getMembersByBatchId).mockResolvedValue([
+      {
+        identity: '30541929',
+        first_names: 'Miguel',
+        last_names: 'Ciavato',
+        birth_date: '2005-05-15',
+        member_type: 'young',
+        unit: 'caminantes',
+        status: 'active',
+        batch_id: 888
+      }
+    ]);
+    vi.mocked(api.batchUpdateMembers).mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <NewBatchWizard />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Tipo de Reconocimiento/i)).not.toBeDisabled();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), {
+      target: { value: 'sct-wood-badge' }
+    });
+    fireEvent.change(screen.getByLabelText(/Cédulas de Identidad/i), {
+      target: { value: '30541929' }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cargar y Verificar Miembros/i }));
+
+    // In Step 2, since membersList.length === 1, the immediate download button is rendered
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Emitir y Descargar PDF/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar PDF/i }));
+
+    await waitFor(() => {
+      expect(recognitionsModule.downloadSingleCertificatePdf).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith('/lotes/exito', {
+        state: { batchId: 888, name: '' }
+      });
+    });
+  });
+
+  it('supports adding a manual No Scout member in Step 2', async () => {
+    vi.mocked(api.createBatch).mockResolvedValue({
+      id: 999,
+      comment: 'Lote con Invitado',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      recognition_type: 'sct-wood-badge',
+      created_at: '2026-08-21T12:00:00.000Z'
+    });
+
+    vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
+    vi.mocked(api.loginScraper).mockResolvedValue();
+    vi.mocked(api.getMemberStatus).mockResolvedValue({
+      nombre_completo: 'Scout Regular',
+      status: 'activo',
+      fecha_nacimiento: '2008-01-01',
+      unidad: 'Tropa',
+      edad: 14,
+      telefono: '',
+      correo_electronico: ''
+    });
+    vi.mocked(api.createMember).mockResolvedValue({
+      identity: '12345678',
+      first_names: 'Scout',
+      last_names: 'Regular',
+      birth_date: '2008-01-01',
+      member_type: 'young',
+      unit: 'tropa',
       status: 'active',
       batch_id: 999
     });
     vi.mocked(api.getMembersByBatchId).mockResolvedValue([
       {
-        identity: '111',
-        first_names: 'Lobato',
-        last_names: 'Martinez',
-        birth_date: `${todayYear - 8}-01-01`,
-        member_type: 'young',
-        status: 'active',
-        batch_id: 999
-      },
-      {
-        identity: '222',
+        identity: '12345678',
         first_names: 'Scout',
-        last_names: 'Silva',
-        birth_date: `${todayYear - 13}-01-01`,
+        last_names: 'Regular',
+        birth_date: '2008-01-01',
         member_type: 'young',
-        status: 'active',
-        batch_id: 999
-      },
-      {
-        identity: '333',
-        first_names: 'Scout',
-        last_names: 'Romero',
-        birth_date: `${todayYear - 14}-01-01`,
-        member_type: 'young',
-        status: 'active',
-        batch_id: 999
-      },
-      {
-        identity: '444',
-        first_names: 'Dirigente',
-        last_names: 'Adulto',
-        birth_date: `${todayYear - 35}-01-01`,
-        member_type: 'adult',
+        unit: 'tropa',
         status: 'active',
         batch_id: 999
       }
@@ -423,135 +303,69 @@ describe('NewBatchWizard full flow', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Tipo de Reconocimiento/i)).not.toBeDisabled();
     });
 
-    // 1. Select Region
-    const regionBtn = screen.getByLabelText(/Región Scout/i);
-    fireEvent.click(regionBtn);
-    const regionOpt = await screen.findByText('Región Capital');
-    fireEvent.click(regionOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Región Capital')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Distrito Scout/i)).not.toBeDisabled();
-    });
-
-    // 2. Select District
-    const districtBtn = screen.getByLabelText(/Distrito Scout/i);
-    fireEvent.click(districtBtn);
-    const districtOpt = await screen.findByText('Distrito Sucre');
-    fireEvent.click(districtOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Grupo Scout/i)).not.toBeDisabled();
-    });
-
-    // 3. Select Group
-    const groupBtn = screen.getByLabelText(/Grupo Scout/i);
-    fireEvent.click(groupBtn);
-    const groupOpt = await screen.findByText('Grupo San Luis');
-    fireEvent.click(groupOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
-    });
-
-    // 4. Select Recognition Type
-    const recSelect = screen.getByLabelText(/Tipo de Reconocimiento/i);
-    fireEvent.change(recSelect, {
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), {
       target: { value: 'sct-wood-badge' }
     });
-
-    const nextBtn = screen.getByText('Siguiente paso');
-    await waitFor(() => {
-      expect(nextBtn).not.toBeDisabled();
-    });
-    fireEvent.click(nextBtn);
-
-    // Step 2:
-    await waitFor(() => {
-      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Cédulas de Identidad/i), {
+      target: { value: '12345678' }
     });
 
-    fireEvent.change(screen.getByLabelText(/Cédulas de Jóvenes/i), {
-      target: { value: '111\n222\n333' }
-    });
-    fireEvent.change(screen.getByLabelText(/Cédulas de Adultos/i), {
-      target: { value: '444' }
-    });
-
-    fireEvent.click(screen.getByText('Iniciar Verificación'));
+    fireEvent.click(screen.getByRole('button', { name: /Cargar y Verificar Miembros/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Lobato Martinez')).toBeInTheDocument();
+      expect(screen.getByText('Revisión y Confirmación del Lote')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Agregar No Scout/i })).toBeInTheDocument();
     });
 
-    // Continue to Step 3
-    fireEvent.click(screen.getByText('Validar y Continuar'));
-
-    // Step 3:
-    await waitFor(() => {
-      expect(screen.getByText('Revisión Final del Lote')).toBeInTheDocument();
-      // Age 8 -> Manada
-      expect(screen.getByText('Manada')).toBeInTheDocument();
-      // Age 13, 14 -> Tropa, Adult (35) -> Tropa (most frequent)
-      const tropaBadges = screen.getAllByText('Tropa');
-      expect(tropaBadges).toHaveLength(3);
-    });
-  });
-
-  it('allows creating a No Scout batch without selecting Region, District, or Group (optional hierarchy)', async () => {
-    vi.mocked(api.createBatch).mockResolvedValue({
-      id: 889,
-      comment: 'Lote No Scout Sin Jerarquia',
-      region_id: 0,
-      district_id: 0,
-      group_id: 0,
-      unit_scope: 'no_scout',
-      created_at: '2026-08-21T12:00:00.000Z'
-    });
-
-    render(
-      <MemoryRouter>
-        <NewBatchWizard />
-      </MemoryRouter>
-    );
+    // Open Manual Modal
+    fireEvent.click(screen.getByRole('button', { name: /Agregar No Scout/i }));
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
+      expect(screen.getByText('Agregar Miembro Manual / No Scout')).toBeInTheDocument();
     });
 
-    // 1. Select Alcance de Unidad -> No Scout
-    const unitScopeSelect = screen.getByLabelText(/Alcance de Unidad/i);
-    fireEvent.change(unitScopeSelect, { target: { value: 'no_scout' } });
-
-    // 2. Select Recognition Type (without selecting region, district, or group)
-    const recSelect = screen.getByLabelText(/Tipo de Reconocimiento/i);
-    fireEvent.change(recSelect, {
-      target: { value: 'sct-wood-badge' }
+    fireEvent.change(screen.getByLabelText(/Cédula de Identidad \*/i), {
+      target: { value: '87654321' }
+    });
+    fireEvent.change(screen.getByLabelText(/Nombres \*/i), {
+      target: { value: 'Dr. Roberto' }
+    });
+    fireEvent.change(screen.getByLabelText(/Apellidos \*/i), {
+      target: { value: 'Mendoza' }
     });
 
-    // 3. Submit Step 1
-    const nextBtn = screen.getByText('Siguiente paso');
+    // Mock response after adding
+    vi.mocked(api.getMembersByBatchId).mockResolvedValue([
+      {
+        identity: '12345678',
+        first_names: 'Scout',
+        last_names: 'Regular',
+        birth_date: '2008-01-01',
+        member_type: 'young',
+        unit: 'tropa',
+        status: 'active',
+        batch_id: 999
+      },
+      {
+        identity: '87654321',
+        first_names: 'Dr. Roberto',
+        last_names: 'Mendoza',
+        birth_date: '1990-01-01',
+        member_type: 'adult',
+        unit: 'no_scout',
+        status: 'active',
+        batch_id: 999
+      }
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: /Agregar Miembro/i }));
+
     await waitFor(() => {
-      expect(nextBtn).not.toBeDisabled();
-    });
-    fireEvent.click(nextBtn);
-
-    // Verify batch was created with region_id: 0, district_id: 0, group_id: 0, unit_scope: 'no_scout'
-    await waitFor(() => {
-      expect(api.createBatch).toHaveBeenCalledWith(
-        expect.objectContaining({
-          region_id: 0,
-          district_id: 0,
-          group_id: 0,
-          unit_scope: 'no_scout'
-        }),
-        'test-user-id'
-      );
-      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
+      expect(screen.getByText('Dr. Roberto Mendoza')).toBeInTheDocument();
+      expect(screen.getByText('No scout')).toBeInTheDocument();
     });
   });
 
@@ -596,7 +410,7 @@ describe('NewBatchWizard full flow', () => {
       });
       expect(
         screen.getByText(
-          'Crea y emite lotes masivos de reconocimientos scouts mediante un proceso guiado y seguro en 3 sencillos pasos.'
+          'Crea y emite lotes masivos de reconocimientos scouts mediante un proceso guiado y seguro en 2 sencillos pasos.'
         )
       ).toBeInTheDocument();
 
@@ -608,156 +422,41 @@ describe('NewBatchWizard full flow', () => {
       expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'El flujo se compone de: 1. Configuración del Lote, 2. Carga y Verificación en el Sistema de Registro, y 3. Revisión de Códigos y Emisión Final.'
+          'El flujo se compone de: 1. Carga de Datos y Verificación en el Sistema de Registro, y 2. Edición, Códigos y Confirmación Final.'
         )
       ).toBeInTheDocument();
 
       // Click Siguiente -> Step 3
       fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
 
-      // Step 3: Configuración y Alcance del Lote
-      expect(screen.getByText('Configuración y Alcance de Unidad')).toBeInTheDocument();
+      // Step 3: Carga y Verificación Unificada
+      expect(screen.getByText('Carga y Verificación Unificada')).toBeInTheDocument();
       expect(screen.getByText('Paso 3 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Define el tipo de reconocimiento a otorgar, la estructura geográfica (Región, Distrito, Grupo) y el alcance (Lote Mixto o exclusivo de Manada, Tropa, Caminantes, Clan, Institucional o No Scout).'
+          'Selecciona el tipo de reconocimiento e ingresa las cédulas. La estructura territorial (Región, Distrito, Grupo) y las unidades se auto-detectarán.'
         )
       ).toBeInTheDocument();
 
       // Click Siguiente -> Step 4
       fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
 
-      // Step 4: Navegación y Avance
+      // Step 4: Avance entre Pasos
       expect(screen.getByText('Avance entre Pasos')).toBeInTheDocument();
       expect(screen.getByText('Paso 4 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Usa 'Siguiente paso' para avanzar. En el paso 2 pegarás las cédulas a verificar, y en el paso 3 el sistema inferirá las unidades por edad y generará los códigos oficiales."
+          "Usa 'Cargar y Verificar Miembros' para procesar las cédulas con Impeesa y continuar a la revisión final de códigos y emisión."
         )
       ).toBeInTheDocument();
 
-      // Last step finish button
-      const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
-      expect(finishBtn).toBeInTheDocument();
-
       // Complete tour
+      const finishBtn = screen.getByRole('button', { name: /¡Entendido!/i });
       fireEvent.click(finishBtn);
 
       // Overlay closes
       expect(screen.queryByText('Avance entre Pasos')).not.toBeInTheDocument();
       expect(localStorage.getItem('chil_tour_new-batch-wizard-tour_test-user-id')).toBe('true');
-    });
-
-    it('allows previous step navigation and skipping the tour', async () => {
-      render(
-        <MemoryRouter>
-          <NewBatchWizard />
-        </MemoryRouter>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText('Asistente de Creación de Lote')).toBeInTheDocument();
-      });
-
-      const helpBtn = screen.getByRole('button', { name: 'Ver guía interactiva' });
-      fireEvent.click(helpBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
-      });
-
-      // Next to Step 2
-      fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
-      expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
-
-      // Back to Step 1
-      fireEvent.click(screen.getByRole('button', { name: /◀ Anterior/i }));
-      expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
-
-      // Skip tour
-      const skipBtn = screen.getByRole('button', { name: /Omitir guía/i });
-      fireEvent.click(skipBtn);
-
-      expect(screen.queryByText('Paso 1 de 4')).not.toBeInTheDocument();
-    });
-  });
-
-  it('supports creating a multigrupo batch with group_id 0 and assigning groups to members', async () => {
-    vi.mocked(api.createBatch).mockResolvedValueOnce({
-      id: 999,
-      comment: 'Lote Multigrupo Distrital',
-      region_id: 1,
-      district_id: 10,
-      group_id: 0,
-      unit_scope: 'mixed',
-      recognition_type: 'sct-wood-badge',
-      created_at: '2026-09-01T00:00:00.000Z'
-    });
-
-    render(
-      <MemoryRouter>
-        <NewBatchWizard />
-      </MemoryRouter>
-    );
-
-    // Wait for hierarchy to load
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
-    });
-
-    // 1. Select Region
-    const regionBtn = screen.getByLabelText(/Región Scout/i);
-    fireEvent.click(regionBtn);
-    const regionOpt = await screen.findByText('Región Capital');
-    fireEvent.click(regionOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Región Capital')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Distrito Scout/i)).not.toBeDisabled();
-    });
-
-    // 2. Select District
-    const districtBtn = screen.getByLabelText(/Distrito Scout/i);
-    fireEvent.click(districtBtn);
-    const districtOpt = await screen.findByText('Distrito Sucre');
-    fireEvent.click(districtOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Grupo Scout/i)).not.toBeDisabled();
-    });
-
-    // 3. Select Group: Mixto (id: 0)
-    const groupBtn = screen.getByLabelText(/Grupo Scout/i);
-    fireEvent.click(groupBtn);
-    const groupOpt = await screen.findByText('Mixto');
-    fireEvent.click(groupOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Mixto')).toBeInTheDocument();
-    });
-
-    // 4. Select Recognition Type
-    const recSelect = screen.getByLabelText(/Tipo de Reconocimiento/i);
-    fireEvent.change(recSelect, { target: { value: 'sct-wood-badge' } });
-
-    // 5. Submit Step 1
-    const nextBtn = screen.getByText('Siguiente paso');
-    await waitFor(() => {
-      expect(nextBtn).not.toBeDisabled();
-    });
-    fireEvent.click(nextBtn);
-
-    await waitFor(() => {
-      expect(api.createBatch).toHaveBeenCalledWith(
-        expect.objectContaining({
-          region_id: 1,
-          district_id: 10,
-          group_id: 0
-        }),
-        'test-user-id'
-      );
-      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
     });
   });
 });

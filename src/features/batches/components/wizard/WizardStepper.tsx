@@ -1,10 +1,10 @@
 import React from 'react';
-import { ClipboardList, Users, CheckCircle2 } from 'lucide-react';
+import { UploadCloud, CheckCircle2 } from 'lucide-react';
 import { getStepCircleClasses } from './wizardHelpers';
 
 export interface WizardStepperProps {
-  currentStep: 1 | 2 | 3;
-  onStepClick: (step: 1 | 2 | 3) => void;
+  currentStep: 1 | 2;
+  onStepClick: (step: 1 | 2) => void;
 }
 
 export const WizardStepper: React.FC<WizardStepperProps> = ({
@@ -14,20 +14,14 @@ export const WizardStepper: React.FC<WizardStepperProps> = ({
   const steps = [
     {
       step: 1 as const,
-      title: 'Organización',
-      desc: 'Metadatos del Lote',
-      icon: <ClipboardList className="w-5 h-5" />
+      title: 'Carga de Datos',
+      desc: 'Cédulas y Reconocimiento',
+      icon: <UploadCloud className="w-5 h-5" />
     },
     {
       step: 2 as const,
-      title: 'Miembros',
-      desc: 'Verificación y Carga',
-      icon: <Users className="w-5 h-5" />
-    },
-    {
-      step: 3 as const,
-      title: 'Generación',
-      desc: 'Revisión y Cierre',
+      title: 'Edición y Confirmación',
+      desc: 'Revisión y Emisión',
       icon: <CheckCircle2 className="w-5 h-5" />
     }
   ];
@@ -38,7 +32,7 @@ export const WizardStepper: React.FC<WizardStepperProps> = ({
       <div className="absolute top-6 left-6 right-6 h-1 bg-gray-200 -translate-y-1/2 rounded-full z-0" />
       <div
         className="absolute top-6 left-6 h-1 bg-primary -translate-y-1/2 rounded-full transition-all duration-500 z-0"
-        style={{ width: `calc(${(currentStep - 1) / 2} * (100% - 3rem))` }}
+        style={{ width: currentStep === 2 ? 'calc(100% - 3rem)' : '0%' }}
       />
 
       <div className="relative z-10 flex justify-between">

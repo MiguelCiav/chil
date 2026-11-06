@@ -53,15 +53,8 @@ describe('NewBatchWizard error cases & edge branches', () => {
     });
   });
 
-  const setupStep2 = async () => {
-    vi.mocked(api.createBatch).mockResolvedValue({
-      id: 888,
-      comment: 'Lote Error Test',
-      region_id: 1,
-      district_id: 10,
-      group_id: 100,
-      created_at: '2026-08-21T12:00:00.000Z'
-    });
+  it('shows missing credentials alert when verifying without scraper credentials configured', async () => {
+    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
 
     render(
       <MemoryRouter>
@@ -70,59 +63,17 @@ describe('NewBatchWizard error cases & edge branches', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Región Scout/i)).not.toBeDisabled();
-    });
-
-    fireEvent.click(screen.getByLabelText(/Región Scout/i));
-    const regOpt = await screen.findByText('Región Capital');
-    fireEvent.click(regOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Región Capital')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Distrito Scout/i)).not.toBeDisabled();
-    });
-
-    fireEvent.click(screen.getByLabelText(/Distrito Scout/i));
-    const distOpt = await screen.findByText('Distrito Sucre');
-    fireEvent.click(distOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Grupo Scout/i)).not.toBeDisabled();
-    });
-
-    fireEvent.click(screen.getByLabelText(/Grupo Scout/i));
-    const grpOpt = await screen.findByText('Grupo San Luis');
-    fireEvent.click(grpOpt);
-
-    await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Tipo de Reconocimiento/i)).not.toBeDisabled();
     });
 
     fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), {
       target: { value: 'sct-wood-badge' }
     });
 
-    const nextBtn = screen.getByText('Siguiente paso');
-    await waitFor(() => {
-      expect(nextBtn).not.toBeDisabled();
-    });
-    fireEvent.click(nextBtn);
+    const cedulasInput = screen.getByLabelText(/Cédulas de Identidad/i);
+    fireEvent.change(cedulasInput, { target: { value: '29111222' } });
 
-    await waitFor(() => {
-      expect(screen.getByText('Verificación de Cédulas')).toBeInTheDocument();
-    });
-  };
-
-  it('shows missing credentials alert when verifying without scraper credentials configured', async () => {
-    await setupStep2();
-
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    const youngInput = screen.getByLabelText(/Cédulas de Jóvenes/i);
-    fireEvent.change(youngInput, { target: { value: '29111222' } });
-
-    const verifyBtn = screen.getByText('Iniciar Verificación');
+    const verifyBtn = screen.getByRole('button', { name: /Cargar y Verificar Miembros/i });
     fireEvent.click(verifyBtn);
 
     await waitFor(() => {
@@ -134,15 +85,27 @@ describe('NewBatchWizard error cases & edge branches', () => {
   });
 
   it('displays authentication error modal when loginScraper fails', async () => {
-    await setupStep2();
-
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
     vi.mocked(api.loginScraper).mockRejectedValue(new Error('Credenciales inválidas en Sistema de Registro'));
 
-    const youngInput = screen.getByLabelText(/Cédulas de Jóvenes/i);
-    fireEvent.change(youngInput, { target: { value: '29111222' } });
+    render(
+      <MemoryRouter>
+        <NewBatchWizard />
+      </MemoryRouter>
+    );
 
-    const verifyBtn = screen.getByText('Iniciar Verificación');
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Tipo de Reconocimiento/i)).not.toBeDisabled();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), {
+      target: { value: 'sct-wood-badge' }
+    });
+
+    const cedulasInput = screen.getByLabelText(/Cédulas de Identidad/i);
+    fireEvent.change(cedulasInput, { target: { value: '29111222' } });
+
+    const verifyBtn = screen.getByRole('button', { name: /Cargar y Verificar Miembros/i });
     fireEvent.click(verifyBtn);
 
     await waitFor(() => {
@@ -152,10 +115,17 @@ describe('NewBatchWizard error cases & edge branches', () => {
   });
 
   it('handles unregistered member lookup by creating a pending member', async () => {
-    await setupStep2();
-
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
     vi.mocked(api.loginScraper).mockResolvedValue();
+    vi.mocked(api.createBatch).mockResolvedValue({
+      id: 888,
+      comment: '',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      recognition_type: 'sct-wood-badge',
+      created_at: '2026-08-21T12:00:00.000Z'
+    });
     vi.mocked(api.getMemberStatus).mockRejectedValue(new Error('No registrado'));
     vi.mocked(api.createMember).mockResolvedValue({
       identity: '99999999',
@@ -166,16 +136,42 @@ describe('NewBatchWizard error cases & edge branches', () => {
       status: 'pending',
       batch_id: 888
     });
+    vi.mocked(api.getMembersByBatchId).mockResolvedValue([
+      {
+        identity: '99999999',
+        first_names: 'Usuario',
+        last_names: 'No Registrado',
+        birth_date: '1990-01-01',
+        member_type: 'young',
+        status: 'pending',
+        batch_id: 888
+      }
+    ]);
 
-    const youngInput = screen.getByLabelText(/Cédulas de Jóvenes/i);
-    fireEvent.change(youngInput, { target: { value: '99999999' } });
+    render(
+      <MemoryRouter>
+        <NewBatchWizard />
+      </MemoryRouter>
+    );
 
-    const verifyBtn = screen.getByText('Iniciar Verificación');
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Tipo de Reconocimiento/i)).not.toBeDisabled();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), {
+      target: { value: 'sct-wood-badge' }
+    });
+
+    const cedulasInput = screen.getByLabelText(/Cédulas de Identidad/i);
+    fireEvent.change(cedulasInput, { target: { value: '99999999' } });
+
+    const verifyBtn = screen.getByRole('button', { name: /Cargar y Verificar Miembros/i });
     fireEvent.click(verifyBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('No registrado')).toBeInTheDocument();
+      expect(screen.getByText('Revisión y Confirmación del Lote')).toBeInTheDocument();
       expect(screen.getByText('Usuario No Registrado')).toBeInTheDocument();
+      expect(screen.getByText('Pendiente')).toBeInTheDocument();
     });
   });
 
@@ -198,7 +194,7 @@ describe('NewBatchWizard error cases & edge branches', () => {
     expect(catLink).toBeInTheDocument();
     expect(catLink).toHaveAttribute('href', '/reconocimientos');
 
-    const nextBtn = screen.getByRole('button', { name: /Siguiente paso/i });
+    const nextBtn = screen.getByRole('button', { name: /Cargar y Verificar Miembros/i });
     expect(nextBtn).toBeDisabled();
   });
 });

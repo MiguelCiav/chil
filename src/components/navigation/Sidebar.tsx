@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
   Folder,
-  Zap,
   PlusCircle,
   Award,
   Table,
@@ -108,13 +107,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     {
-      to: '/lotes/rapido',
-      label: 'Emisión Rápida',
-      icon: Zap,
-      dataWalkthrough: 'nav-rapido',
-      isSpecial: true
-    },
-    {
       to: '/lotes',
       label: 'Lotes',
       icon: Folder,
@@ -217,13 +209,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5'
                     }`;
 
-                    if (item.isSpecial) {
-                      if (isActive) {
-                        return `${baseClasses} bg-amber-300 text-neutral-950 font-bold border border-amber-400`;
-                      }
-                      return `${baseClasses} bg-amber-100 hover:bg-amber-200 text-neutral-900 border border-amber-300`;
-                    }
-
                     if (isActive) {
                       return `${baseClasses} bg-primary/10 text-primary font-bold border border-primary/20`;
                     }
@@ -234,11 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <>
                       <Icon
                         className={`w-5 h-5 shrink-0 transition-colors ${
-                          item.isSpecial
-                            ? isActive
-                              ? 'text-neutral-950'
-                              : 'text-amber-800'
-                            : isActive
+                          isActive
                             ? 'text-primary'
                             : 'text-neutral/50 group-hover:text-neutral/80'
                         }`}

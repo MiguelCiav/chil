@@ -14,8 +14,18 @@ import {
 } from '../../types';
 import { inferBatchMemberUnits } from '../../utils/unitInference';
 import { splitFullName } from '../../utils/nameHelper';
+import { matchHierarchy, classifyScoutUnitAndType } from '../../utils/hierarchyMatcher';
 
-export { splitFullName };
+export { splitFullName, matchHierarchy, classifyScoutUnitAndType };
+
+export function parseCedulasFromText(text?: string): string[] {
+  if (!text) return [];
+  return text
+    .split(/[\n\r,;\s]+/)
+    .map((token) => token.replace(/[^0-9]/g, ''))
+    .filter((digits) => digits.length > 0)
+    .filter((digits, idx, arr) => arr.indexOf(digits) === idx);
+}
 
 export function getStepCircleClasses(currentStep: number, itemStep: number): string {
   if (currentStep === itemStep) {
@@ -87,14 +97,14 @@ export interface InitialMemberHierarchy {
 
 export async function saveNoScoutMemberToDb(
   cedula: string,
-  type: 'young' | 'adult',
-  batchId: number | null,
+  type: 'young' | 'adult' = 'adult',
+  batchId: number | null = null,
   userId?: string,
   hierarchy?: InitialMemberHierarchy
-): Promise<void> {
-  if (!batchId) return;
+): Promise<ScoutMember | null> {
+  if (!batchId) return null;
   try {
-    await createMember(
+    return await createMember(
       {
         identity: cedula,
         first_names: 'Colaborador',
@@ -114,20 +124,21 @@ export async function saveNoScoutMemberToDb(
     );
   } catch (dbErr) {
     console.error('Database save failed for no_scout member:', dbErr);
+    return null;
   }
 }
 
 export async function saveUnregisteredMemberToDb(
   cedula: string,
-  type: 'young' | 'adult',
-  memberUnit: ScoutUnit,
-  batchId: number | null,
+  type: 'young' | 'adult' = 'young',
+  memberUnit: ScoutUnit = 'tropa',
+  batchId: number | null = null,
   userId?: string,
   hierarchy?: InitialMemberHierarchy
-): Promise<void> {
-  if (!batchId) return;
+): Promise<ScoutMember | null> {
+  if (!batchId) return null;
   try {
-    await createMember(
+    return await createMember(
       {
         identity: cedula,
         first_names: 'Usuario',
@@ -147,44 +158,67 @@ export async function saveUnregisteredMemberToDb(
     );
   } catch (dbErr) {
     console.error('Database save failed for unregistered member:', dbErr);
+    return null;
   }
 }
 
 export async function saveScrapedMemberToDb(
   cedula: string,
   res: ScraperMemberDetails,
-  type: 'young' | 'adult',
-  memberUnit: ScoutUnit,
-  batchId: number | null,
+  type?: 'young' | 'adult',
+  memberUnit?: ScoutUnit,
+  batchId?: number | null,
   userId?: string,
   hierarchy?: InitialMemberHierarchy
-): Promise<void> {
-  if (!batchId) return;
+): Promise<ScoutMember | null> {
+  if (!batchId) return null;
   try {
     const { first_names, last_names } = splitFullName(res.nombre_completo);
     const isScrapedActive = res.status?.toLowerCase() === 'activo';
-    await createMember(
+    const matched = matchHierarchy(res.region, res.distrito, res.grupo);
+    const classified = classifyScoutUnitAndType(res);
+
+    const finalUnit = memberUnit || classified.unit;
+    const finalType = type || classified.member_type;
+    const finalRegionId = matched.region_id ?? (hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined);
+    const finalDistrictId = matched.district_id ?? (hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined);
+    const finalGroupId = matched.group_id ?? (hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined);
+
+    return await createMember(
       {
         identity: cedula,
-        first_names,
-        last_names,
+        first_names: first_names || cedula,
+        last_names: last_names || '',
         birth_date: res.fecha_nacimiento || '1990-01-01',
         email: res.correo_electronico,
         phone: res.telefono,
-        member_type: type,
-        unit: memberUnit,
+        region_id: finalRegionId,
+        region_name: matched.region_name,
+        district_id: finalDistrictId,
+        district_name: matched.district_name,
+        group_id: finalGroupId,
+        group_name: matched.group_name,
+        member_type: finalType,
+        unit: finalUnit,
+        position_in_group: res.cargo_grupo,
+        institutional_position: res.cargo_institucional,
+        scout_progression: res.progresion_actual,
         status: isScrapedActive ? 'active' : 'pending',
+        is_solvent: isScrapedActive,
+        solvent_until: res.solvente_hasta,
+        avatar_url: res.avatar_url,
+        impeesa_uuid: res.member_uuid,
+        admission_date: res.fecha_ingreso,
+        promise_date: res.fecha_promesa,
         verified_in_registry: true,
         batch_id: batchId,
-        user_id: userId,
-        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
-        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
-        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
+        user_id: userId
       },
       userId
     );
   } catch (dbErr) {
     console.error('Database save failed for active/inactive member:', dbErr);
+    return null;
   }
 }
 

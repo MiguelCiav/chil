@@ -49,12 +49,11 @@ describe('Sidebar component', () => {
 
     const nav = screen.getByRole('navigation', { name: /Navegación principal/i });
     const links = within(nav).getAllByRole('link');
-    expect(links[0]).toHaveTextContent('Emisión Rápida');
-    expect(links[1]).toHaveTextContent('Lotes');
-    expect(links[2]).toHaveTextContent('Nuevo Lote');
-    expect(links[3]).toHaveTextContent('Reconocimientos');
-    expect(links[4]).toHaveTextContent('Resumen');
-    expect(links[5]).toHaveTextContent('Estadísticas');
+    expect(links[0]).toHaveTextContent('Lotes');
+    expect(links[1]).toHaveTextContent('Nuevo Lote');
+    expect(links[2]).toHaveTextContent('Reconocimientos');
+    expect(links[3]).toHaveTextContent('Resumen');
+    expect(links[4]).toHaveTextContent('Estadísticas');
 
     expect(screen.getByTestId('user-profile-menu')).toBeInTheDocument();
     expect(screen.getByLabelText(/Ajustes de Credenciales Scraper/i)).toBeInTheDocument();
@@ -81,7 +80,6 @@ describe('Sidebar component', () => {
     expect(logoImg.closest('a')).toHaveAttribute('href', '/');
     expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registrarse/i })).toBeInTheDocument();
-    expect(screen.queryByText('Emisión Rápida')).not.toBeInTheDocument();
     expect(screen.queryByText('Nuevo Lote')).not.toBeInTheDocument();
     expect(screen.queryByTestId('user-profile-menu')).not.toBeInTheDocument();
   });
@@ -166,7 +164,7 @@ describe('Sidebar component', () => {
     expect(handleClose).toHaveBeenCalledTimes(2);
   });
 
-  it('highlights active links with Scout primary brown styling and special styling for Emisión Rápida', () => {
+  it('highlights active links with Scout primary brown styling', () => {
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
 
     render(
@@ -178,22 +176,19 @@ describe('Sidebar component', () => {
     const lotesLink = screen.getByRole('link', { name: /Lotes/i });
     expect(lotesLink).toHaveClass('bg-primary/10');
     expect(lotesLink).toHaveClass('text-primary');
-
-    const rapidoLink = screen.getByRole('link', { name: /Emisión Rápida/i });
-    expect(rapidoLink).toHaveClass('bg-amber-100');
   });
 
-  it('highlights Emisión Rápida with active amber styling when path is /lotes/rapido', () => {
+  it('highlights Nuevo Lote with active styling when path is /lotes/nuevo', () => {
     vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
 
     render(
-      <MemoryRouter initialEntries={['/lotes/rapido']}>
+      <MemoryRouter initialEntries={['/lotes/nuevo']}>
         <Sidebar />
       </MemoryRouter>
     );
 
-    const rapidoLink = screen.getByRole('link', { name: /Emisión Rápida/i });
-    expect(rapidoLink).toHaveClass('bg-amber-300');
-    expect(rapidoLink).toHaveClass('text-neutral-950');
+    const nuevoLink = screen.getByRole('link', { name: /Nuevo Lote/i });
+    expect(nuevoLink).toHaveClass('bg-primary/10');
+    expect(nuevoLink).toHaveClass('text-primary');
   });
 });
