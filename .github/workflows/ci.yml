@@ -80,7 +80,7 @@ jobs:
       - name: Build Frontend
         run: npm run build
 
-      - name: Deploy to Firebase
-        run: npx firebase-tools deploy
+      - name: Deploy to Firebase (Hosting & Firestore)
+        run: npx firebase-tools deploy --only hosting,firestore
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
