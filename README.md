@@ -118,9 +118,12 @@ firebase deploy
 
 ### Backend & Cloud Services
 - **Database**: Cloud Firestore
-- **Serverless Backend**: Firebase Cloud Functions (2nd Gen Node.js 20)
+- **Serverless Backend**: Firebase Cloud Functions (2nd Gen Node.js 20) *(Temporalmente asistido por Vercel Serverless Functions para el scraper)*
 - **Hosting**: Firebase Hosting
 - **Authentication**: Firebase Auth
+
+> [!NOTE]
+> **Scraper Temporal en Vercel & Procedimiento de Rollback**: Mientras se regulariza la cuenta de facturación en GCP, el microservicio de scraping opera temporalmente en Vercel. Consulta **[docs/ROLLBACK_FIREBASE_FUNCTIONS.md](docs/ROLLBACK_FIREBASE_FUNCTIONS.md)** para conocer los pasos para regresar al despliegue 100% en Firebase Cloud Functions.
 
 ---
 

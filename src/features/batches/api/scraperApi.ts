@@ -1,6 +1,11 @@
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../../lib/firebase';
 
+export const getScraperApiUrl = (): string => {
+  const rawApiUrl = (import.meta.env.VITE_SCRAPER_API_URL as string | undefined)?.trim();
+  return rawApiUrl ? rawApiUrl.replace(/\/+$/, '') : '';
+};
+
 export interface ScraperMemberDetails {
   // Legacy Core Fields (100% Backwards Compatible)
   nombre_completo: string;
@@ -144,6 +149,26 @@ export async function loginScraper(): Promise<void> {
     throw new Error("No hay credenciales configuradas");
   }
 
+  const scraperApiUrl = getScraperApiUrl();
+  if (scraperApiUrl) {
+    try {
+      const resp = await fetch(`${scraperApiUrl}/loginScraper`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credentials })
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Credenciales incorrectas o inicio de sesión fallido");
+      }
+      return;
+    } catch (error: unknown) {
+      console.error("Scraper login failed:", error);
+      const err = error as Error;
+      throw new Error(err?.message ?? "Credenciales incorrectas o inicio de sesión fallido", { cause: error });
+    }
+  }
+
   try {
     const loginFn = httpsCallable<{ credentials: ScraperCredentials }, void>(
       functions,
@@ -159,6 +184,27 @@ export async function loginScraper(): Promise<void> {
 
 export async function getMemberStatus(cedula: string): Promise<ScraperMemberDetails> {
   const credentials = getScraperCredentials();
+
+  const scraperApiUrl = getScraperApiUrl();
+  if (scraperApiUrl) {
+    try {
+      const resp = await fetch(`${scraperApiUrl}/getMemberStatus`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cedula, credentials })
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Error de red");
+      }
+      const result = await resp.json();
+      return result.data;
+    } catch (error: unknown) {
+      console.error("Scraper function failed:", error);
+      const err = error as Error;
+      throw new Error(err?.message ?? "Error de red", { cause: error });
+    }
+  }
 
   try {
     const getStatusFn = httpsCallable<{ cedula: string; credentials?: ScraperCredentials | null }, ScraperMemberDetails>(
