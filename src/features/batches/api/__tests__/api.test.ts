@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getHierarchyData,
   createBatch,
@@ -16,11 +16,11 @@ import {
   getMemberDocId,
   commitChunkedBatches,
   generateSecureBatchId,
-  saveScraperCredentials,
-  getScraperCredentials,
-  clearScraperCredentials,
-  hasScraperCredentials,
-  loginScraper,
+  saveScraperSession,
+  getScraperSessionStatus,
+  clearScraperSession,
+  purgeLegacyScraperStorage,
+  isScraperSessionError,
   getMemberStatus,
   getRecognitionBadgeStyle,
   getRecognitionName,
@@ -768,61 +768,79 @@ describe('Batches API Layer', () => {
     });
   });
 
-  describe('Scraper Credentials & Cloud Functions', () => {
-    it('saves scraper credentials in sessionStorage and clears legacy localStorage entry', async () => {
+  describe('Scraper Session & Cloud Functions', () => {
+    beforeEach(() => {
+      vi.stubEnv('VITE_SCRAPER_API_URL', '');
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('purges legacy chil_scraper_credentials from sessionStorage and localStorage', async () => {
       window.localStorage.setItem('chil_scraper_credentials', 'legacy-plaintext-entry');
-      expect(await hasScraperCredentials()).toBe(false);
+      window.sessionStorage.setItem('chil_scraper_credentials', 'legacy-session-entry');
 
-      await saveScraperCredentials({ email: 's@test.com', password: 'pass' });
+      const callableMock = vi.fn().mockResolvedValueOnce({
+        data: {
+          connected: false,
+          status: 'none',
+          impeesaEmail: null,
+          updatedAt: null
+        }
+      });
+      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
+        callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
+      );
 
-      expect(await hasScraperCredentials()).toBe(true);
-      expect(window.sessionStorage.getItem('chil_scraper_credentials')).not.toBeNull();
+      const status = await getScraperSessionStatus();
+
+      expect(status).toEqual({
+        connected: false,
+        status: 'none',
+        impeesaEmail: null,
+        updatedAt: null
+      });
       expect(window.localStorage.getItem('chil_scraper_credentials')).toBeNull();
-      expect(getScraperCredentials()).toEqual({ email: 's@test.com', password: 'pass' });
-
-      await clearScraperCredentials();
-      expect(await hasScraperCredentials()).toBe(false);
-    });
-
-    it('handles corrupted JSON in sessionStorage gracefully without crashing', async () => {
-      window.sessionStorage.setItem('chil_scraper_credentials', '{corrupted-json');
-
-      expect(getScraperCredentials()).toBeNull();
-      expect(await hasScraperCredentials()).toBe(false);
-      // Corrupted entry is cleaned up automatically
       expect(window.sessionStorage.getItem('chil_scraper_credentials')).toBeNull();
-
-      window.sessionStorage.setItem('chil_scraper_credentials', '{bad-json');
-      await expect(loginScraper()).rejects.toThrow('No hay credenciales configuradas');
     });
 
-    it('throws when logging in without configured credentials', async () => {
-      await expect(loginScraper()).rejects.toThrow('No hay credenciales configuradas');
-    });
-
-    it('calls loginScraper callable when credentials exist', async () => {
-      await saveScraperCredentials({ email: 's@test.com', password: 'pass' });
-      const callableMock = vi.fn().mockResolvedValueOnce({ data: { success: true } });
+    it('saveScraperSession calls saveScraperSession callable without storing in browser storage', async () => {
+      const callableMock = vi.fn().mockResolvedValueOnce({
+        data: {
+          connected: true,
+          status: 'active',
+          impeesaEmail: 's@test.com',
+          updatedAt: '2026-11-12T10:00:00.000Z'
+        }
+      });
       vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
         callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
       );
 
-      await loginScraper();
-      expect(callableMock).toHaveBeenCalledWith({ credentials: { email: 's@test.com', password: 'pass' } });
+      const res = await saveScraperSession({ email: 's@test.com', password: 'pass' });
+
+      expect(callableMock).toHaveBeenCalledWith({ email: 's@test.com', password: 'pass' });
+      expect(res.connected).toBe(true);
+      expect(window.sessionStorage.getItem('chil_scraper_credentials')).toBeNull();
+      expect(window.localStorage.getItem('chil_scraper_credentials')).toBeNull();
     });
 
-    it('handles loginScraper error', async () => {
-      await saveScraperCredentials({ email: 's@test.com', password: 'pass' });
-      const callableMock = vi.fn().mockRejectedValueOnce(new Error('Credenciales incorrectas'));
+    it('clearScraperSession calls clearScraperSession callable', async () => {
+      const callableMock = vi.fn().mockResolvedValueOnce({
+        data: { connected: false, status: 'none', impeesaEmail: null, updatedAt: null }
+      });
       vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
         callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
       );
 
-      await expect(loginScraper()).rejects.toThrow('Credenciales incorrectas');
+      const res = await clearScraperSession();
+      expect(callableMock).toHaveBeenCalledWith({});
+      expect(res.status).toBe('none');
     });
 
-    it('fetches member status via callable function even when storage had corrupted JSON', async () => {
-      window.sessionStorage.setItem('chil_scraper_credentials', 'not-valid-json');
+    it('fetches member status via callable function and purges legacy storage', async () => {
+      window.sessionStorage.setItem('chil_scraper_credentials', 'legacy');
       const callableMock = vi.fn().mockResolvedValueOnce({
         data: {
           nombre_completo: 'Carlos Test',
@@ -838,16 +856,39 @@ describe('Batches API Layer', () => {
 
       const res = await getMemberStatus('12345678');
       expect(res.nombre_completo).toBe('Carlos Test');
-      expect(callableMock).toHaveBeenCalledWith({ cedula: '12345678', credentials: null });
+      expect(callableMock).toHaveBeenCalledWith({ cedula: '12345678' });
+      expect(window.sessionStorage.getItem('chil_scraper_credentials')).toBeNull();
     });
 
-    it('handles getMemberStatus error', async () => {
+    it('maps failed-precondition errors to ScraperSessionError', async () => {
+      const callableMock = vi.fn().mockRejectedValueOnce({
+        code: 'functions/failed-precondition',
+        message: 'Tu sesión de Impeesa expiró.',
+        details: { reason: 'SCRAPER_SESSION_EXPIRED' }
+      });
+      vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
+        callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
+      );
+
+      try {
+        await getMemberStatus('12345678');
+        expect.fail('Should throw');
+      } catch (err) {
+        expect(isScraperSessionError(err)).toBe(true);
+        if (isScraperSessionError(err)) {
+          expect(err.reason).toBe('SCRAPER_SESSION_EXPIRED');
+        }
+      }
+    });
+
+    it('handles getMemberStatus not registered error', async () => {
       const callableMock = vi.fn().mockRejectedValueOnce(new Error('No registrado'));
       vi.mocked(functionsSdk.httpsCallable).mockReturnValueOnce(
         callableMock as unknown as ReturnType<typeof functionsSdk.httpsCallable>
       );
 
       await expect(getMemberStatus('99999999')).rejects.toThrow('No registrado');
+      purgeLegacyScraperStorage();
     });
   });
 });

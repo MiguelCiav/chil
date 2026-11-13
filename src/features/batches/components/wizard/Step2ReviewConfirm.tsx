@@ -10,7 +10,6 @@ import {
   RotateCcw,
   Eraser,
   UserPlus,
-  Download,
   CheckCircle2,
   RefreshCw,
   ShieldCheck,
@@ -20,7 +19,7 @@ import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/C
 import { Button } from '../../../../components/Button';
 import { Table } from '../../../../components/Table';
 import { ColumnDef } from '@tanstack/react-table';
-import { ScoutGroup, ScoutMember, Region, District, getUnitBadge, Batch } from '../../types';
+import { ScoutGroup, ScoutMember, Region, District, getUnitBadge } from '../../types';
 import {
   updateMember,
   deleteMember,
@@ -29,12 +28,9 @@ import {
   assignBatchRecognitionCodes
 } from '../../api';
 import { EditMemberModal, ManualMemberModal } from '../shared';
-import { downloadSingleCertificatePdf } from '../../../recognitions';
 
 export interface Step2ReviewConfirmProps {
   batchId: number;
-  batchMetadata: { comment?: string; recognitionType?: string };
-  recognitionTypeName?: string;
   membersList: ScoutMember[];
   onMembersUpdated: (members: ScoutMember[]) => void;
   onBack: () => void;
@@ -74,8 +70,6 @@ function getMemberStatusBadge(member: ScoutMember) {
 
 export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
   batchId,
-  batchMetadata,
-  recognitionTypeName = 'Reconocimiento',
   membersList,
   onMembersUpdated,
   onBack,
@@ -231,47 +225,6 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
     }
   };
 
-  const handleEmitAndDownloadSinglePdf = async () => {
-    if (membersList.length === 0) return;
-    setIsFinalizing(true);
-    try {
-      await batchUpdateMembers(membersList);
-
-      const singleMember = membersList[0];
-      const batchObj: Batch = {
-        id: batchId,
-        comment: batchMetadata.comment,
-        recognition_type: batchMetadata.recognitionType,
-        region_id: singleMember.region_id ?? 0,
-        district_id: singleMember.district_id ?? 0,
-        group_id: singleMember.group_id ?? 0,
-        created_at: new Date().toISOString()
-      };
-
-      try {
-        await downloadSingleCertificatePdf({
-          batch: batchObj,
-          member: singleMember,
-          recognition: {
-            id: batchMetadata.recognitionType || 'custom',
-            name: recognitionTypeName,
-            created_at: new Date().toISOString()
-          },
-          hierarchy: { regions, districts, groups }
-        });
-      } catch (pdfErr) {
-        console.warn('Single PDF download failed or mocked:', pdfErr);
-      }
-
-      onFinalizeBatch();
-    } catch (err) {
-      console.error('Error in single certificate emission:', err);
-      alert('Error al emitir y descargar el certificado.');
-    } finally {
-      setIsFinalizing(false);
-    }
-  };
-
   // Table Columns Definition
   const columns = useMemo<ColumnDef<ScoutMember>[]>(() => {
     return [
@@ -415,10 +368,6 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
         <CardHeader className="bg-primary/5 border-b border-primary/10 flex flex-wrap justify-between items-center gap-4">
           <div>
             <h2 className="text-lg font-bold text-neutral">Revisión y Confirmación del Lote</h2>
-            <p className="text-xs text-neutral/60">
-              Lote: <span className="font-semibold text-neutral">{batchMetadata.comment || 'Lote sin título'}</span> · Tipo:{' '}
-              <span className="font-semibold text-primary">{recognitionTypeName}</span>
-            </p>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
@@ -569,18 +518,6 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
           </Button>
 
           <div className="flex items-center gap-3">
-            {/* Atajo si es 1 solo miembro */}
-            {membersList.length === 1 && (
-              <Button
-                variant="secondary"
-                onClick={handleEmitAndDownloadSinglePdf}
-                icon={<Download size={18} />}
-                disabled={isFinalizing}
-              >
-                Emitir y Descargar PDF
-              </Button>
-            )}
-
             <Button
               variant="primary"
               onClick={handleFinalizeBatch}

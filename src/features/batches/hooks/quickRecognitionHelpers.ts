@@ -1,4 +1,4 @@
-import { createBatch, createMember } from '../api';
+import { createBatch, createMember, isScraperSessionError } from '../api';
 import {
   Batch,
   ScoutMember,
@@ -45,9 +45,31 @@ export function sanitizeQuickCedula(val: string): string {
 }
 
 export function getScraperErrorMessage(err: unknown): string {
+  if (isScraperSessionError(err)) {
+    if (err.reason === 'SCRAPER_NOT_CONFIGURED') {
+      return 'No hay una sesión de Impeesa configurada en Ajustes del Scraper.';
+    }
+    if (err.reason === 'SCRAPER_SESSION_EXPIRED') {
+      return 'Tu sesión de Impeesa expiró. Reconéctate en Ajustes del Scraper.';
+    }
+    return 'Debes iniciar sesión en Chil para usar el scraper.';
+  }
   const errorMsg = err instanceof Error ? err.message : String(err);
   if (errorMsg.includes('No registrado')) {
     return 'Usuario no registrado en Sistema de Registro.';
+  }
+  if (
+    errorMsg.includes('SCRAPER_NOT_CONFIGURED') ||
+    errorMsg.toLowerCase().includes('no hay una sesión de impeesa')
+  ) {
+    return 'No hay una sesión de Impeesa configurada en Ajustes del Scraper.';
+  }
+  if (
+    errorMsg.includes('failed-precondition') ||
+    errorMsg.includes('SCRAPER_SESSION_EXPIRED') ||
+    errorMsg.toLowerCase().includes('expir')
+  ) {
+    return 'Tu sesión de Impeesa expiró. Reconéctate en Ajustes del Scraper.';
   }
   if (
     errorMsg.includes('Credenciales') ||

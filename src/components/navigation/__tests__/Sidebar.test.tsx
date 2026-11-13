@@ -2,12 +2,16 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../Sidebar';
+import { ScraperSettingsModal } from '../ScraperSettingsModal';
+import { ScraperSettingsProvider } from '../../../context/ScraperSettingsContext';
 import * as api from '../../../features/batches/api';
 import * as authFeature from '../../../features/auth';
 
 vi.mock('../../../features/batches/api', () => ({
-  hasScraperCredentials: vi.fn(),
-  saveScraperCredentials: vi.fn()
+  getScraperSessionStatus: vi.fn(),
+  saveScraperSession: vi.fn(),
+  clearScraperSession: vi.fn(),
+  purgeLegacyScraperStorage: vi.fn()
 }));
 
 vi.mock('../../../features/auth', () => ({
@@ -32,16 +36,27 @@ describe('Sidebar component', () => {
       logout: vi.fn(),
       resetPassword: vi.fn()
     });
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: false,
+      status: 'none',
+      impeesaEmail: null,
+      updatedAt: null
+    });
   });
 
-  it('renders logo, title, navigation links in correct order, and UserProfileMenu when authenticated', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter>
-        <Sidebar />
-      </MemoryRouter>
+  const renderSidebarWithProvider = (initialEntries = ['/']) => {
+    return render(
+      <ScraperSettingsProvider>
+        <MemoryRouter initialEntries={initialEntries}>
+          <Sidebar />
+          <ScraperSettingsModal />
+        </MemoryRouter>
+      </ScraperSettingsProvider>
     );
+  };
+
+  it('renders logo, title, navigation links in correct order, and UserProfileMenu when authenticated', () => {
+    renderSidebarWithProvider();
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
     const logoImg = screen.getByAltText('Chil Logo');
@@ -69,11 +84,7 @@ describe('Sidebar component', () => {
       resetPassword: vi.fn()
     });
 
-    render(
-      <MemoryRouter>
-        <Sidebar />
-      </MemoryRouter>
-    );
+    renderSidebarWithProvider();
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
     const logoImg = screen.getByAltText('Chil Logo');
@@ -85,13 +96,7 @@ describe('Sidebar component', () => {
   });
 
   it('toggles collapse state and saves in localStorage', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter>
-        <Sidebar />
-      </MemoryRouter>
-    );
+    renderSidebarWithProvider();
 
     const collapseBtn = screen.getByRole('button', { name: /Colapsar barra lateral/i });
     expect(collapseBtn).toBeInTheDocument();
@@ -99,49 +104,51 @@ describe('Sidebar component', () => {
     fireEvent.click(collapseBtn);
 
     expect(localStorage.getItem('chil_sidebar_collapsed')).toBe('true');
-    // When collapsed, the reduced logo acts as the expand button without a separate arrow
     const expandBtn = screen.getByRole('button', { name: /Expandir barra lateral/i });
     expect(within(expandBtn).getByAltText('Chil Logo')).toBeInTheDocument();
 
-    // Expand again by clicking the reduced logo
     fireEvent.click(expandBtn);
 
     expect(localStorage.getItem('chil_sidebar_collapsed')).toBe('false');
     expect(screen.getByRole('button', { name: /Colapsar barra lateral/i })).toBeInTheDocument();
   });
 
-  it('opens scraper settings modal, enters credentials and saves', async () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-    vi.mocked(api.saveScraperCredentials).mockResolvedValue();
+  it('opens shared scraper settings modal and connects Impeesa session', async () => {
+    vi.mocked(api.saveScraperSession).mockResolvedValue({
+      connected: true,
+      status: 'active',
+      impeesaEmail: 'scout@test.com',
+      updatedAt: '2026-11-12T10:00:00.000Z'
+    });
 
-    render(
-      <MemoryRouter>
-        <Sidebar />
-      </MemoryRouter>
-    );
+    renderSidebarWithProvider();
 
     const settingsBtn = screen.getByLabelText(/Ajustes de Credenciales Scraper/i);
     fireEvent.click(settingsBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Configuración del Scraper ASV')).toBeInTheDocument();
+      expect(
+        screen.getByText('Conexión con Sistema de Registro (Impeesa)')
+      ).toBeInTheDocument();
     });
 
-    const emailInput = screen.getByLabelText(/Correo Electrónico/i);
+    const emailInput = screen.getByLabelText(/Correo de Impeesa/i);
     const passwordInput = screen.getByLabelText(/Contraseña/i);
 
     fireEvent.change(emailInput, { target: { value: 'scout@test.com' } });
     fireEvent.change(passwordInput, { target: { value: 'mypassword123' } });
 
-    const saveBtn = screen.getByText('Guardar Ajustes');
+    const saveBtn = screen.getByRole('button', { name: /Conectar Sesión/i });
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(api.saveScraperCredentials).toHaveBeenCalledWith({
+      expect(api.saveScraperSession).toHaveBeenCalledWith({
         email: 'scout@test.com',
         password: 'mypassword123'
       });
-      expect(screen.getByText('Credenciales guardadas exitosamente.')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Sesión de Impeesa conectada y guardada de forma segura/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -149,9 +156,11 @@ describe('Sidebar component', () => {
     const handleClose = vi.fn();
 
     render(
-      <MemoryRouter>
-        <Sidebar isMobileOpen={true} onMobileClose={handleClose} />
-      </MemoryRouter>
+      <ScraperSettingsProvider>
+        <MemoryRouter>
+          <Sidebar isMobileOpen={true} onMobileClose={handleClose} />
+        </MemoryRouter>
+      </ScraperSettingsProvider>
     );
 
     expect(screen.getByRole('dialog', { name: /Menú lateral móvil/i })).toBeInTheDocument();
@@ -165,13 +174,7 @@ describe('Sidebar component', () => {
   });
 
   it('highlights active links with Scout primary brown styling', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/lotes']}>
-        <Sidebar />
-      </MemoryRouter>
-    );
+    renderSidebarWithProvider(['/lotes']);
 
     const lotesLink = screen.getByRole('link', { name: /Lotes/i });
     expect(lotesLink).toHaveClass('bg-primary/10');
@@ -179,13 +182,7 @@ describe('Sidebar component', () => {
   });
 
   it('highlights Nuevo Lote with active styling when path is /lotes/nuevo', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/lotes/nuevo']}>
-        <Sidebar />
-      </MemoryRouter>
-    );
+    renderSidebarWithProvider(['/lotes/nuevo']);
 
     const nuevoLink = screen.getByRole('link', { name: /Nuevo Lote/i });
     expect(nuevoLink).toHaveClass('bg-primary/10');

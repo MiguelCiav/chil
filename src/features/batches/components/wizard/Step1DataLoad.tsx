@@ -90,17 +90,15 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
 
       <Card className="border-primary/10 shadow-sm">
         <CardHeader className="bg-primary/5 border-b border-primary/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-neutral">Carga de Datos del Lote</h2>
-              <p className="text-xs text-neutral/60">
-                Ingresa el tipo de reconocimiento y la lista de cédulas. La estructura geográfica y las unidades se auto-detectarán.
-              </p>
-            </div>
-            <span className="text-xs font-semibold px-2.5 py-1 bg-primary/10 text-primary rounded-full">
-              Paso 1 de 2
-            </span>
+          <div>
+            <h2 className="text-lg font-bold text-neutral">Carga de Datos del Lote</h2>
+            <p className="text-xs text-neutral/60">
+              Ingresa el tipo de reconocimiento y la lista de cédulas. La estructura geográfica y las unidades se auto-detectarán.
+            </p>
           </div>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-primary/10 text-primary rounded-full shrink-0">
+            Paso 1 de 2
+          </span>
         </CardHeader>
 
         <CardBody className="space-y-6">
@@ -160,7 +158,7 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
                   htmlFor="field-batch-cedulas"
                   className="block text-xs font-bold uppercase tracking-wider text-neutral"
                 >
-                  Cédulas de Identidad (Jóvenes y Adultos) *
+                  Cédulas de Identidad *
                 </label>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-neutral/10 text-neutral/70">
@@ -196,9 +194,6 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
               {errors.cedulas && (
                 <p className="text-xs text-red-500 font-medium">{errors.cedulas.message}</p>
               )}
-              <p className="text-xs text-neutral/50">
-                Nota: No necesitas separar jóvenes de adultos ni indicar región o grupo. El sistema consultará el portal oficial de registro y clasificará a cada miembro automáticamente.
-              </p>
             </div>
 
             {/* Indicador de Progreso en Vivo */}

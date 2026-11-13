@@ -21,11 +21,6 @@ vi.mock('../../api', async (importOriginal) => {
   };
 });
 
-import * as recognitionsModule from '../../../recognitions';
-vi.mock('../../../recognitions', () => ({
-  downloadSingleCertificatePdf: vi.fn().mockResolvedValue('Single_Cert.pdf')
-}));
-
 describe('Step2ReviewConfirm component', () => {
   const mockMembers: ScoutMember[] = [
     {
@@ -73,8 +68,6 @@ describe('Step2ReviewConfirm component', () => {
 
   const defaultProps = {
     batchId: 101,
-    batchMetadata: { comment: 'Campamento 2026', recognitionType: 'wood-badge' },
-    recognitionTypeName: 'Insignia de Madera',
     membersList: mockMembers,
     onMembersUpdated: vi.fn(),
     onBack: vi.fn(),
@@ -85,12 +78,12 @@ describe('Step2ReviewConfirm component', () => {
     vi.clearAllMocks();
   });
 
-  it('renders summary statistics and auto-detected member information', () => {
+  it('renders summary statistics without Lote/Tipo subtitle and shows auto-detected member information', () => {
     render(<Step2ReviewConfirm {...defaultProps} />);
 
     expect(screen.getByText('Revisión y Confirmación del Lote')).toBeInTheDocument();
-    expect(screen.getByText(/Campamento 2026/)).toBeInTheDocument();
-    expect(screen.getByText(/Insignia de Madera/)).toBeInTheDocument();
+    expect(screen.queryByText(/Lote:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tipo:/i)).not.toBeInTheDocument();
 
     expect(screen.getByText('Total: 3')).toBeInTheDocument();
     expect(screen.getByText('Jóvenes: 2')).toBeInTheDocument();
@@ -152,7 +145,7 @@ describe('Step2ReviewConfirm component', () => {
     );
   });
 
-  it('shows single member instant PDF button when only 1 member is loaded', async () => {
+  it('uses standard Emitir Lote flow even when only 1 member is loaded (no PDF fast-path button)', async () => {
     const singleMemberProps = {
       ...defaultProps,
       membersList: [mockMembers[0]]
@@ -160,14 +153,15 @@ describe('Step2ReviewConfirm component', () => {
 
     render(<Step2ReviewConfirm {...singleMemberProps} />);
 
-    const pdfBtn = screen.getByRole('button', { name: /Emitir y Descargar PDF/i });
-    expect(pdfBtn).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Emitir y Descargar PDF/i })
+    ).not.toBeInTheDocument();
 
-    fireEvent.click(pdfBtn);
+    const emitBtn = screen.getByRole('button', { name: /Emitir Lote/i });
+    fireEvent.click(emitBtn);
 
     await waitFor(() => {
       expect(api.batchUpdateMembers).toHaveBeenCalledWith([mockMembers[0]]);
-      expect(recognitionsModule.downloadSingleCertificatePdf).toHaveBeenCalled();
       expect(defaultProps.onFinalizeBatch).toHaveBeenCalled();
     });
   });

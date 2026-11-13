@@ -6,6 +6,7 @@
   "main": "api/getMemberStatus.js",
   "dependencies": {
     "axios": "^1.6.8",
-    "cheerio": "^1.0.0-rc.12"
+    "cheerio": "^1.0.0-rc.12",
+    "firebase-admin": "^11.8.0"
   }
 }

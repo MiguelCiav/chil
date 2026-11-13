@@ -17,16 +17,20 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
-vi.mock('../../api', () => ({
-  getHierarchyData: vi.fn(),
-  createBatch: vi.fn(),
-  createMember: vi.fn(),
-  getMemberStatus: vi.fn(),
-  RECOGNITION_TYPES: [
-    { id: 'sct-wood-badge', name: 'Insignia de Madera' },
-    { id: 'sct-promesa', name: 'Promesa Scout' }
-  ]
-}));
+vi.mock('../../api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api')>();
+  return {
+    ...actual,
+    getHierarchyData: vi.fn(),
+    createBatch: vi.fn(),
+    createMember: vi.fn(),
+    getMemberStatus: vi.fn(),
+    RECOGNITION_TYPES: [
+      { id: 'sct-wood-badge', name: 'Insignia de Madera' },
+      { id: 'sct-promesa', name: 'Promesa Scout' }
+    ]
+  };
+});
 
 vi.mock('../../../recognitions', () => ({
   getAllRecognitionTypes: vi.fn(),
