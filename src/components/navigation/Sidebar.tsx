@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
   Folder,
@@ -13,11 +13,9 @@ import {
   X
 } from 'lucide-react';
 import logo from '../../assets/CHIL_LOGO.png';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../Modal';
 import { Button } from '../Button';
-import { Field } from '../Field';
-import { hasScraperCredentials, saveScraperCredentials } from '../../features/batches/api';
 import { useAuth, UserProfileMenu } from '../../features/auth';
+import { useScraperSettings } from '../../context/ScraperSettingsContext';
 
 const SIDEBAR_COLLAPSED_KEY = 'chil_sidebar_collapsed';
 
@@ -35,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse
 }) => {
   const { user } = useAuth();
+  const { openModal, sessionStatus } = useScraperSettings();
   const [internalCollapsed, setInternalCollapsed] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
@@ -59,49 +58,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }
         return next;
       });
-    }
-  };
-
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [hasCredentials, setHasCredentials] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  // Fetch settings when modal is opened
-  useEffect(() => {
-    if (isSettingsOpen) {
-      hasScraperCredentials()
-        .then(hasCreds => {
-          setHasCredentials(hasCreds);
-          setEmail('');
-          setPassword('');
-        })
-        .catch(err => {
-          console.error('Failed to check settings:', err);
-        });
-    }
-  }, [isSettingsOpen]);
-
-  const handleSave = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    setSuccessMsg('');
-    setErrorMsg('');
-    try {
-      await saveScraperCredentials({ email, password });
-      setHasCredentials(true);
-      setSuccessMsg('Credenciales guardadas exitosamente.');
-      setTimeout(() => {
-        setIsSettingsOpen(false);
-      }, 1500);
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('Error al guardar las credenciales.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -272,18 +228,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <>
               <button
                 type="button"
-                onClick={() => {
-                  setSuccessMsg('');
-                  setErrorMsg('');
-                  setIsSettingsOpen(true);
-                }}
+                onClick={openModal}
                 className={`w-full flex items-center gap-3 p-2 rounded-xl text-neutral/70 hover:text-neutral hover:bg-gray-100 transition-colors text-sm font-medium ${
                   collapsed ? 'justify-center' : ''
                 }`}
                 aria-label="Ajustes de Credenciales Scraper"
                 title="Ajustes de Credenciales Scraper"
               >
-                <Settings className="w-5 h-5 shrink-0" />
+                <span className="relative shrink-0">
+                  <Settings className="w-5 h-5" />
+                  {sessionStatus?.status === 'active' && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500"
+                      aria-hidden="true"
+                    />
+                  )}
+                </span>
                 {!collapsed && <span>Ajustes Scraper</span>}
               </button>
 
@@ -331,67 +291,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       )}
-
-      {/* Scraper Credentials Modal */}
-      <Modal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} className="max-w-md">
-        <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden min-h-0">
-          <ModalHeader onClose={() => setIsSettingsOpen(false)}>
-            Configuración del Scraper ASV
-          </ModalHeader>
-          <ModalBody className="space-y-4">
-            <p className="text-sm text-neutral/70">
-              Ingrese sus credenciales del Sistema de Registro para permitir la consulta y verificación automatizada de miembros.
-            </p>
-            {hasCredentials && (
-              <p className="text-xs text-green-600 font-semibold bg-green-50 p-2.5 rounded-lg border border-green-200">
-                Credenciales configuradas. Rellene los campos si desea actualizarlas.
-              </p>
-            )}
-            <Field
-              label="Correo Electrónico"
-              type="email"
-              placeholder="ejemplo@scouts.org.ve"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required={!hasCredentials}
-            />
-            <Field
-              label="Contraseña"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required={!hasCredentials}
-            />
-            {successMsg && (
-              <p className="text-sm text-green-600 font-semibold bg-green-50 p-2.5 rounded-lg border border-green-200">
-                {successMsg}
-              </p>
-            )}
-            {errorMsg && (
-              <p className="text-sm text-red-600 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200">
-                {errorMsg}
-              </p>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setIsSettingsOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? 'Guardando...' : 'Guardar Ajustes'}
-            </Button>
-          </ModalFooter>
-        </form>
-      </Modal>
     </>
   );
 };

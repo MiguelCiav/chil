@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertCircle, AlertTriangle } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
+import { useScraperSettings } from '../../../../context/ScraperSettingsContext';
 
 export interface ScraperAlertModalsProps {
   showAuthAlert: boolean;
@@ -16,6 +17,8 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
   authError,
   onCloseAuthError
 }) => {
+  const { openModal } = useScraperSettings();
+
   return (
     <>
       {/* Scraper Authorization Alert Modal */}
@@ -28,10 +31,10 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
         </ModalHeader>
         <ModalBody className="space-y-4 text-neutral">
           <p className="text-sm">
-            Para realizar la consulta automatizada en el Registro Nacional de Scouts, primero debe configurar su correo y contraseña institucional en los Ajustes del sistema.
+            Para realizar la consulta automatizada en el Registro Nacional de Scouts, primero debe conectar su sesión de Impeesa en los Ajustes del sistema.
           </p>
-          <p className="text-xs text-neutral/60 bg-amber-50 border border-amber-100 p-3 rounded-xl font-medium">
-            ⚠️ Las credenciales del scraper se guardan localmente de forma segura para las consultas consecutivas del lote.
+          <p className="text-xs text-neutral/70 bg-amber-50 border border-amber-100 p-3 rounded-xl font-medium">
+            Chil no almacena tu contraseña; solo guarda las cookies de sesión cifradas en el servidor para tus consultas.
           </p>
         </ModalBody>
         <ModalFooter>
@@ -42,13 +45,7 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
             variant="primary"
             onClick={() => {
               onCloseAuthAlert();
-              // Trigger settings button click on Navbar
-              const settingsBtn = document.querySelector(
-                'button[aria-label="Ajustes de Credenciales Scraper"]'
-              ) as HTMLButtonElement | null;
-              if (settingsBtn) {
-                settingsBtn.click();
-              }
+              openModal();
             }}
           >
             Configurar Credenciales
@@ -66,7 +63,7 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
         </ModalHeader>
         <ModalBody className="space-y-4 text-neutral">
           <p className="text-sm">
-            La conexión con el Scraper de la ASV falló debido a credenciales inválidas o expiración de la sesión en el servidor.
+            La sesión con el Sistema de Registro de la ASV expiró o no es válida. Vuelva a conectar su sesión de Impeesa en Ajustes para continuar.
           </p>
           <div className="bg-red-50 text-red-800 text-xs border border-red-100 p-3 rounded-xl max-h-32 overflow-y-auto font-mono">
             {authError}
@@ -75,6 +72,15 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
         <ModalFooter>
           <Button variant="outline" onClick={onCloseAuthError}>
             Cerrar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              onCloseAuthError();
+              openModal();
+            }}
+          >
+            Reconectar Sesión
           </Button>
         </ModalFooter>
       </Modal>

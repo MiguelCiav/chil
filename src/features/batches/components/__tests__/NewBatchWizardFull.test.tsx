@@ -17,8 +17,7 @@ vi.mock('../../api', async (importOriginal) => {
     deleteMember: vi.fn(),
     batchUpdateMembers: vi.fn(),
     getMembersByBatchId: vi.fn(),
-    hasScraperCredentials: vi.fn(),
-    loginScraper: vi.fn(),
+    getScraperSessionStatus: vi.fn(),
     assignBatchRecognitionCodes: vi.fn((members: Record<string, unknown>[]) =>
       members.map((m, idx: number) => ({
         ...m,
@@ -81,8 +80,12 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
       created_at: '2026-08-21T12:00:00.000Z'
     });
 
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
-    vi.mocked(api.loginScraper).mockResolvedValue();
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: true,
+      status: 'active',
+      impeesaEmail: 'scout@scouts.org.ve',
+      updatedAt: null
+    });
     vi.mocked(api.getMemberStatus).mockResolvedValue({
       nombre_completo: 'Carlos Eduardo Gomez Perez',
       status: 'activo',
@@ -182,8 +185,12 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
       created_at: '2026-08-21T12:00:00.000Z'
     });
 
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
-    vi.mocked(api.loginScraper).mockResolvedValue();
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: true,
+      status: 'active',
+      impeesaEmail: 'scout@scouts.org.ve',
+      updatedAt: null
+    });
     vi.mocked(api.getMemberStatus).mockResolvedValue({
       nombre_completo: 'Miguel Ciavato',
       status: 'activo',
@@ -236,15 +243,19 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Cargar y Verificar Miembros/i }));
 
-    // In Step 2, since membersList.length === 1, the immediate download button is rendered
+    // In Step 2, single-member batches do not show the fast-path PDF button
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Emitir y Descargar PDF/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Emitir Lote/i })).toBeInTheDocument();
     });
+    expect(
+      screen.queryByRole('button', { name: /Emitir y Descargar PDF/i })
+    ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Emitir y Descargar PDF/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Emitir Lote/i }));
 
     await waitFor(() => {
-      expect(recognitionsModule.downloadSingleCertificatePdf).toHaveBeenCalled();
+      expect(api.batchUpdateMembers).toHaveBeenCalled();
+      expect(recognitionsModule.downloadSingleCertificatePdf).not.toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('/lotes/exito', {
         state: { batchId: 888, name: '' }
       });
@@ -262,8 +273,12 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
       created_at: '2026-08-21T12:00:00.000Z'
     });
 
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
-    vi.mocked(api.loginScraper).mockResolvedValue();
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: true,
+      status: 'active',
+      impeesaEmail: 'scout@scouts.org.ve',
+      updatedAt: null
+    });
     vi.mocked(api.getMemberStatus).mockResolvedValue({
       nombre_completo: 'Scout Regular',
       status: 'activo',

@@ -1,0 +1,40 @@
+# batches/api
+
+## Overview
+Provides the data-access, reporting, recognition metadata, and external scraper integration layer for the `batches` feature. It encapsulates Firestore CRUD and batch-merge operations for batches and scout members, Firestore-backed territorial hierarchy loading with local JSON fallback/seeding, PDF and CSV report generation, recognition badge metadata, and scraper credential/status APIs.
+
+## Interface
+- `index.ts`: Barrel re-exporting all modules in `src/features/batches/api` (`recognitionMetadata`, `hierarchyApi`, `scraperApi`, `batchesCrud`, `membersCrud`, `batchReports`) plus `../utils/codeGenerator`.
+- `batchesCrud.ts`: `generateSecureBatchId`, `commitChunkedBatches`, `buildBatchQueryForUser`, `createBatch`, `updateBatch`, `deleteBatch`, `getAllBatches`, `getBatchById`, `MergeBatchesParams`, `mergeBatches`.
+- `membersCrud.ts`: `isGenericIdentity`, `getMemberDocId`, `buildMembersQueryForBatch`, `buildMembersQueryForBatchChunk`, `buildMembersQueryForUser`, `createMember`, `updateMember`, `batchUpdateMembers`, `batchSaveMembers`, `deleteMember`, `getMembersByBatchId`, `getAllMembers`.
+- `hierarchyApi.ts`: `getHierarchyData`.
+- `recognitionMetadata.ts`: `RecognitionTypeInfo`, `RECOGNITION_TYPES`, `BadgeStyle`, `BADGE_STYLE_RULES`, `DEFAULT_BADGE_STYLE`, `EMPTY_BADGE_STYLE`, `getRecognitionBadgeStyle`, `getRecognitionName`.
+- `batchReports.ts`: `exportMembersToCSV`, `generateBatchReport`.
+- `scraperApi.ts`: `getScraperApiUrl`, `ScraperMemberDetails`, `ScraperCredentials`, `ScraperSessionStatusState`, `ScraperSessionStatus`, `ScraperSessionErrorReason`, `ScraperSessionError`, `isScraperSessionError`, `purgeLegacyScraperStorage`, `getScraperSessionStatus`, `saveScraperSession`, `clearScraperSession`, `getMemberStatus`.
+
+## Invariants
+- `[batchesCrud.ts:generateSecureBatchId]`: Generates 9-digit numeric IDs in `[100_000_000, 999_999_999]` using `globalThis.crypto.getRandomValues` when available, falling back to `Date.now()`.
+- `[batchesCrud.ts:commitChunkedBatches]`: Commits Firestore `WriteBatch` operations in chunks of `chunkSize` (defaults to `450` when omitted or `<= 0`).
+- `[batchesCrud.ts:getAllBatches]`, `[membersCrud.ts:getAllMembers]`: Return `[]` when neither an explicit `userId` nor `auth.currentUser?.uid` is present.
+- `[batchesCrud.ts:mergeBatches]`: Requires at least 2 valid existing batches; preserves shared `region_id`, `district_id` (only when `region_id` also matches), `group_id`, `unit_scope`, and `recognition_duration` (falling back to `0`, `'mixed'`, or `''` on mismatch), reassigns members to the new batch ID, and deletes superseded member/batch documents.
+- `[membersCrud.ts:isGenericIdentity]`: Treats empty strings, `'S/C'`, `'N/A'`, `'NO_DISPONIBLE'`, `'SIN CEDULA'`, and `'NONE'` (trimmed, case-insensitive) as generic identities.
+- `[membersCrud.ts:getMemberDocId]`: Prefixes document IDs with `${batch_id}_` when `batch_id` is a valid number; resolves the suffix in order of non-generic `identity`, `recognition_code`, `SC_${first_names}_${last_names}`, or `SC`.
+- `[membersCrud.ts:getMembersByBatchId]`, `[membersCrud.ts:getAllMembers]`: Deduplicates members per batch by prioritizing entries with `recognition_code`, then unique non-generic `identity` drafts, while retaining generic-identity drafts.
+- `[hierarchyApi.ts:getHierarchyData]`: Ensures a `{ id: 0, name: "No aplica" }` entry exists in `regions`, `districts`, and `groups`, sorts each list by `id` ascending, and falls back to local `hierarchyData` JSON if Firestore reads fail.
+- `[recognitionMetadata.ts:getRecognitionBadgeStyle]`, `[recognitionMetadata.ts:getRecognitionName]`: Pure lookups with deterministic fallbacks (`EMPTY_BADGE_STYLE`/`DEFAULT_BADGE_STYLE` and `'-'`/input string).
+- `[batchReports.ts:generateBatchReport]`: Throws `"Lote no encontrado"` if the target batch does not exist; sorts members alphabetically by `last_names first_names` (`es` locale, base sensitivity) and paginates at `y > 270`.
+- `[scraperApi.ts:getScraperApiUrl]`: Strips trailing slashes from `VITE_SCRAPER_API_URL`.
+- `[scraperApi.ts:purgeLegacyScraperStorage]`: Clears any legacy `chil_scraper_credentials` entry from `window.sessionStorage` and `window.localStorage` without persisting credentials in the browser.
+- `[scraperApi.ts:getScraperSessionStatus]`, `[scraperApi.ts:saveScraperSession]`, `[scraperApi.ts:clearScraperSession]`, `[scraperApi.ts:getMemberStatus]`: Route via authenticated HTTP `fetch` (`Authorization: Bearer <idToken>`) when `getScraperApiUrl()` is non-empty, or Firebase `httpsCallable` otherwise, and normalize `SCRAPER_NOT_CONFIGURED`, `SCRAPER_SESSION_EXPIRED`, and `UNAUTHENTICATED` errors into `ScraperSessionError`.
+
+## Side Effects
+- `[batchesCrud.ts:createBatch]`, `[batchesCrud.ts:updateBatch]`, `[batchesCrud.ts:deleteBatch]`, `[batchesCrud.ts:getAllBatches]`, `[batchesCrud.ts:getBatchById]`, `[batchesCrud.ts:mergeBatches]`: Read, write, and batch-delete documents in Firestore `batches` and `scout_members` collections.
+- `[membersCrud.ts:createMember]`, `[membersCrud.ts:updateMember]`, `[membersCrud.ts:batchUpdateMembers]`, `[membersCrud.ts:deleteMember]`, `[membersCrud.ts:getMembersByBatchId]`, `[membersCrud.ts:getAllMembers]`: Read, write, batch-write, and delete documents in Firestore `scout_members` collection.
+- `[hierarchyApi.ts:getHierarchyData]`: Reads Firestore `regions`, `districts`, and `groups` collections; seeds all three collections via `writeBatch` when `regions` is empty; logs to `console.log` and `console.error`.
+- `[batchReports.ts:exportMembersToCSV]`: Mutates `document.body` with a temporary `<a>` element, creates/revokes a `Blob` object URL, and triggers a browser CSV download.
+- `[batchReports.ts:generateBatchReport]`: Optionally reads Firestore via `getBatchById`, `getMembersByBatchId`, and `getHierarchyData`, and saves a PDF file (`Reporte_Lote_${batch.id}.pdf`) via `jsPDF.save`.
+- `[scraperApi.ts:purgeLegacyScraperStorage]`: Removes any legacy `chil_scraper_credentials` key from `window.sessionStorage` and `window.localStorage`.
+- `[scraperApi.ts:getScraperSessionStatus]`, `[scraperApi.ts:saveScraperSession]`, `[scraperApi.ts:clearScraperSession]`, `[scraperApi.ts:getMemberStatus]`: Call `auth.currentUser.getIdToken()` and perform authenticated HTTP `fetch` requests (`Authorization: Bearer <idToken>`) when `getScraperApiUrl()` (`VITE_SCRAPER_API_URL`) is non-empty, or Firebase `httpsCallable` invocations otherwise, and log errors to `console.error`.
+
+## Verification
+- Run: `npm test`

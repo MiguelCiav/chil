@@ -2,28 +2,6 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const { extractCookies, serializeCookies } = require("./cookieHelper");
 
-// Global cached cookie store to optimize scrapers and avoid login on every single call
-let cachedCookies = null;
-let cachedCredentialsKey = null;
-
-function getCredentialsKey(credentials) {
-  if (!credentials) return 'default';
-  return `${credentials.email}:${credentials.password}`;
-}
-
-function getCachedCookies(credentials) {
-  const credentialsKey = getCredentialsKey(credentials);
-  if (cachedCookies && cachedCredentialsKey === credentialsKey) {
-    return cachedCookies;
-  }
-  return null;
-}
-
-function setCachedCookies(credentials, cookies) {
-  cachedCookies = cookies;
-  cachedCredentialsKey = getCredentialsKey(credentials);
-}
-
 async function performLogin(email, password) {
   console.log("Attempting login to registro.scouts.org.ve...");
   
@@ -83,7 +61,4 @@ async function performLogin(email, password) {
 
 module.exports = {
   performLogin,
-  getCredentialsKey,
-  getCachedCookies,
-  setCachedCookies
 };

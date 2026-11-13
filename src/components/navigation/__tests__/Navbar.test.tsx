@@ -2,12 +2,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { Navbar } from '../Navbar';
+import { ScraperSettingsModal } from '../ScraperSettingsModal';
+import { ScraperSettingsProvider } from '../../../context/ScraperSettingsContext';
 import * as api from '../../../features/batches/api';
 import * as authFeature from '../../../features/auth';
 
 vi.mock('../../../features/batches/api', () => ({
-  hasScraperCredentials: vi.fn(),
-  saveScraperCredentials: vi.fn()
+  getScraperSessionStatus: vi.fn(),
+  saveScraperSession: vi.fn(),
+  clearScraperSession: vi.fn(),
+  purgeLegacyScraperStorage: vi.fn()
 }));
 
 vi.mock('../../../features/auth', () => ({
@@ -31,16 +35,27 @@ describe('Navbar component', () => {
       logout: vi.fn(),
       resetPassword: vi.fn()
     });
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: false,
+      status: 'none',
+      impeesaEmail: null,
+      updatedAt: null
+    });
   });
 
-  it('renders logo, brand name, navigation links, and UserProfileMenu when authenticated', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter>
-        <Navbar />
-      </MemoryRouter>
+  const renderNavbarWithProvider = (initialEntries = ['/']) => {
+    return render(
+      <ScraperSettingsProvider>
+        <MemoryRouter initialEntries={initialEntries}>
+          <Navbar />
+          <ScraperSettingsModal />
+        </MemoryRouter>
+      </ScraperSettingsProvider>
     );
+  };
+
+  it('renders logo, brand name, navigation links, and UserProfileMenu when authenticated', () => {
+    renderNavbarWithProvider();
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
     const logoLink = screen.getByRole('link', { name: /Chil Logo Chil/i });
@@ -65,11 +80,7 @@ describe('Navbar component', () => {
       resetPassword: vi.fn()
     });
 
-    render(
-      <MemoryRouter>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider();
 
     expect(screen.getByText('Chil')).toBeInTheDocument();
     const logoLink = screen.getByRole('link', { name: /Chil Logo Chil/i });
@@ -81,49 +92,47 @@ describe('Navbar component', () => {
     expect(screen.queryByTestId('user-profile-menu')).not.toBeInTheDocument();
   });
 
-  it('opens scraper settings modal, enters credentials and saves', async () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-    vi.mocked(api.saveScraperCredentials).mockResolvedValue();
+  it('opens shared scraper settings modal, enters credentials and connects session', async () => {
+    vi.mocked(api.saveScraperSession).mockResolvedValue({
+      connected: true,
+      status: 'active',
+      impeesaEmail: 'scout@test.com',
+      updatedAt: '2026-11-12T10:00:00.000Z'
+    });
 
-    render(
-      <MemoryRouter>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider();
 
     const settingsBtn = screen.getByLabelText(/Ajustes de Credenciales Scraper/i);
     fireEvent.click(settingsBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Configuración del Scraper ASV')).toBeInTheDocument();
+      expect(
+        screen.getByText('Conexión con Sistema de Registro (Impeesa)')
+      ).toBeInTheDocument();
     });
 
-    const emailInput = screen.getByLabelText(/Correo Electrónico/i);
+    const emailInput = screen.getByLabelText(/Correo de Impeesa/i);
     const passwordInput = screen.getByLabelText(/Contraseña/i);
 
     fireEvent.change(emailInput, { target: { value: 'scout@test.com' } });
     fireEvent.change(passwordInput, { target: { value: 'mypassword123' } });
 
-    const saveBtn = screen.getByText('Guardar Ajustes');
+    const saveBtn = screen.getByRole('button', { name: /Conectar Sesión/i });
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(api.saveScraperCredentials).toHaveBeenCalledWith({
+      expect(api.saveScraperSession).toHaveBeenCalledWith({
         email: 'scout@test.com',
         password: 'mypassword123'
       });
-      expect(screen.getByText('Credenciales guardadas exitosamente.')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Sesión de Impeesa conectada y guardada de forma segura/i)
+      ).toBeInTheDocument();
     });
   });
 
   it('highlights only "Nuevo lote" when path is /lotes/nuevo', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/lotes/nuevo']}>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider(['/lotes/nuevo']);
 
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
@@ -140,13 +149,7 @@ describe('Navbar component', () => {
   });
 
   it('highlights only "Listado de lotes" when path is /lotes', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/lotes']}>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider(['/lotes']);
 
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
@@ -163,13 +166,7 @@ describe('Navbar component', () => {
   });
 
   it('highlights only "Reconocimientos" when path is /reconocimientos', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/reconocimientos']}>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider(['/reconocimientos']);
 
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
@@ -186,13 +183,7 @@ describe('Navbar component', () => {
   });
 
   it('highlights only "Resumen" when path is /resumen', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/resumen']}>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider(['/resumen']);
 
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
@@ -209,13 +200,7 @@ describe('Navbar component', () => {
   });
 
   it('highlights only "Estadísticas" when path is /estadisticas', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/estadisticas']}>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider(['/estadisticas']);
 
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
     const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
@@ -232,13 +217,7 @@ describe('Navbar component', () => {
   });
 
   it('highlights only "Emisión Rápida" when path is /lotes/rapido', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/lotes/rapido']}>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider(['/lotes/rapido']);
 
     const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
     const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
@@ -251,17 +230,10 @@ describe('Navbar component', () => {
   });
 
   it('applies amber-100 shading to "Emisión Rápida" when path is not /lotes/rapido', () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
-
-    render(
-      <MemoryRouter initialEntries={['/lotes']}>
-        <Navbar />
-      </MemoryRouter>
-    );
+    renderNavbarWithProvider(['/lotes']);
 
     const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
     expect(rapidoLink).toHaveClass('bg-amber-100');
     expect(rapidoLink).toHaveClass('text-neutral-900');
   });
 });
-

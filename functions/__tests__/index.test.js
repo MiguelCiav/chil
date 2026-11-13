@@ -6,8 +6,16 @@ vi.mock('firebase-admin', () => ({
   initializeApp: vi.fn()
 }));
 
-vi.mock('../handlers/loginScraper', () => ({
-  loginScraper: vi.fn()
+vi.mock('../handlers/saveScraperSession', () => ({
+  saveScraperSession: vi.fn()
+}));
+
+vi.mock('../handlers/getScraperSessionStatus', () => ({
+  getScraperSessionStatus: vi.fn()
+}));
+
+vi.mock('../handlers/clearScraperSession', () => ({
+  clearScraperSession: vi.fn()
 }));
 
 vi.mock('../handlers/getMemberStatus', () => ({
@@ -15,9 +23,12 @@ vi.mock('../handlers/getMemberStatus', () => ({
 }));
 
 describe('functions entrypoint (index.js)', () => {
-  it('exports loginScraper and getMemberStatus callables', async () => {
+  it('exports session and member lookup callables without loginScraper', async () => {
     const functionsIndex = await import('../index.js');
-    expect(functionsIndex.loginScraper).toBeDefined();
+    expect(functionsIndex.saveScraperSession).toBeDefined();
+    expect(functionsIndex.getScraperSessionStatus).toBeDefined();
+    expect(functionsIndex.clearScraperSession).toBeDefined();
     expect(functionsIndex.getMemberStatus).toBeDefined();
+    expect(functionsIndex.loginScraper).toBeUndefined();
   });
 });

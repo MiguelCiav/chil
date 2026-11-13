@@ -124,12 +124,3 @@ firebase deploy
 
 > [!NOTE]
 > **Scraper Temporal en Vercel & Procedimiento de Rollback**: Mientras se regulariza la cuenta de facturación en GCP, el microservicio de scraping opera temporalmente en Vercel. Consulta **[docs/ROLLBACK_FIREBASE_FUNCTIONS.md](docs/ROLLBACK_FIREBASE_FUNCTIONS.md)** para conocer los pasos para regresar al despliegue 100% en Firebase Cloud Functions.
-
----
-
-## Development Standards
-
-Chil follows strict development standards to maintain a clean history and automated semantic versioning:
-- **[Conventional Commits](https://www.conventionalcommits.org/)**: Follow standard commit message formatting (`<type>(scope): <description>`).
-
-For a detailed guide on our workflow, please read the **[Contributing Guide](docs/CONTRIBUTING.md)**.

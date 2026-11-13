@@ -16,8 +16,7 @@ vi.mock('../../api', async (importOriginal) => {
     updateMember: vi.fn(),
     deleteMember: vi.fn(),
     getMembersByBatchId: vi.fn(),
-    hasScraperCredentials: vi.fn(),
-    loginScraper: vi.fn()
+    getScraperSessionStatus: vi.fn()
   };
 });
 
@@ -53,8 +52,13 @@ describe('NewBatchWizard error cases & edge branches', () => {
     });
   });
 
-  it('shows missing credentials alert when verifying without scraper credentials configured', async () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(false);
+  it('shows missing credentials alert when verifying without an active scraper session', async () => {
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: false,
+      status: 'none',
+      impeesaEmail: null,
+      updatedAt: null
+    });
 
     render(
       <MemoryRouter>
@@ -84,9 +88,28 @@ describe('NewBatchWizard error cases & edge branches', () => {
     fireEvent.click(cancelBtn);
   });
 
-  it('displays authentication error modal when loginScraper fails', async () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
-    vi.mocked(api.loginScraper).mockRejectedValue(new Error('Credenciales inválidas en Sistema de Registro'));
+  it('displays authentication error modal when getMemberStatus reports expired scraper session', async () => {
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: true,
+      status: 'active',
+      impeesaEmail: 'scout@scouts.org.ve',
+      updatedAt: null
+    });
+    vi.mocked(api.createBatch).mockResolvedValue({
+      id: 887,
+      comment: '',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      recognition_type: 'sct-wood-badge',
+      created_at: '2026-08-21T12:00:00.000Z'
+    });
+    vi.mocked(api.getMemberStatus).mockRejectedValue(
+      new api.ScraperSessionError(
+        'SCRAPER_SESSION_EXPIRED',
+        'Tu sesión de Impeesa expiró. Reconéctate en Ajustes del Scraper.'
+      )
+    );
 
     render(
       <MemoryRouter>
@@ -110,13 +133,19 @@ describe('NewBatchWizard error cases & edge branches', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Error de Autenticación')).toBeInTheDocument();
-      expect(screen.getByText('Credenciales inválidas en Sistema de Registro')).toBeInTheDocument();
+      expect(
+        screen.getByText('Tu sesión de Impeesa expiró. Reconéctate en Ajustes del Scraper.')
+      ).toBeInTheDocument();
     });
   });
 
   it('handles unregistered member lookup by creating a pending member', async () => {
-    vi.mocked(api.hasScraperCredentials).mockResolvedValue(true);
-    vi.mocked(api.loginScraper).mockResolvedValue();
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: true,
+      status: 'active',
+      impeesaEmail: 'scout@scouts.org.ve',
+      updatedAt: null
+    });
     vi.mocked(api.createBatch).mockResolvedValue({
       id: 888,
       comment: '',

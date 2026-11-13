@@ -8,13 +8,14 @@ import {
   updateBatch,
   getMemberStatus,
   getMembersByBatchId,
-  hasScraperCredentials,
-  loginScraper,
+  getScraperSessionStatus,
+  isScraperSessionError,
   assignBatchRecognitionCodes
 } from '../api';
 import { Region, District, ScoutGroup, ScoutMember } from '../types';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { useAuth } from '../../auth';
+import { useScraperSettings } from '../../../context/ScraperSettingsContext';
 import {
   useWalkthrough,
   WalkthroughOverlay,
@@ -35,6 +36,7 @@ import {
 
 export const NewBatchWizard: React.FC = () => {
   const navigate = useNavigate();
+  const { refreshSessionStatus } = useScraperSettings();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [batchId, setBatchId] = useState<number | null>(null);
   const [batchMetadata, setBatchMetadata] = useState<{
@@ -114,19 +116,10 @@ export const NewBatchWizard: React.FC = () => {
     setAuthError(null);
 
     try {
-      const hasCreds = await hasScraperCredentials();
-      if (!hasCreds) {
+      const sessionStatus = await getScraperSessionStatus();
+      if (!sessionStatus.connected) {
         setIsVerifying(false);
         setShowAuthAlert(true);
-        return;
-      }
-
-      try {
-        await loginScraper();
-      } catch (loginErr) {
-        setIsVerifying(false);
-        const errStr = loginErr instanceof Error ? loginErr.message : String(loginErr);
-        setAuthError(errStr);
         return;
       }
 
@@ -156,6 +149,7 @@ export const NewBatchWizard: React.FC = () => {
 
       // Verification loop
       setVerifyProgress({ current: 0, total: cedulas.length });
+      let sessionError: Error | null = null;
 
       await Promise.all(
         cedulas.map(async (cedula) => {
@@ -163,6 +157,10 @@ export const NewBatchWizard: React.FC = () => {
             const res = await getMemberStatus(cedula);
             await saveScrapedMemberToDb(cedula, res, undefined, undefined, currentBatch.id, user?.uid);
           } catch (scrapeErr) {
+            if (isScraperSessionError(scrapeErr)) {
+              sessionError = scrapeErr;
+              return;
+            }
             const errStr = scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr);
             if (errStr.includes('No registrado')) {
               await saveUnregisteredMemberToDb(cedula, 'young', 'tropa', currentBatch.id, user?.uid);
@@ -177,6 +175,20 @@ export const NewBatchWizard: React.FC = () => {
           }
         })
       );
+
+      if (sessionError) {
+        await refreshSessionStatus().catch(() => {});
+        const sessionErrObj = sessionError as Error;
+        if (
+          isScraperSessionError(sessionErrObj) &&
+          sessionErrObj.reason === 'SCRAPER_NOT_CONFIGURED'
+        ) {
+          setShowAuthAlert(true);
+        } else {
+          setAuthError(sessionErrObj.message);
+        }
+        return;
+      }
 
       // Load all saved members from DB and assign recognition codes
       const saved = await getMembersByBatchId(currentBatch.id);
@@ -196,11 +208,6 @@ export const NewBatchWizard: React.FC = () => {
       state: { batchId, name: batchMetadata.comment }
     });
   };
-
-  const recognitionTypeName =
-    recognitionTypes.find((r) => r.id === batchMetadata.recognitionType)?.name ||
-    batchMetadata.recognitionType ||
-    'Reconocimiento';
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
@@ -251,8 +258,6 @@ export const NewBatchWizard: React.FC = () => {
       {currentStep === 2 && batchId !== null && (
         <Step2ReviewConfirm
           batchId={batchId}
-          batchMetadata={batchMetadata}
-          recognitionTypeName={recognitionTypeName}
           membersList={membersList}
           onMembersUpdated={setMembersList}
           onBack={() => setCurrentStep(1)}

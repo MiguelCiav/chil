@@ -1,41 +1,18 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 const axios = require('axios');
-const {
-  getCredentialsKey,
-  getCachedCookies,
-  setCachedCookies,
-  performLogin
-} = require('../scraper/auth');
+const authModule = require('../scraper/auth');
+const { performLogin } = authModule;
 
 describe('auth scraper module', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  describe('credential keys & caching', () => {
-    it('returns default key when credentials are not provided', () => {
-      expect(getCredentialsKey(null)).toBe('default');
-      expect(getCredentialsKey(undefined)).toBe('default');
-    });
-
-    it('returns formatted key for credentials', () => {
-      const key = getCredentialsKey({ email: 'scout@test.com', password: 'secretpassword' });
-      expect(key).toBe('scout@test.com:secretpassword');
-    });
-
-    it('manages cached cookies properly', () => {
-      const creds = { email: 'scout@test.com', password: 'secretpassword' };
-      const otherCreds = { email: 'other@test.com', password: 'password123' };
-
-      expect(getCachedCookies(creds)).toBeNull();
-
-      const mockCookies = { _session_id: 'session123' };
-      setCachedCookies(creds, mockCookies);
-
-      expect(getCachedCookies(creds)).toEqual(mockCookies);
-      expect(getCachedCookies(otherCreds)).toBeNull();
-    });
+  it('does not expose mutable global cookie cache helpers', () => {
+    expect(authModule.getCachedCookies).toBeUndefined();
+    expect(authModule.setCachedCookies).toBeUndefined();
+    expect(authModule.getCredentialsKey).toBeUndefined();
   });
 
   describe('performLogin', () => {

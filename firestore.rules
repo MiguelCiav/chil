@@ -1,8 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true; // Test mode for now
+    // Credenciales/cookies cifradas del scraper: solo accesibles desde Cloud Functions (Admin SDK).
+    match /scraper_sessions/{uid} {
+      allow read, write: if false;
+    }
+
+    match /batches/{document=**} {
+      allow read, write: if true;
+    }
+    match /scout_members/{document=**} {
+      allow read, write: if true;
+    }
+    match /regions/{document=**} {
+      allow read, write: if true;
+    }
+    match /districts/{document=**} {
+      allow read, write: if true;
+    }
+    match /groups/{document=**} {
+      allow read, write: if true;
+    }
+    match /recognition_types/{document=**} {
+      allow read, write: if true;
     }
   }
 }

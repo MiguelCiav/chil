@@ -1,5 +1,7 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
+import { ScraperSettingsModal } from './components/navigation';
+import { ScraperSettingsProvider } from './context/ScraperSettingsContext';
 import { NewBatchWizard, BatchDetail, BatchList, SuccessPage } from './features/batches';
 import { RecognitionCatalog, CertificateDesigner } from './features/recognitions';
 import { SummaryView } from './features/summary';
@@ -35,9 +37,10 @@ const RootRoute: React.FC = () => {
 function App() {
   return (
     <AuthProvider>
-      <HashRouter>
-        <MainLayout>
-          <Routes>
+      <ScraperSettingsProvider>
+        <HashRouter>
+          <MainLayout>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<RootRoute />} />
             <Route path="/inicio" element={<LandingPage />} />
@@ -120,9 +123,11 @@ function App() {
 
             {/* Catch-all Redirect */}
             <Route path="*" element={<Navigate to="/lotes" replace />} />
-          </Routes>
-        </MainLayout>
-      </HashRouter>
+            </Routes>
+          </MainLayout>
+          <ScraperSettingsModal />
+        </HashRouter>
+      </ScraperSettingsProvider>
     </AuthProvider>
   );
 }

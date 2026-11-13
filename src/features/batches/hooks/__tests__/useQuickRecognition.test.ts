@@ -3,19 +3,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   useQuickRecognition,
   executeQuickEmission,
-  validateQuickRecognitionFields
+  validateQuickRecognitionFields,
+  getScraperErrorMessage
 } from '../useQuickRecognition';
 import * as batchesApi from '../../api';
 import * as recognitionsApi from '../../../recognitions';
 import * as authFeature from '../../../auth';
 
-vi.mock('../../api', () => ({
-  getHierarchyData: vi.fn(),
-  createBatch: vi.fn(),
-  createMember: vi.fn(),
-  getMemberStatus: vi.fn(),
-  RECOGNITION_TYPES: [{ id: 'sct-wood-badge', name: 'Insignia de Madera' }]
-}));
+vi.mock('../../api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api')>();
+  return {
+    ...actual,
+    getHierarchyData: vi.fn(),
+    createBatch: vi.fn(),
+    createMember: vi.fn(),
+    getMemberStatus: vi.fn(),
+    RECOGNITION_TYPES: [{ id: 'sct-wood-badge', name: 'Insignia de Madera' }]
+  };
+});
 
 vi.mock('../../../recognitions', () => ({
   getAllRecognitionTypes: vi.fn(),
@@ -243,5 +248,23 @@ describe('useQuickRecognition hook', () => {
       lastNames: 'Debe ingresar el o los apellidos',
       recognitionCode: 'Debe generar o ingresar un código de reconocimiento'
     });
+  });
+
+  it('formats ScraperSessionError states clearly in getScraperErrorMessage', () => {
+    const notConfigured = new batchesApi.ScraperSessionError(
+      'SCRAPER_NOT_CONFIGURED',
+      'No hay sesión'
+    );
+    expect(getScraperErrorMessage(notConfigured)).toBe(
+      'No hay una sesión de Impeesa configurada en Ajustes del Scraper.'
+    );
+
+    const expired = new batchesApi.ScraperSessionError(
+      'SCRAPER_SESSION_EXPIRED',
+      'Sesión expirada'
+    );
+    expect(getScraperErrorMessage(expired)).toBe(
+      'Tu sesión de Impeesa expiró. Reconéctate en Ajustes del Scraper.'
+    );
   });
 });
