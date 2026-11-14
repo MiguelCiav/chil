@@ -6,7 +6,7 @@ export const BATCH_DETAIL_TOUR_STEPS: WalkthroughStep[] = [
     targetSelector: '[data-walkthrough="batch-detail-header"]',
     title: 'Detalle y Acciones del Lote',
     content:
-      'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista o eliminar el lote si es necesario.',
+      'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista (completo o por grupo) o eliminar el lote si es necesario.',
     placement: 'bottom'
   },
   {
@@ -14,7 +14,7 @@ export const BATCH_DETAIL_TOUR_STEPS: WalkthroughStep[] = [
     targetSelector: '[data-walkthrough="batch-detail-summary-cards"]',
     title: 'Resumen y Observaciones',
     content:
-      'Revisa la estructura geográfica, el tipo de reconocimiento otorgado, el desglose demográfico de miembros (Jóvenes y Adultos) y los comentarios u observaciones registradas.',
+      'Revisa el tipo de reconocimiento otorgado, el desglose demográfico de miembros (Jóvenes y Adultos) y los comentarios u observaciones registradas.',
     placement: 'bottom'
   },
   {

@@ -1,14 +1,18 @@
 import React from 'react';
-import { Download, FileText, Trash2 } from 'lucide-react';
+import { FileText, Trash2 } from 'lucide-react';
 import { Button } from '../../../../components/Button';
 import { WalkthroughHelpButton } from '../../../../components/walkthrough';
+import { BatchReportBucket, ReportBucketKey } from '../../api';
 import { Batch } from '../../types';
+import { BatchReportControls } from './BatchReportControls';
 
 export interface BatchDetailHeaderProps {
   batch: Batch;
   startTour: () => void;
   onDeleteClick: () => void;
-  onDownloadMemberList: () => void;
+  reportBuckets: BatchReportBucket[];
+  isListEmpty: boolean;
+  onDownloadMemberList: (bucketKey?: ReportBucketKey) => void;
   downloadingReport: boolean;
   onDownloadCertificatesZip: () => void;
   downloadingCertificatesZip: boolean;
@@ -19,6 +23,8 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
   batch,
   startTour,
   onDeleteClick,
+  reportBuckets,
+  isListEmpty,
   onDownloadMemberList,
   downloadingReport,
   onDownloadCertificatesZip,
@@ -28,9 +34,9 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
   return (
     <div
       data-walkthrough="batch-detail-header"
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2"
+      className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 pb-2"
     >
-      <div>
+      <div className="min-w-0">
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Lote #{batch.id}
@@ -45,7 +51,7 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3 w-full xl:w-auto xl:ml-auto">
         <Button
           variant="outline"
           onClick={onDeleteClick}
@@ -55,15 +61,12 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
           Eliminar Lote
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={onDownloadMemberList}
-          disabled={downloadingReport}
-          icon={<Download size={16} />}
-          className="border-gray-200 hover:bg-gray-50 text-neutral"
-        >
-          {downloadingReport ? 'Generando PDF...' : 'Descargar lista'}
-        </Button>
+        <BatchReportControls
+          buckets={reportBuckets}
+          downloadingReport={downloadingReport}
+          isListEmpty={isListEmpty}
+          onDownloadMemberList={onDownloadMemberList}
+        />
 
         <Button
           variant="primary"

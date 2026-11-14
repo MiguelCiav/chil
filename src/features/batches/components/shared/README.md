@@ -11,7 +11,7 @@ Reusable modal dialogs shared across batch list, batch detail, and batch wizard 
 
 ## Invariants
 - `DeleteBatchModal.tsx:DeleteBatchModal` blocks closing and disables action buttons while `deleting` is true.
-- `EditMemberModal.tsx:EditMemberModal` keys `EditMemberForm` by `member.identity`, requires a non-empty `exceptional_reason` when `status === 'exceptional'`, and clears dependent `district_id`/`group_id` when changing `region_id` or `district_id` invalidates the child selection.
+- `EditMemberModal.tsx:EditMemberModal` keys `EditMemberForm` by `member.identity`; defaults `showContactFields` to `true` (hiding `Fecha de Nacimiento *` and contact fields and rendering `Unidad Scout *` inline beside `Tipo de Miembro *` when `false`); updates `status` on unit changes for unverified members (`'no_scout'` -> `'active'`, or changing off `'no_scout'` when unverified and `'active'` -> `'pending'`); auto-generates `REC-${member.identity.slice(-4) || 'EXC'}` when enabling exceptional mode with an empty `recognition_code`; requires a non-empty `exceptional_reason` when `status === 'exceptional'`; clears dependent `district_id` (`undefined`) when changing `region_id` invalidates the child selection; and persists `group_id: 0` when clearing a member's group directly or via `region_id`/`district_id` cascade invalidation.
 - `ManualMemberModal.tsx:ManualMemberModal` requires non-empty `identity` and `firstNames`, strips non-alphanumeric/hyphen characters from `identity`, and sets `verified_in_registry: unit !== 'no_scout'` with `status: 'active'`.
 
 ## Side Effects

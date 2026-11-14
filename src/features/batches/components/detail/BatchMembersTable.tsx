@@ -101,7 +101,7 @@ export const BatchMembersTable: React.FC<BatchMembersTableProps> = ({
           de {totalMembersCount} miembros
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-1 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => table.previousPage()}

@@ -264,7 +264,7 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
                       );
                       if (!isValidDist) {
                         updated.district_id = undefined;
-                        updated.group_id = undefined;
+                        updated.group_id = 0;
                       }
                     }
                     setEditingMember(updated);
@@ -305,7 +305,7 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
                         (g) => g.id === editingMember.group_id && g.district_id === newDistId
                       );
                       if (!isValidGrp) {
-                        updated.group_id = undefined;
+                        updated.group_id = 0;
                       }
                     }
                     setEditingMember(updated);
@@ -337,7 +337,7 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
                     const val = Number(e.target.value);
                     setEditingMember({
                       ...editingMember,
-                      group_id: val === 0 ? undefined : val
+                      group_id: val
                     });
                   }}
                   className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"

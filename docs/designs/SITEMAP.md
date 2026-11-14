@@ -7,6 +7,7 @@ Central index for Chil's architecture design documents, operational runbooks, an
 | Document | Status | Date | Author | Summary |
 | :--- | :--- | :--- | :--- | :--- |
 | [batch-wizard-cleanup-and-scraper-session.md](./batch-wizard-cleanup-and-scraper-session.md) | `Implemented` | 2026-11-12 | Miguel Ciavato | Wizard UI cleanup (`Step1DataLoad`, `Step2ReviewConfirm`, uniform `SuccessPage` completion), shared `ScraperSettingsModal` / `ScraperSettingsContext`, `AES-256-GCM` server-encrypted Impeesa session persistence (`scraper_sessions/{uid}` blocked on client via `firestore.rules`), and dual-transport client/backend support (`scraper-api/` on Vercel + `functions/` on Firebase). |
+| [grouped-batch-pdf-report.md](./grouped-batch-pdf-report.md) | `Implemented` | 2026-11-13 | Miguel Ciavato | Grouped PDF "Lista" report (`batchReports.ts`) with continuous Scout group sections (`District` + `Region`), `"Miembros no scout"` / `"Sin grupo asignado"` buckets, uniform top header (`Alcance`), `Emisión Excepcional` summary metrics, `EditMemberModal` cleared-group `group_id: 0` fix, and `"Por grupo"` export menu on `BatchDetailHeader`. |
 
 ## Operational Runbooks (`docs/`)
 

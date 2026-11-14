@@ -6,16 +6,20 @@ import { ScoutMember, Batch } from '../../types';
 import * as api from '../../api';
 import * as recognitions from '../../../recognitions';
 
-vi.mock('../../api', () => ({
-  getBatchById: vi.fn(),
-  getMembersByBatchId: vi.fn(),
-  getHierarchyData: vi.fn(),
-  updateMember: vi.fn(),
-  deleteBatch: vi.fn(),
-  generateBatchReport: vi.fn(),
-  exportMembersToCSV: vi.fn(),
-  getRecognitionName: vi.fn((name) => name || 'Servicio Prolongado')
-}));
+vi.mock('../../api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api')>();
+  return {
+    getBatchById: vi.fn(),
+    getMembersByBatchId: vi.fn(),
+    getHierarchyData: vi.fn(),
+    updateMember: vi.fn(),
+    deleteBatch: vi.fn(),
+    generateBatchReport: vi.fn(),
+    resolveBatchReportBuckets: actual.resolveBatchReportBuckets,
+    exportMembersToCSV: vi.fn(),
+    getRecognitionName: vi.fn((name) => name || 'Servicio Prolongado')
+  };
+});
 
 vi.mock('../../../recognitions', () => ({
   generateBatchCertificatesZip: vi.fn(),
@@ -135,14 +139,19 @@ describe('BatchDetail component', () => {
 
     expect(screen.getByText('Comentarios / Observaciones')).toBeInTheDocument();
     expect(screen.getByText(/Lote de Inspección/i)).toBeInTheDocument();
-    expect(screen.getByText(/Región Capital/i)).toBeInTheDocument();
-    expect(screen.getByText(/Distrito Sucre/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Grupo San Luis/i)).toHaveLength(3); // Card and 2 table rows
-    expect(screen.getByText(/Detalles del Lote/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Detalles del Lote/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Región Capital/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distrito Sucre/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Grupo San Luis/i)).toHaveLength(2); // 2 table rows
     expect(screen.getByText(/Tipo de Reconocimiento/i)).toBeInTheDocument();
     expect(screen.getByText('Servicio Prolongado')).toBeInTheDocument();
     expect(screen.queryByText('5 años')).not.toBeInTheDocument();
     expect(screen.getByText(/Resumen de Miembros/i)).toBeInTheDocument();
+
+    // Header action buttons are right-aligned on the rightmost side
+    const deleteBtn = screen.getByRole('button', { name: /Eliminar Lote/i });
+    const actionsBar = deleteBtn.parentElement;
+    expect(actionsBar).toHaveClass('justify-end', 'xl:ml-auto');
 
     // Check table rows
     expect(screen.getByText('Ana Perez')).toBeInTheDocument();
@@ -1101,7 +1110,7 @@ describe('BatchDetail component', () => {
     });
   });
 
-  it('renders Alcance de Unidad in details card and UNIDAD column with badges', async () => {
+  it('omits Detalles del Lote card and renders UNIDAD column with badges', async () => {
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 101,
       comment: 'Lote Manada Especial',
@@ -1141,9 +1150,10 @@ describe('BatchDetail component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Alcance de Unidad')).toBeInTheDocument();
-      // "Manada" label in card and table badge
-      expect(screen.getAllByText('Manada').length).toBeGreaterThanOrEqual(2);
+      expect(screen.queryByText('Alcance de Unidad')).not.toBeInTheDocument();
+      expect(screen.queryByText('Detalles del Lote')).not.toBeInTheDocument();
+      // "Manada" badge in UNIDAD column
+      expect(screen.getAllByText('Manada').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('UNIDAD')).toBeInTheDocument();
     });
   });
@@ -1221,7 +1231,7 @@ describe('BatchDetail component', () => {
     });
   });
 
-  it('renders "No aplica" for region, district, group and "Sin observaciones registradas" when comment is empty', async () => {
+  it('renders "Sin observaciones registradas" and omits Detalles del Lote card when comment is empty', async () => {
     vi.mocked(api.getBatchById).mockResolvedValueOnce({
       id: 202,
       comment: '',
@@ -1253,8 +1263,8 @@ describe('BatchDetail component', () => {
     });
 
     expect(screen.getByText('Sin observaciones registradas')).toBeInTheDocument();
-    const noAplicaElements = screen.getAllByText('No aplica');
-    expect(noAplicaElements.length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText('Insignia de Madera')).toBeInTheDocument();
+    expect(screen.queryByText(/Detalles del Lote/i)).not.toBeInTheDocument();
   });
 
   it('changes status to pending when editing an unverified no_scout member to a scout unit in BatchDetail', async () => {
@@ -1431,7 +1441,7 @@ describe('BatchDetail component', () => {
       expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista o eliminar el lote si es necesario.'
+          'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista (completo o por grupo) o eliminar el lote si es necesario.'
         )
       ).toBeInTheDocument();
 
@@ -1443,7 +1453,7 @@ describe('BatchDetail component', () => {
       expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Revisa la estructura geográfica, el tipo de reconocimiento otorgado, el desglose demográfico de miembros (Jóvenes y Adultos) y los comentarios u observaciones registradas.'
+          'Revisa el tipo de reconocimiento otorgado, el desglose demográfico de miembros (Jóvenes y Adultos) y los comentarios u observaciones registradas.'
         )
       ).toBeInTheDocument();
 
@@ -1518,6 +1528,221 @@ describe('BatchDetail component', () => {
       // Skip tour
       fireEvent.click(screen.getByRole('button', { name: /Omitir guía/i }));
       expect(screen.queryByText('Detalle y Acciones del Lote')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Grouped PDF List Report Controls & Cleared Group Editing', () => {
+    const hierarchy = {
+      regions: [
+        { id: 0, name: 'No aplica' },
+        { id: 1, name: 'Región Capital' },
+        { id: 2, name: 'Región Central' }
+      ],
+      districts: [
+        { id: 0, name: 'No aplica', region_id: 0 },
+        { id: 10, name: 'Distrito Sucre', region_id: 1 },
+        { id: 20, name: 'Distrito Valencia', region_id: 2 }
+      ],
+      groups: [
+        { id: 0, name: 'No aplica', district_id: 0 },
+        { id: 100, name: 'Grupo San Luis', district_id: 10 },
+        { id: 200, name: 'Grupo Águilas', district_id: 20 }
+      ]
+    };
+
+    const baseBatch: Batch = {
+      id: 301,
+      comment: 'Lote Multi-Grupo',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      created_at: '2026-08-20T10:00:00.000Z'
+    };
+
+    const renderBatchDetail = (id = '301') =>
+      render(
+        <MemoryRouter initialEntries={[`/lotes/${id}`]}>
+          <Routes>
+            <Route path="/lotes/:id" element={<BatchDetail />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+    it('disables PDF list button with tooltip and hides "Por grupo" when batch has 0 members', async () => {
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+
+      renderBatchDetail();
+
+      await waitFor(() => {
+        expect(screen.getByText('Lote #301')).toBeInTheDocument();
+      });
+
+      const listBtn = screen.getByRole('button', { name: /Descargar lista \(PDF\)/i });
+      expect(listBtn).toBeDisabled();
+      expect(listBtn).toHaveAttribute(
+        'title',
+        'No hay miembros en este lote para generar la lista'
+      );
+      expect(screen.queryByRole('button', { name: /Por grupo/i })).not.toBeInTheDocument();
+    });
+
+    it('hides "Por grupo" when entire batch resolves to 1 Scout group or 1 special bucket', async () => {
+      // Case A: Single Scout group
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+        {
+          identity: 'V-1',
+          first_names: 'Ana',
+          last_names: 'Pérez',
+          birth_date: '2000-01-01',
+          member_type: 'adult',
+          status: 'active',
+          unit: 'manada',
+          group_id: 100
+        }
+      ]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+
+      const { unmount } = renderBatchDetail();
+      await waitFor(() => expect(screen.getByText('Lote #301')).toBeInTheDocument());
+      expect(screen.getByRole('button', { name: /Descargar lista \(PDF\)/i })).toBeEnabled();
+      expect(screen.queryByRole('button', { name: /Por grupo/i })).not.toBeInTheDocument();
+      unmount();
+
+      // Case B: Single special bucket (all no_scout)
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+        {
+          identity: 'V-2',
+          first_names: 'Luis',
+          last_names: 'Rojas',
+          birth_date: '1995-05-05',
+          member_type: 'adult',
+          status: 'exceptional',
+          unit: 'no_scout'
+        }
+      ]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+
+      renderBatchDetail();
+      await waitFor(() => expect(screen.getByText('Lote #301')).toBeInTheDocument());
+      expect(screen.queryByRole('button', { name: /Por grupo/i })).not.toBeInTheDocument();
+    });
+
+    it('shows "Por grupo" for 2+ buckets, supports 3-arg full export, scoped bucket export, Escape and outside click', async () => {
+      const members: ScoutMember[] = [
+        {
+          identity: 'V-10',
+          first_names: 'Carlos',
+          last_names: 'Zapata',
+          birth_date: '2001-01-01',
+          member_type: 'adult',
+          status: 'active',
+          unit: 'clan',
+          group_id: 100
+        },
+        {
+          identity: 'V-20',
+          first_names: 'Elena',
+          last_names: 'Morales',
+          birth_date: '1998-03-03',
+          member_type: 'adult',
+          status: 'pending',
+          unit: 'no_scout'
+        }
+      ];
+
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce(members);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+      vi.mocked(api.generateBatchReport).mockResolvedValue('Reporte_Lote_301.pdf');
+
+      renderBatchDetail();
+      await waitFor(() => expect(screen.getByText('Lote #301')).toBeInTheDocument());
+
+      // 1-click full export passes 3 arguments (no bucketKey)
+      fireEvent.click(screen.getByRole('button', { name: /Descargar lista \(PDF\)/i }));
+      await waitFor(() => {
+        expect(api.generateBatchReport).toHaveBeenCalledWith(baseBatch, members, hierarchy);
+      });
+      expect(vi.mocked(api.generateBatchReport).mock.calls[0]).toHaveLength(3);
+
+      // Open "Por grupo" menu -> displays Scout group + divider + Miembros no scout
+      const menuTrigger = screen.getByRole('button', { name: /Por grupo/i });
+      fireEvent.click(menuTrigger);
+      expect(menuTrigger).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+      expect(screen.getByRole('separator')).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: /Grupo San Luis/i })).toHaveTextContent(
+        'Distrito Sucre'
+      );
+
+      // Escape closes menu
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+      // Re-open and click outside closes menu
+      fireEvent.click(menuTrigger);
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+      fireEvent.mouseDown(document.body);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+      // Re-open and select special bucket -> calls generateBatchReport with bucketKey
+      fireEvent.click(menuTrigger);
+      fireEvent.click(screen.getByRole('menuitem', { name: /Miembros no scout/i }));
+
+      await waitFor(() => {
+        expect(api.generateBatchReport).toHaveBeenCalledWith(baseBatch, members, hierarchy, {
+          bucketKey: 'special:no_scout'
+        });
+      });
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
+    it('persists group_id: 0 via EditMemberModal when clearing a member group in BatchDetail', async () => {
+      const member: ScoutMember = {
+        identity: 'V-55',
+        first_names: 'Pedro',
+        last_names: 'Silveira',
+        birth_date: '2002-02-02',
+        member_type: 'adult',
+        status: 'active',
+        unit: 'tropa',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100
+      };
+
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([member]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+      vi.mocked(api.updateMember).mockResolvedValueOnce({ ...member, group_id: 0 });
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([{ ...member, group_id: 0 }]);
+
+      renderBatchDetail();
+      await waitFor(() => expect(screen.getByText('Pedro Silveira')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByLabelText(/Opciones de Pedro Silveira/i));
+      fireEvent.click(screen.getByText('Editar'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Editar Datos de Miembro')).toBeInTheDocument();
+      });
+
+      const groupSelect = screen.getByLabelText(/Grupo Scout/i);
+      fireEvent.change(groupSelect, { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
+
+      await waitFor(() => {
+        expect(api.updateMember).toHaveBeenCalledWith(
+          expect.objectContaining({
+            identity: 'V-55',
+            group_id: 0
+          })
+        );
+      });
     });
   });
 });

@@ -19,6 +19,8 @@ import {
   deleteBatch,
   getHierarchyData,
   generateBatchReport,
+  resolveBatchReportBuckets,
+  ReportBucketKey,
   getRecognitionName
 } from '../api';
 import {
@@ -195,11 +197,20 @@ export const BatchDetail: React.FC = () => {
     [batch, recognition, regions, districts, groups, triggerToast]
   );
 
-  const handleDownloadMemberListPDF = async () => {
+  const handleDownloadMemberListPDF = async (bucketKey?: ReportBucketKey) => {
     if (!batch) return;
     setDownloadingReport(true);
     try {
-      await generateBatchReport(batch, members, { regions, districts, groups });
+      if (bucketKey) {
+        await generateBatchReport(
+          batch,
+          members,
+          { regions, districts, groups },
+          { bucketKey }
+        );
+      } else {
+        await generateBatchReport(batch, members, { regions, districts, groups });
+      }
       triggerToast('Lista de miembros (PDF) generada exitosamente.');
     } catch (err) {
       console.error('Error generating member list PDF:', err);
@@ -243,6 +254,12 @@ export const BatchDetail: React.FC = () => {
       setDeleting(false);
     }
   };
+
+  // PDF report group buckets
+  const reportBuckets = useMemo(() => {
+    if (!batch) return [];
+    return resolveBatchReportBuckets(batch, members, { regions, districts, groups });
+  }, [batch, members, regions, districts, groups]);
 
   // Totals calculations
   const totals: BatchDetailTotals = useMemo(() => {
@@ -336,6 +353,8 @@ export const BatchDetail: React.FC = () => {
         batch={batch}
         startTour={() => startTour()}
         onDeleteClick={() => setIsDeleteModalOpen(true)}
+        reportBuckets={reportBuckets}
+        isListEmpty={members.length === 0}
         onDownloadMemberList={handleDownloadMemberListPDF}
         downloadingReport={downloadingReport}
         onDownloadCertificatesZip={handleDownloadPDF}
@@ -343,14 +362,11 @@ export const BatchDetail: React.FC = () => {
         isEligibleZero={totals.eligible === 0}
       />
 
-      {/* Top 4 Information Cards */}
+      {/* Top 3 Information Cards */}
       <BatchSummaryCards
         batch={batch}
         totals={totals}
         recognitionTitle={recognitionTitle}
-        regions={regions}
-        districts={districts}
-        groups={groups}
       />
 
       {/* Members Table Container */}

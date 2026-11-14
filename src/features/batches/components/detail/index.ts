@@ -2,6 +2,7 @@ export * from './types';
 export * from './batchDetailTour';
 export * from './batchDetailColumns';
 export * from './BatchDetailHeader';
+export * from './BatchReportControls';
 export * from './BatchMembersTable';
 export * from './BatchSummaryCards';
 export * from './DeleteBatchModal';

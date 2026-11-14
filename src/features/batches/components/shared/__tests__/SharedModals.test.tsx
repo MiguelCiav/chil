@@ -260,7 +260,7 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
       expect(districtSelect).toHaveValue('10');
       expect(groupSelect).toHaveValue('100');
 
-      // Change region to 2 (Región Central) -> district 10 and group 100 are incompatible and reset to 0 (undefined)
+      // Change region to 2 (Región Central) -> district 10 is reset to undefined and group 100 to 0
       fireEvent.change(regionSelect, { target: { value: '2' } });
       expect(districtSelect).toHaveValue('0');
       expect(groupSelect).toHaveValue('0');
@@ -272,7 +272,39 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
           expect.objectContaining({
             region_id: 2,
             district_id: undefined,
-            group_id: undefined
+            group_id: 0
+          })
+        );
+      });
+    });
+
+    it('persists group_id: 0 when clearing the group dropdown directly', async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+
+      render(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={mockMember}
+          onSave={onSave}
+          regions={mockRegions}
+          districts={mockDistricts}
+          groups={mockGroups}
+        />
+      );
+
+      const groupSelect = screen.getByLabelText(/Grupo Scout/i);
+      expect(groupSelect).toHaveValue('100');
+
+      fireEvent.change(groupSelect, { target: { value: '0' } });
+      expect(groupSelect).toHaveValue('0');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            group_id: 0
           })
         );
       });
