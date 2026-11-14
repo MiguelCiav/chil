@@ -47,6 +47,10 @@ import {
 } from '../types';
 import { useAuth } from '../../auth';
 import {
+  consolidateMergedGroupTokens,
+  deriveBatchTerritorialProjection
+} from '../utils/batchTerritorial';
+import {
   FilterType,
   DateFilterMode,
   PredefinedPeriod,
@@ -216,23 +220,37 @@ export const BatchList: React.FC = () => {
 
   // Format table rows
   const tableData = useMemo<BatchRowData[]>(() => {
+    const membersByBatchId = new Map<number, ScoutMember[]>();
+    for (const member of members) {
+      if (member.batch_id === undefined) continue;
+      const list = membersByBatchId.get(member.batch_id);
+      if (list) {
+        list.push(member);
+      } else {
+        membersByBatchId.set(member.batch_id, [member]);
+      }
+    }
+
+    const hierarchy = { regions, districts, groups };
+
     return batches.map(batch => {
-      const region = regions.find(r => r.id === batch.region_id);
-      const district = districts.find(d => d.id === batch.district_id);
-      const group = groups.find(g => g.id === batch.group_id);
-      const batchMembers = members.filter(m => m.batch_id === batch.id);
+      const batchMembers = membersByBatchId.get(batch.id) ?? [];
+      const projection = deriveBatchTerritorialProjection(batchMembers, batch, hierarchy);
 
       return {
         id: batch.id,
         batch,
         created_at: batch.created_at,
         formattedDate: formatBatchDate(batch.created_at),
-        regionName: region ? region.name : (batch.region_id === 0 ? 'No aplica' : '-'),
-        districtName: district ? district.name : (batch.district_id === 0 ? 'No aplica' : '-'),
-        groupName: group ? group.name : (batch.group_id === 0 ? (batchMembers.some(m => m.group_id) ? 'Multigrupo' : 'No aplica') : '-'),
+        regionTokens: projection.regionTokens,
+        districtTokens: projection.districtTokens,
+        groupTokens: projection.groupTokens,
+        completenessStatus: projection.completenessStatus,
+        completenessLabel: projection.completenessLabel,
+        pendingCount: projection.pendingCount,
         recognitionName: resolveRecognitionName(batch.recognition_type),
         recognitionType: batch.recognition_type ?? '',
-        memberCount: batchMembers.length
+        memberCount: projection.memberCount
       };
     });
   }, [batches, members, regions, districts, groups, resolveRecognitionName]);
@@ -287,7 +305,8 @@ export const BatchList: React.FC = () => {
           batch: row.batch,
           created_at: row.created_at,
           formattedDate: row.formattedDate,
-          groupName: row.groupName,
+          groupTokens: row.groupTokens,
+          groupName: consolidateMergedGroupTokens([row.groupTokens]),
           recognitionName: row.recognitionName,
           memberCount: row.memberCount
         };

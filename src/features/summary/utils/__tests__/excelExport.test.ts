@@ -28,6 +28,10 @@ describe('excelExport utility', () => {
       status: 'active',
       statusLabel: 'Registro Válido',
       recognitionCode: 'SOL-001',
+      regionId: 1,
+      districtId: 10,
+      groupId: 100,
+      isNationalInstitutional: false,
       regionName: 'Región Capital',
       districtName: 'Distrito Sucre',
       groupName: 'Grupo San Luis'
@@ -51,6 +55,10 @@ describe('excelExport utility', () => {
       status: 'pending',
       statusLabel: 'Registro Inválido',
       recognitionCode: 'WB-099',
+      regionId: 2,
+      districtId: 20,
+      groupId: 200,
+      isNationalInstitutional: false,
       regionName: 'Región Andina',
       districtName: 'Distrito Norte',
       groupName: 'Grupo Scouts 45, Caracas'
@@ -159,6 +167,10 @@ describe('excelExport utility', () => {
       status: 'active',
       statusLabel: 'Registro Válido',
       recognitionCode: '',
+      regionId: 0,
+      districtId: 0,
+      groupId: 0,
+      isNationalInstitutional: false,
       regionName: '',
       districtName: '',
       groupName: ''
@@ -254,6 +266,10 @@ describe('excelExport utility', () => {
       status: 'exceptional',
       statusLabel: 'Emisión Excepcional',
       recognitionCode: 'TT-001',
+      regionId: 1,
+      districtId: 10,
+      groupId: 100,
+      isNationalInstitutional: false,
       regionName: 'Región Capital',
       districtName: 'Distrito Sucre',
       groupName: 'Grupo San Luis'

@@ -605,4 +605,112 @@ describe('SummaryView component', () => {
     expect(screen.queryByText('Ana María')).not.toBeInTheDocument();
     expect(screen.queryByText('Carlos')).not.toBeInTheDocument();
   });
+
+  it('resolves member-first hierarchy for mixed batches, Nacional institutional, and No aplica filters', async () => {
+    const mixedBatches: Batch[] = [
+      {
+        id: 500,
+        comment: 'Lote Mixto',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_type: 'sct-go-solar',
+        created_at: '2026-08-20T10:00:00.000Z'
+      }
+    ];
+    const mixedMembers: ScoutMember[] = [
+      {
+        identity: 'V-7001',
+        status: 'active',
+        batch_id: 500,
+        first_names: 'Laura',
+        last_names: 'Grupo100',
+        birth_date: '2008-05-10',
+        member_type: 'young',
+        unit: 'tropa',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_code: 'SOL-701'
+      },
+      {
+        identity: 'V-7002',
+        status: 'active',
+        batch_id: 500,
+        first_names: 'Marco',
+        last_names: 'Nacional',
+        birth_date: '1980-05-10',
+        member_type: 'adult',
+        unit: 'institucional',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_code: 'SOL-702'
+      },
+      {
+        identity: 'V-7003',
+        status: 'active',
+        batch_id: 500,
+        first_names: 'Nora',
+        last_names: 'Externa',
+        birth_date: '1985-05-10',
+        member_type: 'adult',
+        unit: 'no_scout',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_code: 'SOL-703'
+      }
+    ];
+
+    vi.mocked(batchApi.getAllBatches).mockResolvedValueOnce(mixedBatches);
+    vi.mocked(batchApi.getAllMembers).mockResolvedValueOnce(mixedMembers);
+    vi.mocked(batchApi.getHierarchyData).mockResolvedValueOnce({
+      ...mockHierarchy,
+      districts: [
+        ...mockHierarchy.districts,
+        { id: 16, name: 'No aplica', region_id: 1 }
+      ]
+    });
+
+    render(
+      <MemoryRouter>
+        <SummaryView />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Laura')).toBeInTheDocument();
+      expect(screen.getByText('Marco')).toBeInTheDocument();
+      expect(screen.getByText('Nora')).toBeInTheDocument();
+    });
+
+    const regionSelect = screen.getByLabelText(/Filtrar por región/i) as HTMLSelectElement;
+    const districtSelect = screen.getByLabelText(/Filtrar por distrito/i) as HTMLSelectElement;
+    const groupSelect = screen.getByLabelText(/Filtrar por grupo/i) as HTMLSelectElement;
+
+    const regionValues = Array.from(regionSelect.options).map(o => o.value);
+    expect(regionValues.slice(0, 3)).toEqual(['', 'nacional', '0']);
+    expect(Array.from(districtSelect.options).some(o => o.value === '0')).toBe(false);
+    expect(Array.from(groupSelect.options).some(o => o.value === '0')).toBe(false);
+
+    // 1. Filter by Region = Nacional
+    fireEvent.change(regionSelect, { target: { value: 'nacional' } });
+    expect(Array.from(districtSelect.options).some(o => o.value === '0')).toBe(true);
+    expect(Array.from(groupSelect.options).some(o => o.value === '0')).toBe(true);
+    expect(screen.getByText('Marco')).toBeInTheDocument();
+    expect(screen.queryByText('Laura')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nora')).not.toBeInTheDocument();
+
+    // 2. Filter by Region = No aplica ('0') — matches Nora (no_scout), excludes Marco (Nacional)
+    fireEvent.change(regionSelect, { target: { value: '0' } });
+    expect(screen.getByText('Nora')).toBeInTheDocument();
+    expect(screen.queryByText('Marco')).not.toBeInTheDocument();
+    expect(screen.queryByText('Laura')).not.toBeInTheDocument();
+
+    // 3. Filter by Region 1 -> Laura
+    fireEvent.change(regionSelect, { target: { value: '1' } });
+    expect(screen.getByText('Laura')).toBeInTheDocument();
+    expect(screen.queryByText('Nora')).not.toBeInTheDocument();
+  });
 });

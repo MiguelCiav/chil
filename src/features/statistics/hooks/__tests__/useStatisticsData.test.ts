@@ -336,4 +336,98 @@ describe('useStatisticsData hook', () => {
     expect(result.current.stats.geographic.groups).toHaveLength(1);
     expect(result.current.stats.geographic.groups?.[0].id).toBe(100);
   });
+
+  it('supports filtering by "nacional" and "0" (No aplica), excludes batches whose members moved to another region, and formats summary labels', async () => {
+    const batchesWithStaleHeader: Batch[] = [
+      {
+        id: 301,
+        comment: 'Header says Region 1 but member moved to Region 2',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2026-03-10T10:00:00.000Z'
+      },
+      {
+        id: 302,
+        comment: 'Nacional & No Scout Batch',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_type: 'sct-promesa',
+        created_at: '2026-04-10T10:00:00.000Z'
+      }
+    ];
+    const membersWithOverrides: ScoutMember[] = [
+      {
+        identity: 'V-301',
+        first_names: 'Reassigned',
+        last_names: 'Member',
+        birth_date: '2010-01-01',
+        region_id: 2,
+        district_id: 20,
+        group_id: 200,
+        member_type: 'young',
+        status: 'active',
+        batch_id: 301
+      },
+      {
+        identity: 'V-302',
+        first_names: 'Institucional',
+        last_names: 'Nacional',
+        birth_date: '1980-01-01',
+        unit: 'institucional',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        member_type: 'adult',
+        status: 'active',
+        batch_id: 302
+      },
+      {
+        identity: 'V-303',
+        first_names: 'Externo',
+        last_names: 'NoScout',
+        birth_date: '1985-01-01',
+        unit: 'no_scout',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        member_type: 'adult',
+        status: 'active',
+        batch_id: 302
+      }
+    ];
+
+    vi.mocked(batchApi.getAllBatches).mockResolvedValue(batchesWithStaleHeader);
+    vi.mocked(batchApi.getAllMembers).mockResolvedValue(membersWithOverrides);
+
+    const { result } = renderHook(() => useStatisticsData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // 1. Filter by Region 1 -> 0 members AND 0 batches (batch 301 header is ignored because its member is in Region 2)
+    act(() => {
+      result.current.setFilter('regionId', '1');
+    });
+    expect(result.current.stats.filteredMembersCount).toBe(0);
+    expect(result.current.stats.filteredBatchesCount).toBe(0);
+
+    // 2. Filter by Region = 'nacional' -> matches V-302
+    act(() => {
+      result.current.setFilter('regionId', 'nacional');
+    });
+    expect(result.current.stats.filteredMembersCount).toBe(1);
+    expect(result.current.stats.filteredBatchesCount).toBe(1);
+    expect(result.current.availableDistricts).toEqual([]);
+    expect(result.current.getFilterSummaryLabels().regionLabel).toBe('Nacional');
+
+    // 3. Filter by Region = '0' (No aplica) -> matches V-303 (no_scout), excludes V-302 (Nacional)
+    act(() => {
+      result.current.setFilter('regionId', '0');
+      result.current.setFilter('districtId', '0');
+    });
+    expect(result.current.stats.filteredMembersCount).toBe(1);
+    expect(result.current.getFilterSummaryLabels().regionLabel).toBe('No aplica');
+    expect(result.current.getFilterSummaryLabels().districtLabel).toBe('No aplica');
+  });
 });

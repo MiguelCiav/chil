@@ -17,7 +17,7 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
       deleting: false
     };
 
-    it('renders correctly in batch object mode (with groupName)', () => {
+    it('renders correctly in batch object mode (with groupTokens)', () => {
       const mockBatch: BatchRowData = {
         id: 101,
         batch: {
@@ -29,9 +29,12 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
         },
         created_at: '2026-08-20T10:00:00.000Z',
         formattedDate: '20 Ago 2026',
-        regionName: 'Región Capital',
-        districtName: 'Distrito Sucre',
-        groupName: 'Grupo San Luis',
+        regionTokens: [{ kind: 'id', key: 'id:1', id: 1, label: 'Región Capital', count: 5 }],
+        districtTokens: [{ kind: 'id', key: 'id:10', id: 10, label: 'Distrito Sucre', count: 5 }],
+        groupTokens: [{ kind: 'id', key: 'id:100', id: 100, label: 'Grupo San Luis', count: 5 }],
+        completenessStatus: 'complete',
+        completenessLabel: 'Todos registrados',
+        pendingCount: 0,
         recognitionName: 'Go Solar',
         recognitionType: 'sct-go-solar',
         memberCount: 5
@@ -45,7 +48,7 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
       expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
     });
 
-    it('omits group detail when batch.groupName is "-"', () => {
+    it('omits group detail when batch.groupTokens resolves to No aplica and comment is empty', () => {
       const mockBatch: BatchRowData = {
         id: 102,
         batch: {
@@ -57,9 +60,12 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
         },
         created_at: '2026-08-20T10:00:00.000Z',
         formattedDate: '20 Ago 2026',
-        regionName: '-',
-        districtName: '-',
-        groupName: '-',
+        regionTokens: [{ kind: 'none', key: '0', label: 'No aplica', count: 2 }],
+        districtTokens: [{ kind: 'none', key: '0', label: 'No aplica', count: 2 }],
+        groupTokens: [{ kind: 'none', key: '0', label: 'No aplica', count: 2 }],
+        completenessStatus: 'pending',
+        completenessLabel: 'Registros pendientes (2)',
+        pendingCount: 2,
         recognitionName: 'Go Solar',
         recognitionType: 'sct-go-solar',
         memberCount: 2
@@ -68,7 +74,7 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
       render(<DeleteBatchModal {...defaultProps} batch={mockBatch} />);
 
       expect(screen.getByText('#102')).toBeInTheDocument();
-      expect(screen.queryByText(/\(-\)/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/\(No aplica\)/)).not.toBeInTheDocument();
     });
 
     it('renders correctly in batchId / batchComment props mode', () => {
@@ -260,7 +266,7 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
       expect(districtSelect).toHaveValue('10');
       expect(groupSelect).toHaveValue('100');
 
-      // Change region to 2 (Región Central) -> district 10 is reset to undefined and group 100 to 0
+      // Change region to 2 (Región Central) -> district 10 is reset to 0 and group 100 to 0
       fireEvent.change(regionSelect, { target: { value: '2' } });
       expect(districtSelect).toHaveValue('0');
       expect(groupSelect).toHaveValue('0');
@@ -271,7 +277,48 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
         expect(onSave).toHaveBeenCalledWith(
           expect.objectContaining({
             region_id: 2,
-            district_id: undefined,
+            district_id: 0,
+            group_id: 0
+          })
+        );
+      });
+    });
+
+    it('resets region_id, district_id, and group_id to explicit 0 when region is cleared to 0 and filters NO APLICA districts', async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+
+      render(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={mockMember}
+          onSave={onSave}
+          regions={mockRegions}
+          districts={[
+            ...mockDistricts,
+            { id: 34, name: 'NO APLICA', region_id: 1 }
+          ]}
+          groups={mockGroups}
+        />
+      );
+
+      const regionSelect = screen.getByLabelText(/Región Scout/i);
+      const districtSelect = screen.getByLabelText(/Distrito Scout/i);
+
+      // Positive-ID "NO APLICA" district should not appear as a duplicate option
+      const districtOptions = Array.from(districtSelect.querySelectorAll('option')).map(
+        (opt) => opt.textContent
+      );
+      expect(districtOptions).not.toContain('NO APLICA');
+
+      fireEvent.change(regionSelect, { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            region_id: 0,
+            district_id: 0,
             group_id: 0
           })
         );

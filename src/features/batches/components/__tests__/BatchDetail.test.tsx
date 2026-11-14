@@ -140,9 +140,10 @@ describe('BatchDetail component', () => {
     expect(screen.getByText('Comentarios / Observaciones')).toBeInTheDocument();
     expect(screen.getByText(/Lote de Inspección/i)).toBeInTheDocument();
     expect(screen.queryByText(/Detalles del Lote/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Región Capital/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Distrito Sucre/i)).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Grupo San Luis/i)).toHaveLength(2); // 2 table rows
+    expect(screen.getByText('Distribución Territorial del Lote')).toBeInTheDocument();
+    expect(screen.getByText(/Región Capital/i)).toBeInTheDocument();
+    expect(screen.getByText(/Distrito Sucre/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Grupo San Luis/i)).toHaveLength(3); // 1 territorial card + 2 table rows
     expect(screen.getByText(/Tipo de Reconocimiento/i)).toBeInTheDocument();
     expect(screen.getByText('Servicio Prolongado')).toBeInTheDocument();
     expect(screen.queryByText('5 años')).not.toBeInTheDocument();
@@ -1743,6 +1744,72 @@ describe('BatchDetail component', () => {
           })
         );
       });
+    });
+
+    it('renders BatchTerritorialCard with Ver más/Ver menos toggle, special bars, and aligns MemberQuickViewModal with resolveMemberHierarchy', async () => {
+      const multiGroupBatch: Batch = {
+        id: 707,
+        comment: 'Lote Territorial',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'Servicio Prolongado',
+        created_at: '2026-08-20T10:00:00.000Z'
+      };
+      const multiGroupHierarchy = {
+        regions: [{ id: 1, name: 'Región Capital' }],
+        districts: [{ id: 10, name: 'Distrito Sucre', region_id: 1 }],
+        groups: [
+          { id: 100, name: 'Grupo San Luis', district_id: 10 },
+          { id: 101, name: 'Grupo Bolívar', district_id: 10 },
+          { id: 102, name: 'Grupo Miranda', district_id: 10 },
+          { id: 103, name: 'Grupo Sucre', district_id: 10 }
+        ]
+      };
+      const multiGroupMembers: ScoutMember[] = [
+        { identity: 'V-1', first_names: 'M1', last_names: 'A', birth_date: '2000-01-01', member_type: 'young', status: 'active', unit: 'tropa', region_id: 1, district_id: 10, group_id: 100 },
+        { identity: 'V-2', first_names: 'M2', last_names: 'B', birth_date: '2000-01-01', member_type: 'young', status: 'active', unit: 'tropa', region_id: 1, district_id: 10, group_id: 101 },
+        { identity: 'V-3', first_names: 'M3', last_names: 'C', birth_date: '2000-01-01', member_type: 'young', status: 'active', unit: 'tropa', region_id: 1, district_id: 10, group_id: 102 },
+        { identity: 'V-4', first_names: 'M4', last_names: 'D', birth_date: '2000-01-01', member_type: 'young', status: 'active', unit: 'tropa', region_id: 1, district_id: 10, group_id: 103 },
+        { identity: 'V-5', first_names: 'NoScout', last_names: 'Person', birth_date: '2000-01-01', member_type: 'adult', status: 'active', unit: 'no_scout', region_id: 0, district_id: 0, group_id: 0 },
+        { identity: 'V-6', first_names: 'Ungrouped', last_names: 'Scout', birth_date: '2000-01-01', member_type: 'adult', status: 'active', unit: 'institucional', region_id: 1, district_id: 10, group_id: 0 }
+      ];
+
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(multiGroupBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce(multiGroupMembers);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(multiGroupHierarchy);
+
+      renderBatchDetail();
+
+      await waitFor(() => {
+        expect(screen.getByText('Distribución Territorial del Lote')).toBeInTheDocument();
+        expect(screen.getByText('6 miembros')).toBeInTheDocument();
+      });
+
+      // Special bars rendered for noScoutCount > 0 and ungroupedScoutCount > 0
+      expect(screen.getByText('Miembros no scout')).toBeInTheDocument();
+      expect(screen.getByText('Sin grupo asignado')).toBeInTheDocument();
+
+      // Ver más toggle is rendered because groups.length === 4 (> 3)
+      const verMasBtn = screen.getByRole('button', { name: /Ver más/i });
+      expect(verMasBtn).toBeInTheDocument();
+
+      // Initially Grupo Sucre appears only once (in the members table), not in the collapsed 3-item card list
+      expect(screen.getAllByText('Grupo Sucre')).toHaveLength(1);
+
+      fireEvent.click(verMasBtn);
+      expect(screen.getByRole('button', { name: /Ver menos/i })).toBeInTheDocument();
+      expect(screen.getAllByText('Grupo Sucre')).toHaveLength(2);
+
+      // Open Quick View for Ungrouped Scout (explicit group_id: 0 even though batch.group_id is 100)
+      fireEvent.click(screen.getByLabelText(/Opciones de Ungrouped Scout/i));
+      fireEvent.click(screen.getByText('Ver Ficha'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Ficha del Miembro Scout')).toBeInTheDocument();
+      });
+      // Quick view displays 'No aplica' for explicit group_id: 0
+      expect(screen.getAllByText('No aplica').length).toBeGreaterThanOrEqual(3);
     });
   });
 });

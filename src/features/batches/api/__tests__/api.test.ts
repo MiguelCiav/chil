@@ -525,6 +525,24 @@ describe('Batches API Layer', () => {
       });
     });
 
+    it('persists explicit numeric 0 for region_id, district_id, and group_id when provided', async () => {
+      vi.mocked(firestore.setDoc).mockResolvedValueOnce();
+      await createMember({
+        ...mockMember,
+        region_id: 0,
+        district_id: 0,
+        group_id: 0
+      });
+      expect(firestore.setDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/100_V-12345678' }),
+        expect.objectContaining({
+          region_id: 0,
+          district_id: 0,
+          group_id: 0
+        })
+      );
+    });
+
     it('updates a scout member using composite key without undefined fields', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
       const res = await updateMember({

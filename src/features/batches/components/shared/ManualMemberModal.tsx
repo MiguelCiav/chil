@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
 import { Field } from '../../../../components/Field';
+import { isNoAplicaDistrict } from '../../../../utils/memberHierarchy';
 import { ScoutGroup, ScoutMember, ScoutUnit, Region, District } from '../../types';
 
 export interface ManualMemberModalProps {
@@ -37,8 +38,10 @@ export const ManualMemberModal: React.FC<ManualMemberModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const availableDistricts = useMemo(() => {
-    if (!regionId || regionId === 0) return districts.filter((d) => d.id !== 0);
-    return districts.filter((d) => d.id !== 0 && d.region_id === regionId);
+    if (!regionId || regionId === 0) {
+      return districts.filter((d) => d.id !== 0 && !isNoAplicaDistrict(d));
+    }
+    return districts.filter((d) => d.id !== 0 && !isNoAplicaDistrict(d) && d.region_id === regionId);
   }, [districts, regionId]);
 
   const availableGroups = useMemo(() => {
@@ -66,9 +69,9 @@ export const ManualMemberModal: React.FC<ManualMemberModalProps> = ({
         verified_in_registry: unit !== 'no_scout',
         batch_id: batchId ?? undefined,
         user_id: userId,
-        region_id: regionId && regionId !== 0 ? regionId : undefined,
-        district_id: districtId && districtId !== 0 ? districtId : undefined,
-        group_id: groupId && groupId !== 0 ? groupId : undefined
+        region_id: regionId ?? 0,
+        district_id: districtId ?? 0,
+        group_id: groupId ?? 0
       };
 
       await onSave(newMember);

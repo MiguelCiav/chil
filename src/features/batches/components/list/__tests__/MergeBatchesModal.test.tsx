@@ -23,6 +23,7 @@ describe('MergeBatchesModal component', () => {
       },
       created_at: '2026-08-01T10:00:00.000Z',
       formattedDate: '01 ago. 2026',
+      groupTokens: [{ kind: 'id', key: 'id:100', id: 100, label: 'Grupo San Luis', count: 3 }],
       groupName: 'Grupo San Luis',
       recognitionName: 'Insignia de Madera',
       memberCount: 3
@@ -40,6 +41,7 @@ describe('MergeBatchesModal component', () => {
       },
       created_at: '2026-08-15T15:00:00.000Z',
       formattedDate: '15 ago. 2026',
+      groupTokens: [{ kind: 'id', key: 'id:100', id: 100, label: 'Grupo San Luis', count: 5 }],
       groupName: 'Grupo San Luis',
       recognitionName: 'Insignia de Madera',
       memberCount: 5
@@ -80,16 +82,18 @@ describe('MergeBatchesModal component', () => {
     expect(screen.getAllByText('Insignia de Madera').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('displays Multigrupo and combined recognition when batches differ', () => {
+  it('displays consolidated group labels and combined recognition when batches differ', () => {
     const differingBatches: BatchMergeOption[] = [
       {
         ...mockBatches[0],
+        groupTokens: [{ kind: 'id', key: 'id:1', id: 1, label: 'Grupo 1', count: 3 }],
         groupName: 'Grupo 1',
         recognitionName: 'Insignia de Madera',
         batch: { ...mockBatches[0].batch, group_id: 1, recognition_type: 'sct-wood-badge' }
       },
       {
         ...mockBatches[1],
+        groupTokens: [{ kind: 'id', key: 'id:2', id: 2, label: 'Grupo 2', count: 5 }],
         groupName: 'Grupo 2',
         recognitionName: 'Go Solar',
         batch: { ...mockBatches[1].batch, group_id: 2, recognition_type: 'sct-go-solar' }
@@ -105,7 +109,7 @@ describe('MergeBatchesModal component', () => {
       />
     );
 
-    expect(screen.getByText('Multigrupo')).toBeInTheDocument();
+    expect(screen.getByText('Grupo 1, Grupo 2')).toBeInTheDocument();
     expect(screen.getByText('Insignia de Madera (combinado)')).toBeInTheDocument();
   });
 

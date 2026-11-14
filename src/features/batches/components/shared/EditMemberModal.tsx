@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
 import { Field } from '../../../../components/Field';
+import { isNoAplicaDistrict } from '../../../../utils/memberHierarchy';
 import { ScoutGroup, ScoutMember, ScoutUnit, Region, District } from '../../types';
 
 export interface EditMemberModalProps {
@@ -28,9 +29,9 @@ interface EditMemberFormProps {
 
 function getFilteredDistricts(districts: District[], regionId?: number): District[] {
   if (!regionId || regionId === 0) {
-    return districts.filter((d) => d.id !== 0);
+    return districts.filter((d) => d.id !== 0 && !isNoAplicaDistrict(d));
   }
-  return districts.filter((d) => d.id !== 0 && d.region_id === regionId);
+  return districts.filter((d) => d.id !== 0 && !isNoAplicaDistrict(d) && d.region_id === regionId);
 }
 
 function getFilteredGroups(groups: ScoutGroup[], districtId?: number): ScoutGroup[] {
@@ -254,18 +255,25 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
                   value={editingMember.region_id ?? 0}
                   onChange={(e) => {
                     const newRegId = Number(e.target.value);
-                    const updated = {
+                    const selectedRegion = regions.find((r) => r.id === newRegId);
+                    const updated: ScoutMember = {
                       ...editingMember,
-                      region_id: newRegId === 0 ? undefined : newRegId
+                      region_id: newRegId,
+                      region_name: newRegId === 0 ? undefined : selectedRegion?.name
                     };
-                    if (newRegId !== 0) {
-                      const isValidDist = districts.some(
-                        (d) => d.id === editingMember.district_id && d.region_id === newRegId
+                    const isValidDist =
+                      newRegId !== 0 &&
+                      districts.some(
+                        (d) =>
+                          d.id === editingMember.district_id &&
+                          d.region_id === newRegId &&
+                          !isNoAplicaDistrict(d)
                       );
-                      if (!isValidDist) {
-                        updated.district_id = undefined;
-                        updated.group_id = 0;
-                      }
+                    if (!isValidDist) {
+                      updated.district_id = 0;
+                      updated.district_name = undefined;
+                      updated.group_id = 0;
+                      updated.group_name = undefined;
                     }
                     setEditingMember(updated);
                   }}
@@ -296,17 +304,26 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
                   value={editingMember.district_id ?? 0}
                   onChange={(e) => {
                     const newDistId = Number(e.target.value);
-                    const updated = {
+                    const selectedDistrict = districts.find((d) => d.id === newDistId);
+                    const updated: ScoutMember = {
                       ...editingMember,
-                      district_id: newDistId === 0 ? undefined : newDistId
+                      district_id: newDistId,
+                      district_name: newDistId === 0 ? undefined : selectedDistrict?.name
                     };
-                    if (newDistId !== 0) {
-                      const isValidGrp = groups.some(
+                    if (newDistId > 0 && selectedDistrict?.region_id) {
+                      updated.region_id = selectedDistrict.region_id;
+                      updated.region_name = regions.find(
+                        (r) => r.id === selectedDistrict.region_id
+                      )?.name;
+                    }
+                    const isValidGrp =
+                      newDistId !== 0 &&
+                      groups.some(
                         (g) => g.id === editingMember.group_id && g.district_id === newDistId
                       );
-                      if (!isValidGrp) {
-                        updated.group_id = 0;
-                      }
+                    if (!isValidGrp) {
+                      updated.group_id = 0;
+                      updated.group_name = undefined;
                     }
                     setEditingMember(updated);
                   }}
@@ -335,10 +352,27 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
                   value={editingMember.group_id ?? 0}
                   onChange={(e) => {
                     const val = Number(e.target.value);
-                    setEditingMember({
+                    const selectedGroup = groups.find((g) => g.id === val);
+                    const updated: ScoutMember = {
                       ...editingMember,
-                      group_id: val
-                    });
+                      group_id: val,
+                      group_name: val === 0 ? undefined : selectedGroup?.name
+                    };
+                    if (val > 0 && selectedGroup) {
+                      const parentDist = districts.find((d) => d.id === selectedGroup.district_id);
+                      const normalizedDistId =
+                        parentDist && !isNoAplicaDistrict(parentDist) ? parentDist.id : 0;
+                      updated.district_id = normalizedDistId;
+                      updated.district_name =
+                        normalizedDistId === 0 ? undefined : parentDist?.name;
+                      if (parentDist?.region_id) {
+                        updated.region_id = parentDist.region_id;
+                        updated.region_name = regions.find(
+                          (r) => r.id === parentDist.region_id
+                        )?.name;
+                      }
+                    }
+                    setEditingMember(updated);
                   }}
                   className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 >

@@ -188,7 +188,7 @@ describe('Step2ReviewConfirm component', () => {
     fireEvent.click(deleteBtn);
 
     await waitFor(() => {
-      expect(api.deleteMember).toHaveBeenCalledWith('99888777', '99888777');
+      expect(api.deleteMember).toHaveBeenCalledWith('99888777', '99888777', 101);
       expect(defaultProps.onMembersUpdated).toHaveBeenCalledWith([mockMembers[0], mockMembers[1]]);
     });
   });

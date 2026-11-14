@@ -44,11 +44,13 @@ import {
   BatchDetailHeader,
   BatchMembersTable,
   BatchSummaryCards,
+  BatchTerritorialCard,
   DeleteBatchModal,
   EditMemberModal,
   MemberQuickViewModal,
   BatchDetailTotals
 } from './detail';
+import { calculateBatchTerritorialBreakdown } from '../utils/batchTerritorial';
 
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -261,6 +263,12 @@ export const BatchDetail: React.FC = () => {
     return resolveBatchReportBuckets(batch, members, { regions, districts, groups });
   }, [batch, members, regions, districts, groups]);
 
+  // Territorial distribution breakdown
+  const territorialBreakdown = useMemo(
+    () => calculateBatchTerritorialBreakdown(members, batch, { regions, districts, groups }),
+    [members, batch, regions, districts, groups]
+  );
+
   // Totals calculations
   const totals: BatchDetailTotals = useMemo(() => {
     return {
@@ -369,6 +377,9 @@ export const BatchDetail: React.FC = () => {
         recognitionTitle={recognitionTitle}
       />
 
+      {/* Card 4: Territorial Distribution */}
+      <BatchTerritorialCard breakdown={territorialBreakdown} />
+
       {/* Members Table Container */}
       <BatchMembersTable
         searchQuery={searchQuery}
@@ -394,11 +405,7 @@ export const BatchDetail: React.FC = () => {
         member={viewingMember}
         onClose={() => setViewingMember(null)}
         groups={groups}
-        batchGroup={
-          batch.group_id
-            ? (groups.find((g) => g.id === batch.group_id)?.name ?? `Grupo ${batch.group_id}`)
-            : (batch.region_id === 0 ? 'No aplica' : 'Multigrupo')
-        }
+        batch={batch}
       />
 
       {/* Modal: Confirmar Eliminación de Lote */}

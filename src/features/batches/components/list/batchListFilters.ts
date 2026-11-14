@@ -1,6 +1,10 @@
 import { ActiveFilterChip, Region, District, ScoutGroup } from '../../types';
 import { RecognitionType } from '../../../recognitions';
 import { getRecognitionName } from '../../api';
+import type {
+  CompletenessStatus,
+  TerritorialToken
+} from '../../utils/batchTerritorial';
 import { FilterType, DateFilterMode, BatchRowData } from './types';
 
 export function formatBatchDate(dateStr: string): string {
@@ -80,16 +84,39 @@ export function matchesDateFilter(createdAt: string, filterValue: string): boole
   return true;
 }
 
-export function matchesRegionFilter(rowRegion: string, filterValue: string): boolean {
-  return rowRegion === filterValue || filterValue === '-';
+function matchesTerritorialTokens(
+  tokens: TerritorialToken[],
+  filterValue: string
+): boolean {
+  return tokens.some(token => token.key === filterValue);
 }
 
-export function matchesDistrictFilter(rowDistrict: string, filterValue: string): boolean {
-  return rowDistrict === filterValue || filterValue === '-';
+export function matchesRegionFilter(
+  tokens: TerritorialToken[],
+  filterValue: string
+): boolean {
+  return matchesTerritorialTokens(tokens, filterValue);
 }
 
-export function matchesGroupFilter(rowGroup: string, filterValue: string): boolean {
-  return rowGroup.toLowerCase().includes(filterValue.toLowerCase());
+export function matchesDistrictFilter(
+  tokens: TerritorialToken[],
+  filterValue: string
+): boolean {
+  return matchesTerritorialTokens(tokens, filterValue);
+}
+
+export function matchesGroupFilter(
+  tokens: TerritorialToken[],
+  filterValue: string
+): boolean {
+  return matchesTerritorialTokens(tokens, filterValue);
+}
+
+export function matchesCompletenessFilter(
+  status: CompletenessStatus,
+  filterValue: string
+): boolean {
+  return status === filterValue;
 }
 
 export function matchesRecognitionFilter(
@@ -101,17 +128,21 @@ export function matchesRecognitionFilter(
 }
 
 export function matchesSingleFilter(row: BatchRowData, filter: ActiveFilterChip): boolean {
+  const rawValue = filter.filterValue ?? filter.value;
+
   switch (filter.type) {
     case 'date':
-      return matchesDateFilter(row.created_at, filter.value);
+      return matchesDateFilter(row.created_at, rawValue);
     case 'region':
-      return matchesRegionFilter(row.regionName, filter.value);
+      return matchesRegionFilter(row.regionTokens, rawValue);
     case 'district':
-      return matchesDistrictFilter(row.districtName, filter.value);
+      return matchesDistrictFilter(row.districtTokens, rawValue);
     case 'group':
-      return matchesGroupFilter(row.groupName, filter.value);
+      return matchesGroupFilter(row.groupTokens, rawValue);
+    case 'completeness':
+      return matchesCompletenessFilter(row.completenessStatus, rawValue);
     case 'recognition':
-      return matchesRecognitionFilter(row.recognitionName, row.recognitionType, filter.value);
+      return matchesRecognitionFilter(row.recognitionName, row.recognitionType, rawValue);
     default:
       return true;
   }
@@ -119,6 +150,17 @@ export function matchesSingleFilter(row: BatchRowData, filter: ActiveFilterChip)
 
 export function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip[]): boolean {
   return activeFilters.every(filter => matchesSingleFilter(row, filter));
+}
+
+function resolveTerritorialDisplayLabel(
+  rawValue: string,
+  items: Array<{ id: number; name: string }>
+): string {
+  if (rawValue === 'nacional') return 'Nacional';
+  if (rawValue === '0') return 'No aplica';
+  if (rawValue === 'no_scout') return 'No scout';
+  const numericKey = rawValue.startsWith('id:') ? rawValue.slice(3) : rawValue;
+  return items.find(item => String(item.id) === numericKey)?.name || rawValue;
 }
 
 export function getFilterLabelAndValue(
@@ -133,18 +175,29 @@ export function getFilterLabelAndValue(
     case 'region':
       return {
         label: 'Región',
-        displayValue: hierarchy.regions.find(r => String(r.id) === filterValue)?.name || filterValue
+        displayValue: resolveTerritorialDisplayLabel(filterValue, hierarchy.regions)
       };
     case 'district':
       return {
         label: 'Distrito',
-        displayValue: hierarchy.districts.find(d => String(d.id) === filterValue)?.name || filterValue
+        displayValue: resolveTerritorialDisplayLabel(filterValue, hierarchy.districts)
       };
     case 'group':
       return {
         label: 'Grupo',
-        displayValue: hierarchy.groups.find(g => String(g.id) === filterValue)?.name || filterValue
+        displayValue: resolveTerritorialDisplayLabel(filterValue, hierarchy.groups)
       };
+    case 'completeness': {
+      const completenessLabels: Record<string, string> = {
+        complete: 'Todos registrados',
+        pending: 'Registros pendientes',
+        empty: 'Sin miembros'
+      };
+      return {
+        label: 'Completitud',
+        displayValue: completenessLabels[filterValue] || filterValue
+      };
+    }
     case 'recognition': {
       const rec = recognitionTypes.find(
         r => r.id === filterValue || r.name.toLowerCase() === filterValue.toLowerCase()

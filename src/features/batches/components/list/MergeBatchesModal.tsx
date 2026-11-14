@@ -4,12 +4,17 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../componen
 import { Button } from '../../../../components/Button';
 import { mergeBatches } from '../../api';
 import { Batch } from '../../types';
+import {
+  consolidateMergedGroupTokens,
+  type TerritorialToken
+} from '../../utils/batchTerritorial';
 
 export interface BatchMergeOption {
   id: number;
   batch: Batch;
   created_at: string;
   formattedDate: string;
+  groupTokens: TerritorialToken[];
   groupName: string;
   recognitionName: string;
   memberCount: number;
@@ -43,10 +48,11 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
   )[0];
   const latestFormattedDate = latestBatch?.formattedDate ?? '-';
 
-  // Group summary preview: if all share the same group, show that group, else 'Multigrupo'
-  const firstGroupId = selectedBatches[0]?.batch.group_id;
-  const allSameGroup = selectedBatches.every(b => b.batch.group_id === firstGroupId);
-  const consolidatedGroupLabel = allSameGroup ? (selectedBatches[0]?.groupName || '-') : 'Multigrupo';
+  // Group summary preview: consolidate all distinct resolved group tokens across selected batches
+  const consolidatedGroupLabel =
+    selectedBatches.length > 0
+      ? consolidateMergedGroupTokens(selectedBatches.map(b => b.groupTokens))
+      : '-';
 
   // Recognition type preview
   const firstRecType = selectedBatches[0]?.batch.recognition_type;

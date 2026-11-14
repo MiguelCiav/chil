@@ -19,7 +19,7 @@ Step views, stepper, Zod schema, tour steps, scraper alert modals, and member pe
 - `wizardSchema.ts:step1DataLoadSchema` requires a non-empty `recognitionType` and at least one numeric `cedula` parsed by `wizardHelpers.ts:parseCedulasFromText`.
 - `WizardStepper.tsx:WizardStepper` only allows backward navigation (`item.step < currentStep`) and disables current/future step buttons.
 - `Step2ReviewConfirm.tsx:Step2ReviewConfirm` and `Step3Review.tsx:Step3Review` auto-assign recognition codes on mount when `codeMode === 'auto'` and any `active` or `exceptional` member lacks a `recognition_code`.
-- `wizardHelpers.ts:saveNoScoutMemberToDb`, `wizardHelpers.ts:saveUnregisteredMemberToDb`, and `wizardHelpers.ts:saveScrapedMemberToDb` return `null` without calling `createMember` if `batchId` is falsy.
+- `wizardHelpers.ts:saveNoScoutMemberToDb`, `wizardHelpers.ts:saveUnregisteredMemberToDb`, and `wizardHelpers.ts:saveScrapedMemberToDb` return `null` without calling `createMember` if `batchId` is falsy, and persist explicit numeric `0` (`?? 0`) for unset `region_id`, `district_id`, and `group_id` fields; `Step2ReviewConfirm.tsx:Step2ReviewConfirm` and `wizardHelpers.ts:syncAndFinalizeStep2Members` pass `batchId` as the 3rd argument to `deleteMember`.
 
 ## Side Effects
 - `Step1DataLoad.tsx:Step1DataLoad` reads uploaded `.csv`/`.txt` files via `FileReader`.

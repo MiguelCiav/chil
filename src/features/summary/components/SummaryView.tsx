@@ -42,6 +42,10 @@ import {
 import { SummaryRowData } from '../types';
 import { exportToExcel } from '../utils/excelExport';
 import { useAuth } from '../../auth';
+import {
+  isNoAplicaDistrict,
+  resolveMemberHierarchy
+} from '../../../utils/memberHierarchy';
 
 function formatBatchDate(dateStr?: string): string {
   if (!dateStr) return 'Fecha no disponible';
@@ -178,23 +182,28 @@ function matchesRecognitionFilter(row: SummaryRowData, selectedRecognition: stri
 
 function matchesHierarchyFilters(
   row: SummaryRowData,
-  filters: Pick<SummaryFilterOptions, 'selectedRegion' | 'selectedDistrict' | 'selectedGroup' | 'regions' | 'districts' | 'groups'>
+  filters: Pick<SummaryFilterOptions, 'selectedRegion' | 'selectedDistrict' | 'selectedGroup'>
 ): boolean {
-  const { selectedRegion, selectedDistrict, selectedGroup, regions, districts, groups } = filters;
+  const { selectedRegion, selectedDistrict, selectedGroup } = filters;
 
-  if (selectedRegion) {
-    const regionObj = regions.find(r => String(r.id) === selectedRegion);
-    if (regionObj && row.regionName !== regionObj.name) return false;
+  if (selectedRegion === 'nacional') {
+    if (!row.isNationalInstitutional) return false;
+  } else if (selectedRegion === '0') {
+    if (row.regionId !== 0 || row.isNationalInstitutional) return false;
+  } else if (selectedRegion) {
+    if (String(row.regionId) !== selectedRegion) return false;
   }
 
-  if (selectedDistrict) {
-    const districtObj = districts.find(d => String(d.id) === selectedDistrict);
-    if (districtObj && row.districtName !== districtObj.name) return false;
+  if (selectedDistrict === '0') {
+    if (row.districtId !== 0) return false;
+  } else if (selectedDistrict) {
+    if (String(row.districtId) !== selectedDistrict) return false;
   }
 
-  if (selectedGroup) {
-    const groupObj = groups.find(g => String(g.id) === selectedGroup);
-    if (groupObj && row.groupName !== groupObj.name) return false;
+  if (selectedGroup === '0') {
+    if (row.groupId !== 0) return false;
+  } else if (selectedGroup) {
+    if (String(row.groupId) !== selectedGroup) return false;
   }
 
   return true;
@@ -289,9 +298,9 @@ function getMemberTypeLabel(memberType: 'young' | 'adult'): 'Joven' | 'Adulto' {
   return memberType === 'young' ? 'Joven' : 'Adulto';
 }
 
-function resolveHierarchyName(id?: number, rawName: string = '-'): string {
-  if (!id || id === 0) return '-';
-  if (rawName.toLowerCase() === 'no aplica') return '-';
+function resolveHierarchyName(id?: number, rawName?: string): string {
+  if (!id || id === 0) return 'No aplica';
+  if (!rawName || rawName.toLowerCase() === 'no aplica') return 'No aplica';
   return rawName;
 }
 
@@ -528,12 +537,16 @@ export const SummaryView: React.FC = () => {
 
   // Master Flat Data Aggregation
   const flatData = useMemo<SummaryRowData[]>(() => {
+    const batchMap = new Map<number, Batch>();
+    batches.forEach(b => batchMap.set(b.id, b));
+
     return members.map((m, idx) => {
-      const batch = batches.find(b => b.id === m.batch_id);
-      const regionObj = regions.find(r => r.id === batch?.region_id);
-      const districtObj = districts.find(d => d.id === batch?.district_id);
-      const effectiveGroupId = m.group_id ?? batch?.group_id;
-      const groupObj = groups.find(g => g.id === effectiveGroupId);
+      const batch = m.batch_id !== undefined ? batchMap.get(m.batch_id) : undefined;
+      const resolved = resolveMemberHierarchy(m, batch, { regions, districts, groups });
+
+      const regionObj = regions.find(r => r.id === resolved.regionId);
+      const districtObj = districts.find(d => d.id === resolved.districtId);
+      const groupObj = groups.find(g => g.id === resolved.groupId);
 
       const recType = batch?.recognition_type;
       const recName = resolveRecognitionName(recType);
@@ -544,9 +557,11 @@ export const SummaryView: React.FC = () => {
       const memberTypeLabel = getMemberTypeLabel(m.member_type);
       const statusLabel = getMemberStatusLabel(m.status);
 
-      const regionName = resolveHierarchyName(batch?.region_id, regionObj?.name);
-      const districtName = resolveHierarchyName(batch?.district_id, districtObj?.name);
-      const groupName = resolveHierarchyName(effectiveGroupId, groupObj?.name);
+      const regionName = resolved.isNationalInstitutional
+        ? 'Nacional'
+        : resolveHierarchyName(resolved.regionId, regionObj?.name);
+      const districtName = resolveHierarchyName(resolved.districtId, districtObj?.name);
+      const groupName = resolveHierarchyName(resolved.groupId, groupObj?.name);
 
       const rawFullName = `${m.first_names ?? ''} ${m.last_names ?? ''}`.trim();
       const fullName = rawFullName.length > 0 ? rawFullName : '-';
@@ -571,6 +586,10 @@ export const SummaryView: React.FC = () => {
         statusLabel,
         exceptionalReason: m.exceptional_reason ?? '',
         recognitionCode: m.recognition_code ?? '-',
+        regionId: resolved.regionId,
+        districtId: resolved.districtId,
+        groupId: resolved.groupId,
+        isNationalInstitutional: resolved.isNationalInstitutional,
         regionName,
         districtName,
         groupName
@@ -580,20 +599,27 @@ export const SummaryView: React.FC = () => {
 
   // Filter options dependent on hierarchy
   const availableDistricts = useMemo(() => {
-    if (!selectedRegion) return districts;
-    return districts.filter(d => String(d.region_id) === selectedRegion);
+    const validDistricts = districts.filter(d => d.id !== 0 && !isNoAplicaDistrict(d));
+    if (!selectedRegion) return validDistricts;
+    if (selectedRegion === 'nacional' || selectedRegion === '0') return [];
+    return validDistricts.filter(d => String(d.region_id) === selectedRegion);
   }, [districts, selectedRegion]);
 
   const availableGroups = useMemo(() => {
+    const validGroups = groups.filter(g => g.id !== 0);
+    if (selectedDistrict === '0') return [];
     if (selectedDistrict) {
-      return groups.filter(g => String(g.district_id) === selectedDistrict);
+      return validGroups.filter(g => String(g.district_id) === selectedDistrict);
     }
+    if (selectedRegion === 'nacional' || selectedRegion === '0') return [];
     if (selectedRegion) {
-      const regionDistricts = districts.filter(d => String(d.region_id) === selectedRegion);
+      const regionDistricts = districts.filter(
+        d => d.id !== 0 && !isNoAplicaDistrict(d) && String(d.region_id) === selectedRegion
+      );
       const regionDistrictIds = new Set(regionDistricts.map(d => d.id));
-      return groups.filter(g => regionDistrictIds.has(g.district_id));
+      return validGroups.filter(g => regionDistrictIds.has(g.district_id));
     }
-    return groups;
+    return validGroups;
   }, [groups, districts, selectedRegion, selectedDistrict]);
 
   // Apply All Filters
@@ -823,9 +849,13 @@ export const SummaryView: React.FC = () => {
               className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
             >
               <option value="">Todas las regiones</option>
-              {regions.map(r => (
-                <option key={r.id} value={String(r.id)}>{r.name}</option>
-              ))}
+              <option value="nacional">Nacional</option>
+              <option value="0">No aplica</option>
+              {regions
+                .filter(r => r.id !== 0)
+                .map(r => (
+                  <option key={r.id} value={String(r.id)}>{r.name}</option>
+                ))}
             </select>
           </div>
 
@@ -848,6 +878,7 @@ export const SummaryView: React.FC = () => {
               {availableDistricts.map(d => (
                 <option key={d.id} value={String(d.id)}>{d.name}</option>
               ))}
+              {selectedRegion !== '' && <option value="0">No aplica</option>}
             </select>
           </div>
 
@@ -867,6 +898,9 @@ export const SummaryView: React.FC = () => {
               {availableGroups.map(g => (
                 <option key={g.id} value={String(g.id)}>{g.name}</option>
               ))}
+              {(selectedDistrict !== '' || selectedRegion !== '') && (
+                <option value="0">No aplica</option>
+              )}
             </select>
           </div>
 

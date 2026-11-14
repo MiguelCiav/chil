@@ -7,26 +7,101 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { getRecognitionBadgeStyle } from '../../api';
+import type {
+  CompletenessStatus,
+  TerritorialToken
+} from '../../utils/batchTerritorial';
 import {
   BatchRowData,
   BatchActionsCellProps,
   BatchListColumnsParams
 } from './types';
 
+const MAX_VISIBLE_TERRITORIAL_PILLS = 3;
+
+function getTerritorialTokenPillClass(token: TerritorialToken, isGroupColumn = false): string {
+  if (token.kind === 'national') {
+    return 'bg-indigo-50 text-indigo-700 border border-indigo-200';
+  }
+  if (token.kind === 'no_scout') {
+    return 'bg-amber-50 text-amber-700 border border-amber-200';
+  }
+  if (token.kind === 'none') {
+    return 'bg-gray-100 text-neutral/60 border border-gray-200';
+  }
+  return isGroupColumn
+    ? 'bg-primary/10 text-primary border border-primary/20 font-semibold'
+    : 'bg-slate-100 text-neutral/85 border border-slate-200';
+}
+
+export function renderTerritorialTokensCell(
+  tokens: TerritorialToken[],
+  isGroupColumn = false
+) {
+  const visible = tokens.slice(0, MAX_VISIBLE_TERRITORIAL_PILLS);
+  const remainingCount = tokens.length - visible.length;
+
+  return (
+    <div className="flex flex-wrap gap-1 whitespace-normal max-w-xs">
+      {visible.map((token) => (
+        <span
+          key={token.key}
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTerritorialTokenPillClass(
+            token,
+            isGroupColumn
+          )}`}
+        >
+          {token.label}
+        </span>
+      ))}
+      {remainingCount > 0 && (
+        <span
+          title={tokens
+            .slice(MAX_VISIBLE_TERRITORIAL_PILLS)
+            .map((t) => t.label)
+            .join(', ')}
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-neutral/70 border border-gray-200"
+        >
+          +{remainingCount}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function renderBatchDateCell(info: { getValue: () => unknown }) {
   return <span className="font-medium text-neutral">{info.getValue() as string}</span>;
 }
 
 export function renderBatchRegionCell(info: { getValue: () => unknown }) {
-  return <span className="font-normal text-neutral/80">{info.getValue() as string}</span>;
+  return renderTerritorialTokensCell(info.getValue() as TerritorialToken[], false);
 }
 
 export function renderBatchDistrictCell(info: { getValue: () => unknown }) {
-  return <span className="font-normal text-neutral/80">{info.getValue() as string}</span>;
+  return renderTerritorialTokensCell(info.getValue() as TerritorialToken[], false);
 }
 
 export function renderBatchGroupCell(info: { getValue: () => unknown }) {
-  return <span className="font-semibold text-neutral">{info.getValue() as string}</span>;
+  return renderTerritorialTokensCell(info.getValue() as TerritorialToken[], true);
+}
+
+export function renderBatchCompletenessCell(info: {
+  row: { original: BatchRowData };
+}) {
+  const { completenessStatus, completenessLabel } = info.row.original;
+  const styleByStatus: Record<CompletenessStatus, string> = {
+    complete: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    pending: 'bg-amber-50 text-amber-700 border border-amber-200',
+    empty: 'bg-gray-100 text-neutral/60 border border-gray-200'
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${styleByStatus[completenessStatus]}`}
+    >
+      {completenessLabel}
+    </span>
+  );
 }
 
 export function renderBatchRecognitionCell(info: { getValue: () => unknown }) {
@@ -192,17 +267,17 @@ export function createBatchListColumns(params: BatchListColumnsParams): ColumnDe
       cell: renderBatchDateCell
     },
     {
-      accessorKey: 'regionName',
+      accessorKey: 'regionTokens',
       header: 'REGIÓN',
       cell: renderBatchRegionCell
     },
     {
-      accessorKey: 'districtName',
+      accessorKey: 'districtTokens',
       header: 'DISTRITO',
       cell: renderBatchDistrictCell
     },
     {
-      accessorKey: 'groupName',
+      accessorKey: 'groupTokens',
       header: 'GRUPO',
       cell: renderBatchGroupCell
     },
@@ -215,6 +290,12 @@ export function createBatchListColumns(params: BatchListColumnsParams): ColumnDe
       accessorKey: 'memberCount',
       header: 'CANTIDAD',
       cell: renderBatchMembersCell
+    },
+    {
+      id: 'completeness',
+      accessorKey: 'completenessLabel',
+      header: 'COMPLETITUD',
+      cell: renderBatchCompletenessCell
     },
     {
       id: 'actions',

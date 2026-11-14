@@ -8,6 +8,7 @@ Central index for Chil's architecture design documents, operational runbooks, an
 | :--- | :--- | :--- | :--- | :--- |
 | [batch-wizard-cleanup-and-scraper-session.md](./batch-wizard-cleanup-and-scraper-session.md) | `Implemented` | 2026-11-12 | Miguel Ciavato | Wizard UI cleanup (`Step1DataLoad`, `Step2ReviewConfirm`, uniform `SuccessPage` completion), shared `ScraperSettingsModal` / `ScraperSettingsContext`, `AES-256-GCM` server-encrypted Impeesa session persistence (`scraper_sessions/{uid}` blocked on client via `firestore.rules`), and dual-transport client/backend support (`scraper-api/` on Vercel + `functions/` on Firebase). |
 | [grouped-batch-pdf-report.md](./grouped-batch-pdf-report.md) | `Implemented` | 2026-11-13 | Miguel Ciavato | Grouped PDF "Lista" report (`batchReports.ts`) with continuous Scout group sections (`District` + `Region`), `"Miembros no scout"` / `"Sin grupo asignado"` buckets, uniform top header (`Alcance`), `Emisión Excepcional` summary metrics, `EditMemberModal` cleared-group `group_id: 0` fix, and `"Por grupo"` export menu on `BatchDetailHeader`. |
+| [multi-territory-batch-attribution.md](./multi-territory-batch-attribution.md) | `Implemented` | 2026-11-13 | Miguel Ciavato | Shared member-first hierarchy resolver (`src/utils/memberHierarchy.ts`), `BatchList` read-time multi-badges (`<= 3 + +N`) + `"Completitud"` + exact token filters, `SummaryView`/`Statistics` decoupling (`"Nacional"`, member-scoped KPIs), and `BatchDetail` 4th territorial breakdown card (`BatchTerritorialCard`). |
 
 ## Operational Runbooks (`docs/`)
 

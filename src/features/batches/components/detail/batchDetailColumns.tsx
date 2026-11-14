@@ -9,6 +9,7 @@ import {
   ScoutUnit,
   getUnitBadge
 } from '../../types';
+import { resolveMemberHierarchy } from '../../../../utils/memberHierarchy';
 import { MemberActionsCellProps } from './types';
 
 export function renderMemberIdentityCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
@@ -185,14 +186,18 @@ export function createBatchDetailColumns(
       id: 'group',
       header: 'GRUPO',
       cell: (info) => {
-        const memberGroupId = info.row.original.group_id ?? batch?.group_id;
-        if (!memberGroupId || memberGroupId === 0) {
+        const groupId = resolveMemberHierarchy(info.row.original, batch ?? undefined, {
+          regions: [],
+          districts: [],
+          groups
+        }).groupId;
+        if (groupId === 0) {
           return <span className="text-xs sm:text-sm text-neutral/50 font-medium">No aplica</span>;
         }
-        const found = groups.find((g) => g.id === memberGroupId);
+        const found = groups.find((g) => g.id === groupId);
         return (
           <span className="text-xs sm:text-sm font-medium text-neutral/80">
-            {found?.name ?? `Grupo ${memberGroupId}`}
+            {found?.name ?? `Grupo ${groupId}`}
           </span>
         );
       }

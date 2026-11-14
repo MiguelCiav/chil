@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
+import { consolidateMergedGroupTokens } from '../../utils/batchTerritorial';
 import { BatchRowData } from '../list/types';
 
 export interface DeleteBatchModalProps {
@@ -23,10 +24,13 @@ export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
   batchComment
 }) => {
   const resolvedId = batch?.id ?? batchId;
+  const groupDetail = batch
+    ? consolidateMergedGroupTokens([batch.groupTokens])
+    : undefined;
   const resolvedDetail = batch
-    ? batch.groupName && batch.groupName !== '-'
-      ? batch.groupName
-      : undefined
+    ? groupDetail && groupDetail !== 'No aplica' && groupDetail !== '-'
+      ? groupDetail
+      : batch.batch.comment
     : batchComment;
 
   return (
