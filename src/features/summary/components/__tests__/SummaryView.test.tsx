@@ -150,8 +150,8 @@ describe('SummaryView component', () => {
     expect(
       screen.getByText('Consulta y exportación consolidada de todos los reconocimientos emitidos.')
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Descargar Excel/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Descargar todo/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Exportar todo/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Exportar filtrados/i })).not.toBeInTheDocument();
 
     // 12 Table Columns
     await waitFor(() => {
@@ -409,7 +409,7 @@ describe('SummaryView component', () => {
     expect(screen.getByText('V-2001')).toBeInTheDocument();
   });
 
-  it('calls exportToExcel with filtered rows when clicking Descargar Excel button', async () => {
+  it('calls exportToExcel with filtered rows when clicking Exportar filtrados button', async () => {
     render(
       <MemoryRouter>
         <SummaryView />
@@ -424,8 +424,8 @@ describe('SummaryView component', () => {
     const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
     fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
 
-    // Click Export Excel (now showing Descargar filtrados)
-    const exportBtn = screen.getByRole('button', { name: /Descargar Excel/i });
+    // Click Exportar filtrados
+    const exportBtn = screen.getByRole('button', { name: /Exportar filtrados/i });
     fireEvent.click(exportBtn);
 
     expect(excelExportModule.exportToExcel).toHaveBeenCalledTimes(1);
@@ -439,7 +439,7 @@ describe('SummaryView component', () => {
     expect(screen.getByText(/¡Registros exportados exitosamente \(3\)!/i)).toBeInTheDocument();
   });
 
-  it('calls exportToExcel with ALL rows when clicking Descargar todo button even when filters are active', async () => {
+  it('calls exportToExcel with ALL rows when clicking Exportar todo button even when filters are active', async () => {
     render(
       <MemoryRouter>
         <SummaryView />
@@ -454,8 +454,8 @@ describe('SummaryView component', () => {
     const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
     fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
 
-    // Click "Descargar todo"
-    const exportAllBtn = screen.getByRole('button', { name: /Descargar todo/i });
+    // Click "Exportar todo"
+    const exportAllBtn = screen.getByRole('button', { name: /Exportar todo/i });
     fireEvent.click(exportAllBtn);
 
     expect(excelExportModule.exportToExcel).toHaveBeenCalledTimes(1);

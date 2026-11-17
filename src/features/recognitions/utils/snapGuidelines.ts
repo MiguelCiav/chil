@@ -19,6 +19,8 @@ export interface CalculateSnapParams {
   fieldId: string;
   fields: RecognitionFieldConfig[];
   threshold?: number; // default: 1.5%
+  thresholdX?: number; // optional horizontal override in percentage
+  thresholdY?: number; // optional vertical override in percentage
   fieldWidths?: Record<string, number>; // optional width in % per fieldId for optical edge snapping
 }
 
@@ -79,6 +81,8 @@ export function calculateSnapGuidelines({
   fieldId,
   fields,
   threshold = 1.5,
+  thresholdX = threshold,
+  thresholdY = threshold,
   fieldWidths
 }: CalculateSnapParams): SnapResult {
   let snappedX = currentX;
@@ -91,13 +95,13 @@ export function calculateSnapGuidelines({
   const draggedEdges = getFieldHorizontalEdges(currentX, draggedAlign, draggedWidth);
 
   // Check X alignment (vertical guide line)
-  let bestDeltaX = threshold + 1;
+  let bestDeltaX = thresholdX + 1;
   let chosenGuideX: AlignmentGuide | null = null;
   let chosenSnapX: number | null = null;
 
   // 1. Check Canvas Center X = 50%
   const deltaCanvasCenterX = Math.abs(draggedEdges.center - 50);
-  if (deltaCanvasCenterX <= threshold) {
+  if (deltaCanvasCenterX <= thresholdX) {
     bestDeltaX = deltaCanvasCenterX;
     chosenSnapX = Math.round((currentX + (50 - draggedEdges.center)) * 100) / 100;
     chosenGuideX = {
@@ -114,7 +118,7 @@ export function calculateSnapGuidelines({
 
     if (draggedWidth === 0 && otherWidth === 0) {
       const delta = Math.abs(currentX - other.x);
-      if (delta <= threshold && delta < bestDeltaX) {
+      if (delta <= thresholdX && delta < bestDeltaX) {
         bestDeltaX = delta;
         chosenSnapX = other.x;
         chosenGuideX = {
@@ -132,7 +136,7 @@ export function calculateSnapGuidelines({
       for (const dEdge of draggedCandidates) {
         for (const tEdge of targetCandidates) {
           const delta = Math.abs(dEdge - tEdge);
-          if (delta <= threshold && delta < bestDeltaX) {
+          if (delta <= thresholdX && delta < bestDeltaX) {
             bestDeltaX = delta;
             chosenSnapX = Math.round((currentX + (tEdge - dEdge)) * 100) / 100;
             chosenGuideX = {
@@ -153,13 +157,13 @@ export function calculateSnapGuidelines({
   }
 
   // Check Y alignment (horizontal guide line)
-  let bestDeltaY = threshold + 1;
+  let bestDeltaY = thresholdY + 1;
   let chosenGuideY: AlignmentGuide | null = null;
   let chosenSnapY: number | null = null;
 
   // 1. Check Canvas Center Y = 50%
   const deltaCanvasCenterY = Math.abs(currentY - 50);
-  if (deltaCanvasCenterY <= threshold) {
+  if (deltaCanvasCenterY <= thresholdY) {
     bestDeltaY = deltaCanvasCenterY;
     chosenSnapY = 50;
     chosenGuideY = {
@@ -172,7 +176,7 @@ export function calculateSnapGuidelines({
   // 2. Check other fields for Y alignment
   for (const other of otherFields) {
     const delta = Math.abs(currentY - other.y);
-    if (delta <= threshold && delta < bestDeltaY) {
+    if (delta <= thresholdY && delta < bestDeltaY) {
       bestDeltaY = delta;
       chosenSnapY = other.y;
       chosenGuideY = {

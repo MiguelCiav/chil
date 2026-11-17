@@ -238,4 +238,47 @@ describe('useDesignerReducer hook', () => {
     expect(custom.aspect_ratio).toBeCloseTo(1600 / 1200, 4);
     expect(custom.fields).toHaveLength(2);
   });
+
+  it('supports transient drag updates and single-entry commitFieldMove undo/redo', () => {
+    const { result } = renderHook(() =>
+      useDesignerReducer({
+        ...DEFAULT_CERTIFICATE_TEMPLATE,
+        fields: [buildDefaultField(AVAILABLE_TEMPLATE_FIELDS[0])]
+      })
+    );
+
+    const fieldId = result.current.template.fields[0].id;
+    const initialX = result.current.template.fields[0].x;
+    const initialY = result.current.template.fields[0].y;
+
+    act(() => {
+      result.current.moveFieldCoordinatesTransient(fieldId, 52, 44);
+      result.current.moveFieldCoordinatesTransient(fieldId, 60, 48);
+      result.current.moveFieldCoordinatesTransient(fieldId, 72, 55);
+    });
+
+    expect(result.current.template.fields[0].x).toBe(72);
+    expect(result.current.template.fields[0].y).toBe(55);
+    expect(result.current.past).toHaveLength(0);
+
+    act(() => {
+      result.current.commitFieldMove(fieldId, initialX, initialY, 72, 55);
+    });
+
+    expect(result.current.past).toHaveLength(1);
+    expect(result.current.past[0].fields[0].x).toBe(initialX);
+    expect(result.current.past[0].fields[0].y).toBe(initialY);
+
+    act(() => {
+      result.current.undo();
+    });
+    expect(result.current.template.fields[0].x).toBe(initialX);
+    expect(result.current.template.fields[0].y).toBe(initialY);
+
+    act(() => {
+      result.current.redo();
+    });
+    expect(result.current.template.fields[0].x).toBe(72);
+    expect(result.current.template.fields[0].y).toBe(55);
+  });
 });

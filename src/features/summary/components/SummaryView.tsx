@@ -762,27 +762,28 @@ export const SummaryView: React.FC = () => {
         <div className="flex items-center gap-3">
           <Button
             type="button"
-            variant="outline"
+            variant={hasActiveFilters ? 'outline' : 'primary'}
             onClick={handleExportAll}
             disabled={flatData.length === 0}
             className="whitespace-nowrap"
-            aria-label="Descargar todo"
+            aria-label="Exportar todo"
           >
             <Download className="w-4 h-4" />
-            <span>Descargar todo</span>
+            <span>Exportar todo</span>
           </Button>
-          <Button
-            type="button"
-            variant="primary"
-            onClick={handleExport}
-            disabled={filteredData.length === 0}
-            className="whitespace-nowrap"
-            aria-label="Descargar Excel"
-          >
-            <Download className="w-4 h-4" />
-            <span>{hasActiveFilters ? 'Descargar filtrados' : 'Descargar Excel'}</span>
-
-          </Button>
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleExport}
+              disabled={filteredData.length === 0}
+              className="whitespace-nowrap"
+              aria-label="Exportar filtrados"
+            >
+              <Download className="w-4 h-4" />
+              <span>Exportar filtrados</span>
+            </Button>
+          )}
         </div>
       </div>
 

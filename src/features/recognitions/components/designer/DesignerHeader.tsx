@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Save, Upload, Eye, Edit3, Undo2, Redo2 } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Eye, Edit3, Undo2, Redo2, Magnet } from 'lucide-react';
 import { Button } from '../../../../components/Button';
 import { WalkthroughHelpButton } from '../../../../components/walkthrough';
 
@@ -11,8 +11,10 @@ export interface DesignerHeaderProps {
   hasBackground: boolean;
   canUndo?: boolean;
   canRedo?: boolean;
+  isSnapEnabled?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
+  onToggleSnap?: (enabled: boolean) => void;
   onTogglePreview: (preview: boolean) => void;
   onUploadClick: () => void;
   onSave: () => void;
@@ -21,7 +23,7 @@ export interface DesignerHeaderProps {
 }
 
 function getUploadButtonText(isUploadingBg: boolean, hasBackground: boolean): string {
-  if (isUploadingBg) return 'Subiendo...';
+  if (isUploadingBg) return 'Procesando...';
   if (hasBackground) return 'Cambiar Fondo';
   return 'Subir Fondo';
 }
@@ -34,8 +36,10 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
   hasBackground,
   canUndo = false,
   canRedo = false,
+  isSnapEnabled = true,
   onUndo,
   onRedo,
+  onToggleSnap,
   onTogglePreview,
   onUploadClick,
   onSave,
@@ -95,6 +99,30 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
             <Redo2 className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Snap-to-Guides Toggle */}
+        {onToggleSnap && (
+          <button
+            type="button"
+            onClick={() => onToggleSnap(!isSnapEnabled)}
+            disabled={isPreviewMode}
+            aria-label="Ajuste automático a guías"
+            aria-pressed={isSnapEnabled}
+            title={
+              isSnapEnabled
+                ? 'Ajuste a guías activo (mantén Alt para mover libremente)'
+                : 'Ajuste a guías desactivado (movimiento libre)'
+            }
+            className={`inline-flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              isSnapEnabled
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                : 'bg-gray-100 text-neutral/70 border-gray-200 hover:bg-gray-200/70'
+            }`}
+          >
+            <Magnet className="w-4 h-4" />
+            <span className="hidden sm:inline">Guías</span>
+          </button>
+        )}
 
         {/* Mode Switcher */}
         <div

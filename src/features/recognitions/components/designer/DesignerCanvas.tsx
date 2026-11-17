@@ -14,6 +14,7 @@ export interface DesignerCanvasProps {
   canvasRef: React.RefObject<HTMLDivElement | null>;
   template: CertificateTemplate;
   selectedFieldId: string | null;
+  draggingFieldId?: string | null;
   isPreviewMode: boolean;
   fontScale: number;
   activeGuides?: AlignmentGuide[];
@@ -22,6 +23,7 @@ export interface DesignerCanvasProps {
   onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerDownField: (e: React.PointerEvent<HTMLDivElement>, fieldId: string) => void;
   onSelectField: (fieldId: string) => void;
+  onDeselectField?: () => void;
   onUpdateFieldCoordinates?: (fieldId: string, x: number, y: number) => void;
   onNudgeField?: (fieldId: string, deltaX: number, deltaY: number) => void;
 }
@@ -30,6 +32,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
   canvasRef,
   template,
   selectedFieldId,
+  draggingFieldId = null,
   isPreviewMode,
   fontScale,
   activeGuides = [],
@@ -38,6 +41,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
   onPointerUp,
   onPointerDownField,
   onSelectField,
+  onDeselectField,
   onUpdateFieldCoordinates,
   onNudgeField
 }) => {
@@ -59,9 +63,16 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
         {/* The Dynamic Canvas Box */}
         <div
           ref={canvasRef}
+          onPointerDown={() => {
+            if (!isPreviewMode && onDeselectField) {
+              onDeselectField();
+            }
+          }}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          className="relative w-full max-w-full bg-white rounded-2xl overflow-hidden border border-gray-300 select-none transition-all"
+          className={`relative w-full max-w-full bg-white rounded-2xl overflow-hidden border border-gray-300 select-none touch-none ${
+            draggingFieldId ? 'cursor-grabbing' : ''
+          }`}
           style={{
             aspectRatio: canvasAspectRatioStyle
           }}
@@ -117,6 +128,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
                 key={field.id}
                 field={field}
                 isSelected={isSelected}
+                isDragging={!isPreviewMode && draggingFieldId === field.id}
                 isPreviewMode={isPreviewMode}
                 fontScale={fontScale}
                 displayText={displayText}
@@ -136,7 +148,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
         <div className="flex flex-wrap items-center justify-between w-full text-xs text-neutral/50 px-2 pt-4 gap-2">
           <span className="flex items-center gap-1.5">
             <Move className="w-3.5 h-3.5 text-primary" />
-            <span>Arrastre los campos para ajustar sus coordenadas libremente</span>
+            <span>Arrastra los campos libremente (mantén Alt para ignorar las guías) o usa las flechas para ajustar</span>
           </span>
           <span className="font-mono text-[11px]">{formatBadgeText}</span>
         </div>

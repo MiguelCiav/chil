@@ -51,8 +51,9 @@ function calculateTrendBarMetrics(params: TrendBarMetricsParams): TrendBarMetric
 
   const slotX = paddingLeft + idx * slotWidth;
   const xCenter = slotX + slotWidth / 2;
-  const singleBarWidth = Math.max(slotWidth * 0.55, 14);
-  const dualBarWidth = Math.max((slotWidth - 8) / 2, 7);
+  const slotPadding = Math.min(slotWidth * 0.24, 15);
+  const singleBarWidth = Math.min(Math.max(slotWidth * 0.46, 14), 26);
+  const dualBarWidth = Math.min(Math.max((slotWidth - slotPadding * 2 - 3) / 2, 7), 15);
 
   const currentBarH = maxVal > 0 ? (currentCount / maxVal) * chartHeight : 0;
   const prevBarH = maxVal > 0 ? (previousCount / maxVal) * chartHeight : 0;
@@ -224,14 +225,27 @@ const MonthlyTrendDualBar: React.FC<MonthlyTrendDualBarProps> = ({
       role="graphics-symbol"
       aria-label={`${item.label}: ${item.currentCount} (${displayYear}) vs ${item.previousCount} (${prevYear})`}
     >
+      {/* Subtle vertical divider between months */}
+      {idx > 0 && (
+        <line
+          x1={metrics.slotX}
+          y1={paddingTop}
+          x2={metrics.slotX}
+          y2={paddingTop + chartHeight}
+          stroke="#e2e8f0"
+          strokeWidth="1"
+          strokeDasharray="3 3"
+        />
+      )}
+
       {/* Background hover column highlight */}
       <rect
-        x={metrics.slotX + 1}
+        x={metrics.slotX + 3}
         y={paddingTop}
-        width={metrics.slotWidth - 2}
+        width={Math.max(metrics.slotWidth - 6, 4)}
         height={chartHeight}
-        fill={isHovered ? '#f8fafc' : 'transparent'}
-        rx={6}
+        fill={isHovered ? '#f1f5f9' : 'transparent'}
+        rx={8}
       />
 
       {/* Current year bar */}
@@ -282,12 +296,27 @@ const MonthlyTrendDualBar: React.FC<MonthlyTrendDualBarProps> = ({
           x={metrics.xBarCurr + metrics.dualBarWidth / 2}
           y={metrics.yBarCurr - 4}
           textAnchor="middle"
-          fontSize="9"
+          fontSize="9.5"
           fill={textValueFill}
           fontWeight="700"
           fontFamily="sans-serif"
         >
           {item.currentCount}
+        </text>
+      )}
+
+      {/* Value above previous bar on hover */}
+      {isHovered && item.previousCount > 0 && (
+        <text
+          x={metrics.xBarPrev + metrics.dualBarWidth / 2}
+          y={metrics.yBarPrev - 4}
+          textAnchor="middle"
+          fontSize="8.5"
+          fill="#64748b"
+          fontWeight="700"
+          fontFamily="sans-serif"
+        >
+          {item.previousCount}
         </text>
       )}
 
@@ -503,11 +532,11 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
 
   const maxVal = computeMaxMonthlyValue(data, yoy, hasYoY);
 
-  const svgWidth = 600;
-  const svgHeight = 220;
-  const paddingLeft = 36;
+  const svgWidth = 760;
+  const svgHeight = 232;
+  const paddingLeft = 38;
   const paddingRight = 16;
-  const paddingTop = 32;
+  const paddingTop = 34;
   const paddingBottom = 32;
 
   const chartWidth = svgWidth - paddingLeft - paddingRight;

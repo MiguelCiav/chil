@@ -548,6 +548,109 @@ describe('certificatePdfGenerator service', () => {
       );
     });
 
+    it('preserves exact aspect ratios and (x, y) mm placement parity for PDF-converted templates', () => {
+      const variants = [
+        {
+          label: 'A4 landscape',
+          page_width: 842,
+          page_height: 595,
+          aspect_ratio: 1.414,
+          orientation: 'landscape' as const,
+          expectedWidth: 297,
+          expectedHeight: 210.04,
+          fieldX: 25,
+          fieldY: 40
+        },
+        {
+          label: 'US Letter portrait',
+          page_width: 612,
+          page_height: 792,
+          aspect_ratio: 0.773,
+          orientation: 'portrait' as const,
+          expectedWidth: 229.58,
+          expectedHeight: 297,
+          fieldX: 50,
+          fieldY: 33.3
+        },
+        {
+          label: '1:1 square',
+          page_width: 800,
+          page_height: 800,
+          aspect_ratio: 1,
+          orientation: 'landscape' as const,
+          expectedWidth: 297,
+          expectedHeight: 297,
+          fieldX: 75,
+          fieldY: 60
+        },
+        {
+          label: '9:16 portrait',
+          page_width: 540,
+          page_height: 960,
+          aspect_ratio: 0.563,
+          orientation: 'portrait' as const,
+          expectedWidth: 167.21,
+          expectedHeight: 297,
+          fieldX: 12.5,
+          fieldY: 80
+        }
+      ];
+
+      for (const v of variants) {
+        vi.clearAllMocks();
+        const template: CertificateTemplate = {
+          background_url: 'data:image/jpeg;base64,pdfconverted',
+          page_width: v.page_width,
+          page_height: v.page_height,
+          aspect_ratio: v.aspect_ratio,
+          orientation: v.orientation,
+          fields: [
+            {
+              id: 'field-name',
+              field_key: 'full_name',
+              label: 'Nombre y Apellido',
+              x: v.fieldX,
+              y: v.fieldY,
+              font_family: 'helvetica',
+              font_size: 20,
+              font_weight: 'bold',
+              color: '#1b7a37',
+              align: 'center'
+            }
+          ]
+        };
+
+        const dims = getNormalizedPageDimensions(template);
+        expect(dims.width).toBe(v.expectedWidth);
+        expect(dims.height).toBe(v.expectedHeight);
+        expect(dims.width / dims.height).toBeCloseTo(v.aspect_ratio, 2);
+
+        renderCertificatePage(mockDocInstance as unknown as jsPDF, {
+          member: mockActiveMember,
+          batch: mockBatch,
+          recognition: { ...mockRecognition, template },
+          hierarchy: mockHierarchy,
+          template
+        });
+
+        expect(mockDocInstance.addImage).toHaveBeenCalledWith(
+          template.background_url,
+          'JPEG',
+          0,
+          0,
+          v.expectedWidth,
+          v.expectedHeight,
+          CERTIFICATE_BG_IMAGE_ALIAS
+        );
+        expect(mockDocInstance.text).toHaveBeenCalledWith(
+          'Carlos Eduardo Mendoza',
+          Math.round((v.fieldX / 100) * v.expectedWidth * 100) / 100,
+          Math.round((v.fieldY / 100) * v.expectedHeight * 100) / 100,
+          { align: 'center', baseline: 'middle' }
+        );
+      }
+    });
+
     it('fetches hierarchy and recognition from Firestore if not provided in arguments', async () => {
       // Mock getHierarchyData (3 Firestore getDocs)
       vi.mocked(firestore.getDocs)

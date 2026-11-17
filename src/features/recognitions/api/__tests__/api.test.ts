@@ -9,10 +9,14 @@ import {
   saveCertificateTemplate,
   processBackgroundImageFile,
   generateRecognitionId,
-  PDF_UPLOAD_NOT_SUPPORTED_MESSAGE,
+  ENCRYPTED_PDF_NOT_SUPPORTED_MESSAGE,
+  INVALID_PDF_MESSAGE,
+  EMPTY_PDF_MESSAGE,
+  BACKGROUND_SIZE_LIMIT_EXCEEDED_MESSAGE,
   INVALID_IMAGE_FORMAT_MESSAGE,
   MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH,
-  MAX_FIRESTORE_TEMPLATE_BYTES
+  MAX_FIRESTORE_TEMPLATE_BYTES,
+  PdfPageRenderer
 } from '../index';
 import { CertificateTemplate } from '../../types';
 
@@ -323,14 +327,334 @@ describe('Recognition Types API Layer', () => {
   });
 
   describe('processBackgroundImageFile', () => {
-    it('rejects application/pdf files with explicit validation error message', async () => {
+    function spyOnMockCanvasFactory(options: {
+      alpha?: number;
+      toDataURL?: (canvas: { width: number; height: number }, type: string, quality?: number) => string;
+    }) {
+      const originalCreateElement = document.createElement.bind(document);
+      const createdCanvases: Array<{
+        width: number;
+        height: number;
+        fillRect: ReturnType<typeof vi.fn>;
+        drawImage: ReturnType<typeof vi.fn>;
+      }> = [];
+
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          const fillRect = vi.fn();
+          const drawImage = vi.fn();
+          const canvasObj = {
+            width: 0,
+            height: 0,
+            fillRect,
+            drawImage,
+            getContext: vi.fn(() => ({
+              fillStyle: '',
+              fillRect,
+              drawImage,
+              getImageData: vi.fn(() => ({
+                data: new Uint8ClampedArray([255, 255, 255, options.alpha ?? 255])
+              }))
+            })),
+            toDataURL: vi.fn((type: string, quality?: number) => {
+              if (options.toDataURL) {
+                return options.toDataURL(canvasObj, type, quality);
+              }
+              return `data:${type};base64,mockcanvasdata`;
+            })
+          };
+          createdCanvases.push(canvasObj);
+          return canvasObj as unknown as HTMLCanvasElement;
+        }
+        return originalCreateElement(tagName);
+      });
+
+      return createdCanvases;
+    }
+
+    it('converts single-page A4 landscape PDF onto white JPEG preserving proportions', async () => {
       const mockFile = new File(['%PDF-1.4 mock content'], 'certificate.pdf', {
         type: 'application/pdf'
       });
 
-      await expect(processBackgroundImageFile(mockFile)).rejects.toThrow(
-        PDF_UPLOAD_NOT_SUPPORTED_MESSAGE
+      const fillRect = vi.fn();
+      const canvasEl = {
+        width: 1527,
+        height: 1080,
+        getContext: vi.fn(),
+        toDataURL: vi.fn(() => 'data:image/jpeg;base64,pdfpage1')
+      };
+      const ctx = {
+        fillStyle: '',
+        fillRect,
+        drawImage: vi.fn(),
+        getImageData: vi.fn()
+      } as unknown as CanvasRenderingContext2D;
+
+      const pdfRenderer: PdfPageRenderer = vi.fn(async () => ({
+        canvas: canvasEl as unknown as HTMLCanvasElement,
+        ctx,
+        naturalWidth: 842,
+        naturalHeight: 595,
+        exactRatio: 841.89 / 595.28,
+        pageCount: 1
+      }));
+
+      const result = await processBackgroundImageFile(mockFile, 1920, 1080, { pdfRenderer });
+
+      expect(pdfRenderer).toHaveBeenCalledWith(mockFile, 1920, 1080);
+      expect(result.dataUrl).toBe('data:image/jpeg;base64,pdfpage1');
+      expect(result.sourceType).toBe('pdf');
+      expect(result.pageCount).toBe(1);
+      expect(result.wasCompressedHeavily).toBe(false);
+      expect(result.orientation).toBe('landscape');
+      expect(result.normalizedWidth).toBe(297);
+      expect(result.normalizedHeight).toBe(210);
+      expect(result.aspectRatio).toBe(1.414);
+      // Cleanup zeroes rendered canvas dimensions after encoding
+      expect(canvasEl.width).toBe(0);
+      expect(canvasEl.height).toBe(0);
+    });
+
+    it('preserves portrait US Letter PDF proportions and reports multi-page metadata', async () => {
+      const mockFile = new File(['%PDF-1.4 letter portrait'], 'diploma.pdf', {
+        type: 'application/pdf'
+      });
+
+      const canvasEl = {
+        width: 834,
+        height: 1080,
+        toDataURL: vi.fn(() => 'data:image/jpeg;base64,portraitletter')
+      } as unknown as HTMLCanvasElement;
+      const ctx = {} as CanvasRenderingContext2D;
+
+      const pdfRenderer: PdfPageRenderer = vi.fn(async () => ({
+        canvas: canvasEl,
+        ctx,
+        naturalWidth: 612,
+        naturalHeight: 792,
+        exactRatio: 612 / 792,
+        pageCount: 3
+      }));
+
+      const result = await processBackgroundImageFile(mockFile, 1920, 1080, { pdfRenderer });
+
+      expect(result.sourceType).toBe('pdf');
+      expect(result.pageCount).toBe(3);
+      expect(result.orientation).toBe('portrait');
+      expect(result.normalizedHeight).toBe(297);
+      expect(result.normalizedWidth).toBe(229.5);
+      expect(result.aspectRatio).toBe(0.773);
+    });
+
+    it('uniformly downscales oversized PDF renders while preserving aspectRatio and keeping size <= 750k', async () => {
+      const mockFile = new File(['%PDF-1.4 dense'], 'dense.pdf', {
+        type: 'application/pdf'
+      });
+
+      const exactRatio = 16 / 9;
+      const oversizedPayload = `data:image/jpeg;base64,${'X'.repeat(MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH + 500)}`;
+
+      const createdCanvases = spyOnMockCanvasFactory({
+        toDataURL: (canvas) => {
+          if (canvas.width <= 1632) {
+            return 'data:image/jpeg;base64,uniformlydownscaled';
+          }
+          return oversizedPayload;
+        }
+      });
+
+      const pdfCanvas = {
+        width: 1920,
+        height: 1080,
+        toDataURL: vi.fn(() => oversizedPayload)
+      } as unknown as HTMLCanvasElement;
+      const ctx = {} as CanvasRenderingContext2D;
+
+      const pdfRenderer: PdfPageRenderer = vi.fn(async () => ({
+        canvas: pdfCanvas,
+        ctx,
+        naturalWidth: 1920,
+        naturalHeight: 1080,
+        exactRatio,
+        pageCount: 1
+      }));
+
+      const result = await processBackgroundImageFile(mockFile, 1920, 1080, { pdfRenderer });
+
+      expect(result.dataUrl).toBe('data:image/jpeg;base64,uniformlydownscaled');
+      expect(result.dataUrl.length).toBeLessThanOrEqual(MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH);
+      expect(result.wasCompressedHeavily).toBe(true);
+      expect(result.aspectRatio).toBe(1.778);
+      expect(result.normalizedWidth).toBe(297);
+      expect(result.normalizedHeight).toBe(167.06);
+      expect(createdCanvases).toHaveLength(1);
+      // After cleanup in finally, dimensions were zeroed; verify drawImage used exact 16:9 scaled height (1632 x 918)
+      expect(createdCanvases[0].drawImage).toHaveBeenCalledWith(pdfCanvas, 0, 0, 1632, 918);
+
+      vi.restoreAllMocks();
+    });
+
+    it('rejects with BACKGROUND_SIZE_LIMIT_EXCEEDED_MESSAGE when all scale/quality passes stay above 750k', async () => {
+      const mockFile = new File(['%PDF-1.4 huge'], 'huge.pdf', {
+        type: 'application/pdf'
+      });
+
+      const oversizedPayload = `data:image/jpeg;base64,${'X'.repeat(MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH + 500)}`;
+      spyOnMockCanvasFactory({
+        toDataURL: () => oversizedPayload
+      });
+
+      const pdfCanvas = {
+        width: 1920,
+        height: 1080,
+        toDataURL: vi.fn(() => oversizedPayload)
+      } as unknown as HTMLCanvasElement;
+
+      const pdfRenderer: PdfPageRenderer = vi.fn(async () => ({
+        canvas: pdfCanvas,
+        ctx: {} as CanvasRenderingContext2D,
+        naturalWidth: 1920,
+        naturalHeight: 1080,
+        exactRatio: 16 / 9,
+        pageCount: 1
+      }));
+
+      await expect(
+        processBackgroundImageFile(mockFile, 1920, 1080, { pdfRenderer })
+      ).rejects.toThrow(BACKGROUND_SIZE_LIMIT_EXCEEDED_MESSAGE);
+
+      vi.restoreAllMocks();
+    });
+
+    it('renders page 1 onto #ffffff canvas via default pdfjs-dist loader and cleans up resources', async () => {
+      vi.resetModules();
+
+      const pageCleanupMock = vi.fn();
+      const docCleanupMock = vi.fn().mockResolvedValue(undefined);
+      const taskDestroyMock = vi.fn().mockResolvedValue(undefined);
+      const fillRectMock = vi.fn();
+      const renderMock = vi.fn(() => ({ promise: Promise.resolve() }));
+      const fakeCtx = {
+        fillStyle: '',
+        fillRect: fillRectMock
+      };
+
+      const originalCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          return {
+            width: 0,
+            height: 0,
+            getContext: vi.fn(() => fakeCtx),
+            toDataURL: vi.fn(() => 'data:image/jpeg;base64,realpdfjsflow')
+          } as unknown as HTMLCanvasElement;
+        }
+        return originalCreateElement(tagName);
+      });
+
+      class MockPasswordException extends Error {
+        override name = 'PasswordException';
+      }
+
+      const getDocumentMock = vi.fn(() => ({
+        destroy: taskDestroyMock,
+        promise: Promise.resolve({
+          numPages: 2,
+          getPage: vi.fn(async () => ({
+            getViewport: vi.fn(({ scale }: { scale: number }) => ({
+              width: 842 * scale,
+              height: 595 * scale
+            })),
+            render: renderMock,
+            cleanup: pageCleanupMock
+          })),
+          cleanup: docCleanupMock
+        })
+      }));
+
+      vi.doMock('pdfjs-dist', () => ({
+        GlobalWorkerOptions: { workerSrc: '' },
+        PasswordException: MockPasswordException,
+        getDocument: getDocumentMock
+      }));
+      vi.doMock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({
+        default: '/assets/pdf.worker.min.mjs'
+      }));
+
+      const { processBackgroundImageFile: freshProcess } = await import('../imageProcessor');
+      const file = new File([new Uint8Array([37, 80, 68, 70])], 'cert.pdf', {
+        type: 'application/pdf'
+      });
+
+      const result = await freshProcess(file);
+
+      expect(result.dataUrl).toBe('data:image/jpeg;base64,realpdfjsflow');
+      expect(result.sourceType).toBe('pdf');
+      expect(result.pageCount).toBe(2);
+      expect(fakeCtx.fillStyle).toBe('#ffffff');
+      expect(fillRectMock).toHaveBeenCalled();
+      expect(renderMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          canvas: expect.any(Object),
+          canvasContext: fakeCtx
+        })
       );
+      expect(pageCleanupMock).toHaveBeenCalledTimes(1);
+      expect(docCleanupMock).toHaveBeenCalledTimes(1);
+      expect(taskDestroyMock).toHaveBeenCalledTimes(1);
+
+      vi.doUnmock('pdfjs-dist');
+      vi.doUnmock('pdfjs-dist/build/pdf.worker.min.mjs?url');
+      vi.restoreAllMocks();
+    });
+
+    it('maps PasswordException, empty PDFs, and corrupted PDFs to explicit Spanish errors', async () => {
+      vi.resetModules();
+
+      class MockPasswordException extends Error {
+        override name = 'PasswordException';
+      }
+
+      const taskDestroyMock = vi.fn().mockResolvedValue(undefined);
+      const getDocumentMock = vi
+        .fn()
+        .mockImplementationOnce(() => ({
+          destroy: taskDestroyMock,
+          promise: Promise.reject(new MockPasswordException('encrypted'))
+        }))
+        .mockImplementationOnce(() => ({
+          destroy: taskDestroyMock,
+          promise: Promise.resolve({ numPages: 0, cleanup: vi.fn() })
+        }))
+        .mockImplementationOnce(() => ({
+          destroy: taskDestroyMock,
+          promise: Promise.reject(new Error('Invalid PDF structure'))
+        }));
+
+      vi.doMock('pdfjs-dist', () => ({
+        GlobalWorkerOptions: { workerSrc: '' },
+        PasswordException: MockPasswordException,
+        getDocument: getDocumentMock
+      }));
+      vi.doMock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({
+        default: '/assets/pdf.worker.min.mjs'
+      }));
+
+      const { processBackgroundImageFile: freshProcess } = await import('../imageProcessor');
+
+      const pdfFile = new File([new Uint8Array([37, 80, 68, 70])], 'test.pdf', {
+        type: 'application/pdf'
+      });
+
+      await expect(freshProcess(pdfFile)).rejects.toThrow(ENCRYPTED_PDF_NOT_SUPPORTED_MESSAGE);
+      await expect(freshProcess(pdfFile)).rejects.toThrow(EMPTY_PDF_MESSAGE);
+      await expect(freshProcess(pdfFile)).rejects.toThrow(INVALID_PDF_MESSAGE);
+      expect(taskDestroyMock).toHaveBeenCalledTimes(3);
+
+      vi.doUnmock('pdfjs-dist');
+      vi.doUnmock('pdfjs-dist/build/pdf.worker.min.mjs?url');
+      vi.restoreAllMocks();
     });
 
     it('rejects unsupported non-image MIME types with validation error', async () => {
@@ -379,7 +703,6 @@ describe('Recognition Types API Layer', () => {
 
     it('normalizes opaque landscape image onto JPEG canvas output', async () => {
       const originalImage = global.Image;
-      const originalCreateElement = document.createElement.bind(document);
 
       class MockLandscapeImage {
         src = '';
@@ -398,26 +721,7 @@ describe('Recognition Types API Layer', () => {
 
       global.Image = MockLandscapeImage as unknown as typeof Image;
 
-      const mockCanvas = {
-        width: 0,
-        height: 0,
-        getContext: vi.fn(() => ({
-          fillStyle: '',
-          fillRect: vi.fn(),
-          drawImage: vi.fn(),
-          getImageData: vi.fn(() => ({
-            data: new Uint8ClampedArray([255, 255, 255, 255])
-          }))
-        })),
-        toDataURL: vi.fn((type: string) => `data:${type};base64,mockcanvasdata`)
-      };
-
-      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
-        if (tagName === 'canvas') {
-          return mockCanvas as unknown as HTMLCanvasElement;
-        }
-        return originalCreateElement(tagName);
-      });
+      const createdCanvases = spyOnMockCanvasFactory({ alpha: 255 });
 
       const mockFile = new File(['mock image'], 'landscape.png', { type: 'image/png' });
       const result = await processBackgroundImageFile(mockFile, 1920, 1080);
@@ -426,6 +730,7 @@ describe('Recognition Types API Layer', () => {
       expect(result.orientation).toBe('landscape');
       expect(result.normalizedWidth).toBe(297);
       expect(result.dataUrl).toContain('data:image/jpeg');
+      expect(createdCanvases.length).toBeGreaterThanOrEqual(2);
 
       global.Image = originalImage;
       vi.restoreAllMocks();
@@ -433,7 +738,6 @@ describe('Recognition Types API Layer', () => {
 
     it('preserves PNG format when alpha transparency is detected on image', async () => {
       const originalImage = global.Image;
-      const originalCreateElement = document.createElement.bind(document);
 
       class MockTransparentImage {
         src = '';
@@ -452,25 +756,9 @@ describe('Recognition Types API Layer', () => {
 
       global.Image = MockTransparentImage as unknown as typeof Image;
 
-      const mockCanvas = {
-        width: 0,
-        height: 0,
-        getContext: vi.fn(() => ({
-          fillStyle: '',
-          fillRect: vi.fn(),
-          drawImage: vi.fn(),
-          getImageData: vi.fn(() => ({
-            data: new Uint8ClampedArray([255, 255, 255, 0]) // alpha = 0 (transparent)
-          }))
-        })),
-        toDataURL: vi.fn((type: string) => `data:${type};base64,mocktransparentpng`)
-      };
-
-      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
-        if (tagName === 'canvas') {
-          return mockCanvas as unknown as HTMLCanvasElement;
-        }
-        return originalCreateElement(tagName);
+      spyOnMockCanvasFactory({
+        alpha: 0,
+        toDataURL: (_canvas, type) => `data:${type};base64,mocktransparentpng`
       });
 
       const mockFile = new File(['mock transparent png'], 'transparent.png', { type: 'image/png' });
@@ -484,7 +772,6 @@ describe('Recognition Types API Layer', () => {
 
     it('handles portrait image and steps down JPEG quality if initial payload exceeds Firestore limit', async () => {
       const originalImage = global.Image;
-      const originalCreateElement = document.createElement.bind(document);
 
       class MockPortraitImage {
         src = '';
@@ -503,27 +790,14 @@ describe('Recognition Types API Layer', () => {
 
       global.Image = MockPortraitImage as unknown as typeof Image;
 
-      const mockCanvas = {
-        width: 0,
-        height: 0,
-        getContext: vi.fn(() => ({
-          fillStyle: '',
-          fillRect: vi.fn(),
-          drawImage: vi.fn()
-        })),
-        toDataURL: vi.fn((_type: string, quality?: number) => {
-          if (quality && quality > 0.7) {
+      spyOnMockCanvasFactory({
+        alpha: 255,
+        toDataURL: (_canvas, _type, quality) => {
+          if (quality && quality > 0.75) {
             return `data:image/jpeg;base64,${'X'.repeat(MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH + 500)}`;
           }
           return 'data:image/jpeg;base64,compactjpegdata';
-        })
-      };
-
-      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
-        if (tagName === 'canvas') {
-          return mockCanvas as unknown as HTMLCanvasElement;
         }
-        return originalCreateElement(tagName);
       });
 
       const mockFile = new File(['mock portrait'], 'portrait.jpg', { type: 'image/jpeg' });

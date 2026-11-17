@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TourConfig, WalkthroughStep } from './types';
 
 export interface UseWalkthroughReturn {
@@ -24,6 +24,12 @@ export function useWalkthrough(config: TourConfig): UseWalkthroughReturn {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const isOpenRef = useRef(isOpen);
+  const hasAutoStartedRef = useRef(false);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   const totalSteps = steps.length;
   const currentStep = useMemo<WalkthroughStep | null>(() => {
@@ -58,10 +64,20 @@ export function useWalkthrough(config: TourConfig): UseWalkthroughReturn {
   }, [storageKey]);
 
   // Start tour handler
-  const startTour = useCallback((stepIndex = 0) => {
-    setCurrentStepIndex(stepIndex);
-    setIsOpen(true);
-  }, []);
+  const startTour = useCallback(
+    (stepIndex: number | unknown = 0) => {
+      const safeIndex =
+        typeof stepIndex === 'number' &&
+        Number.isFinite(stepIndex) &&
+        stepIndex >= 0 &&
+        stepIndex < totalSteps
+          ? Math.floor(stepIndex)
+          : 0;
+      setCurrentStepIndex(safeIndex);
+      setIsOpen(true);
+    },
+    [totalSteps]
+  );
 
   // Advance to next step or complete
   const nextStep = useCallback(() => {
@@ -95,10 +111,13 @@ export function useWalkthrough(config: TourConfig): UseWalkthroughReturn {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (autoStart === false) return;
+    if (hasAutoStartedRef.current || isOpenRef.current) return;
     try {
       const hasSeen = localStorage.getItem(storageKey);
       if (!hasSeen && totalSteps > 0) {
         const timer = setTimeout(() => {
+          if (hasAutoStartedRef.current || isOpenRef.current) return;
+          hasAutoStartedRef.current = true;
           setIsOpen(true);
           setCurrentStepIndex(0);
         }, autoStartDelay);
@@ -134,12 +153,18 @@ export function useWalkthrough(config: TourConfig): UseWalkthroughReturn {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    const timer = setTimeout(() => {
+    const measureTarget = () => {
       const el = document.querySelector(currentStep.targetSelector);
       setTargetRect(el ? el.getBoundingClientRect() : null);
-    }, 0);
+    };
 
-    return () => clearTimeout(timer);
+    const immediateTimer = setTimeout(measureTarget, 0);
+    const settledTimer = setTimeout(measureTarget, 150);
+
+    return () => {
+      clearTimeout(immediateTimer);
+      clearTimeout(settledTimer);
+    };
   }, [isOpen, currentStep]);
 
   // Listen to window resize and scroll events to dynamically recalculate targetRect

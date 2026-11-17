@@ -224,7 +224,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
             </div>
 
             {/* Coordinates X, Y Fine Tuning */}
-            <div className="space-y-1.5 pt-2 border-t border-gray-100">
+            <div className="space-y-2 pt-2 border-t border-gray-100">
               <span className="text-xs font-semibold text-neutral block">Posición (%)</span>
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
@@ -236,12 +236,15 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                     type="number"
                     min={0}
                     max={100}
+                    step={0.1}
                     value={selectedField.x}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const parsed = Number(e.target.value);
+                      if (!Number.isFinite(parsed)) return;
                       onUpdateField({
-                        x: Math.max(0, Math.min(100, Number(e.target.value)))
-                      })
-                    }
+                        x: Math.max(0, Math.min(100, Math.round(parsed * 10) / 10))
+                      });
+                    }}
                     className="w-full bg-transparent text-xs font-mono text-neutral focus:outline-none"
                     aria-label="Coordenada X"
                   />
@@ -256,17 +259,38 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                     type="number"
                     min={0}
                     max={100}
+                    step={0.1}
                     value={selectedField.y}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const parsed = Number(e.target.value);
+                      if (!Number.isFinite(parsed)) return;
                       onUpdateField({
-                        y: Math.max(0, Math.min(100, Number(e.target.value)))
-                      })
-                    }
+                        y: Math.max(0, Math.min(100, Math.round(parsed * 10) / 10))
+                      });
+                    }}
                     className="w-full bg-transparent text-xs font-mono text-neutral focus:outline-none"
                     aria-label="Coordenada Y"
                   />
                   <span className="text-[10px] text-neutral/40 pr-1">%</span>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onUpdateField({ x: 50 })}
+                  className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-white text-neutral/80 border border-gray-200 hover:bg-gray-50 transition-colors"
+                  aria-label="Centrar horizontalmente"
+                >
+                  Centrar H (50%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdateField({ y: 50 })}
+                  className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-white text-neutral/80 border border-gray-200 hover:bg-gray-50 transition-colors"
+                  aria-label="Centrar verticalmente"
+                >
+                  Centrar V (50%)
+                </button>
               </div>
             </div>
 

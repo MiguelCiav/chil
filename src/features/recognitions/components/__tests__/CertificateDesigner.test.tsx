@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CertificateDesigner } from '../CertificateDesigner';
 import * as api from '../../api';
@@ -63,6 +63,7 @@ const mockRecognitionWithTemplate: RecognitionType = {
 describe('CertificateDesigner component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockParams = { id: 'sct-wood-badge' };
   });
 
@@ -571,9 +572,11 @@ describe('CertificateDesigner component', () => {
     expect(screen.getByText('Propiedades del Campo')).toBeInTheDocument();
   });
 
-  it('shows error notification when background image processing fails', async () => {
+  it('shows propagated error notification when background image processing fails', async () => {
     vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognition);
-    vi.mocked(api.processBackgroundImageFile).mockRejectedValue(new Error('Corrupt image'));
+    vi.mocked(api.processBackgroundImageFile)
+      .mockRejectedValueOnce(new Error('Corrupt image'))
+      .mockRejectedValueOnce('string rejection');
 
     render(<CertificateDesigner />);
 
@@ -587,7 +590,13 @@ describe('CertificateDesigner component', () => {
     fireEvent.change(fileInput, { target: { files: [testFile] } });
 
     await waitFor(() => {
-      expect(screen.getByText('Error al procesar la imagen de fondo.')).toBeInTheDocument();
+      expect(screen.getByText('Corrupt image')).toBeInTheDocument();
+    });
+
+    fireEvent.change(fileInput, { target: { files: [testFile] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Error al procesar el archivo de fondo.')).toBeInTheDocument();
     });
   });
 
@@ -804,5 +813,251 @@ describe('CertificateDesigner component', () => {
 
     fireEvent.keyDown(window, { key: 'Z', metaKey: true, shiftKey: true });
     expect(screen.getByText('[Cédula de Identidad]')).toBeInTheDocument();
+  });
+
+  it('provides quick-center buttons, decimal X/Y inputs, and snap-to-guides toggle with single-step drag undo', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognitionWithTemplate);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    // Toggle snap button
+    const snapBtn = screen.getByRole('button', { name: 'Ajuste automático a guías' });
+    expect(snapBtn).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(snapBtn);
+    expect(snapBtn).toHaveAttribute('aria-pressed', 'false');
+
+    // Open properties tab and test quick-center buttons + decimal step
+    const estiloTabBtn = screen.getByRole('button', { name: /^Estilo$/i });
+    fireEvent.click(estiloTabBtn);
+
+    const inputX = screen.getByLabelText('Coordenada X');
+    const inputY = screen.getByLabelText('Coordenada Y');
+    expect(inputX).toHaveAttribute('step', '0.1');
+    expect(inputY).toHaveAttribute('step', '0.1');
+
+    fireEvent.change(inputX, { target: { value: '24.5' } });
+    expect(inputX).toHaveValue(24.5);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Centrar horizontalmente' }));
+    expect(inputX).toHaveValue(50);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Centrar verticalmente' }));
+    expect(inputY).toHaveValue(50);
+  });
+
+  it('deletes selected field with Delete/Backspace and re-selects restored field on Ctrl+Z', async () => {
+    localStorage.setItem('chil_tour_certificate-designer-tour_test-user-id', 'true');
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognitionWithTemplate);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    // Initially first field is selected in state; click to switch to properties tab
+    fireEvent.click(screen.getByText('[Nombre y Apellido]'));
+    expect(screen.getByText('Propiedades del Campo')).toBeInTheDocument();
+
+    // Press Delete -> removes field immediately and clears selection
+    fireEvent.keyDown(window, { key: 'Delete' });
+    expect(screen.queryByText('[Nombre y Apellido]')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Campo "Nombre y Apellido" eliminado (Ctrl+Z para deshacer).')
+    ).toBeInTheDocument();
+
+    // Press Ctrl+Z -> restores field and re-selects it automatically
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+    expect(screen.getByText('[Nombre y Apellido]')).toBeInTheDocument();
+    expect(screen.getByText('Propiedades del Campo')).toBeInTheDocument();
+    expect(screen.getByLabelText('Coordenada X')).toHaveValue(50);
+
+    // Press Backspace while selected -> deletes again without confirmation
+    fireEvent.keyDown(window, { key: 'Backspace' });
+    expect(screen.queryByText('[Nombre y Apellido]')).not.toBeInTheDocument();
+  });
+
+  it('ignores Delete and Backspace inside inputs, preview mode, and active walkthrough', async () => {
+    localStorage.setItem('chil_tour_certificate-designer-tour_test-user-id', 'true');
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognitionWithTemplate);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('[Nombre y Apellido]'));
+    const inputX = screen.getByLabelText('Coordenada X');
+
+    // Inside editable input
+    fireEvent.keyDown(inputX, { key: 'Delete' });
+    fireEvent.keyDown(inputX, { key: 'Backspace' });
+    expect(screen.getByText('[Nombre y Apellido]')).toBeInTheDocument();
+
+    // Inside preview mode
+    fireEvent.click(screen.getByRole('button', { name: 'Vista previa con datos de prueba' }));
+    fireEvent.keyDown(window, { key: 'Delete' });
+    fireEvent.click(screen.getByRole('button', { name: 'Modo Edición' }));
+    expect(screen.getByText('[Nombre y Apellido]')).toBeInTheDocument();
+
+    // Inside active walkthrough
+    fireEvent.click(screen.getByRole('button', { name: 'Ver guía interactiva' }));
+    expect(screen.getByText('Diseñador Visual de Plantillas')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Delete' });
+    fireEvent.click(screen.getByRole('button', { name: 'Omitir guía' }));
+    expect(screen.getByText('[Nombre y Apellido]')).toBeInTheDocument();
+  });
+
+  it('opens walkthrough immediately when ? is clicked even after tour was already completed', async () => {
+    localStorage.setItem('chil_tour_certificate-designer-tour_test-user-id', 'true');
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognitionWithTemplate);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver guía interactiva' }));
+
+    expect(screen.getByText('Diseñador Visual de Plantillas')).toBeInTheDocument();
+    expect(screen.getByText('Paso 1 de 6')).toBeInTheDocument();
+  });
+
+  it('delays tour autoStart until initial Firestore load finishes', async () => {
+    vi.useFakeTimers();
+    let resolveLoad: ((value: RecognitionType) => void) | null = null;
+    vi.mocked(api.getRecognitionTypeById).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveLoad = resolve;
+        })
+    );
+
+    render(<CertificateDesigner />);
+
+    // Advance past 400ms autoStart delay while still loading
+    await act(async () => {
+      vi.advanceTimersByTime(600);
+    });
+    expect(screen.queryByText('Diseñador Visual de Plantillas')).not.toBeInTheDocument();
+
+    // Resolve Firestore load cleanly
+    await act(async () => {
+      resolveLoad?.(mockRecognitionWithTemplate);
+    });
+    expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    expect(screen.queryByText('Diseñador Visual de Plantillas')).not.toBeInTheDocument();
+
+    // Now advance 400ms delay after load finished -> tour auto-starts on step 1
+    await act(async () => {
+      vi.advanceTimersByTime(450);
+    });
+    expect(screen.getByText('Diseñador Visual de Plantillas')).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it('displays non-blocking PDF status, amber warnings, and manual dismiss on PDF upload', async () => {
+    localStorage.setItem('chil_tour_certificate-designer-tour_test-user-id', 'true');
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognition);
+
+    let resolvePdf: ((value: api.ProcessedBackgroundResult) => void) | null = null;
+    vi.mocked(api.processBackgroundImageFile).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePdf = resolve;
+        })
+    );
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    const fileInput = screen.getByLabelText('Subir imagen de fondo');
+    const pdfFile = new File(['%PDF-1.4'], 'diploma.pdf', { type: 'application/pdf' });
+
+    fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+
+    expect(screen.getByText('Convirtiendo página 1 del PDF a imagen...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Procesando\.\.\./i })).toBeDisabled();
+
+    await act(async () => {
+      resolvePdf?.({
+        dataUrl: 'data:image/jpeg;base64,pdfbg',
+        width: 842,
+        height: 595,
+        naturalWidth: 842,
+        naturalHeight: 595,
+        normalizedWidth: 297,
+        normalizedHeight: 210,
+        aspectRatio: 1.414,
+        orientation: 'landscape',
+        sourceType: 'pdf',
+        pageCount: 3,
+        wasCompressedHeavily: true
+      });
+    });
+
+    const warningText =
+      'El PDF tiene 3 páginas; se usó la página 1 y se comprimió para ajustarla al límite. Si notas pérdida de nitidez, sube una imagen PNG o JPG.';
+    expect(screen.getByText(warningText)).toBeInTheDocument();
+
+    // Dismiss notification manually
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar notificación' }));
+    expect(screen.queryByText(warningText)).not.toBeInTheDocument();
+
+    // Multi-page only warning
+    vi.mocked(api.processBackgroundImageFile).mockResolvedValueOnce({
+      dataUrl: 'data:image/jpeg;base64,multipage',
+      width: 842,
+      height: 595,
+      naturalWidth: 842,
+      naturalHeight: 595,
+      normalizedWidth: 297,
+      normalizedHeight: 210,
+      aspectRatio: 1.414,
+      orientation: 'landscape',
+      sourceType: 'pdf',
+      pageCount: 2,
+      wasCompressedHeavily: false
+    });
+    fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+    await waitFor(() => {
+      expect(
+        screen.getByText('El PDF tiene 2 páginas; se usó únicamente la página 1 como fondo.')
+      ).toBeInTheDocument();
+    });
+
+    // Heavy compression only warning
+    vi.mocked(api.processBackgroundImageFile).mockResolvedValueOnce({
+      dataUrl: 'data:image/jpeg;base64,compressed',
+      width: 842,
+      height: 595,
+      naturalWidth: 842,
+      naturalHeight: 595,
+      normalizedWidth: 297,
+      normalizedHeight: 210,
+      aspectRatio: 1.414,
+      orientation: 'landscape',
+      sourceType: 'pdf',
+      pageCount: 1,
+      wasCompressedHeavily: true
+    });
+    fireEvent.change(fileInput, { target: { files: [pdfFile] } });
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'El fondo se comprimió para cumplir con el tamaño máximo. Si notas pérdida de nitidez, sube una imagen PNG o JPG.'
+        )
+      ).toBeInTheDocument();
+    });
   });
 });

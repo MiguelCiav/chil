@@ -89,7 +89,7 @@ describe('DesignerHeader component', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: /Subiendo\.\.\./i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Procesando\.\.\./i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Guardando\.\.\./i })).toBeDisabled();
   });
 
@@ -146,5 +146,51 @@ describe('DesignerHeader component', () => {
 
     fireEvent.click(redoBtn);
     expect(onRedo).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders snap-to-guides toggle when onToggleSnap is provided and disables it in preview mode', () => {
+    const onToggleSnap = vi.fn();
+
+    const { rerender } = render(
+      <DesignerHeader
+        recognitionName="Insignia de Madera"
+        isPreviewMode={false}
+        isSaving={false}
+        isUploadingBg={false}
+        hasBackground={false}
+        isSnapEnabled={true}
+        onToggleSnap={onToggleSnap}
+        onTogglePreview={vi.fn()}
+        onUploadClick={vi.fn()}
+        onSave={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    const snapBtn = screen.getByRole('button', { name: 'Ajuste automático a guías' });
+    expect(snapBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(snapBtn).not.toBeDisabled();
+
+    fireEvent.click(snapBtn);
+    expect(onToggleSnap).toHaveBeenCalledWith(false);
+
+    rerender(
+      <DesignerHeader
+        recognitionName="Insignia de Madera"
+        isPreviewMode={true}
+        isSaving={false}
+        isUploadingBg={false}
+        hasBackground={false}
+        isSnapEnabled={false}
+        onToggleSnap={onToggleSnap}
+        onTogglePreview={vi.fn()}
+        onUploadClick={vi.fn()}
+        onSave={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    expect(snapBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(snapBtn).toBeDisabled();
   });
 });

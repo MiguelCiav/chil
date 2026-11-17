@@ -153,4 +153,25 @@ describe('calculateSnapGuidelines utility', () => {
       type: 'canvas-center'
     });
   });
+
+  it('supports independent thresholdX and thresholdY tolerances', () => {
+    const result = calculateSnapGuidelines({
+      currentX: 50.8,
+      currentY: 50.8,
+      fieldId: 'field-2',
+      fields: mockFields,
+      thresholdX: 1.0,
+      thresholdY: 0.5
+    });
+
+    expect(result.snappedX).toBe(50);
+    expect(result.snappedY).toBe(50.8);
+    expect(result.activeGuides).toEqual([
+      {
+        orientation: 'vertical',
+        position: 50,
+        type: 'canvas-center'
+      }
+    ]);
+  });
 });

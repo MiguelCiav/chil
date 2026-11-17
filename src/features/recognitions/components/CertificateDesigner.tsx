@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertCircle, AlertTriangle, X } from 'lucide-react';
 import { Button } from '../../../components/Button';
 import {
   WalkthroughOverlay,
@@ -110,6 +110,9 @@ export const CertificateDesigner: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [recognition, setRecognition] = useState<RecognitionType | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
   const {
     isOpen: isTourOpen,
     currentStep: tourCurrentStep,
@@ -123,13 +126,13 @@ export const CertificateDesigner: React.FC = () => {
   } = useWalkthrough({
     tourId: 'certificate-designer-tour',
     steps: CERTIFICATE_DESIGNER_TOUR_STEPS,
-    autoStart: true,
+    autoStart: !isLoading && Boolean(recognition),
     userId: user?.uid
   });
 
-  const [recognition, setRecognition] = useState<RecognitionType | null>(null);
   const {
     template,
+    past,
     canUndo,
     canRedo,
     loadTemplate,
@@ -138,6 +141,8 @@ export const CertificateDesigner: React.FC = () => {
     removeField,
     updateFieldProps,
     moveFieldCoordinates,
+    moveFieldCoordinatesTransient,
+    commitFieldMove,
     resetFields,
     setBackground,
     clearBackground,
@@ -146,25 +151,47 @@ export const CertificateDesigner: React.FC = () => {
   } = useDesignerReducer(DEFAULT_CERTIFICATE_TEMPLATE);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
+  const [isSnapEnabled, setIsSnapEnabled] = useState<boolean>(true);
   const [activeSidebarTab, setActiveSidebarTab] = useState<'palette' | 'properties' | 'format'>('palette');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isUploadingBg, setIsUploadingBg] = useState<boolean>(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'warning' | 'error';
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+  const dismissNotification = useCallback(() => {
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
-    }
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => {
-      setToast(null);
       toastTimerRef.current = null;
-    }, 4000);
+    }
+    setToast(null);
   }, []);
+
+  const showNotification = useCallback(
+    (
+      message: string,
+      type: 'success' | 'warning' | 'error' = 'success',
+      options?: { persistent?: boolean }
+    ) => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+      setToast({ message, type });
+      if (!options?.persistent) {
+        const durationMs = type === 'success' ? 4000 : 8000;
+        toastTimerRef.current = setTimeout(() => {
+          setToast(null);
+          toastTimerRef.current = null;
+        }, durationMs);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     return () => {
@@ -174,15 +201,93 @@ export const CertificateDesigner: React.FC = () => {
     };
   }, []);
 
+  const { canvasRef, fontScale, normalizedDimensions } = useCanvasScale(template);
+
+  const handleSelectField = useCallback((fieldId: string) => {
+    setSelectedFieldId(fieldId);
+    setActiveSidebarTab('properties');
+  }, []);
+
+  const handleDeselectField = useCallback(() => {
+    setSelectedFieldId(null);
+  }, []);
+
+  const {
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    activeGuides,
+    draggingFieldId
+  } = useCanvasDrag({
+    canvasRef,
+    fields: template.fields,
+    isPreviewMode,
+    snapEnabled: isSnapEnabled,
+    onUpdateFieldCoordinates: moveFieldCoordinatesTransient,
+    onCommitFieldCoordinates: commitFieldMove,
+    onSelectField: handleSelectField
+  });
+
+  const deleteFieldById = useCallback(
+    (fieldId: string, includeUndoHint = false) => {
+      const fieldToRemove = template.fields.find((f) => f.id === fieldId);
+      removeField(fieldId);
+      if (selectedFieldId === fieldId) {
+        setSelectedFieldId(null);
+      }
+      if (fieldToRemove) {
+        const suffix = includeUndoHint ? ' (Ctrl+Z para deshacer)' : '';
+        showNotification(`Campo "${fieldToRemove.label}" eliminado${suffix}.`);
+      }
+    },
+    [template.fields, removeField, selectedFieldId, showNotification]
+  );
+
+  const handleRemoveField = useCallback(
+    (fieldId: string) => {
+      deleteFieldById(fieldId, false);
+    },
+    [deleteFieldById]
+  );
+
+  const handleUndo = useCallback(() => {
+    const previousFields = past[past.length - 1]?.fields ?? [];
+    const restoredFields = previousFields.filter(
+      (prevField) => !template.fields.some((curField) => curField.id === prevField.id)
+    );
+    undo();
+    if (restoredFields.length > 0) {
+      setSelectedFieldId(restoredFields[0].id);
+      setActiveSidebarTab('properties');
+    }
+  }, [past, template.fields, undo]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable)
-      ) {
+      const isEditableTarget =
+        Boolean(
+          target?.closest?.('input, textarea, select, [contenteditable="true"], [contenteditable=""]')
+        ) || Boolean(target?.isContentEditable);
+
+      if (isEditableTarget) {
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (
+          selectedFieldId === null ||
+          isPreviewMode ||
+          isTourOpen ||
+          draggingFieldId !== null ||
+          e.ctrlKey ||
+          e.metaKey ||
+          e.altKey
+        ) {
+          return;
+        }
+        e.preventDefault();
+        deleteFieldById(selectedFieldId, true);
         return;
       }
 
@@ -195,7 +300,7 @@ export const CertificateDesigner: React.FC = () => {
           redo();
         } else {
           e.preventDefault();
-          undo();
+          handleUndo();
         }
       } else if (key === 'y') {
         e.preventDefault();
@@ -207,21 +312,15 @@ export const CertificateDesigner: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [undo, redo]);
-
-  const { canvasRef, fontScale, normalizedDimensions } = useCanvasScale(template);
-
-  const { handlePointerDown, handlePointerMove, handlePointerUp, activeGuides } =
-    useCanvasDrag({
-      canvasRef,
-      fields: template.fields,
-      isPreviewMode,
-      onUpdateFieldCoordinates: moveFieldCoordinates,
-      onSelectField: (fieldId) => {
-        setSelectedFieldId(fieldId);
-        setActiveSidebarTab('properties');
-      }
-    });
+  }, [
+    handleUndo,
+    redo,
+    deleteFieldById,
+    selectedFieldId,
+    isPreviewMode,
+    isTourOpen,
+    draggingFieldId
+  ]);
 
   // Fetch recognition and existing template
   useEffect(() => {
@@ -280,17 +379,6 @@ export const CertificateDesigner: React.FC = () => {
     showNotification(`Campo "${def.label}" añadido a la plantilla.`);
   };
 
-  const handleRemoveField = (fieldId: string) => {
-    const fieldToRemove = template.fields.find((f) => f.id === fieldId);
-    removeField(fieldId);
-    if (selectedFieldId === fieldId) {
-      setSelectedFieldId(null);
-    }
-    if (fieldToRemove) {
-      showNotification(`Campo "${fieldToRemove.label}" eliminado.`);
-    }
-  };
-
   const handleAddAllFields = () => {
     const toAdd = getMissingTemplateFields(template.fields);
     if (toAdd.length === 0) return;
@@ -320,15 +408,53 @@ export const CertificateDesigner: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const isPdfUpload =
+      file.type === 'application/pdf' ||
+      file.type === 'application/x-pdf' ||
+      file.name.toLowerCase().endsWith('.pdf');
+
     setIsUploadingBg(true);
+    if (isPdfUpload) {
+      showNotification('Convirtiendo página 1 del PDF a imagen...', 'warning', {
+        persistent: true
+      });
+    }
+
     try {
       const result = await processBackgroundImageFile(file);
       const bgPatch = extractBackgroundTemplatePatch(result);
       setBackground(bgPatch);
-      showNotification('Imagen de fondo cargada y optimizada exitosamente.');
+
+      if (typeof result !== 'string') {
+        const pageCount = result.pageCount ?? 1;
+        if (pageCount > 1 && result.wasCompressedHeavily) {
+          showNotification(
+            `El PDF tiene ${pageCount} páginas; se usó la página 1 y se comprimió para ajustarla al límite. Si notas pérdida de nitidez, sube una imagen PNG o JPG.`,
+            'warning'
+          );
+        } else if (pageCount > 1) {
+          showNotification(
+            `El PDF tiene ${pageCount} páginas; se usó únicamente la página 1 como fondo.`,
+            'warning'
+          );
+        } else if (result.wasCompressedHeavily) {
+          showNotification(
+            'El fondo se comprimió para cumplir con el tamaño máximo. Si notas pérdida de nitidez, sube una imagen PNG o JPG.',
+            'warning'
+          );
+        } else {
+          showNotification('Imagen de fondo cargada y optimizada exitosamente.');
+        }
+      } else {
+        showNotification('Imagen de fondo cargada y optimizada exitosamente.');
+      }
     } catch (err) {
       console.error('Error uploading background image:', err);
-      showNotification('Error al procesar la imagen de fondo.', 'error');
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Error al procesar el archivo de fondo.';
+      showNotification(message, 'error');
     } finally {
       setIsUploadingBg(false);
       if (fileInputRef.current) {
@@ -391,18 +517,30 @@ export const CertificateDesigner: React.FC = () => {
       {toast && (
         <div
           role="alert"
-          className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl border animate-fade-in ${
+          className={`fixed top-6 right-6 z-50 max-w-md flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border animate-fade-in ${
             toast.type === 'error'
               ? 'bg-red-900 text-white border-red-700'
-              : 'bg-neutral text-white border-primary/20'
+              : toast.type === 'warning'
+                ? 'bg-amber-900 text-white border-amber-600'
+                : 'bg-neutral text-white border-primary/20'
           }`}
         >
           {toast.type === 'error' ? (
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          ) : toast.type === 'warning' ? (
+            <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0" />
           ) : (
             <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
           )}
           <span className="text-sm font-semibold">{toast.message}</span>
+          <button
+            type="button"
+            onClick={dismissNotification}
+            aria-label="Cerrar notificación"
+            className="ml-1 p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -425,13 +563,15 @@ export const CertificateDesigner: React.FC = () => {
         hasBackground={Boolean(template.background_url)}
         canUndo={canUndo}
         canRedo={canRedo}
-        onUndo={undo}
+        isSnapEnabled={isSnapEnabled}
+        onUndo={handleUndo}
         onRedo={redo}
+        onToggleSnap={setIsSnapEnabled}
         onTogglePreview={setIsPreviewMode}
         onUploadClick={() => fileInputRef.current?.click()}
         onSave={handleSaveTemplate}
         onBack={() => navigate('/reconocimientos')}
-        onStartTour={startTour}
+        onStartTour={() => startTour()}
       />
 
       {/* Main Ergonomic 2-Column Workspace */}
@@ -441,6 +581,7 @@ export const CertificateDesigner: React.FC = () => {
           canvasRef={canvasRef}
           template={template}
           selectedFieldId={selectedFieldId}
+          draggingFieldId={draggingFieldId}
           isPreviewMode={isPreviewMode}
           fontScale={fontScale}
           activeGuides={activeGuides}
@@ -449,10 +590,8 @@ export const CertificateDesigner: React.FC = () => {
           onPointerUp={handlePointerUp}
           onPointerDownField={handlePointerDown}
           onUpdateFieldCoordinates={moveFieldCoordinates}
-          onSelectField={(fieldId) => {
-            setSelectedFieldId(fieldId);
-            setActiveSidebarTab('properties');
-          }}
+          onSelectField={handleSelectField}
+          onDeselectField={handleDeselectField}
         />
 
         {/* RIGHT COLUMN: Control Panel Sidebar */}
