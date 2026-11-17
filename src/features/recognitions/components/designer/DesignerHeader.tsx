@@ -23,7 +23,7 @@ export interface DesignerHeaderProps {
 }
 
 function getUploadButtonText(isUploadingBg: boolean, hasBackground: boolean): string {
-  if (isUploadingBg) return 'Subiendo...';
+  if (isUploadingBg) return 'Procesando...';
   if (hasBackground) return 'Cambiar Fondo';
   return 'Subir Fondo';
 }

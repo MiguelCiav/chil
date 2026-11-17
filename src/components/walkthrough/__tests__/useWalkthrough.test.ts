@@ -313,4 +313,114 @@ describe('useWalkthrough hook', () => {
 
     document.body.removeChild(div);
   });
+
+  it('defaults non-number or out-of-range startTour arguments (such as MouseEvent) to step 0', () => {
+    localStorage.setItem('chil_tour_test-tour_user-123', 'true');
+
+    const { result } = renderHook(() => useWalkthrough(defaultConfig));
+
+    act(() => {
+      // Simulate accidental onClick={startTour} passing a MouseEvent instead of a numeric stepIndex
+      result.current.startTour(new MouseEvent('click') as unknown as number);
+    });
+
+    expect(result.current.isOpen).toBe(true);
+    expect(result.current.currentStepIndex).toBe(0);
+    expect(result.current.currentStep?.id).toBe('step-1');
+
+    act(() => {
+      result.current.startTour(99);
+    });
+    expect(result.current.currentStepIndex).toBe(0);
+
+    act(() => {
+      result.current.startTour(-2);
+    });
+    expect(result.current.currentStepIndex).toBe(0);
+  });
+
+  it('does not reset currentStepIndex when autoStart toggles while open or re-trigger after localStorage failure', () => {
+    const { result, rerender } = renderHook(
+      ({ autoStart }: { autoStart: boolean }) =>
+        useWalkthrough({ ...defaultConfig, autoStart }),
+      { initialProps: { autoStart: false } }
+    );
+
+    act(() => {
+      result.current.startTour(1);
+    });
+    expect(result.current.isOpen).toBe(true);
+    expect(result.current.currentStepIndex).toBe(1);
+
+    rerender({ autoStart: true });
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(result.current.isOpen).toBe(true);
+    expect(result.current.currentStepIndex).toBe(1);
+
+    // Even if localStorage persists fail on close, autoStart does not re-open once already triggered
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+
+    const { result: freshResult } = renderHook(() =>
+      useWalkthrough(defaultConfig)
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(freshResult.current.isOpen).toBe(true);
+
+    act(() => {
+      freshResult.current.skipTour();
+    });
+    expect(freshResult.current.isOpen).toBe(false);
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(freshResult.current.isOpen).toBe(false);
+
+    setItemSpy.mockRestore();
+  });
+
+  it('clears both immediate (0ms) and settled (150ms) measurement timers on cleanup', () => {
+    const div = document.createElement('div');
+    div.setAttribute('data-testid', 'target-1');
+    const getRectSpy = vi.fn(() => ({
+      top: 10,
+      left: 20,
+      width: 100,
+      height: 40,
+      bottom: 50,
+      right: 120,
+      x: 20,
+      y: 10,
+      toJSON: () => {}
+    }) as DOMRect);
+    div.getBoundingClientRect = getRectSpy;
+    div.scrollIntoView = vi.fn();
+    document.body.appendChild(div);
+
+    const { result, unmount } = renderHook(() =>
+      useWalkthrough({ ...defaultConfig, autoStart: false })
+    );
+
+    act(() => {
+      result.current.startTour(0);
+    });
+
+    unmount();
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(getRectSpy).not.toHaveBeenCalled();
+
+    document.body.removeChild(div);
+  });
 });

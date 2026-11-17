@@ -89,7 +89,7 @@ describe('DesignerHeader component', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: /Subiendo\.\.\./i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Procesando\.\.\./i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Guardando\.\.\./i })).toBeDisabled();
   });
 

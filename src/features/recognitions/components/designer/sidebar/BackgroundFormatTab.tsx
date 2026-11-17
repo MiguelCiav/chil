@@ -83,9 +83,10 @@ export const BackgroundFormatTab: React.FC<BackgroundFormatTabProps> = ({
                 size="sm"
                 fullWidth
                 onClick={onUploadBgClick}
+                disabled={isUploadingBg}
                 icon={<Upload size={14} />}
               >
-                Cambiar
+                {isUploadingBg ? 'Procesando...' : 'Cambiar'}
               </Button>
               <button
                 type="button"
@@ -100,8 +101,8 @@ export const BackgroundFormatTab: React.FC<BackgroundFormatTabProps> = ({
         ) : (
           <div className="space-y-2 text-neutral/60">
             <p className="text-[11px]">
-              Actualmente se usa el diseño predeterminado. Puede subir una plantilla gráfica
-              personalizada en PNG, JPG o PDF para adaptar automáticamente el tamaño y las proporciones.
+              Actualmente se usa el diseño predeterminado. Puede subir una plantilla gráfica personalizada
+              en PNG, JPG, WebP o PDF (página 1) para adaptar automáticamente el tamaño y las proporciones.
             </p>
             <Button
               type="button"
@@ -112,7 +113,7 @@ export const BackgroundFormatTab: React.FC<BackgroundFormatTabProps> = ({
               disabled={isUploadingBg}
               icon={<Upload size={14} />}
             >
-              {isUploadingBg ? 'Subiendo...' : 'Subir Fondo Personalizado'}
+              {isUploadingBg ? 'Procesando...' : 'Subir Fondo Personalizado'}
             </Button>
           </div>
         )}

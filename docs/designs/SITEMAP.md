@@ -10,6 +10,7 @@ Central index for Chil's architecture design documents, operational runbooks, an
 | [grouped-batch-pdf-report.md](./grouped-batch-pdf-report.md) | `Implemented` | 2026-11-13 | Miguel Ciavato | Grouped PDF "Lista" report (`batchReports.ts`) with continuous Scout group sections (`District` + `Region`), `"Miembros no scout"` / `"Sin grupo asignado"` buckets, uniform top header (`Alcance`), `Emisión Excepcional` summary metrics, `EditMemberModal` cleared-group `group_id: 0` fix, and `"Por grupo"` export menu on `BatchDetailHeader`. |
 | [multi-territory-batch-attribution.md](./multi-territory-batch-attribution.md) | `Implemented` | 2026-11-13 | Miguel Ciavato | Shared member-first hierarchy resolver (`src/utils/memberHierarchy.ts`), `BatchList` read-time multi-badges (`<= 3 + +N`) + `"Completitud"` + exact token filters, `SummaryView`/`Statistics` decoupling (`"Nacional"`, member-scoped KPIs), and `BatchDetail` 4th territorial breakdown card (`BatchTerritorialCard`). |
 | [scoped-certificate-zip-and-progress-modal.md](./scoped-certificate-zip-and-progress-modal.md) | `Implemented` | 2026-11-16 | Miguel Ciavato | Split-button `"Por grupo"` exports on `BatchDetailHeader` (`ScopedExportSplitButton`, eligible-only `filterEligibleReportBuckets`, `_<bucketSlug>` ZIP filenames), `BatchList` `eligibleCount === 0` row gating, and shared `useCertificateZipDownload` / `CertificateZipProgressModal` across `BatchDetail`, `BatchList`, and `SuccessPage`. |
+| [recognition-designer-pdf-and-ergonomics.md](./recognition-designer-pdf-and-ergonomics.md) | `Implemented` | 2026-11-16 | Miguel Ciavato | Client-side page-1 `.pdf` background conversion via dynamic `pdfjs-dist` onto `#ffffff` with uniform `<= 750,000`-char scaling and 1:1 WYSIWYG placement parity, `Delete`/`Backspace` field removal with automatic `Ctrl+Z` re-selection, amber multi-page/compression notifications, and `useWalkthrough` `?` / `autoStart` fixes. |
 
 ## Operational Runbooks (`docs/`)
 
@@ -17,20 +18,16 @@ Central index for Chil's architecture design documents, operational runbooks, an
 | :--- | :--- |
 | [ROLLBACK_FIREBASE_FUNCTIONS.md](../ROLLBACK_FIREBASE_FUNCTIONS.md) | Step-by-step procedure to retire the temporary Vercel `scraper-api/` deployment (`VITE_SCRAPER_API_URL`) and return to native Firebase Cloud Functions once GCP Blaze billing is active on `chil-2d600`. |
 
-## Feature Blueprints & Contracts (`src/features/batches/`)
+## Feature Blueprints & Contracts (`src/features/`)
 
-| Module | Document | Responsibility |
+| Feature | Root Blueprint | Submodule Contracts |
 | :--- | :--- | :--- |
-| Feature Root | [src/features/batches/README.md](../../src/features/batches/README.md) | System overview, global invariants, and side effects for batch management. |
-| API | [api/README.md](../../src/features/batches/api/README.md) | Firestore CRUD (`batchesCrud`, `membersCrud`), hierarchy loading/seeding, CSV/PDF reports, and dual-transport `scraperApi.ts`. |
-| Components | [components/README.md](../../src/features/batches/components/README.md) | Page-level workflow views (`BatchList`, `BatchDetail`, `NewBatchWizard`, `SuccessPage`). |
-| Components / Detail | [components/detail/README.md](../../src/features/batches/components/detail/README.md) | Batch detail header, split export controls (`ScopedExportSplitButton`, `BatchReportControls`), summary and territorial cards, paginated table, columns, and quick-view modal. |
-| Components / List | [components/list/README.md](../../src/features/batches/components/list/README.md) | Batch list filters, table columns, and `MergeBatchesModal`. |
-| Components / Shared | [components/shared/README.md](../../src/features/batches/components/shared/README.md) | Reusable `CertificateZipProgressModal`, `DeleteBatchModal`, `EditMemberModal`, and `ManualMemberModal`. |
-| Components / Wizard | [components/wizard/README.md](../../src/features/batches/components/wizard/README.md) | Wizard steps, stepper, Zod schema, `ScraperAlertModals`, tour, and helpers. |
-| Hooks | [hooks/README.md](../../src/features/batches/hooks/README.md) | `useCertificateZipDownload` progress/abort hook and cancellation state. |
-| Types | [types/README.md](../../src/features/batches/types/README.md) | Shared domain type re-exports and `ActiveFilterChip`. |
-| Utils | [utils/README.md](../../src/features/batches/utils/README.md) | Code generation, Scout hierarchy matching/classification, name splitting, unit inference, and read-time territorial projections (`batchTerritorial.ts`). |
+| Auth | [src/features/auth/README.md](../../src/features/auth/README.md) | [api](../../src/features/auth/api/README.md), [components](../../src/features/auth/components/README.md), [context](../../src/features/auth/context/README.md), [hooks](../../src/features/auth/hooks/README.md), [types](../../src/features/auth/types/README.md) |
+| Batches | [src/features/batches/README.md](../../src/features/batches/README.md) | [api](../../src/features/batches/api/README.md), [components](../../src/features/batches/components/README.md) ([detail](../../src/features/batches/components/detail/README.md), [list](../../src/features/batches/components/list/README.md), [shared](../../src/features/batches/components/shared/README.md), [wizard](../../src/features/batches/components/wizard/README.md)), [hooks](../../src/features/batches/hooks/README.md), [types](../../src/features/batches/types/README.md), [utils](../../src/features/batches/utils/README.md) |
+| Landing | [src/features/landing/README.md](../../src/features/landing/README.md) | [components](../../src/features/landing/components/README.md), [types](../../src/features/landing/types/README.md) |
+| Recognitions | [src/features/recognitions/README.md](../../src/features/recognitions/README.md) | [api](../../src/features/recognitions/api/README.md), [components](../../src/features/recognitions/components/README.md) ([designer](../../src/features/recognitions/components/designer/README.md), [sidebar](../../src/features/recognitions/components/designer/sidebar/README.md)), [hooks](../../src/features/recognitions/hooks/README.md), [services](../../src/features/recognitions/services/README.md), [types](../../src/features/recognitions/types/README.md), [utils](../../src/features/recognitions/utils/README.md) |
+| Statistics | [src/features/statistics/README.md](../../src/features/statistics/README.md) | [components](../../src/features/statistics/components/README.md) ([charts](../../src/features/statistics/components/charts/README.md)), [hooks](../../src/features/statistics/hooks/README.md), [types](../../src/features/statistics/types/README.md), [utils](../../src/features/statistics/utils/README.md) |
+| Summary | [src/features/summary/README.md](../../src/features/summary/README.md) | [components](../../src/features/summary/components/README.md), [types](../../src/features/summary/types/README.md), [utils](../../src/features/summary/utils/README.md) |
 
 ## Project-Wide Docs
 

@@ -8,6 +8,8 @@ const mockDocInstance = {
   text: vi.fn(),
   setDrawColor: vi.fn(),
   line: vi.fn(),
+  lines: vi.fn(),
+  circle: vi.fn(),
   setFont: vi.fn(),
   setFillColor: vi.fn(),
   rect: vi.fn(),
@@ -121,6 +123,9 @@ describe('statsPdfExport', () => {
       ],
       districts: [
         { id: 10, name: 'Distrito Sucre', count: 8, percentage: 40, parentName: 'Región Capital' }
+      ],
+      groups: [
+        { id: 100, name: 'Grupo San Jorge', count: 6, percentage: 30, parentName: 'Distrito Sucre' }
       ]
     },
     statusBreakdown: {
@@ -147,7 +152,7 @@ describe('statsPdfExport', () => {
     filteredBatchesCount: 5
   };
 
-  it('generates PDF executive report with header, KPI boxes, and 5 sections', () => {
+  it('generates PDF report matching web dashboard cards, donut, segmented bar, groups, and monthly chart', () => {
     const filename = exportStatisticsPdf(mockStats, {
       periodLabel: 'Este Año',
       regionLabel: 'Región Capital',
@@ -157,14 +162,14 @@ describe('statsPdfExport', () => {
     expect(filename).toMatch(/^Reporte_Estadistico_Chil_\d{8}\.pdf$/);
     expect(mockDocInstance.save).toHaveBeenCalledWith(filename);
 
-    // Checks header content
+    // Checks web-matching header content
     expect(mockDocInstance.text).toHaveBeenCalledWith(
-      'INFORME EJECUTIVO Y ANÁLISIS ESTADÍSTICO',
+      'Estadísticas y Análisis',
       expect.any(Number),
       expect.any(Number)
     );
 
-    // Checks KPI metrics text
+    // Checks 4 web KPI cards (and no legacy TOTAL LOTES card)
     expect(mockDocInstance.text).toHaveBeenCalledWith(
       'TOTAL RECONOCIMIENTOS',
       expect.any(Number),
@@ -172,6 +177,16 @@ describe('statsPdfExport', () => {
     );
     expect(mockDocInstance.text).toHaveBeenCalledWith(
       '15',
+      expect.any(Number),
+      expect.any(Number)
+    );
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      'REGIONES Y DISTRITOS',
+      expect.any(Number),
+      expect.any(Number)
+    );
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      'TOTAL LOTES',
       expect.any(Number),
       expect.any(Number)
     );
@@ -200,7 +215,19 @@ describe('statsPdfExport', () => {
       expect.any(Number)
     );
 
-    // Checks Section 3: Unit table
+    // Checks Section 2b: Scout Group table
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      '2b. Reconocimientos Entregados por Grupo Scout',
+      expect.any(Number),
+      expect.any(Number)
+    );
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      '1. Grupo San Jorge',
+      expect.any(Number),
+      expect.any(Number)
+    );
+
+    // Checks Section 3: Unit table & segmented bar
     expect(mockDocInstance.text).toHaveBeenCalledWith(
       '3. Reconocimientos Entregados por Unidad Scout',
       expect.any(Number),
@@ -212,12 +239,14 @@ describe('statsPdfExport', () => {
       expect.any(Number)
     );
 
-    // Checks Section 4: Demographics table
+    // Checks Section 4: Demographics Donut chart & table
     expect(mockDocInstance.text).toHaveBeenCalledWith(
       '4. Resumen Demográfico (Jóvenes y Adultos)',
       expect.any(Number),
       expect.any(Number)
     );
+    expect(mockDocInstance.circle).toHaveBeenCalled();
+    expect(mockDocInstance.lines).toHaveBeenCalled();
 
     // Checks Section 5: Monthly table and chart
     expect(mockDocInstance.text).toHaveBeenCalledWith(
@@ -294,11 +323,12 @@ describe('statsPdfExport', () => {
     expect(filename).toBeDefined();
     expect(mockDocInstance.save).toHaveBeenCalled();
 
-    // Check comparative subtitle in header
+    // Check comparative subtitle pill in header
     expect(mockDocInstance.text).toHaveBeenCalledWith(
       'Reporte Comparativo Anual (2024 vs 2025)',
       expect.any(Number),
-      expect.any(Number)
+      expect.any(Number),
+      { align: 'center' }
     );
 
     // Check comparative chart title
