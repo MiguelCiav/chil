@@ -904,6 +904,67 @@ describe('certificatePdfGenerator service', () => {
         })
       ).rejects.toThrow('No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos');
     });
+
+    it('appends sanitized bucketSlug suffix to ZIP filename while respecting options precedence and edge inputs', async () => {
+      const zipSpy = vi.spyOn((await import('jszip')).default.prototype, 'file');
+
+      const scopedName = await generateBatchCertificatesZip({
+        batch: mockBatch,
+        members: [mockActiveMember],
+        recognition: mockRecognition,
+        hierarchy: mockHierarchy,
+        bucketSlug: 'Grupo San Luis!'
+      });
+      expect(scopedName).toBe('Reconocimientos_Lote_45_insignia_de_madera_grupo_san_luis.zip');
+      expect(zipSpy).toHaveBeenCalledWith(
+        'Reconocimiento_V-18_234_567_Lote_45_insignia_de_madera.pdf',
+        expect.any(ArrayBuffer)
+      );
+
+      const optionWinsName = await generateBatchCertificatesZip(
+        {
+          batch: mockBatch,
+          members: [mockActiveMember],
+          recognition: mockRecognition,
+          hierarchy: mockHierarchy,
+          bucketSlug: 'Grupo Uno'
+        },
+        { bucketSlug: 'Miembros no scout' }
+      );
+      expect(optionWinsName).toBe('Reconocimientos_Lote_45_insignia_de_madera_miembros_no_scout.zip');
+
+      const whitespaceOptionName = await generateBatchCertificatesZip(
+        {
+          batch: mockBatch,
+          members: [mockActiveMember],
+          recognition: mockRecognition,
+          hierarchy: mockHierarchy,
+          bucketSlug: 'Grupo Uno'
+        },
+        { bucketSlug: '   ' }
+      );
+      expect(whitespaceOptionName).toBe('Reconocimientos_Lote_45_insignia_de_madera_grupo_uno.zip');
+
+      const punctuationOnlyName = await generateBatchCertificatesZip({
+        batch: mockBatch,
+        members: [mockActiveMember],
+        recognition: mockRecognition,
+        hierarchy: mockHierarchy,
+        bucketSlug: '!!!'
+      });
+      expect(punctuationOnlyName).toBe('Reconocimientos_Lote_45_insignia_de_madera_grupo.zip');
+
+      const whitespaceOnlyParamName = await generateBatchCertificatesZip({
+        batch: mockBatch,
+        members: [mockActiveMember],
+        recognition: mockRecognition,
+        hierarchy: mockHierarchy,
+        bucketSlug: '   '
+      });
+      expect(whitespaceOnlyParamName).toBe('Reconocimientos_Lote_45_insignia_de_madera.zip');
+
+      zipSpy.mockRestore();
+    });
   });
 
   describe('renderCertificatePage & background format validation', () => {

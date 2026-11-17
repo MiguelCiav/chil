@@ -130,14 +130,14 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
       return;
     }
     try {
-      await deleteMember(member.recognition_code || member.identity, member.identity);
+      await deleteMember(member.recognition_code || member.identity, member.identity, batchId);
       const remaining = membersList.filter((m) => m.identity !== member.identity);
       onMembersUpdated(remaining);
     } catch (err) {
       console.error('Error deleting member from batch:', err);
       alert('No se pudo eliminar el miembro del lote.');
     }
-  }, [membersList, onMembersUpdated]);
+  }, [batchId, membersList, onMembersUpdated]);
 
   const handleEditMemberClick = (member: ScoutMember) => {
     setEditingMember({ ...member });

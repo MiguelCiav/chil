@@ -61,7 +61,7 @@ describe('Navbar component', () => {
     const logoLink = screen.getByRole('link', { name: /Chil Logo Chil/i });
     expect(logoLink).toHaveAttribute('href', '/lotes');
 
-    expect(screen.getByText('Emisión Rápida')).toBeInTheDocument();
+    expect(screen.queryByText('Emisión Rápida')).not.toBeInTheDocument();
     expect(screen.getByText('Nuevo lote')).toBeInTheDocument();
     expect(screen.getByText('Listado de lotes')).toBeInTheDocument();
     expect(screen.getByText('Resumen')).toBeInTheDocument();
@@ -214,26 +214,5 @@ describe('Navbar component', () => {
     expect(listadoLotesLink).toHaveClass('border-transparent');
     expect(recognitionsLink).toHaveClass('border-transparent');
     expect(resumenLink).toHaveClass('border-transparent');
-  });
-
-  it('highlights only "Emisión Rápida" when path is /lotes/rapido', () => {
-    renderNavbarWithProvider(['/lotes/rapido']);
-
-    const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
-    const nuevoLoteLink = screen.getByRole('link', { name: 'Nuevo lote' });
-    const listadoLotesLink = screen.getByRole('link', { name: 'Listado de lotes' });
-
-    expect(rapidoLink).toHaveClass('bg-amber-300');
-    expect(rapidoLink).toHaveClass('text-neutral-950');
-    expect(nuevoLoteLink).toHaveClass('border-transparent');
-    expect(listadoLotesLink).toHaveClass('border-transparent');
-  });
-
-  it('applies amber-100 shading to "Emisión Rápida" when path is not /lotes/rapido', () => {
-    renderNavbarWithProvider(['/lotes']);
-
-    const rapidoLink = screen.getByRole('link', { name: 'Emisión Rápida' });
-    expect(rapidoLink).toHaveClass('bg-amber-100');
-    expect(rapidoLink).toHaveClass('text-neutral-900');
   });
 });

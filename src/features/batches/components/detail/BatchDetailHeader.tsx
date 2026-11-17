@@ -1,16 +1,22 @@
 import React from 'react';
-import { Download, FileText, Trash2 } from 'lucide-react';
+import { FileText, Trash2 } from 'lucide-react';
 import { Button } from '../../../../components/Button';
 import { WalkthroughHelpButton } from '../../../../components/walkthrough';
+import { BatchReportBucket, ReportBucketKey } from '../../api';
 import { Batch } from '../../types';
+import { BatchReportControls } from './BatchReportControls';
+import { ScopedExportSplitButton } from './ScopedExportSplitButton';
 
 export interface BatchDetailHeaderProps {
   batch: Batch;
   startTour: () => void;
   onDeleteClick: () => void;
-  onDownloadMemberList: () => void;
+  reportBuckets: BatchReportBucket[];
+  eligibleBuckets: BatchReportBucket[];
+  isListEmpty: boolean;
+  onDownloadMemberList: (bucketKey?: ReportBucketKey) => void;
   downloadingReport: boolean;
-  onDownloadCertificatesZip: () => void;
+  onDownloadCertificatesZip: (bucketKey?: ReportBucketKey) => void;
   downloadingCertificatesZip: boolean;
   isEligibleZero: boolean;
 }
@@ -19,6 +25,9 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
   batch,
   startTour,
   onDeleteClick,
+  reportBuckets,
+  eligibleBuckets,
+  isListEmpty,
   onDownloadMemberList,
   downloadingReport,
   onDownloadCertificatesZip,
@@ -28,9 +37,9 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
   return (
     <div
       data-walkthrough="batch-detail-header"
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2"
+      className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 pb-2"
     >
-      <div>
+      <div className="min-w-0">
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Lote #{batch.id}
@@ -45,7 +54,7 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3 w-full xl:w-auto xl:ml-auto">
         <Button
           variant="outline"
           onClick={onDeleteClick}
@@ -55,30 +64,29 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
           Eliminar Lote
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={onDownloadMemberList}
-          disabled={downloadingReport}
-          icon={<Download size={16} />}
-          className="border-gray-200 hover:bg-gray-50 text-neutral"
-        >
-          {downloadingReport ? 'Generando PDF...' : 'Descargar lista'}
-        </Button>
+        <BatchReportControls
+          buckets={reportBuckets}
+          downloadingReport={downloadingReport}
+          isListEmpty={isListEmpty}
+          onDownloadMemberList={onDownloadMemberList}
+        />
 
-        <Button
+        <ScopedExportSplitButton
+          buckets={eligibleBuckets}
+          onSelectAll={() => onDownloadCertificatesZip()}
+          onSelectBucket={(bucketKey) => onDownloadCertificatesZip(bucketKey)}
+          primaryLabel="Descargar Reconocimientos (ZIP)"
+          loadingLabel="Generando ZIP..."
+          loading={downloadingCertificatesZip}
+          disabled={isEligibleZero}
+          disabledTitle="No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos"
+          chevronAriaLabel="Opciones de certificados por grupo"
+          menuAriaLabel="Exportar certificados por grupo"
           variant="primary"
-          onClick={onDownloadCertificatesZip}
-          disabled={downloadingCertificatesZip || isEligibleZero}
-          title={
-            isEligibleZero
-              ? 'No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos'
-              : undefined
-          }
+          primaryClassName="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
+          chevronClassName="bg-[#5c371d] hover:bg-[#4b2c17] text-white border-l border-white/25"
           icon={<FileText size={16} />}
-          className="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
-        >
-          {downloadingCertificatesZip ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
-        </Button>
+        />
       </div>
     </div>
   );

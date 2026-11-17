@@ -8,6 +8,7 @@ import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../../types';
 import { StatisticsFilterState } from '../types';
 import { buildStatisticsDataset, calculateYoYComparison, resolveMemberHierarchy } from '../utils/statsCalculators';
+import { isNoAplicaDistrict } from '../../../utils/memberHierarchy';
 import { FilterSummaryLabels } from '../utils/statsPdfExport';
 import { useAuth } from '../../auth';
 
@@ -71,24 +72,10 @@ function matchesDateRange(createdAt: string, period: string, startDate?: string,
 }
 
 export function buildAvailableDistricts(districts: District[], regionId?: string): District[] {
-  if (!regionId) return districts;
-  return districts.filter(d => String(d.region_id) === regionId);
-}
-
-function matchesBatchCriteria(b: Batch, filters: StatisticsFilterState): boolean {
-  if (filters.period !== 'all' && !matchesDateRange(b.created_at ?? '', filters.period, filters.startDate, filters.endDate)) {
-    return false;
-  }
-  if (filters.recognitionId && b.recognition_type !== filters.recognitionId) {
-    return false;
-  }
-  if (filters.regionId && String(b.region_id) !== filters.regionId) {
-    return false;
-  }
-  if (filters.districtId && String(b.district_id) !== filters.districtId) {
-    return false;
-  }
-  return true;
+  const validDistricts = districts.filter(d => d.id !== 0 && !isNoAplicaDistrict(d));
+  if (!regionId) return validDistricts;
+  if (regionId === 'nacional' || regionId === '0') return [];
+  return validDistricts.filter(d => String(d.region_id) === regionId);
 }
 
 export function filterBatchesByCriteria(
@@ -96,12 +83,12 @@ export function filterBatchesByCriteria(
   filters: StatisticsFilterState,
   filteredMembers?: ScoutMember[]
 ): Batch[] {
-  if (!filteredMembers) {
-    return batches.filter(b => matchesBatchCriteria(b, filters));
-  }
-  const matchingBatchIds = new Set<number>(
-    filteredMembers.map(m => m.batch_id).filter((id): id is number => id !== undefined)
-  );
+  const matchingBatchIds = filteredMembers
+    ? new Set<number>(
+        filteredMembers.map(m => m.batch_id).filter((id): id is number => id !== undefined)
+      )
+    : null;
+
   return batches.filter(b => {
     if (filters.period !== 'all' && !matchesDateRange(b.created_at ?? '', filters.period, filters.startDate, filters.endDate)) {
       return false;
@@ -109,16 +96,35 @@ export function filterBatchesByCriteria(
     if (filters.recognitionId && b.recognition_type !== filters.recognitionId) {
       return false;
     }
-    if (filters.regionId || filters.districtId) {
-      const directReg = !filters.regionId || String(b.region_id) === filters.regionId;
-      const directDist = !filters.districtId || String(b.district_id) === filters.districtId;
-      if (directReg && directDist && b.region_id !== 0 && b.district_id !== 0) {
-        return true;
-      }
+    if (matchingBatchIds && (filters.regionId || filters.districtId)) {
       return matchingBatchIds.has(b.id);
     }
     return true;
   });
+}
+
+function matchesResolvedTerritoryFilters(
+  regionId: number,
+  districtId: number,
+  isNationalInstitutional: boolean,
+  filterRegionId?: string,
+  filterDistrictId?: string
+): boolean {
+  if (filterRegionId === 'nacional') {
+    if (!isNationalInstitutional) return false;
+  } else if (filterRegionId === '0') {
+    if (regionId !== 0 || isNationalInstitutional) return false;
+  } else if (filterRegionId) {
+    if (String(regionId) !== filterRegionId) return false;
+  }
+
+  if (filterDistrictId === '0') {
+    if (districtId !== 0) return false;
+  } else if (filterDistrictId) {
+    if (String(districtId) !== filterDistrictId) return false;
+  }
+
+  return true;
 }
 
 function matchesMemberCriteria(
@@ -138,11 +144,20 @@ function matchesMemberCriteria(
   if (filters.recognitionId && batch?.recognition_type !== filters.recognitionId) {
     return false;
   }
-  const { regionId, districtId } = resolveMemberHierarchy(m, batch, groups, districts, regions);
-  if (filters.regionId && String(regionId) !== filters.regionId) {
-    return false;
-  }
-  if (filters.districtId && String(districtId) !== filters.districtId) {
+  const { regionId, districtId, isNationalInstitutional } = resolveMemberHierarchy(m, batch, {
+    regions,
+    districts,
+    groups
+  });
+  if (
+    !matchesResolvedTerritoryFilters(
+      regionId,
+      districtId,
+      isNationalInstitutional,
+      filters.regionId,
+      filters.districtId
+    )
+  ) {
     return false;
   }
   if (filters.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) {
@@ -201,21 +216,39 @@ export function extractYearBatches(
   const batchMap = new Map<number, Batch>();
   allBatches.forEach(b => batchMap.set(b.id, b));
 
+  const hasMemberFilter = Boolean(
+    filters?.regionId ||
+      filters?.districtId ||
+      (filters?.memberType && filters.memberType !== 'all')
+  );
+
   let validBatchIdsWithMembers: Set<number> | null = null;
-  if (filters?.regionId || filters?.districtId) {
+  if (hasMemberFilter && members) {
     validBatchIdsWithMembers = new Set<number>();
-    if (members) {
-      members.forEach(m => {
-        const b = m.batch_id ? batchMap.get(m.batch_id) : undefined;
-        if (!b) return;
-        const { regionId, districtId } = resolveMemberHierarchy(m, b, groups, districts, regions);
-        const matchReg = !filters.regionId || String(regionId) === filters.regionId;
-        const matchDist = !filters.districtId || String(districtId) === filters.districtId;
-        if (matchReg && matchDist) {
-          validBatchIdsWithMembers?.add(b.id);
-        }
-      });
-    }
+    const hierarchy = { regions, districts, groups };
+    members.forEach(m => {
+      const b = m.batch_id ? batchMap.get(m.batch_id) : undefined;
+      if (!b) return;
+      if (filters?.memberType && filters.memberType !== 'all' && m.member_type !== filters.memberType) {
+        return;
+      }
+      const { regionId, districtId, isNationalInstitutional } = resolveMemberHierarchy(
+        m,
+        b,
+        hierarchy
+      );
+      if (
+        matchesResolvedTerritoryFilters(
+          regionId,
+          districtId,
+          isNationalInstitutional,
+          filters?.regionId,
+          filters?.districtId
+        )
+      ) {
+        validBatchIdsWithMembers?.add(b.id);
+      }
+    });
   }
 
   return allBatches.filter(b => {
@@ -223,13 +256,8 @@ export function extractYearBatches(
     const d = new Date(b.created_at);
     if (Number.isNaN(d.getTime()) || d.getFullYear() !== year) return false;
     if (filters?.recognitionId && b.recognition_type !== filters.recognitionId) return false;
-    if (filters?.regionId || filters?.districtId) {
-      const directReg = !filters?.regionId || String(b.region_id) === filters.regionId;
-      const directDist = !filters?.districtId || String(b.district_id) === filters.districtId;
-      if (directReg && directDist && b.region_id !== 0 && b.district_id !== 0) {
-        return true;
-      }
-      return validBatchIdsWithMembers ? validBatchIdsWithMembers.has(b.id) : false;
+    if (hasMemberFilter && validBatchIdsWithMembers) {
+      return validBatchIdsWithMembers.has(b.id);
     }
     return true;
   });
@@ -246,15 +274,29 @@ export function extractYearMembers(
 ): ScoutMember[] {
   const memberType = typeof filters === 'string' ? filters : filters?.memberType;
   const filterState = typeof filters === 'object' ? filters : undefined;
+  const hierarchy = { regions, districts, groups };
 
   return members.filter(m => {
     if (!m.batch_id || !yearBatchIds.has(m.batch_id)) return false;
     if (memberType && memberType !== 'all' && m.member_type !== memberType) return false;
     if (filterState?.regionId || filterState?.districtId) {
       const b = batchMap ? batchMap.get(m.batch_id) : undefined;
-      const { regionId, districtId } = resolveMemberHierarchy(m, b, groups, districts, regions);
-      if (filterState.regionId && String(regionId) !== filterState.regionId) return false;
-      if (filterState.districtId && String(districtId) !== filterState.districtId) return false;
+      const { regionId, districtId, isNationalInstitutional } = resolveMemberHierarchy(
+        m,
+        b,
+        hierarchy
+      );
+      if (
+        !matchesResolvedTerritoryFilters(
+          regionId,
+          districtId,
+          isNationalInstitutional,
+          filterState.regionId,
+          filterState.districtId
+        )
+      ) {
+        return false;
+      }
     }
     return true;
   });
@@ -279,12 +321,15 @@ function getRecognitionSummaryLabel(recognitionId?: string, recognitionTypes: Re
 
 function getRegionSummaryLabel(regionId?: string, regions: Region[] = []): string | undefined {
   if (!regionId) return undefined;
+  if (regionId === 'nacional') return 'Nacional';
+  if (regionId === '0') return 'No aplica';
   const reg = regions.find(r => String(r.id) === regionId);
   return reg ? reg.name : `Región ${regionId}`;
 }
 
 function getDistrictSummaryLabel(districtId?: string, districts: District[] = []): string | undefined {
   if (!districtId) return undefined;
+  if (districtId === '0') return 'No aplica';
   const dist = districts.find(d => String(d.id) === districtId);
   return dist ? dist.name : `Distrito ${districtId}`;
 }

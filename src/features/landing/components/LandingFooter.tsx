@@ -55,8 +55,8 @@ export const LandingFooter: React.FC = () => {
             </h4>
             <ul className="space-y-2.5 text-sm text-neutral/70">
               <li>
-                <a href="#emision-rapida" className="hover:text-primary transition-colors">
-                  Emisión Rápida de Reconocimientos
+                <a href="#exportacion-flexible" className="hover:text-primary transition-colors">
+                  Exportación en PDF y ZIP
                 </a>
               </li>
               <li>

@@ -2,6 +2,10 @@ import { Batch, ScoutMember, Region, District, ScoutGroup, ScoutUnit, SCOUT_UNIT
 import { getRecognitionBadgeStyle, getRecognitionName, RecognitionTypeInfo } from '../../batches/api';
 import hierarchyData from '../../../data/hierarchy.json';
 import {
+  ResolvedMemberHierarchy,
+  resolveMemberHierarchy
+} from '../../../utils/memberHierarchy';
+import {
   KpiMetrics,
   MonthlyTrendData,
   RecognitionRankingData,
@@ -27,67 +31,9 @@ export const MONTH_LABELS_ES = [
   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
 ];
 
-export interface EffectiveHierarchy {
-  groupId: number;
-  districtId: number;
-  regionId: number;
-}
-
-/**
- * Resolves effective hierarchy IDs (group, district, region) for a member.
- * Priorities:
- * 1. Explicit member-level IDs
- * 2. Lookup in hierarchy using member's group (group -> district -> region)
- * 3. Batch-level fallback IDs (if non-zero)
- */
-export function resolveMemberHierarchy(
-  member: ScoutMember,
-  batch?: Batch,
-  groups?: ScoutGroup[],
-  districts?: District[],
-  _regions?: Region[]
-): EffectiveHierarchy {
-  void _regions;
-  const gList = groups && groups.length > 0 ? groups : (hierarchyData.groups as ScoutGroup[]);
-  const dList = districts && districts.length > 0 ? districts : (hierarchyData.districts as District[]);
-
-  // 1. Group ID
-  const groupId = (member.group_id !== undefined && member.group_id > 0)
-    ? member.group_id
-    : (batch?.group_id !== undefined && batch.group_id > 0 ? batch.group_id : 0);
-
-  // 2. District ID (member -> group lookup -> batch fallback)
-  let districtId = (member.district_id !== undefined && member.district_id > 0)
-    ? member.district_id
-    : 0;
-
-  if (districtId === 0 && groupId > 0) {
-    const gObj = gList.find(g => g.id === groupId);
-    if (gObj?.district_id && gObj.district_id > 0) {
-      districtId = gObj.district_id;
-    }
-  }
-  if (districtId === 0 && batch?.district_id !== undefined && batch.district_id > 0) {
-    districtId = batch.district_id;
-  }
-
-  // 3. Region ID (member -> district lookup -> batch fallback)
-  let regionId = (member.region_id !== undefined && member.region_id > 0)
-    ? member.region_id
-    : 0;
-
-  if (regionId === 0 && districtId > 0) {
-    const dObj = dList.find(d => d.id === districtId);
-    if (dObj?.region_id && dObj.region_id > 0) {
-      regionId = dObj.region_id;
-    }
-  }
-  if (regionId === 0 && batch?.region_id !== undefined && batch.region_id > 0) {
-    regionId = batch.region_id;
-  }
-
-  return { groupId, districtId, regionId };
-}
+export type { ResolvedMemberHierarchy };
+export type EffectiveHierarchy = ResolvedMemberHierarchy;
+export { resolveMemberHierarchy };
 
 /**
  * Calculates percentage variation between current and previous values
@@ -186,32 +132,39 @@ function buildYoYRegionComparison(
   groups?: ScoutGroup[],
   districts?: District[]
 ): YoYRegionItem[] {
-  const currentRegionCounts = new Map<number, number>();
+  const hierarchy = { regions, districts, groups };
+  const currentRegionCounts = new Map<number | string, number>();
   currentMembers.forEach(m => {
     const b = m.batch_id ? currentBatchMap.get(m.batch_id) : undefined;
-    const { regionId } = resolveMemberHierarchy(m, b, groups, districts, regions);
-    if (regionId > 0) {
+    const { regionId, isNationalInstitutional } = resolveMemberHierarchy(m, b, hierarchy);
+    if (isNationalInstitutional) {
+      currentRegionCounts.set('nacional', (currentRegionCounts.get('nacional') ?? 0) + 1);
+    } else if (regionId > 0) {
       currentRegionCounts.set(regionId, (currentRegionCounts.get(regionId) ?? 0) + 1);
     }
   });
 
-  const previousRegionCounts = new Map<number, number>();
+  const previousRegionCounts = new Map<number | string, number>();
   previousMembers.forEach(m => {
     const b = m.batch_id ? previousBatchMap.get(m.batch_id) : undefined;
-    const { regionId } = resolveMemberHierarchy(m, b, groups, districts, regions);
-    if (regionId > 0) {
+    const { regionId, isNationalInstitutional } = resolveMemberHierarchy(m, b, hierarchy);
+    if (isNationalInstitutional) {
+      previousRegionCounts.set('nacional', (previousRegionCounts.get('nacional') ?? 0) + 1);
+    } else if (regionId > 0) {
       previousRegionCounts.set(regionId, (previousRegionCounts.get(regionId) ?? 0) + 1);
     }
   });
 
-  const allRegionIds = new Set<number>([
+  const allRegionIds = new Set<number | string>([
     ...currentRegionCounts.keys(),
     ...previousRegionCounts.keys()
   ]);
 
   const yoyRegions: YoYRegionItem[] = Array.from(allRegionIds).map(regId => {
-    const regObj = regions.find(r => r.id === regId);
-    const name = regObj?.name ?? `Región ${regId}`;
+    const name =
+      regId === 'nacional'
+        ? 'Nacional'
+        : (regions.find(r => r.id === regId)?.name ?? `Región ${regId}`);
     const currentCount = currentRegionCounts.get(regId) ?? 0;
     const previousCount = previousRegionCounts.get(regId) ?? 0;
     const diff = currentCount - previousCount;
@@ -266,10 +219,11 @@ function buildYoYDistrictComparison(
     currentMembersCount,
     previousMembersCount
   } = options;
+  const hierarchy = { regions, districts, groups };
   const currentDistrictCounts = new Map<number, number>();
   currentMembers.forEach(m => {
     const b = m.batch_id ? currentBatchMap.get(m.batch_id) : undefined;
-    const { districtId } = resolveMemberHierarchy(m, b, groups, districts, regions);
+    const { districtId } = resolveMemberHierarchy(m, b, hierarchy);
     if (districtId > 0) {
       currentDistrictCounts.set(districtId, (currentDistrictCounts.get(districtId) ?? 0) + 1);
     }
@@ -278,7 +232,7 @@ function buildYoYDistrictComparison(
   const previousDistrictCounts = new Map<number, number>();
   previousMembers.forEach(m => {
     const b = m.batch_id ? previousBatchMap.get(m.batch_id) : undefined;
-    const { districtId } = resolveMemberHierarchy(m, b, groups, districts, regions);
+    const { districtId } = resolveMemberHierarchy(m, b, hierarchy);
     if (districtId > 0) {
       previousDistrictCounts.set(districtId, (previousDistrictCounts.get(districtId) ?? 0) + 1);
     }
@@ -616,7 +570,7 @@ export function calculateKpiMetrics(
   let youngCount = 0;
   let adultCount = 0;
 
-  const activeRegionIds = new Set<number>();
+  const activeRegionIds = new Set<number | string>();
   const activeDistrictIds = new Set<number>();
   const activeGroupIds = new Set<number>();
 
@@ -624,6 +578,7 @@ export function calculateKpiMetrics(
   batches.forEach(b => batchMap.set(b.id, b));
 
   const countsByRec = new Map<string, number>();
+  const hierarchy = { regions, districts, groups };
 
   members.forEach(m => {
     if (m.status === 'active') activeCount++;
@@ -634,21 +589,19 @@ export function calculateKpiMetrics(
     else if (m.member_type === 'adult') adultCount++;
 
     const b = m.batch_id ? batchMap.get(m.batch_id) : undefined;
-    const { groupId, districtId, regionId } = resolveMemberHierarchy(m, b, groups, districts, regions);
-    if (regionId > 0) activeRegionIds.add(regionId);
+    const { groupId, districtId, regionId, isNationalInstitutional } = resolveMemberHierarchy(
+      m,
+      b,
+      hierarchy
+    );
+    if (isNationalInstitutional) activeRegionIds.add('nacional');
+    else if (regionId > 0) activeRegionIds.add(regionId);
     if (districtId > 0) activeDistrictIds.add(districtId);
     if (groupId > 0) activeGroupIds.add(groupId);
 
     let recType = 'general';
     if (b?.recognition_type) recType = b.recognition_type;
     countsByRec.set(recType, (countsByRec.get(recType) ?? 0) + 1);
-  });
-
-  // Also include batch IDs from batches list directly if not covered (for batches without members)
-  batches.forEach(b => {
-    if (b.region_id && b.region_id > 0) activeRegionIds.add(b.region_id);
-    if (b.district_id && b.district_id > 0) activeDistrictIds.add(b.district_id);
-    if (b.group_id && b.group_id > 0) activeGroupIds.add(b.group_id);
   });
 
   let topRecId = '';
@@ -871,15 +824,22 @@ export function calculateGeographicBreakdown(
   const batchMap = new Map<number, Batch>();
   batches.forEach(b => batchMap.set(b.id, b));
 
-  const regionCounts = new Map<number, number>();
+  const regionCounts = new Map<number | string, number>();
   const districtCounts = new Map<number, number>();
   const groupCounts = new Map<number, number>();
+  const hierarchy = { regions, districts, groups: gList };
 
   members.forEach(m => {
     const b = m.batch_id ? batchMap.get(m.batch_id) : undefined;
-    const { groupId, districtId, regionId } = resolveMemberHierarchy(m, b, gList, districts, regions);
+    const { groupId, districtId, regionId, isNationalInstitutional } = resolveMemberHierarchy(
+      m,
+      b,
+      hierarchy
+    );
 
-    if (regionId > 0) {
+    if (isNationalInstitutional) {
+      regionCounts.set('nacional', (regionCounts.get('nacional') ?? 0) + 1);
+    } else if (regionId > 0) {
       regionCounts.set(regionId, (regionCounts.get(regionId) ?? 0) + 1);
     }
     if (districtId > 0) {
@@ -895,8 +855,10 @@ export function calculateGeographicBreakdown(
   // Build Regions breakdown
   const regionsResult: GeographicItem[] = [];
   regionCounts.forEach((count, regionId) => {
-    const regionObj = regions.find(r => r.id === regionId);
-    const name = regionObj?.name ?? `Región ${regionId}`;
+    const name =
+      regionId === 'nacional'
+        ? 'Nacional'
+        : (regions.find(r => r.id === regionId)?.name ?? `Región ${regionId}`);
     const percentage = totalMembers > 0 ? Number(((count / totalMembers) * 100).toFixed(1)) : 0;
     regionsResult.push({ id: regionId, name, count, percentage });
   });

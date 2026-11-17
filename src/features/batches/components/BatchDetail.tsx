@@ -19,6 +19,9 @@ import {
   deleteBatch,
   getHierarchyData,
   generateBatchReport,
+  resolveBatchReportBuckets,
+  filterEligibleReportBuckets,
+  ReportBucketKey,
   getRecognitionName
 } from '../api';
 import {
@@ -42,11 +45,15 @@ import {
   BatchDetailHeader,
   BatchMembersTable,
   BatchSummaryCards,
+  BatchTerritorialCard,
   DeleteBatchModal,
   EditMemberModal,
   MemberQuickViewModal,
   BatchDetailTotals
 } from './detail';
+import { CertificateZipProgressModal } from './shared';
+import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
+import { calculateBatchTerritorialBreakdown } from '../utils/batchTerritorial';
 
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +82,7 @@ export const BatchDetail: React.FC = () => {
   const [members, setMembers] = useState<ScoutMember[]>([]);
   const [loading, setLoading] = useState(!Number.isNaN(Number(id)));
   const [searchQuery, setSearchQuery] = useState('');
-  const [downloading, setDownloading] = useState(false);
+  const zipDownload = useCertificateZipDownload();
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -156,23 +163,38 @@ export const BatchDetail: React.FC = () => {
       });
   }, [batchId, user?.uid]);
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = (bucketKey?: ReportBucketKey) => {
     if (!batch) return;
-    setDownloading(true);
-    try {
-      const fileName = await generateBatchCertificatesZip({
-        batch,
-        members,
-        recognition,
-        hierarchy: { regions, districts, groups }
-      });
-      triggerToast(`¡Reconocimientos descargados exitosamente en ${fileName}!`, 4000);
-    } catch (err) {
-      console.error('Error generating ZIP:', err);
-      alert('Error al generar los reconocimientos en ZIP.');
-    } finally {
-      setDownloading(false);
+    const targetBucket = bucketKey
+      ? eligibleBuckets.find((b) => b.key === bucketKey)
+      : undefined;
+    if (bucketKey && !targetBucket) {
+      return;
     }
+
+    void zipDownload.startDownload(
+      ({ onProgress, signal }) =>
+        generateBatchCertificatesZip({
+          batch,
+          members: targetBucket ? targetBucket.members : members,
+          recognition,
+          hierarchy: { regions, districts, groups },
+          bucketSlug: targetBucket?.label,
+          onProgress,
+          signal
+        }),
+      {
+        scopeLabel: targetBucket ? targetBucket.label : `Lote #${batch.id}`,
+        initialTotal: targetBucket ? targetBucket.members.length : totals.eligible,
+        onSuccess: (fileName) => {
+          triggerToast(`¡Reconocimientos descargados exitosamente en ${fileName}!`, 4000);
+        },
+        onError: (err) => {
+          console.error('Error generating ZIP:', err);
+          alert('Error al generar los reconocimientos en ZIP.');
+        }
+      }
+    );
   };
 
   const handleDownloadSingleRecognition = useCallback(
@@ -195,11 +217,20 @@ export const BatchDetail: React.FC = () => {
     [batch, recognition, regions, districts, groups, triggerToast]
   );
 
-  const handleDownloadMemberListPDF = async () => {
+  const handleDownloadMemberListPDF = async (bucketKey?: ReportBucketKey) => {
     if (!batch) return;
     setDownloadingReport(true);
     try {
-      await generateBatchReport(batch, members, { regions, districts, groups });
+      if (bucketKey) {
+        await generateBatchReport(
+          batch,
+          members,
+          { regions, districts, groups },
+          { bucketKey }
+        );
+      } else {
+        await generateBatchReport(batch, members, { regions, districts, groups });
+      }
       triggerToast('Lista de miembros (PDF) generada exitosamente.');
     } catch (err) {
       console.error('Error generating member list PDF:', err);
@@ -243,6 +274,23 @@ export const BatchDetail: React.FC = () => {
       setDeleting(false);
     }
   };
+
+  // PDF report group buckets
+  const reportBuckets = useMemo(() => {
+    if (!batch) return [];
+    return resolveBatchReportBuckets(batch, members, { regions, districts, groups });
+  }, [batch, members, regions, districts, groups]);
+
+  const eligibleBuckets = useMemo(
+    () => filterEligibleReportBuckets(reportBuckets),
+    [reportBuckets]
+  );
+
+  // Territorial distribution breakdown
+  const territorialBreakdown = useMemo(
+    () => calculateBatchTerritorialBreakdown(members, batch, { regions, districts, groups }),
+    [members, batch, regions, districts, groups]
+  );
 
   // Totals calculations
   const totals: BatchDetailTotals = useMemo(() => {
@@ -336,22 +384,25 @@ export const BatchDetail: React.FC = () => {
         batch={batch}
         startTour={() => startTour()}
         onDeleteClick={() => setIsDeleteModalOpen(true)}
+        reportBuckets={reportBuckets}
+        eligibleBuckets={eligibleBuckets}
+        isListEmpty={members.length === 0}
         onDownloadMemberList={handleDownloadMemberListPDF}
         downloadingReport={downloadingReport}
         onDownloadCertificatesZip={handleDownloadPDF}
-        downloadingCertificatesZip={downloading}
+        downloadingCertificatesZip={zipDownload.isDownloading}
         isEligibleZero={totals.eligible === 0}
       />
 
-      {/* Top 4 Information Cards */}
+      {/* Top 3 Information Cards */}
       <BatchSummaryCards
         batch={batch}
         totals={totals}
         recognitionTitle={recognitionTitle}
-        regions={regions}
-        districts={districts}
-        groups={groups}
       />
+
+      {/* Card 4: Territorial Distribution */}
+      <BatchTerritorialCard breakdown={territorialBreakdown} />
 
       {/* Members Table Container */}
       <BatchMembersTable
@@ -378,11 +429,7 @@ export const BatchDetail: React.FC = () => {
         member={viewingMember}
         onClose={() => setViewingMember(null)}
         groups={groups}
-        batchGroup={
-          batch.group_id
-            ? (groups.find((g) => g.id === batch.group_id)?.name ?? `Grupo ${batch.group_id}`)
-            : (batch.region_id === 0 ? 'No aplica' : 'Multigrupo')
-        }
+        batch={batch}
       />
 
       {/* Modal: Confirmar Eliminación de Lote */}
@@ -393,6 +440,16 @@ export const BatchDetail: React.FC = () => {
         deleting={deleting}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Modal: Progreso de Generación ZIP */}
+      <CertificateZipProgressModal
+        isOpen={zipDownload.isOpen}
+        phase={zipDownload.phase}
+        progress={zipDownload.progress}
+        isCancelling={zipDownload.isCancelling}
+        scopeLabel={zipDownload.scopeLabel}
+        onCancel={zipDownload.cancelDownload}
       />
 
       {/* Walkthrough Interactive Guide Overlay */}

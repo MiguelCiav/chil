@@ -12,7 +12,8 @@ const mockDocInstance = {
   setFillColor: vi.fn(),
   rect: vi.fn(),
   addPage: vi.fn(),
-  save: vi.fn()
+  save: vi.fn(),
+  splitTextToSize: vi.fn((text: string, _maxWidth: number) => [text])
 };
 
 vi.mock('firebase/firestore', async (importOriginal) => {
@@ -122,20 +123,28 @@ describe('generateBatchReport', () => {
     // Check that save was called with the expected file name
     expect(mockDocInstance.save).toHaveBeenCalledWith('Reporte_Lote_12345.pdf');
 
-    // Check that summary metrics include both active and pending counts
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Total Miembros: 2', 14, 84);
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Miembros Activos (Válidos): 1', 70, 84);
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Miembros Pendientes (No Registrados): 1', 130, 84);
+    // Check that summary metrics include active, exceptional and pending counts
+    expect(mockDocInstance.text).toHaveBeenCalledWith('Total: 2', 14, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith('Activos (Válidos): 1', 56, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith('Excepcionales: 0', 110, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith('Pendientes: 1', 152, expect.any(Number));
 
-    // Check that table rows include BOTH members
+    // Check section header carries group, district and region
+    expect(mockDocInstance.text).toHaveBeenCalledWith('Grupo San Luis (2)', 14, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      'Distrito: Distrito Sucre  |  Región: Región Capital',
+      14,
+      expect.any(Number)
+    );
+
+    // Check that table rows include BOTH members without per-row Grupo column
     expect(mockDocInstance.text).toHaveBeenCalledWith('V-11111111', 16, expect.any(Number));
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Ana Perez', 46, expect.any(Number));
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Grupo San Luis', 106, expect.any(Number));
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Registro Válido', 170, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith(['Ana Perez'], 46, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith('Registro Válido', 156, expect.any(Number));
 
     expect(mockDocInstance.text).toHaveBeenCalledWith('V-22222222', 16, expect.any(Number));
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Carlos Gomez', 46, expect.any(Number));
-    expect(mockDocInstance.text).toHaveBeenCalledWith('No registrado', 170, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith(['Carlos Gomez'], 46, expect.any(Number));
+    expect(mockDocInstance.text).toHaveBeenCalledWith('No registrado', 156, expect.any(Number));
 
     // Check that green and red colors were set for active and inactive status
     expect(mockDocInstance.setTextColor).toHaveBeenCalledWith(40, 167, 69);

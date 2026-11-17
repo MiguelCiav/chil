@@ -116,9 +116,9 @@ export async function saveNoScoutMemberToDb(
         verified_in_registry: false,
         batch_id: batchId,
         user_id: userId,
-        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
-        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
-        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
+        region_id: hierarchy?.region_id ?? 0,
+        district_id: hierarchy?.district_id ?? 0,
+        group_id: hierarchy?.group_id ?? 0
       },
       userId
     );
@@ -150,9 +150,9 @@ export async function saveUnregisteredMemberToDb(
         verified_in_registry: true,
         batch_id: batchId,
         user_id: userId,
-        region_id: hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined,
-        district_id: hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined,
-        group_id: hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined
+        region_id: hierarchy?.region_id ?? 0,
+        district_id: hierarchy?.district_id ?? 0,
+        group_id: hierarchy?.group_id ?? 0
       },
       userId
     );
@@ -180,9 +180,15 @@ export async function saveScrapedMemberToDb(
 
     const finalUnit = memberUnit || classified.unit;
     const finalType = type || classified.member_type;
-    const finalRegionId = matched.region_id ?? (hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : undefined);
-    const finalDistrictId = matched.district_id ?? (hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : undefined);
-    const finalGroupId = matched.group_id ?? (hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : undefined);
+    const finalRegionId =
+      matched.region_id ??
+      (hierarchy?.region_id && hierarchy.region_id !== 0 ? hierarchy.region_id : 0);
+    const finalDistrictId =
+      matched.district_id ??
+      (hierarchy?.district_id && hierarchy.district_id !== 0 ? hierarchy.district_id : 0);
+    const finalGroupId =
+      matched.group_id ??
+      (hierarchy?.group_id && hierarchy.group_id !== 0 ? hierarchy.group_id : 0);
 
     return await createMember(
       {
@@ -233,7 +239,7 @@ export async function syncAndFinalizeStep2Members(
 
   const deletePromises = dbMembers
     .filter((m) => !cedulaSet.has(m.identity))
-    .map((m) => deleteMember(m.recognition_code || m.identity, m.identity));
+    .map((m) => deleteMember(m.recognition_code || m.identity, m.identity, batchId));
   await Promise.all(deletePromises);
 
   const members = await getMembersByBatchId(batchId);

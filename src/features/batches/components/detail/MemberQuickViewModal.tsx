@@ -1,13 +1,14 @@
 import React from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
-import { ScoutGroup, ScoutMember, getUnitLabel } from '../../types';
+import { resolveMemberHierarchy } from '../../../../utils/memberHierarchy';
+import { Batch, ScoutGroup, ScoutMember, getUnitLabel } from '../../types';
 
 export interface MemberQuickViewModalProps {
   member: ScoutMember | null;
   onClose: () => void;
   groups?: ScoutGroup[];
-  batchGroup?: string;
+  batch?: Batch | null;
 }
 
 function getMemberTypeLabel(type: 'young' | 'adult'): string {
@@ -30,16 +31,21 @@ export const MemberQuickViewModal: React.FC<MemberQuickViewModalProps> = ({
   member,
   onClose,
   groups = [],
-  batchGroup
+  batch
 }) => {
   const memberGroupName = React.useMemo(() => {
     if (!member) return '-';
-    if (member.group_id && member.group_id !== 0) {
-      const found = groups.find(g => g.id === member.group_id);
-      return found?.name ?? `Grupo ${member.group_id}`;
+    const groupId = resolveMemberHierarchy(member, batch ?? undefined, {
+      regions: [],
+      districts: [],
+      groups
+    }).groupId;
+    if (groupId === 0) {
+      return 'No aplica';
     }
-    return batchGroup || 'No aplica';
-  }, [member, groups, batchGroup]);
+    const found = groups.find((g) => g.id === groupId);
+    return found?.name ?? `Grupo ${groupId}`;
+  }, [member, groups, batch]);
   return (
     <Modal isOpen={member !== null} onClose={onClose} className="max-w-md">
       <ModalHeader onClose={onClose}>Ficha del Miembro Scout</ModalHeader>

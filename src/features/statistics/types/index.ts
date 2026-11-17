@@ -73,7 +73,7 @@ export interface DemographicsData {
 }
 
 export interface GeographicItem {
-  id: number;
+  id: number | string;
   name: string;
   count: number;
   percentage: number;
@@ -117,7 +117,7 @@ export interface YoYCountMetric {
 }
 
 export interface YoYRegionItem {
-  id: number;
+  id: number | string;
   name: string;
   currentCount: number;
   previousCount: number;

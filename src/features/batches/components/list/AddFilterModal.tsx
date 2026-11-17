@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
+import { isNoAplicaDistrict } from '../../../../utils/memberHierarchy';
 import { Region, District, ScoutGroup, ActiveFilterChip } from '../../types';
 import { RecognitionType } from '../../../recognitions';
 import { RECOGNITION_TYPES } from '../../api';
@@ -77,7 +78,8 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
       id: `${filterType}-${Date.now()}`,
       type: filterType,
       label,
-      value: displayValue
+      value: displayValue,
+      filterValue: computedFilterValue
     };
 
     onApplyFilter(newChip);
@@ -107,6 +109,7 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
               <option value="region">Región Scout</option>
               <option value="district">Distrito Scout</option>
               <option value="group">Grupo Scout</option>
+              <option value="completeness">Completitud</option>
               <option value="recognition">Tipo de Reconocimiento</option>
               <option value="date">Fecha / Período</option>
             </select>
@@ -125,9 +128,13 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
                 required
               >
                 <option value="">Seleccione una región</option>
-                {regions.map(r => (
-                  <option key={r.id} value={String(r.id)}>{r.name}</option>
-                ))}
+                <option value="nacional">Nacional</option>
+                <option value="0">No aplica</option>
+                {regions
+                  .filter(r => r.id !== 0)
+                  .map(r => (
+                    <option key={r.id} value={`id:${r.id}`}>{r.name}</option>
+                  ))}
               </select>
             )}
 
@@ -140,9 +147,12 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
                 required
               >
                 <option value="">Seleccione un distrito</option>
-                {districts.map(d => (
-                  <option key={d.id} value={String(d.id)}>{d.name}</option>
-                ))}
+                <option value="0">No aplica</option>
+                {districts
+                  .filter(d => d.id !== 0 && !isNoAplicaDistrict(d))
+                  .map(d => (
+                    <option key={d.id} value={`id:${d.id}`}>{d.name}</option>
+                  ))}
               </select>
             )}
 
@@ -155,9 +165,28 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
                 required
               >
                 <option value="">Seleccione un grupo scout</option>
-                {groups.map(g => (
-                  <option key={g.id} value={String(g.id)}>{g.name}</option>
-                ))}
+                <option value="0">No aplica</option>
+                <option value="no_scout">No scout</option>
+                {groups
+                  .filter(g => g.id !== 0)
+                  .map(g => (
+                    <option key={g.id} value={`id:${g.id}`}>{g.name}</option>
+                  ))}
+              </select>
+            )}
+
+            {filterType === 'completeness' && (
+              <select
+                id="filter-value-select"
+                value={filterValue}
+                onChange={e => setFilterValue(e.target.value)}
+                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                required
+              >
+                <option value="">Seleccione un estado</option>
+                <option value="complete">Todos registrados</option>
+                <option value="pending">Registros pendientes</option>
+                <option value="empty">Sin miembros</option>
               </select>
             )}
 

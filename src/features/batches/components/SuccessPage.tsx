@@ -31,6 +31,8 @@ import {
   getRecognitionTypeById,
   RecognitionType
 } from '../../recognitions';
+import { CertificateZipProgressModal } from './shared';
+import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
 
 interface StatSummaryCardProps {
   readonly title: string;
@@ -173,7 +175,7 @@ export const SuccessPage: React.FC = () => {
   const [batch, setBatch] = useState<Batch | null>(null);
   const [members, setMembers] = useState<ScoutMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(false);
+  const zipDownload = useCertificateZipDownload();
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -217,30 +219,44 @@ export const SuccessPage: React.FC = () => {
     loadBatchData();
   }, [batchId]);
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = () => {
     if (!batch) return;
-    setDownloading(true);
-    try {
-      let recType: RecognitionType | null = null;
-      if (batch.recognition_type) {
-        recType = await getRecognitionTypeById(batch.recognition_type);
+    void zipDownload.startDownload(
+      async ({ onProgress, signal }) => {
+        let recType: RecognitionType | null = null;
+        if (batch.recognition_type) {
+          recType = await getRecognitionTypeById(batch.recognition_type);
+          if (signal.aborted) {
+            throw new DOMException('Aborted', 'AbortError');
+          }
+        }
+        const hierarchy = await getHierarchyData();
+        if (signal.aborted) {
+          throw new DOMException('Aborted', 'AbortError');
+        }
+        return await generateBatchCertificatesZip({
+          batch,
+          members,
+          recognition: recType,
+          hierarchy,
+          onProgress,
+          signal
+        });
+      },
+      {
+        scopeLabel: `Lote #${batch.id}`,
+        initialTotal: 0,
+        onSuccess: (path) => {
+          setToastMessage(`¡Reconocimientos descargados exitosamente en ${path}!`);
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 4000);
+        },
+        onError: (err) => {
+          console.error(err);
+          alert('Error al generar los reconocimientos en ZIP.');
+        }
       }
-      const hierarchy = await getHierarchyData();
-      const path = await generateBatchCertificatesZip({
-        batch,
-        members,
-        recognition: recType,
-        hierarchy
-      });
-      setToastMessage(`¡Reconocimientos descargados exitosamente en ${path}!`);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
-    } catch (err) {
-      console.error(err);
-      alert("Error al generar los reconocimientos en ZIP.");
-    } finally {
-      setDownloading(false);
-    }
+    );
   };
 
   const handleDownloadReport = async () => {
@@ -318,11 +334,11 @@ export const SuccessPage: React.FC = () => {
           <Button
             variant="primary"
             onClick={handleDownloadPDF}
-            disabled={downloading || eligibleCount === 0}
+            disabled={zipDownload.isDownloading || eligibleCount === 0}
             title={eligibleCount === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos" : undefined}
             icon={<Download size={18} />}
           >
-            {downloading ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
+            {zipDownload.isDownloading ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
           </Button>
           <Button
             variant="outline"
@@ -405,6 +421,14 @@ export const SuccessPage: React.FC = () => {
         <Table columns={columns} data={members} className="border-0 rounded-none shadow-none" />
       </div>
 
+      <CertificateZipProgressModal
+        isOpen={zipDownload.isOpen}
+        phase={zipDownload.phase}
+        progress={zipDownload.progress}
+        isCancelling={zipDownload.isCancelling}
+        scopeLabel={zipDownload.scopeLabel}
+        onCancel={zipDownload.cancelDownload}
+      />
     </div>
   );
 };

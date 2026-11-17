@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-  Zap,
   GitMerge
 } from 'lucide-react';
 
@@ -47,6 +46,10 @@ import {
 } from '../types';
 import { useAuth } from '../../auth';
 import {
+  consolidateMergedGroupTokens,
+  deriveBatchTerritorialProjection
+} from '../utils/batchTerritorial';
+import {
   FilterType,
   DateFilterMode,
   PredefinedPeriod,
@@ -61,6 +64,8 @@ import {
   MergeBatchesModal,
   BatchMergeOption
 } from './list';
+import { CertificateZipProgressModal } from './shared';
+import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
 
 export type { FilterType, DateFilterMode, PredefinedPeriod };
 
@@ -102,6 +107,7 @@ export const BatchList: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const zipDownload = useCertificateZipDownload();
 
   // Filter state
   const [activeFilters, setActiveFilters] = useState<ActiveFilterChip[]>([
@@ -147,38 +153,65 @@ export const BatchList: React.FC = () => {
     return found ? found.name : getRecognitionName(recType);
   }, [recognitionTypes]);
 
-  const handleDownloadPDF = useCallback(async (batchId: number) => {
-    setDownloadingId(batchId);
-    try {
-      const targetBatch = batches.find(b => b.id === batchId) || (await getBatchById(batchId));
-      if (!targetBatch) throw new Error('Lote no encontrado');
+  const { startDownload } = zipDownload;
 
-      let batchMembers = members.filter(m => m.batch_id === batchId);
-      if (batchMembers.length === 0) {
-        batchMembers = await getMembersByBatchId(batchId);
-      }
+  const handleDownloadPDF = useCallback(
+    (batchId: number) => {
+      void startDownload(
+        async ({ onProgress, signal }) => {
+          setDownloadingId(batchId);
+          try {
+            const targetBatch = batches.find(b => b.id === batchId) || (await getBatchById(batchId));
+            if (!targetBatch) throw new Error('Lote no encontrado');
+            if (signal.aborted) {
+              throw new DOMException('Aborted', 'AbortError');
+            }
 
-      let recType: RecognitionType | null = null;
-      if (targetBatch.recognition_type) {
-        recType = await getRecognitionTypeById(targetBatch.recognition_type);
-      }
+            let batchMembers = members.filter(m => m.batch_id === batchId);
+            if (batchMembers.length === 0) {
+              batchMembers = await getMembersByBatchId(batchId);
+              if (signal.aborted) {
+                throw new DOMException('Aborted', 'AbortError');
+              }
+            }
 
-      const fileName = await generateBatchCertificatesZip({
-        batch: targetBatch,
-        members: batchMembers,
-        recognition: recType,
-        hierarchy: { regions, districts, groups }
-      });
-      setToastMessage(`Reconocimientos descargados: ${fileName}`);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
-    } catch (err) {
-      console.error("Error downloading PDF:", err);
-      alert("Error al generar los reconocimientos en ZIP.");
-    } finally {
-      setDownloadingId(null);
-    }
-  }, [batches, members, regions, districts, groups]);
+            let recType: RecognitionType | null = null;
+            if (targetBatch.recognition_type) {
+              recType = await getRecognitionTypeById(targetBatch.recognition_type);
+              if (signal.aborted) {
+                throw new DOMException('Aborted', 'AbortError');
+              }
+            }
+
+            return await generateBatchCertificatesZip({
+              batch: targetBatch,
+              members: batchMembers,
+              recognition: recType,
+              hierarchy: { regions, districts, groups },
+              onProgress,
+              signal
+            });
+          } finally {
+            setDownloadingId(null);
+          }
+        },
+        {
+          scopeLabel: `Lote #${batchId}`,
+          initialTotal: 0,
+          onSuccess: (fileName) => {
+            setToastMessage(`Reconocimientos descargados: ${fileName}`);
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 4000);
+          },
+          onError: (err) => {
+            console.error('Error downloading PDF:', err);
+            alert('Error al generar los reconocimientos en ZIP.');
+          }
+        }
+      );
+    },
+    [startDownload, batches, members, regions, districts, groups]
+  );
 
   const handleDeleteClick = useCallback((rowData: BatchRowData) => {
     setOpenActionMenuId(null);
@@ -216,23 +249,38 @@ export const BatchList: React.FC = () => {
 
   // Format table rows
   const tableData = useMemo<BatchRowData[]>(() => {
+    const membersByBatchId = new Map<number, ScoutMember[]>();
+    for (const member of members) {
+      if (member.batch_id === undefined) continue;
+      const list = membersByBatchId.get(member.batch_id);
+      if (list) {
+        list.push(member);
+      } else {
+        membersByBatchId.set(member.batch_id, [member]);
+      }
+    }
+
+    const hierarchy = { regions, districts, groups };
+
     return batches.map(batch => {
-      const region = regions.find(r => r.id === batch.region_id);
-      const district = districts.find(d => d.id === batch.district_id);
-      const group = groups.find(g => g.id === batch.group_id);
-      const batchMembers = members.filter(m => m.batch_id === batch.id);
+      const batchMembers = membersByBatchId.get(batch.id) ?? [];
+      const projection = deriveBatchTerritorialProjection(batchMembers, batch, hierarchy);
 
       return {
         id: batch.id,
         batch,
         created_at: batch.created_at,
         formattedDate: formatBatchDate(batch.created_at),
-        regionName: region ? region.name : (batch.region_id === 0 ? 'No aplica' : '-'),
-        districtName: district ? district.name : (batch.district_id === 0 ? 'No aplica' : '-'),
-        groupName: group ? group.name : (batch.group_id === 0 ? (batchMembers.some(m => m.group_id) ? 'Multigrupo' : 'No aplica') : '-'),
+        regionTokens: projection.regionTokens,
+        districtTokens: projection.districtTokens,
+        groupTokens: projection.groupTokens,
+        completenessStatus: projection.completenessStatus,
+        completenessLabel: projection.completenessLabel,
+        pendingCount: projection.pendingCount,
+        eligibleCount: projection.eligibleCount,
         recognitionName: resolveRecognitionName(batch.recognition_type),
         recognitionType: batch.recognition_type ?? '',
-        memberCount: batchMembers.length
+        memberCount: projection.memberCount
       };
     });
   }, [batches, members, regions, districts, groups, resolveRecognitionName]);
@@ -287,7 +335,8 @@ export const BatchList: React.FC = () => {
           batch: row.batch,
           created_at: row.created_at,
           formattedDate: row.formattedDate,
-          groupName: row.groupName,
+          groupTokens: row.groupTokens,
+          groupName: consolidateMergedGroupTokens([row.groupTokens]),
           recognitionName: row.recognitionName,
           memberCount: row.memberCount
         };
@@ -354,15 +403,6 @@ export const BatchList: React.FC = () => {
               Fusionar lotes ({selectedBatches.length})
             </Button>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate('/lotes/rapido')}
-            icon={<Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" />}
-            className="flex-shrink-0"
-          >
-            Emisión Rápida
-          </Button>
           <Button
             type="button"
             variant="primary"
@@ -491,6 +531,16 @@ export const BatchList: React.FC = () => {
         selectedBatches={selectedBatches}
         onMergeSuccess={handleMergeSuccess}
         userId={user?.uid}
+      />
+
+      {/* Modal: Progreso de Generación ZIP */}
+      <CertificateZipProgressModal
+        isOpen={zipDownload.isOpen}
+        phase={zipDownload.phase}
+        progress={zipDownload.progress}
+        isCancelling={zipDownload.isCancelling}
+        scopeLabel={zipDownload.scopeLabel}
+        onCancel={zipDownload.cancelDownload}
       />
 
       {/* Walkthrough Interactive Guide Overlay */}

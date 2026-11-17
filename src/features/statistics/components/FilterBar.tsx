@@ -3,6 +3,7 @@ import { Download, RotateCcw, Filter } from 'lucide-react';
 import { Button } from '../../../components/Button';
 import { StatisticsFilterState, StatisticsDataset } from '../types';
 import { Region, District } from '../../../types';
+import { isNoAplicaDistrict } from '../../../utils/memberHierarchy';
 import { RecognitionType } from '../../recognitions';
 import { exportStatisticsPdf, FilterSummaryLabels } from '../utils/statsPdfExport';
 
@@ -117,11 +118,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
           >
             <option value="">Todas las regiones</option>
-            {regions.map(r => (
-              <option key={r.id} value={String(r.id)}>
-                {r.name}
-              </option>
-            ))}
+            {regions
+              .filter(r => r.id !== 0)
+              .map(r => (
+                <option key={r.id} value={String(r.id)}>
+                  {r.name}
+                </option>
+              ))}
+            <option value="nacional">Nacional</option>
+            <option value="0">No aplica</option>
           </select>
         </div>
 
@@ -138,11 +143,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
           >
             <option value="">Todos los distritos</option>
-            {availableDistricts.map(d => (
-              <option key={d.id} value={String(d.id)}>
-                {d.name}
-              </option>
-            ))}
+            {availableDistricts
+              .filter(d => d.id !== 0 && !isNoAplicaDistrict(d))
+              .map(d => (
+                <option key={d.id} value={String(d.id)}>
+                  {d.name}
+                </option>
+              ))}
+            <option value="0">No aplica</option>
           </select>
         </div>
 

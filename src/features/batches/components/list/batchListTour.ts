@@ -12,7 +12,7 @@ export const BATCH_LIST_TOUR_STEPS: WalkthroughStep[] = [
     id: 'batch-list-actions',
     targetSelector: '[data-walkthrough="batch-list-actions"]',
     title: 'Crear Nuevos Lotes',
-    content: "Usa '+ Nuevo Lote' para procesar listas masivas con el asistente de 3 pasos, o '⚡ Emisión Rápida' para galardonar a una persona individual al instante.",
+    content: "Usa '+ Nuevo Lote' para procesar listas masivas con el asistente paso a paso.",
     placement: 'bottom'
   },
   {

@@ -4,5 +4,6 @@ export interface ActiveFilterChip {
   id: string;
   label: string;
   value: string;
-  type: 'date' | 'region' | 'district' | 'group' | 'unit' | 'recognition';
+  filterValue?: string;
+  type: 'date' | 'region' | 'district' | 'group' | 'unit' | 'recognition' | 'completeness';
 }

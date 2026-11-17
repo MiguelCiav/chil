@@ -32,6 +32,7 @@ export interface BatchGenerationOptions {
   onProgress?: (progress: BatchGenerationProgress) => void;
   signal?: AbortSignal;
   chunkSize?: number;
+  bucketSlug?: string;
 }
 
 export interface SingleCertificateParams {
@@ -48,6 +49,7 @@ export interface BatchCertificatesParams {
   hierarchy?: HierarchyData;
   onProgress?: (progress: BatchGenerationProgress) => void;
   signal?: AbortSignal;
+  bucketSlug?: string;
 }
 
 let cachedScoutsPlanarFontBase64: string | null = null;
@@ -755,7 +757,11 @@ export async function generateBatchCertificatesZip(
 
   throwIfAborted(signal);
 
-  const zipFileName = `Reconocimientos_Lote_${batch.id}_${slug}.zip`;
+  const rawBucketSlug = options?.bucketSlug?.trim() || params.bucketSlug?.trim();
+  const cleanBucketSlug = rawBucketSlug ? slugify(rawBucketSlug) || 'grupo' : '';
+  const zipFileName = `Reconocimientos_Lote_${batch.id}_${slug}${
+    cleanBucketSlug ? `_${cleanBucketSlug}` : ''
+  }.zip`;
   triggerBlobDownload(zipBlob, zipFileName);
 
   return zipFileName;

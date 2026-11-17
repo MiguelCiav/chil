@@ -49,14 +49,6 @@ function App() {
 
             {/* Protected Routes */}
             <Route
-              path="/lotes/rapido"
-              element={<Navigate to="/lotes/nuevo" replace />}
-            />
-            <Route
-              path="/emision-rapida"
-              element={<Navigate to="/lotes/nuevo" replace />}
-            />
-            <Route
               path="/lotes/nuevo"
               element={
                 <ProtectedRoute>

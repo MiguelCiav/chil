@@ -587,6 +587,76 @@ describe('statsCalculators', () => {
       expect(kpis.activeDistrictsCount).toBe(1);
       expect(kpis.activeGroupsCount).toBe(1);
     });
+
+    it('attributes Nacional institutional members to id "nacional" in KPIs, geographic breakdown, and YoY regions without batch scalar leakage', () => {
+      const emptyBatchWithStaleHeader: Batch = {
+        id: 888,
+        region_id: 30,
+        district_id: 301,
+        group_id: 501,
+        created_at: '2026-04-10T10:00:00.000Z'
+      };
+      const nationalBatch: Batch = {
+        id: 889,
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        created_at: '2026-04-11T10:00:00.000Z'
+      };
+      const nationalMember: ScoutMember = {
+        identity: 'V-9999',
+        first_names: 'Elena',
+        last_names: 'Nacional',
+        birth_date: '1980-01-01',
+        member_type: 'adult',
+        unit: 'institucional',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        status: 'active',
+        batch_id: 889
+      };
+
+      const kpis = calculateKpiMetrics(
+        [nationalMember],
+        [emptyBatchWithStaleHeader, nationalBatch],
+        [],
+        testGroups,
+        testDistricts,
+        testRegions
+      );
+
+      // Only 'nacional' is active; stale batch 888 with 0 members does not inflate active counts
+      expect(kpis.activeRegionsCount).toBe(1);
+      expect(kpis.activeDistrictsCount).toBe(0);
+      expect(kpis.activeGroupsCount).toBe(0);
+
+      const geo = calculateGeographicBreakdown(
+        [emptyBatchWithStaleHeader, nationalBatch],
+        [nationalMember],
+        testRegions,
+        testDistricts,
+        testGroups
+      );
+      expect(geo.regions).toEqual([
+        { id: 'nacional', name: 'Nacional', count: 1, percentage: 100 }
+      ]);
+
+      const yoy = calculateYoYComparison({
+        currentMembers: [nationalMember],
+        previousMembers: [],
+        currentBatches: [nationalBatch],
+        previousBatches: [],
+        regions: testRegions,
+        districts: testDistricts,
+        groups: testGroups,
+        currentYear: 2026,
+        previousYear: 2025
+      });
+      expect(yoy.regions).toEqual([
+        expect.objectContaining({ id: 'nacional', name: 'Nacional', currentCount: 1 })
+      ]);
+    });
   });
 });
 

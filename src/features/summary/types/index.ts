@@ -20,6 +20,10 @@ export interface SummaryRowData {
   statusLabel: 'Registro Válido' | 'Registro Inválido' | 'Emisión Excepcional';
   exceptionalReason?: string;
   recognitionCode: string;
+  regionId: number;
+  districtId: number;
+  groupId: number;
+  isNationalInstitutional: boolean;
   regionName: string;
   districtName: string;
   groupName: string;

@@ -77,10 +77,12 @@ describe('Landing Page Feature', () => {
         })
       ).toBeInTheDocument();
 
-      // 1. Emisión Rápida
-      expect(screen.getByRole('heading', { level: 3, name: 'Emisión Rápida' })).toBeInTheDocument();
+      // 1. Exportación Flexible en PDF y ZIP
       expect(
-        screen.getByText(/Reconoce individualmente en 1 solo paso con descarga instantánea/i)
+        screen.getByRole('heading', { level: 3, name: 'Exportación Flexible en PDF y ZIP' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Descarga diplomas individuales en PDF, archivos ZIP completos o por grupo/i)
       ).toBeInTheDocument();
 
       // 2. Lotes Masivos

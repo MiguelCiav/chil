@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { Step1DataLoad } from '../wizard/Step1DataLoad';
+import { WizardStepper } from '../wizard/WizardStepper';
 
 describe('Step1DataLoad UI cleanup', () => {
   const defaultProps = {
@@ -33,5 +34,16 @@ describe('Step1DataLoad UI cleanup', () => {
     expect(
       screen.queryByText(/Nota: No necesitas separar jóvenes de adultos/i)
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('WizardStepper', () => {
+  it('renders step titles without the removed subtitles', () => {
+    render(<WizardStepper currentStep={1} onStepClick={vi.fn()} />);
+
+    expect(screen.getByText('Carga de Datos')).toBeInTheDocument();
+    expect(screen.getByText('Edición y Confirmación')).toBeInTheDocument();
+    expect(screen.queryByText('Cédulas y Reconocimiento')).not.toBeInTheDocument();
+    expect(screen.queryByText('Revisión y Emisión')).not.toBeInTheDocument();
   });
 });

@@ -15,13 +15,11 @@ export const WizardStepper: React.FC<WizardStepperProps> = ({
     {
       step: 1 as const,
       title: 'Carga de Datos',
-      desc: 'Cédulas y Reconocimiento',
       icon: <UploadCloud className="w-5 h-5" />
     },
     {
       step: 2 as const,
       title: 'Edición y Confirmación',
-      desc: 'Revisión y Emisión',
       icon: <CheckCircle2 className="w-5 h-5" />
     }
   ];
@@ -63,9 +61,6 @@ export const WizardStepper: React.FC<WizardStepperProps> = ({
               }`}
             >
               {item.title}
-            </span>
-            <span className="text-xs text-neutral/40 font-medium hidden sm:inline">
-              {item.desc}
             </span>
           </button>
         ))}
