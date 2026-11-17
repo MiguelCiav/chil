@@ -96,7 +96,6 @@ firebase deploy
 
 - **Lotes Masivos y Multigrupo**: Creación ágil de lotes con soporte para integrantes de múltiples grupos scouts, asignación individual de jerarquía y validación estricta de cédulas.
 - **Fusión de Lotes (Batch Merge)**: Unificación de dos o más lotes existentes en uno consolidado con fecha actualizada y comentarios combinados.
-- **Emisión Rápida Individual**: Generación instantánea de reconocimientos con asignación de código oficial y descarga directa en PDF para jóvenes, adultos o colaboradores No Scouts.
 - **Diseñador Visual de Plantillas**: Editor interactivo drag-and-drop con fondos personalizados, resolución adaptable, tipografías institucionales oficiales y guías magnéticas inteligentes de centrado y alineación.
 - **Descarga de Reconocimientos en ZIP**: Empaquetado automático en archivo comprimido `.zip` con un diploma en PDF individual por cada integrante acreditado.
 - **Tablero Estadístico e Interanual (YoY)**: Métricas ejecutivas, distribución territorial por región y distrito, y comparativa histórica interanual con exportación en PDF y CSV.
@@ -118,7 +117,7 @@ firebase deploy
 
 ### Backend & Cloud Services
 - **Database**: Cloud Firestore
-- **Serverless Backend**: Firebase Cloud Functions (2nd Gen Node.js 20) *(Temporalmente asistido por Vercel Serverless Functions para el scraper)*
+- **Serverless Backend**: Firebase Cloud Functions (2nd Gen Node.js 22) *(Temporalmente asistido por Vercel Serverless Functions para el scraper)*
 - **Hosting**: Firebase Hosting
 - **Authentication**: Firebase Auth
 

@@ -144,7 +144,7 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
                   id="field-batch-comment"
                   {...register('comment')}
                   aria-label="Título o Comentario del Lote"
-                  placeholder="Ej. Reconocimientos Campamento Nacional 2026"
+                  placeholder="Ej. Reconocimientos de ENJ 2026"
                   className="w-full rounded-field px-4 h-[46px] bg-primary/5 border border-primary/20 text-neutral text-sm focus:ring-2 focus:ring-primary"
                   disabled={isVerifying}
                 />
@@ -187,7 +187,7 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
                 {...register('cedulas')}
                 aria-label="Cédulas de Identidad"
                 rows={6}
-                placeholder={`Pega aquí las cédulas una por línea o separadas por comas.\nEjemplos:\n11926931\n30541929\n28123456`}
+                placeholder={`Pega aquí las cédulas una por línea o separadas por comas.\nEjemplos:\n12345678\n23456789\n34567890`}
                 className="w-full rounded-field p-4 bg-primary/5 border border-primary/20 text-neutral text-sm font-mono focus:ring-2 focus:ring-primary"
                 disabled={isVerifying}
               />

@@ -28,6 +28,7 @@ export interface BatchRowData {
   completenessStatus: CompletenessStatus;
   completenessLabel: string;
   pendingCount: number;
+  eligibleCount: number;
   recognitionName: string;
   recognitionType: string;
   memberCount: number;

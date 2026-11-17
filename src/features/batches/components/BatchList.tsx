@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-  Zap,
   GitMerge
 } from 'lucide-react';
 
@@ -65,6 +64,8 @@ import {
   MergeBatchesModal,
   BatchMergeOption
 } from './list';
+import { CertificateZipProgressModal } from './shared';
+import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
 
 export type { FilterType, DateFilterMode, PredefinedPeriod };
 
@@ -106,6 +107,7 @@ export const BatchList: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const zipDownload = useCertificateZipDownload();
 
   // Filter state
   const [activeFilters, setActiveFilters] = useState<ActiveFilterChip[]>([
@@ -151,38 +153,65 @@ export const BatchList: React.FC = () => {
     return found ? found.name : getRecognitionName(recType);
   }, [recognitionTypes]);
 
-  const handleDownloadPDF = useCallback(async (batchId: number) => {
-    setDownloadingId(batchId);
-    try {
-      const targetBatch = batches.find(b => b.id === batchId) || (await getBatchById(batchId));
-      if (!targetBatch) throw new Error('Lote no encontrado');
+  const { startDownload } = zipDownload;
 
-      let batchMembers = members.filter(m => m.batch_id === batchId);
-      if (batchMembers.length === 0) {
-        batchMembers = await getMembersByBatchId(batchId);
-      }
+  const handleDownloadPDF = useCallback(
+    (batchId: number) => {
+      void startDownload(
+        async ({ onProgress, signal }) => {
+          setDownloadingId(batchId);
+          try {
+            const targetBatch = batches.find(b => b.id === batchId) || (await getBatchById(batchId));
+            if (!targetBatch) throw new Error('Lote no encontrado');
+            if (signal.aborted) {
+              throw new DOMException('Aborted', 'AbortError');
+            }
 
-      let recType: RecognitionType | null = null;
-      if (targetBatch.recognition_type) {
-        recType = await getRecognitionTypeById(targetBatch.recognition_type);
-      }
+            let batchMembers = members.filter(m => m.batch_id === batchId);
+            if (batchMembers.length === 0) {
+              batchMembers = await getMembersByBatchId(batchId);
+              if (signal.aborted) {
+                throw new DOMException('Aborted', 'AbortError');
+              }
+            }
 
-      const fileName = await generateBatchCertificatesZip({
-        batch: targetBatch,
-        members: batchMembers,
-        recognition: recType,
-        hierarchy: { regions, districts, groups }
-      });
-      setToastMessage(`Reconocimientos descargados: ${fileName}`);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
-    } catch (err) {
-      console.error("Error downloading PDF:", err);
-      alert("Error al generar los reconocimientos en ZIP.");
-    } finally {
-      setDownloadingId(null);
-    }
-  }, [batches, members, regions, districts, groups]);
+            let recType: RecognitionType | null = null;
+            if (targetBatch.recognition_type) {
+              recType = await getRecognitionTypeById(targetBatch.recognition_type);
+              if (signal.aborted) {
+                throw new DOMException('Aborted', 'AbortError');
+              }
+            }
+
+            return await generateBatchCertificatesZip({
+              batch: targetBatch,
+              members: batchMembers,
+              recognition: recType,
+              hierarchy: { regions, districts, groups },
+              onProgress,
+              signal
+            });
+          } finally {
+            setDownloadingId(null);
+          }
+        },
+        {
+          scopeLabel: `Lote #${batchId}`,
+          initialTotal: 0,
+          onSuccess: (fileName) => {
+            setToastMessage(`Reconocimientos descargados: ${fileName}`);
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 4000);
+          },
+          onError: (err) => {
+            console.error('Error downloading PDF:', err);
+            alert('Error al generar los reconocimientos en ZIP.');
+          }
+        }
+      );
+    },
+    [startDownload, batches, members, regions, districts, groups]
+  );
 
   const handleDeleteClick = useCallback((rowData: BatchRowData) => {
     setOpenActionMenuId(null);
@@ -248,6 +277,7 @@ export const BatchList: React.FC = () => {
         completenessStatus: projection.completenessStatus,
         completenessLabel: projection.completenessLabel,
         pendingCount: projection.pendingCount,
+        eligibleCount: projection.eligibleCount,
         recognitionName: resolveRecognitionName(batch.recognition_type),
         recognitionType: batch.recognition_type ?? '',
         memberCount: projection.memberCount
@@ -373,15 +403,6 @@ export const BatchList: React.FC = () => {
               Fusionar lotes ({selectedBatches.length})
             </Button>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate('/lotes/rapido')}
-            icon={<Zap className="w-4 h-4 text-amber-500 fill-amber-500/20" />}
-            className="flex-shrink-0"
-          >
-            Emisión Rápida
-          </Button>
           <Button
             type="button"
             variant="primary"
@@ -510,6 +531,16 @@ export const BatchList: React.FC = () => {
         selectedBatches={selectedBatches}
         onMergeSuccess={handleMergeSuccess}
         userId={user?.uid}
+      />
+
+      {/* Modal: Progreso de Generación ZIP */}
+      <CertificateZipProgressModal
+        isOpen={zipDownload.isOpen}
+        phase={zipDownload.phase}
+        progress={zipDownload.progress}
+        isCancelling={zipDownload.isCancelling}
+        scopeLabel={zipDownload.scopeLabel}
+        onCancel={zipDownload.cancelDownload}
       />
 
       {/* Walkthrough Interactive Guide Overlay */}

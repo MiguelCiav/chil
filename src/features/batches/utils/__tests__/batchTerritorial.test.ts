@@ -150,7 +150,7 @@ describe('batchTerritorial', () => {
       expect(proj.groupTokens.map((t) => t.label)).toEqual(['No aplica']);
     });
 
-    it('Case H: retains insolvent pending Scouts with positive IDs, suppresses 0,0,0 pending noise, and tracks pending count', () => {
+    it('Case H: retains insolvent pending Scouts with positive IDs, suppresses 0,0,0 pending noise, and tracks pending and eligible counts', () => {
       const members = [
         makeMember({ group_id: 100, status: 'active' }, 1),
         makeMember({ group_id: 200, status: 'pending' }, 2),
@@ -162,6 +162,7 @@ describe('batchTerritorial', () => {
       expect(proj.completenessStatus).toBe('pending');
       expect(proj.completenessLabel).toBe('Registros pendientes (2)');
       expect(proj.pendingCount).toBe(2);
+      expect(proj.eligibleCount).toBe(1);
     });
 
     it('Case I: projects 0 members as No aplica across all columns and Sin miembros completeness', () => {
@@ -171,6 +172,30 @@ describe('batchTerritorial', () => {
       expect(proj.groupTokens.map((t) => t.label)).toEqual(['No aplica']);
       expect(proj.completenessStatus).toBe('empty');
       expect(proj.completenessLabel).toBe('Sin miembros');
+      expect(proj.eligibleCount).toBe(0);
+    });
+
+    it('counts active, exceptional, and no_scout members accurately in eligibleCount', () => {
+      const mixedProj = deriveBatchTerritorialProjection(
+        [
+          makeMember({ group_id: 100, status: 'active' }, 1),
+          makeMember({ group_id: 100, status: 'exceptional' }, 2),
+          makeMember({ group_id: 100, status: 'pending' }, 3)
+        ],
+        emptyBatch,
+        hierarchy
+      );
+      expect(mixedProj.eligibleCount).toBe(2);
+
+      const noScoutProj = deriveBatchTerritorialProjection(
+        [
+          makeMember({ unit: 'no_scout', status: 'active' }, 4),
+          makeMember({ unit: 'no_scout', status: 'exceptional' }, 5)
+        ],
+        emptyBatch,
+        hierarchy
+      );
+      expect(noScoutProj.eligibleCount).toBe(2);
     });
   });
 

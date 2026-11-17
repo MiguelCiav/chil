@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { jsPDF } from 'jspdf';
 import { Batch, District, Region, ScoutGroup, ScoutMember } from '../../types';
-import { generateBatchReport, resolveBatchReportBuckets } from '../batchReports';
+import {
+  filterEligibleReportBuckets,
+  generateBatchReport,
+  resolveBatchReportBuckets
+} from '../batchReports';
 
 const mockDocInstance = {
   setFontSize: vi.fn(),
@@ -187,6 +191,40 @@ describe('batchReports service', () => {
         'special:ungrouped'
       ]);
       expect(buckets[1].members.map((m) => m.identity)).toEqual(['V10', 'V20']);
+    });
+  });
+
+  describe('filterEligibleReportBuckets', () => {
+    it('strips pending members, drops empty buckets, preserves special buckets with eligible members, and does not mutate inputs', () => {
+      const members = [
+        makeMember({ identity: 'V-A1', group_id: 100, status: 'active' }),
+        makeMember({ identity: 'V-A2', group_id: 100, status: 'pending' }),
+        makeMember({ identity: 'V-P1', group_id: 200, status: 'pending' }),
+        makeMember({ identity: 'V-NS', unit: 'no_scout', status: 'active' }),
+        makeMember({ identity: 'V-UG-E', group_id: 0, status: 'exceptional' }),
+        makeMember({ identity: 'V-UG-P', group_id: 0, status: 'pending' })
+      ];
+
+      const buckets = resolveBatchReportBuckets(baseBatch, members, hierarchy);
+      const originalGroup100Length = buckets.find((b) => b.key === 'group:100')?.members.length;
+
+      const eligible = filterEligibleReportBuckets(buckets);
+
+      expect(eligible.map((b) => b.key)).toEqual([
+        'group:100',
+        'special:no_scout',
+        'special:ungrouped'
+      ]);
+      expect(eligible.find((b) => b.key === 'group:100')?.members.map((m) => m.identity)).toEqual([
+        'V-A1'
+      ]);
+      expect(
+        eligible.find((b) => b.key === 'special:ungrouped')?.members.map((m) => m.identity)
+      ).toEqual(['V-UG-E']);
+      expect(eligible.find((b) => b.key === 'special:no_scout')?.members).toHaveLength(1);
+      expect(buckets.find((b) => b.key === 'group:100')?.members.length).toBe(
+        originalGroup100Length
+      );
     });
   });
 

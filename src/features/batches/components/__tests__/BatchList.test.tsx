@@ -571,7 +571,7 @@ describe('BatchList component', () => {
     });
   });
 
-  it('renders header with Emisión Rápida and Nuevo Lote buttons and handles navigation', async () => {
+  it('renders header with Nuevo Lote button without Emisión Rápida and handles navigation', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce([]);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce([]);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce({ regions: [], districts: [], groups: [] });
@@ -586,14 +586,10 @@ describe('BatchList component', () => {
       expect(screen.getByText('No se encontraron lotes registrados.')).toBeInTheDocument();
     });
 
-    const rapidoBtn = screen.getByRole('button', { name: /Emisión Rápida/i });
     const nuevoBtn = screen.getByRole('button', { name: /Nuevo Lote/i });
 
-    expect(rapidoBtn).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Emisión Rápida/i })).not.toBeInTheDocument();
     expect(nuevoBtn).toBeInTheDocument();
-
-    fireEvent.click(rapidoBtn);
-    expect(mockNavigate).toHaveBeenCalledWith('/lotes/rapido');
 
     fireEvent.click(nuevoBtn);
     expect(mockNavigate).toHaveBeenCalledWith('/lotes/nuevo');
@@ -656,7 +652,9 @@ describe('BatchList component', () => {
     // Step 2: Crear Nuevos Lotes
     expect(screen.getByText('Crear Nuevos Lotes')).toBeInTheDocument();
     expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
-    expect(screen.getByText(/Usa '\+ Nuevo Lote' para procesar listas masivas/i)).toBeInTheDocument();
+    expect(
+      screen.getByText("Usa '+ Nuevo Lote' para procesar listas masivas con el asistente paso a paso.")
+    ).toBeInTheDocument();
 
     // Click Siguiente -> Step 3
     fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
@@ -945,6 +943,69 @@ describe('BatchList component', () => {
       expect(screen.getByText('Grupo 1')).toBeInTheDocument();
     });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('disables row ZIP download when batch has 0 eligible members, and supports modal pre-fetch cancellation', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const batchesFixture = [
+      ...mockBatches,
+      {
+        id: 103,
+        comment: 'Lote Solo Pendientes',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-go-solar',
+        created_at: '2026-08-22T10:00:00.000Z'
+      }
+    ];
+    const membersFixture: ScoutMember[] = [
+      ...mockMembers,
+      { identity: 'V-P1', status: 'pending', batch_id: 103, first_names: 'P', last_names: 'User', birth_date: '2000-01-01', member_type: 'young' }
+    ];
+
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(batchesFixture);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(membersFixture);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
+
+    let resolveRecType!: (val: recognitions.RecognitionType | null) => void;
+    vi.mocked(recognitions.getRecognitionTypeById).mockImplementationOnce(
+      () => new Promise((res) => { resolveRecType = res; })
+    );
+
+    render(
+      <MemoryRouter>
+        <BatchList />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Acciones del lote 103')).toBeInTheDocument();
+    });
+
+    // Batch 103 has only pending members -> disabled row ZIP menu item
+    fireEvent.click(screen.getByLabelText('Acciones del lote 103'));
+    const disabledZipItem = screen.getByRole('button', { name: /^Descargar reconocimientos \(ZIP\)$/i });
+    expect(disabledZipItem).toBeDisabled();
+
+    // Batch 101 -> open modal in "Preparando lote..." while pre-fetching and cancel mid-fetch
+    fireEvent.click(screen.getByLabelText('Acciones del lote 101'));
+    fireEvent.click(screen.getByRole('button', { name: /^Descargar reconocimientos \(ZIP\)$/i }));
+
+    expect(screen.getByText('Generando certificados')).toBeInTheDocument();
+    expect(screen.getByText('Preparando lote...')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.getByText('Cancelando...')).toBeInTheDocument();
+
+    resolveRecType(null);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(recognitions.generateBatchCertificatesZip).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });
 

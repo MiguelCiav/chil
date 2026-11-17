@@ -16,6 +16,7 @@ vi.mock('../../api', async (importOriginal) => {
     deleteBatch: vi.fn(),
     generateBatchReport: vi.fn(),
     resolveBatchReportBuckets: actual.resolveBatchReportBuckets,
+    filterEligibleReportBuckets: actual.filterEligibleReportBuckets,
     exportMembersToCSV: vi.fn(),
     getRecognitionName: vi.fn((name) => name || 'Servicio Prolongado')
   };
@@ -1442,7 +1443,7 @@ describe('BatchDetail component', () => {
       expect(screen.getByText('Paso 1 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista (completo o por grupo) o eliminar el lote si es necesario.'
+          'Consulta la información completa del lote. Desde la cabecera puedes descargar los reconocimientos oficiales en ZIP (completo o por grupo), generar el reporte de lista en PDF (completo o por grupo) o eliminar el lote si es necesario.'
         )
       ).toBeInTheDocument();
 
@@ -1586,7 +1587,7 @@ describe('BatchDetail component', () => {
         'title',
         'No hay miembros en este lote para generar la lista'
       );
-      expect(screen.queryByRole('button', { name: /Por grupo/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Opciones de lista por grupo/i })).not.toBeInTheDocument();
     });
 
     it('hides "Por grupo" when entire batch resolves to 1 Scout group or 1 special bucket', async () => {
@@ -1609,7 +1610,7 @@ describe('BatchDetail component', () => {
       const { unmount } = renderBatchDetail();
       await waitFor(() => expect(screen.getByText('Lote #301')).toBeInTheDocument());
       expect(screen.getByRole('button', { name: /Descargar lista \(PDF\)/i })).toBeEnabled();
-      expect(screen.queryByRole('button', { name: /Por grupo/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Opciones de lista por grupo/i })).not.toBeInTheDocument();
       unmount();
 
       // Case B: Single special bucket (all no_scout)
@@ -1629,7 +1630,7 @@ describe('BatchDetail component', () => {
 
       renderBatchDetail();
       await waitFor(() => expect(screen.getByText('Lote #301')).toBeInTheDocument());
-      expect(screen.queryByRole('button', { name: /Por grupo/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Opciones de lista por grupo/i })).not.toBeInTheDocument();
     });
 
     it('shows "Por grupo" for 2+ buckets, supports 3-arg full export, scoped bucket export, Escape and outside click', async () => {
@@ -1670,8 +1671,8 @@ describe('BatchDetail component', () => {
       });
       expect(vi.mocked(api.generateBatchReport).mock.calls[0]).toHaveLength(3);
 
-      // Open "Por grupo" menu -> displays Scout group + divider + Miembros no scout
-      const menuTrigger = screen.getByRole('button', { name: /Por grupo/i });
+      // Open "Opciones de lista por grupo" menu -> displays Scout group + divider + Miembros no scout
+      const menuTrigger = screen.getByRole('button', { name: /Opciones de lista por grupo/i });
       fireEvent.click(menuTrigger);
       expect(menuTrigger).toHaveAttribute('aria-expanded', 'true');
       expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -1810,6 +1811,119 @@ describe('BatchDetail component', () => {
       });
       // Quick view displays 'No aplica' for explicit group_id: 0
       expect(screen.getAllByText('No aplica').length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('renders ZIP split button when multiple eligible buckets exist, hides 0-eligible buckets, and hides chevron when only 1 eligible bucket remains', async () => {
+      const mixedEligibilityHierarchy = {
+        regions: [{ id: 1, name: 'Región Capital' }],
+        districts: [{ id: 10, name: 'Distrito Sucre', region_id: 1 }],
+        groups: [
+          { id: 100, name: 'Grupo San Luis', district_id: 10 },
+          { id: 101, name: 'Grupo Bolívar', district_id: 10 }
+        ]
+      };
+
+      // Case A: 2 report buckets, only 1 has eligible members (Grupo Bolívar is all pending)
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+        { identity: 'V-1', first_names: 'Ana', last_names: 'Pérez', birth_date: '2000-01-01', member_type: 'adult', status: 'active', unit: 'tropa', group_id: 100 },
+        { identity: 'V-2', first_names: 'Luis', last_names: 'Pending', birth_date: '2000-01-01', member_type: 'adult', status: 'pending', unit: 'tropa', group_id: 101 }
+      ]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mixedEligibilityHierarchy);
+
+      const { unmount } = renderBatchDetail();
+      await waitFor(() => expect(screen.getByText('Lote #301')).toBeInTheDocument());
+      expect(screen.getByRole('button', { name: /Opciones de lista por grupo/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Opciones de certificados por grupo/i })).not.toBeInTheDocument();
+      unmount();
+
+      // Case B: Multiple eligible buckets plus an all-pending ungrouped bucket (hidden in ZIP menu)
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+        { identity: 'V-10', first_names: 'Ana', last_names: 'Activa', birth_date: '2000-01-01', member_type: 'adult', status: 'active', unit: 'tropa', group_id: 100 },
+        { identity: 'V-11', first_names: 'Pepe', last_names: 'Pending', birth_date: '2000-01-01', member_type: 'adult', status: 'pending', unit: 'tropa', group_id: 100 },
+        { identity: 'V-12', first_names: 'No', last_names: 'Scout', birth_date: '2000-01-01', member_type: 'adult', status: 'active', unit: 'no_scout', group_id: 0 },
+        { identity: 'V-13', first_names: 'Solo', last_names: 'PendingUG', birth_date: '2000-01-01', member_type: 'adult', status: 'pending', unit: 'tropa', group_id: 0 }
+      ]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mixedEligibilityHierarchy);
+      vi.mocked(recognitions.generateBatchCertificatesZip).mockResolvedValueOnce(
+        'Reconocimientos_Lote_301_insignia_grupo_san_luis.zip'
+      );
+
+      renderBatchDetail();
+      await waitFor(() => expect(screen.getByText('Lote #301')).toBeInTheDocument());
+
+      const zipMenuTrigger = screen.getByRole('button', { name: /Opciones de certificados por grupo/i });
+      fireEvent.click(zipMenuTrigger);
+      const zipMenu = screen.getByRole('menu', { name: /Exportar certificados por grupo/i });
+      expect(zipMenu).toBeInTheDocument();
+      expect(zipMenu).toHaveTextContent('Grupo San Luis');
+      expect(zipMenu).toHaveTextContent('Miembros no scout');
+      expect(zipMenu).not.toHaveTextContent('Sin grupo asignado');
+
+      fireEvent.click(screen.getByRole('menuitem', { name: /Grupo San Luis/i }));
+      await waitFor(() => {
+        expect(recognitions.generateBatchCertificatesZip).toHaveBeenCalledWith(
+          expect.objectContaining({
+            batch: baseBatch,
+            members: [expect.objectContaining({ identity: 'V-10' })],
+            bucketSlug: 'Grupo San Luis',
+            onProgress: expect.any(Function),
+            signal: expect.any(AbortSignal)
+          })
+        );
+      });
+    });
+
+    it('renders progress modal with compression status and handles Cancelar -> Cancelando... cleanly', async () => {
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
+      vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+        { identity: 'V-1', first_names: 'A', last_names: 'B', birth_date: '2000-01-01', member_type: 'adult', status: 'active', unit: 'tropa', group_id: 100 },
+        { identity: 'V-2', first_names: 'C', last_names: 'D', birth_date: '2000-01-01', member_type: 'adult', status: 'exceptional', unit: 'tropa', group_id: 100 }
+      ]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+
+      let rejectZip!: (reason?: unknown) => void;
+      vi.mocked(recognitions.generateBatchCertificatesZip).mockImplementationOnce(
+        ({ onProgress, signal }) =>
+          new Promise((_, rej) => {
+            rejectZip = rej;
+            onProgress?.({ current: 1, total: 2, percentage: 50 });
+            setTimeout(() => {
+              onProgress?.({ current: 2, total: 2, percentage: 100 });
+            }, 0);
+            signal?.addEventListener('abort', () => {
+              // Wait until explicitly settled to verify Cancelando... state
+            });
+          })
+      );
+
+      renderBatchDetail();
+      await waitFor(() => expect(screen.getByText('Lote #301')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Descargar Reconocimientos \(ZIP\)/i }));
+
+      expect(screen.getByText('Generando certificados')).toBeInTheDocument();
+      expect(screen.getByText('1 / 2 (50%)')).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(screen.getByText('Comprimiendo archivo ZIP...')).toBeInTheDocument();
+        expect(screen.getByText('2 / 2 (100%)')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(screen.getByText('Cancelando...')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+
+      rejectZip(new DOMException('Operación cancelada', 'AbortError'));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', { name: /Descargar Reconocimientos \(ZIP\)/i })).toBeEnabled();
+      expect(alertSpy).not.toHaveBeenCalled();
+      alertSpy.mockRestore();
     });
   });
 });

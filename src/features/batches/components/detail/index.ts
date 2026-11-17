@@ -3,6 +3,7 @@ export * from './batchDetailTour';
 export * from './batchDetailColumns';
 export * from './BatchDetailHeader';
 export * from './BatchReportControls';
+export * from './ScopedExportSplitButton';
 export * from './BatchMembersTable';
 export * from './BatchSummaryCards';
 export * from './BatchTerritorialCard';

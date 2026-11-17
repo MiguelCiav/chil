@@ -24,6 +24,7 @@ export interface BatchTerritorialProjection {
   completenessStatus: CompletenessStatus;
   completenessLabel: string;
   pendingCount: number;
+  eligibleCount: number;
   memberCount: number;
 }
 
@@ -82,6 +83,9 @@ export function deriveBatchTerritorialProjection(
 ): BatchTerritorialProjection {
   const memberCount = batchMembers.length;
   const pendingCount = batchMembers.filter((m) => m.status === 'pending').length;
+  const eligibleCount = batchMembers.filter(
+    (m) => m.status === 'active' || m.status === 'exceptional'
+  ).length;
 
   let completenessStatus: CompletenessStatus = 'complete';
   let completenessLabel = 'Todos registrados';
@@ -102,6 +106,7 @@ export function deriveBatchTerritorialProjection(
       completenessStatus,
       completenessLabel,
       pendingCount,
+      eligibleCount: 0,
       memberCount
     };
   }
@@ -122,6 +127,7 @@ export function deriveBatchTerritorialProjection(
       completenessStatus,
       completenessLabel,
       pendingCount,
+      eligibleCount,
       memberCount
     };
   }
@@ -217,6 +223,7 @@ export function deriveBatchTerritorialProjection(
     completenessStatus,
     completenessLabel,
     pendingCount,
+    eligibleCount,
     memberCount
   };
 }

@@ -168,8 +168,13 @@ export function renderBatchActionsCell(props: BatchActionsCellProps) {
               setOpenActionMenuId(null);
               handleDownloadPDF(rowData.id);
             }}
-            disabled={downloadingId === rowData.id}
-            className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50"
+            disabled={downloadingId === rowData.id || rowData.eligibleCount === 0}
+            title={
+              rowData.eligibleCount === 0
+                ? 'No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos'
+                : undefined
+            }
+            className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-3.5 h-3.5 text-primary" />
             {downloadingId === rowData.id ? 'Descargando...' : 'Descargar reconocimientos (ZIP)'}

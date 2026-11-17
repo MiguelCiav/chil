@@ -5,16 +5,18 @@ import { WalkthroughHelpButton } from '../../../../components/walkthrough';
 import { BatchReportBucket, ReportBucketKey } from '../../api';
 import { Batch } from '../../types';
 import { BatchReportControls } from './BatchReportControls';
+import { ScopedExportSplitButton } from './ScopedExportSplitButton';
 
 export interface BatchDetailHeaderProps {
   batch: Batch;
   startTour: () => void;
   onDeleteClick: () => void;
   reportBuckets: BatchReportBucket[];
+  eligibleBuckets: BatchReportBucket[];
   isListEmpty: boolean;
   onDownloadMemberList: (bucketKey?: ReportBucketKey) => void;
   downloadingReport: boolean;
-  onDownloadCertificatesZip: () => void;
+  onDownloadCertificatesZip: (bucketKey?: ReportBucketKey) => void;
   downloadingCertificatesZip: boolean;
   isEligibleZero: boolean;
 }
@@ -24,6 +26,7 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
   startTour,
   onDeleteClick,
   reportBuckets,
+  eligibleBuckets,
   isListEmpty,
   onDownloadMemberList,
   downloadingReport,
@@ -68,20 +71,22 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
           onDownloadMemberList={onDownloadMemberList}
         />
 
-        <Button
+        <ScopedExportSplitButton
+          buckets={eligibleBuckets}
+          onSelectAll={() => onDownloadCertificatesZip()}
+          onSelectBucket={(bucketKey) => onDownloadCertificatesZip(bucketKey)}
+          primaryLabel="Descargar Reconocimientos (ZIP)"
+          loadingLabel="Generando ZIP..."
+          loading={downloadingCertificatesZip}
+          disabled={isEligibleZero}
+          disabledTitle="No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos"
+          chevronAriaLabel="Opciones de certificados por grupo"
+          menuAriaLabel="Exportar certificados por grupo"
           variant="primary"
-          onClick={onDownloadCertificatesZip}
-          disabled={downloadingCertificatesZip || isEligibleZero}
-          title={
-            isEligibleZero
-              ? 'No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos'
-              : undefined
-          }
+          primaryClassName="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
+          chevronClassName="bg-[#5c371d] hover:bg-[#4b2c17] text-white border-l border-white/25"
           icon={<FileText size={16} />}
-          className="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
-        >
-          {downloadingCertificatesZip ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
-        </Button>
+        />
       </div>
     </div>
   );

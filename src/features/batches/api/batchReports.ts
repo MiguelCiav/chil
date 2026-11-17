@@ -171,6 +171,19 @@ export function resolveBatchReportBuckets(
   return groupBuckets;
 }
 
+/**
+ * Filters pre-resolved report buckets to members eligible for a certificate PDF
+ * (`active` or `exceptional`), omitting buckets with zero eligible members.
+ */
+export function filterEligibleReportBuckets(buckets: BatchReportBucket[]): BatchReportBucket[] {
+  return buckets
+    .map((bucket) => ({
+      ...bucket,
+      members: bucket.members.filter((m) => m.status === 'active' || m.status === 'exceptional')
+    }))
+    .filter((bucket) => bucket.members.length > 0);
+}
+
 export function exportMembersToCSV(batch: Batch, members: ScoutMember[]): void {
   const headers = ['Cédula', 'Nombres', 'Apellidos', 'Tipo', 'Estatus', 'Código Rec.', 'Fecha Nacimiento', 'Email', 'Teléfono'];
   const rows = members.map(m => [

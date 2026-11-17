@@ -6,7 +6,7 @@ export const BATCH_DETAIL_TOUR_STEPS: WalkthroughStep[] = [
     targetSelector: '[data-walkthrough="batch-detail-header"]',
     title: 'Detalle y Acciones del Lote',
     content:
-      'Consulta la información completa del lote. Desde la cabecera puedes descargar todos los reconocimientos oficiales en PDF, generar el reporte de lista (completo o por grupo) o eliminar el lote si es necesario.',
+      'Consulta la información completa del lote. Desde la cabecera puedes descargar los reconocimientos oficiales en ZIP (completo o por grupo), generar el reporte de lista en PDF (completo o por grupo) o eliminar el lote si es necesario.',
     placement: 'bottom'
   },
   {

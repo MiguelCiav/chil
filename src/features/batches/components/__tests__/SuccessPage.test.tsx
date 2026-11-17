@@ -309,4 +309,73 @@ describe('SuccessPage component', () => {
     expect(eyeBtn).toBeInTheDocument();
     fireEvent.click(eyeBtn);
   });
+
+  it('shows preparing/progress states in modal on ZIP generation and aborts cleanly on Cancelar without alert', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.mocked(api.getBatchById).mockResolvedValueOnce({
+      id: 999,
+      comment: 'Lote Progreso',
+      region_id: 1,
+      district_id: 10,
+      group_id: 100,
+      recognition_type: 'sct-go-solar',
+      created_at: '2026-08-21T12:00:00.000Z'
+    });
+    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([
+      {
+        identity: 'V-11111111',
+        first_names: 'Ana',
+        last_names: 'Perez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 999
+      }
+    ]);
+
+    let resolveRecType!: (val: recognitions.RecognitionType | null) => void;
+    vi.mocked(recognitions.getRecognitionTypeById).mockImplementationOnce(
+      () => new Promise((res) => { resolveRecType = res; })
+    );
+
+    let rejectZip!: (reason?: unknown) => void;
+    vi.mocked(recognitions.generateBatchCertificatesZip).mockImplementationOnce(
+      ({ onProgress }) =>
+        new Promise((_, rej) => {
+          rejectZip = rej;
+          onProgress?.({ current: 1, total: 1, percentage: 100 });
+        })
+    );
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/lotes/exito', state: { batchId: 999 } }]}>
+        <SuccessPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Descargar Reconocimientos/i })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Descargar Reconocimientos/i }));
+    expect(screen.getByText('Preparando lote...')).toBeInTheDocument();
+
+    resolveRecType(null);
+
+    await waitFor(() => {
+      expect(screen.getByText('1 / 1 (100%)')).toBeInTheDocument();
+      expect(screen.getByText('Comprimiendo archivo ZIP...')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.getByText('Cancelando...')).toBeInTheDocument();
+
+    rejectZip(new DOMException('Operación cancelada', 'AbortError'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
 });

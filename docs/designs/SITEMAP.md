@@ -9,6 +9,7 @@ Central index for Chil's architecture design documents, operational runbooks, an
 | [batch-wizard-cleanup-and-scraper-session.md](./batch-wizard-cleanup-and-scraper-session.md) | `Implemented` | 2026-11-12 | Miguel Ciavato | Wizard UI cleanup (`Step1DataLoad`, `Step2ReviewConfirm`, uniform `SuccessPage` completion), shared `ScraperSettingsModal` / `ScraperSettingsContext`, `AES-256-GCM` server-encrypted Impeesa session persistence (`scraper_sessions/{uid}` blocked on client via `firestore.rules`), and dual-transport client/backend support (`scraper-api/` on Vercel + `functions/` on Firebase). |
 | [grouped-batch-pdf-report.md](./grouped-batch-pdf-report.md) | `Implemented` | 2026-11-13 | Miguel Ciavato | Grouped PDF "Lista" report (`batchReports.ts`) with continuous Scout group sections (`District` + `Region`), `"Miembros no scout"` / `"Sin grupo asignado"` buckets, uniform top header (`Alcance`), `Emisión Excepcional` summary metrics, `EditMemberModal` cleared-group `group_id: 0` fix, and `"Por grupo"` export menu on `BatchDetailHeader`. |
 | [multi-territory-batch-attribution.md](./multi-territory-batch-attribution.md) | `Implemented` | 2026-11-13 | Miguel Ciavato | Shared member-first hierarchy resolver (`src/utils/memberHierarchy.ts`), `BatchList` read-time multi-badges (`<= 3 + +N`) + `"Completitud"` + exact token filters, `SummaryView`/`Statistics` decoupling (`"Nacional"`, member-scoped KPIs), and `BatchDetail` 4th territorial breakdown card (`BatchTerritorialCard`). |
+| [scoped-certificate-zip-and-progress-modal.md](./scoped-certificate-zip-and-progress-modal.md) | `Implemented` | 2026-11-16 | Miguel Ciavato | Split-button `"Por grupo"` exports on `BatchDetailHeader` (`ScopedExportSplitButton`, eligible-only `filterEligibleReportBuckets`, `_<bucketSlug>` ZIP filenames), `BatchList` `eligibleCount === 0` row gating, and shared `useCertificateZipDownload` / `CertificateZipProgressModal` across `BatchDetail`, `BatchList`, and `SuccessPage`. |
 
 ## Operational Runbooks (`docs/`)
 
@@ -20,17 +21,16 @@ Central index for Chil's architecture design documents, operational runbooks, an
 
 | Module | Document | Responsibility |
 | :--- | :--- | :--- |
-| Feature Root | [src/features/batches/README.md](../../src/features/batches/README.md) | System overview, global invariants, and side effects for batch management and quick recognitions. |
+| Feature Root | [src/features/batches/README.md](../../src/features/batches/README.md) | System overview, global invariants, and side effects for batch management. |
 | API | [api/README.md](../../src/features/batches/api/README.md) | Firestore CRUD (`batchesCrud`, `membersCrud`), hierarchy loading/seeding, CSV/PDF reports, and dual-transport `scraperApi.ts`. |
-| Components | [components/README.md](../../src/features/batches/components/README.md) | Page-level workflow views (`BatchList`, `BatchDetail`, `NewBatchWizard`, `QuickRecognition`, `SuccessPage`). |
-| Components / Detail | [components/detail/README.md](../../src/features/batches/components/detail/README.md) | Batch detail header, summary cards, paginated table, columns, and quick-view modal. |
+| Components | [components/README.md](../../src/features/batches/components/README.md) | Page-level workflow views (`BatchList`, `BatchDetail`, `NewBatchWizard`, `SuccessPage`). |
+| Components / Detail | [components/detail/README.md](../../src/features/batches/components/detail/README.md) | Batch detail header, split export controls (`ScopedExportSplitButton`, `BatchReportControls`), summary and territorial cards, paginated table, columns, and quick-view modal. |
 | Components / List | [components/list/README.md](../../src/features/batches/components/list/README.md) | Batch list filters, table columns, and `MergeBatchesModal`. |
-| Components / Quick | [components/quick/README.md](../../src/features/batches/components/quick/README.md) | Quick recognition form sections and post-emission success view. |
-| Components / Shared | [components/shared/README.md](../../src/features/batches/components/shared/README.md) | Reusable `DeleteBatchModal`, `EditMemberModal`, and `ManualMemberModal`. |
+| Components / Shared | [components/shared/README.md](../../src/features/batches/components/shared/README.md) | Reusable `CertificateZipProgressModal`, `DeleteBatchModal`, `EditMemberModal`, and `ManualMemberModal`. |
 | Components / Wizard | [components/wizard/README.md](../../src/features/batches/components/wizard/README.md) | Wizard steps, stepper, Zod schema, `ScraperAlertModals`, tour, and helpers. |
-| Hooks | [hooks/README.md](../../src/features/batches/hooks/README.md) | `useQuickRecognition`, Zod form schema, and single-member emission helpers. |
+| Hooks | [hooks/README.md](../../src/features/batches/hooks/README.md) | `useCertificateZipDownload` progress/abort hook and cancellation state. |
 | Types | [types/README.md](../../src/features/batches/types/README.md) | Shared domain type re-exports and `ActiveFilterChip`. |
-| Utils | [utils/README.md](../../src/features/batches/utils/README.md) | Code generation, Scout hierarchy matching/classification, name splitting, and unit inference. |
+| Utils | [utils/README.md](../../src/features/batches/utils/README.md) | Code generation, Scout hierarchy matching/classification, name splitting, unit inference, and read-time territorial projections (`batchTerritorial.ts`). |
 
 ## Project-Wide Docs
 

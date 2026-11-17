@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Zap,
+  FileArchive,
   Package,
   Palette,
   ShieldCheck,
@@ -18,18 +18,18 @@ interface ExtendedFeatureItem extends FeatureCardItem {
 export const FeatureGridSection: React.FC = () => {
   const features: ExtendedFeatureItem[] = [
     {
-      id: 'emision-rapida',
-      icon: <Zap className="w-6 h-6 text-amber-600" />,
+      id: 'exportacion-flexible',
+      icon: <FileArchive className="w-6 h-6 text-amber-600" />,
       iconContainerClass: 'bg-amber-100/80 text-amber-700 border-amber-200/80',
-      badge: '1 Solo Paso',
+      badge: 'PDF & ZIP por Grupo',
       badgeClass: 'bg-amber-100 text-amber-800 border-amber-200/80',
-      title: 'Emisión Rápida',
+      title: 'Exportación Flexible en PDF y ZIP',
       description:
-        'Reconoce individualmente en 1 solo paso con descarga instantánea de diploma en PDF y asignación automática de código verificable.',
+        'Descarga diplomas individuales en PDF, archivos ZIP completos o por grupo y nóminas detalladas con progreso en tiempo real y cancelación.',
       highlights: [
-        'Generación de diploma en segundos',
-        'Previsualización en tiempo real',
-        'Ideal para entregas urgentes'
+        'ZIP completo o segmentado por grupo',
+        'Reportes de lista y resumen en PDF',
+        'Progreso en vivo con cancelación segura'
       ]
     },
     {

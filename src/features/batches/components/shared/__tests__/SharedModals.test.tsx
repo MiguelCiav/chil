@@ -35,6 +35,7 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
         completenessStatus: 'complete',
         completenessLabel: 'Todos registrados',
         pendingCount: 0,
+        eligibleCount: 5,
         recognitionName: 'Go Solar',
         recognitionType: 'sct-go-solar',
         memberCount: 5
@@ -66,6 +67,7 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
         completenessStatus: 'pending',
         completenessLabel: 'Registros pendientes (2)',
         pendingCount: 2,
+        eligibleCount: 0,
         recognitionName: 'Go Solar',
         recognitionType: 'sct-go-solar',
         memberCount: 2
