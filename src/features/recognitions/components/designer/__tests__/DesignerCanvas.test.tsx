@@ -239,4 +239,36 @@ describe('DesignerCanvas component', () => {
     fireEvent.keyDown(fieldBtn, { key: 'ArrowUp' });
     expect(onUpdateFieldCoordinates).toHaveBeenLastCalledWith('field-full_name', 97.5, 2);
   });
+
+  it('deselects when pressing empty canvas background and applies dragging cursor when draggingFieldId matches', () => {
+    const onDeselectField = vi.fn();
+    const { container } = render(
+      <DesignerCanvas
+        canvasRef={{ current: null }}
+        template={mockTemplate}
+        selectedFieldId="field-full_name"
+        draggingFieldId="field-full_name"
+        isPreviewMode={false}
+        fontScale={1}
+        recognitionName="Insignia de Madera"
+        onPointerMove={vi.fn()}
+        onPointerUp={vi.fn()}
+        onPointerDownField={vi.fn()}
+        onSelectField={vi.fn()}
+        onDeselectField={onDeselectField}
+      />
+    );
+
+    const fieldBtn = screen.getByRole('button', { name: 'Nombre y Apellido' });
+    expect(fieldBtn.className).toContain('cursor-grabbing');
+    expect(fieldBtn.className).toContain('touch-none');
+    expect(fieldBtn.className).not.toContain('transition-all');
+
+    const canvasBox = container.querySelector('.touch-none.cursor-grabbing');
+    expect(canvasBox).toBeInTheDocument();
+    if (canvasBox) {
+      fireEvent.pointerDown(canvasBox);
+    }
+    expect(onDeselectField).toHaveBeenCalledTimes(1);
+  });
 });

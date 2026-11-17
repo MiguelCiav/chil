@@ -6,6 +6,7 @@ import { getFontFamilyStyle, getAlignTransform } from './designerUtils';
 export interface DraggableFieldProps {
   field: RecognitionFieldConfig;
   isSelected: boolean;
+  isDragging?: boolean;
   isPreviewMode: boolean;
   fontScale: number;
   displayText: string;
@@ -15,14 +16,17 @@ export interface DraggableFieldProps {
   onUpdateFieldCoordinates?: (fieldId: string, x: number, y: number) => void;
 }
 
-function getFieldClass(isPreviewMode: boolean, isSelected: boolean): string {
+function getFieldClass(isPreviewMode: boolean, isSelected: boolean, isDragging: boolean): string {
   if (isPreviewMode) {
     return 'cursor-default';
   }
-  if (isSelected) {
-    return 'ring-2 ring-primary ring-offset-2 ring-offset-white bg-primary/10 rounded cursor-grab active:cursor-grabbing';
+  if (isDragging) {
+    return 'z-30 ring-2 ring-primary ring-offset-2 ring-offset-white bg-primary/15 rounded cursor-grabbing transition-none';
   }
-  return 'hover:ring-1 hover:ring-primary/50 hover:bg-primary/5 rounded cursor-pointer';
+  if (isSelected) {
+    return 'z-20 ring-2 ring-primary ring-offset-2 ring-offset-white bg-primary/10 rounded cursor-grab active:cursor-grabbing transition-colors';
+  }
+  return 'z-10 hover:ring-1 hover:ring-primary/50 hover:bg-primary/5 rounded cursor-grab active:cursor-grabbing transition-colors';
 }
 
 function getFieldFontWeight(fontWeight?: string, fontFamily?: string): number {
@@ -40,6 +44,7 @@ export const DraggableField: React.FC<DraggableFieldProps> = React.memo(
   ({
     field,
     isSelected,
+    isDragging = false,
     isPreviewMode,
     fontScale,
     displayText,
@@ -130,7 +135,7 @@ export const DraggableField: React.FC<DraggableFieldProps> = React.memo(
             onUpdateFieldCoordinates(field.id, nextX, nextY);
           }
         }}
-        className={`absolute z-10 select-none transition-all border-0 outline-hidden ${getFieldClass(false, isSelected)}`}
+        className={`absolute select-none touch-none border-0 outline-hidden ${getFieldClass(false, isSelected, isDragging)}`}
         style={{
           left: `${field.x}%`,
           top: `${field.y}%`,

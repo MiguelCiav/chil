@@ -361,4 +361,144 @@ describe('useCanvasDrag hook', () => {
       clampFieldCoordinates(99, 50, { align: 'right', fieldWidthPercent: 20 })
     ).toEqual({ x: 98, y: 50 });
   });
+
+  it('keeps oversized fields movable across [2, 98] instead of freezing at 50%', () => {
+    expect(
+      clampFieldCoordinates(20, 30, { align: 'center', fieldWidthPercent: 98, fieldHeightPercent: 98 })
+    ).toEqual({ x: 20, y: 30 });
+    expect(
+      clampFieldCoordinates(90, 90, { align: 'center', fieldWidthPercent: 110 })
+    ).toEqual({ x: 90, y: 90 });
+  });
+
+  it('ignores sub-threshold micro-jitter (< 3px), bypasses snap with Alt or snapEnabled=false, and commits 1 undo step on pointerup', () => {
+    const onUpdateFieldCoordinates = vi.fn();
+    const onCommitFieldCoordinates = vi.fn();
+    const mockCanvas = document.createElement('div');
+    vi.spyOn(mockCanvas, 'getBoundingClientRect').mockReturnValue({
+      width: 1000,
+      height: 500,
+      top: 0,
+      left: 0,
+      right: 1000,
+      bottom: 500,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    const { result, rerender } = renderHook(
+      ({ snapEnabled }: { snapEnabled: boolean }) =>
+        useCanvasDrag({
+          canvasRef: { current: mockCanvas },
+          fields: [
+            {
+              ...mockFields[0],
+              x: 40,
+              y: 40
+            }
+          ],
+          isPreviewMode: false,
+          snapEnabled,
+          onUpdateFieldCoordinates,
+          onCommitFieldCoordinates
+        }),
+      { initialProps: { snapEnabled: true } }
+    );
+
+    const mockTarget = document.createElement('div');
+
+    // Click with 2px micro-jitter: should not move or commit
+    act(() => {
+      result.current.handlePointerDown(
+        {
+          currentTarget: mockTarget,
+          clientX: 100,
+          clientY: 100,
+          pointerId: 1,
+          button: 0,
+          stopPropagation: vi.fn(),
+          preventDefault: vi.fn()
+        } as unknown as React.PointerEvent<HTMLDivElement>,
+        'field-1'
+      );
+    });
+    act(() => {
+      result.current.handlePointerMove({
+        clientX: 102,
+        clientY: 101,
+        altKey: false
+      } as unknown as React.PointerEvent<HTMLDivElement>);
+    });
+    expect(onUpdateFieldCoordinates).not.toHaveBeenCalled();
+
+    // Move +108px X (50.8% -> 8px away from 50%, outside adaptive 6px / 0.6% snap radius!)
+    act(() => {
+      result.current.handlePointerMove({
+        clientX: 208,
+        clientY: 100,
+        altKey: false
+      } as unknown as React.PointerEvent<HTMLDivElement>);
+    });
+    expect(onUpdateFieldCoordinates).toHaveBeenLastCalledWith('field-1', 50.8, 40);
+    expect(result.current.activeGuides).toEqual([]);
+
+    // Move +95px X (49.5% -> 5px away from 50%, snaps to 50%)
+    act(() => {
+      result.current.handlePointerMove({
+        clientX: 195,
+        clientY: 100,
+        altKey: false
+      } as unknown as React.PointerEvent<HTMLDivElement>);
+    });
+    expect(onUpdateFieldCoordinates).toHaveBeenLastCalledWith('field-1', 50, 40);
+    expect(result.current.activeGuides).toHaveLength(1);
+
+    // Hold Alt: bypasses snapping at exact same pointer spot -> 49.5%
+    act(() => {
+      result.current.handlePointerMove({
+        clientX: 195,
+        clientY: 100,
+        altKey: true
+      } as unknown as React.PointerEvent<HTMLDivElement>);
+    });
+    expect(onUpdateFieldCoordinates).toHaveBeenLastCalledWith('field-1', 49.5, 40);
+    expect(result.current.activeGuides).toEqual([]);
+
+    // Release pointer: commits one single move from (40, 40) to (49.5, 40)
+    act(() => {
+      result.current.handlePointerUp({
+        currentTarget: mockTarget,
+        pointerId: 1
+      } as unknown as React.PointerEvent<HTMLDivElement>);
+    });
+    expect(onCommitFieldCoordinates).toHaveBeenCalledTimes(1);
+    expect(onCommitFieldCoordinates).toHaveBeenCalledWith('field-1', 40, 40, 49.5, 40);
+
+    // Rerender with snapEnabled=false: 49.5% should NOT snap even without Alt
+    rerender({ snapEnabled: false });
+    act(() => {
+      result.current.handlePointerDown(
+        {
+          currentTarget: mockTarget,
+          clientX: 100,
+          clientY: 100,
+          pointerId: 2,
+          button: 0,
+          stopPropagation: vi.fn(),
+          preventDefault: vi.fn()
+        } as unknown as React.PointerEvent<HTMLDivElement>,
+        'field-1'
+      );
+    });
+    act(() => {
+      result.current.handlePointerMove({
+        clientX: 195,
+        clientY: 100,
+        altKey: false
+      } as unknown as React.PointerEvent<HTMLDivElement>);
+    });
+    expect(onUpdateFieldCoordinates).toHaveBeenLastCalledWith('field-1', 49.5, 40);
+    expect(result.current.activeGuides).toEqual([]);
+  });
 });

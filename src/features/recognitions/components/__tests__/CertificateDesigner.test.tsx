@@ -805,4 +805,38 @@ describe('CertificateDesigner component', () => {
     fireEvent.keyDown(window, { key: 'Z', metaKey: true, shiftKey: true });
     expect(screen.getByText('[Cédula de Identidad]')).toBeInTheDocument();
   });
+
+  it('provides quick-center buttons, decimal X/Y inputs, and snap-to-guides toggle with single-step drag undo', async () => {
+    vi.mocked(api.getRecognitionTypeById).mockResolvedValue(mockRecognitionWithTemplate);
+
+    render(<CertificateDesigner />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Insignia de Madera' })).toBeInTheDocument();
+    });
+
+    // Toggle snap button
+    const snapBtn = screen.getByRole('button', { name: 'Ajuste automático a guías' });
+    expect(snapBtn).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(snapBtn);
+    expect(snapBtn).toHaveAttribute('aria-pressed', 'false');
+
+    // Open properties tab and test quick-center buttons + decimal step
+    const estiloTabBtn = screen.getByRole('button', { name: /^Estilo$/i });
+    fireEvent.click(estiloTabBtn);
+
+    const inputX = screen.getByLabelText('Coordenada X');
+    const inputY = screen.getByLabelText('Coordenada Y');
+    expect(inputX).toHaveAttribute('step', '0.1');
+    expect(inputY).toHaveAttribute('step', '0.1');
+
+    fireEvent.change(inputX, { target: { value: '24.5' } });
+    expect(inputX).toHaveValue(24.5);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Centrar horizontalmente' }));
+    expect(inputX).toHaveValue(50);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Centrar verticalmente' }));
+    expect(inputY).toHaveValue(50);
+  });
 });

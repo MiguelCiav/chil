@@ -138,6 +138,8 @@ export const CertificateDesigner: React.FC = () => {
     removeField,
     updateFieldProps,
     moveFieldCoordinates,
+    moveFieldCoordinatesTransient,
+    commitFieldMove,
     resetFields,
     setBackground,
     clearBackground,
@@ -146,6 +148,7 @@ export const CertificateDesigner: React.FC = () => {
   } = useDesignerReducer(DEFAULT_CERTIFICATE_TEMPLATE);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
+  const [isSnapEnabled, setIsSnapEnabled] = useState<boolean>(true);
   const [activeSidebarTab, setActiveSidebarTab] = useState<'palette' | 'properties' | 'format'>('palette');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -211,17 +214,30 @@ export const CertificateDesigner: React.FC = () => {
 
   const { canvasRef, fontScale, normalizedDimensions } = useCanvasScale(template);
 
-  const { handlePointerDown, handlePointerMove, handlePointerUp, activeGuides } =
-    useCanvasDrag({
-      canvasRef,
-      fields: template.fields,
-      isPreviewMode,
-      onUpdateFieldCoordinates: moveFieldCoordinates,
-      onSelectField: (fieldId) => {
-        setSelectedFieldId(fieldId);
-        setActiveSidebarTab('properties');
-      }
-    });
+  const handleSelectField = useCallback((fieldId: string) => {
+    setSelectedFieldId(fieldId);
+    setActiveSidebarTab('properties');
+  }, []);
+
+  const handleDeselectField = useCallback(() => {
+    setSelectedFieldId(null);
+  }, []);
+
+  const {
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    activeGuides,
+    draggingFieldId
+  } = useCanvasDrag({
+    canvasRef,
+    fields: template.fields,
+    isPreviewMode,
+    snapEnabled: isSnapEnabled,
+    onUpdateFieldCoordinates: moveFieldCoordinatesTransient,
+    onCommitFieldCoordinates: commitFieldMove,
+    onSelectField: handleSelectField
+  });
 
   // Fetch recognition and existing template
   useEffect(() => {
@@ -425,8 +441,10 @@ export const CertificateDesigner: React.FC = () => {
         hasBackground={Boolean(template.background_url)}
         canUndo={canUndo}
         canRedo={canRedo}
+        isSnapEnabled={isSnapEnabled}
         onUndo={undo}
         onRedo={redo}
+        onToggleSnap={setIsSnapEnabled}
         onTogglePreview={setIsPreviewMode}
         onUploadClick={() => fileInputRef.current?.click()}
         onSave={handleSaveTemplate}
@@ -441,6 +459,7 @@ export const CertificateDesigner: React.FC = () => {
           canvasRef={canvasRef}
           template={template}
           selectedFieldId={selectedFieldId}
+          draggingFieldId={draggingFieldId}
           isPreviewMode={isPreviewMode}
           fontScale={fontScale}
           activeGuides={activeGuides}
@@ -449,10 +468,8 @@ export const CertificateDesigner: React.FC = () => {
           onPointerUp={handlePointerUp}
           onPointerDownField={handlePointerDown}
           onUpdateFieldCoordinates={moveFieldCoordinates}
-          onSelectField={(fieldId) => {
-            setSelectedFieldId(fieldId);
-            setActiveSidebarTab('properties');
-          }}
+          onSelectField={handleSelectField}
+          onDeselectField={handleDeselectField}
         />
 
         {/* RIGHT COLUMN: Control Panel Sidebar */}

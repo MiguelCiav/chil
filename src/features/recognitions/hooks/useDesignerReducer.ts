@@ -93,7 +93,11 @@ export type DesignerAction =
     }
   | {
       type: 'MOVE_FIELD_COORDINATES';
-      payload: { fieldId: string; x: number; y: number };
+      payload: { fieldId: string; x: number; y: number; recordHistory?: boolean };
+    }
+  | {
+      type: 'COMMIT_FIELD_MOVE';
+      payload: { fieldId: string; initialX: number; initialY: number; x: number; y: number };
     }
   | { type: 'RESET_FIELDS'; payload?: RecognitionFieldConfig[] }
   | { type: 'SET_BACKGROUND'; payload: Partial<CertificateTemplate> }
@@ -223,7 +227,7 @@ export function designerReducer(
     }
 
     case 'MOVE_FIELD_COORDINATES': {
-      const { fieldId, x, y } = action.payload;
+      const { fieldId, x, y, recordHistory = true } = action.payload;
       let changed = false;
       const nextFields = state.present.fields.map((f) => {
         if (f.id !== fieldId) return f;
@@ -234,10 +238,44 @@ export function designerReducer(
       if (!changed) {
         return state;
       }
-      return pushHistory(state, {
+      const nextPresent: CertificateTemplate = {
         ...state.present,
         fields: nextFields
-      });
+      };
+      if (!recordHistory) {
+        return {
+          ...state,
+          present: nextPresent
+        };
+      }
+      return pushHistory(state, nextPresent);
+    }
+
+    case 'COMMIT_FIELD_MOVE': {
+      const { fieldId, initialX, initialY, x, y } = action.payload;
+      if (initialX === x && initialY === y) {
+        return state;
+      }
+      const targetExists = state.present.fields.some((f) => f.id === fieldId);
+      if (!targetExists) {
+        return state;
+      }
+      const previousPresent: CertificateTemplate = {
+        ...state.present,
+        fields: state.present.fields.map((f) =>
+          f.id === fieldId ? { ...f, x: initialX, y: initialY } : f
+        )
+      };
+      const nextPresent: CertificateTemplate = {
+        ...state.present,
+        fields: state.present.fields.map((f) => (f.id === fieldId ? { ...f, x, y } : f))
+      };
+      const nextPast = [...state.past, previousPresent].slice(-MAX_DESIGNER_HISTORY);
+      return {
+        past: nextPast,
+        present: nextPresent,
+        future: []
+      };
     }
 
     case 'RESET_FIELDS': {
@@ -340,9 +378,32 @@ export function useDesignerReducer(
     []
   );
 
-  const moveFieldCoordinates = useCallback((fieldId: string, x: number, y: number) => {
-    dispatch({ type: 'MOVE_FIELD_COORDINATES', payload: { fieldId, x, y } });
+  const moveFieldCoordinates = useCallback(
+    (fieldId: string, x: number, y: number, options?: { recordHistory?: boolean }) => {
+      dispatch({
+        type: 'MOVE_FIELD_COORDINATES',
+        payload: { fieldId, x, y, recordHistory: options?.recordHistory }
+      });
+    },
+    []
+  );
+
+  const moveFieldCoordinatesTransient = useCallback((fieldId: string, x: number, y: number) => {
+    dispatch({
+      type: 'MOVE_FIELD_COORDINATES',
+      payload: { fieldId, x, y, recordHistory: false }
+    });
   }, []);
+
+  const commitFieldMove = useCallback(
+    (fieldId: string, initialX: number, initialY: number, x: number, y: number) => {
+      dispatch({
+        type: 'COMMIT_FIELD_MOVE',
+        payload: { fieldId, initialX, initialY, x, y }
+      });
+    },
+    []
+  );
 
   const resetFields = useCallback((fields?: RecognitionFieldConfig[]) => {
     dispatch({ type: 'RESET_FIELDS', payload: fields });
@@ -381,6 +442,8 @@ export function useDesignerReducer(
     toggleField,
     updateFieldProps,
     moveFieldCoordinates,
+    moveFieldCoordinatesTransient,
+    commitFieldMove,
     resetFields,
     setBackground,
     clearBackground,
