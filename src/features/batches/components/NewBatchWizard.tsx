@@ -222,9 +222,8 @@ export const NewBatchWizard: React.FC = () => {
   };
 
   const handleFinalizeBatch = () => {
-    navigate('/lotes/exito', {
-      state: { batchId, name: batchMetadata.comment }
-    });
+    if (batchId === null) return;
+    navigate(`/lotes/${batchId}`);
   };
 
   return (

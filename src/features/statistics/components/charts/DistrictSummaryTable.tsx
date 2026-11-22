@@ -14,7 +14,6 @@ export const DistrictSummaryTable: React.FC<DistrictSummaryTableProps> = ({ dist
   return (
     <TerritorialSummaryTable
       title="Reconocimientos entregados por Distrito"
-      subtitle="Distribución territorial por distrito y región scout"
       icon={<MapPin className="w-5 h-5" />}
       items={districts}
       yoyItems={hasYoY && yoy ? yoy.districts : undefined}
@@ -25,8 +24,7 @@ export const DistrictSummaryTable: React.FC<DistrictSummaryTableProps> = ({ dist
       }
       entityLabel="Distrito"
       parentLabel="Región"
-      countLabelSingular="distrito"
-      countLabelPlural="distritos"
+      totalLabel="Total de distritos"
       showAllLabel="Ver todos"
       accentColor="emerald"
       emptyMessage="No hay registros disponibles por distrito para los filtros seleccionados."

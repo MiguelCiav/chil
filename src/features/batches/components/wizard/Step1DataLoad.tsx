@@ -1,11 +1,10 @@
-import React, { useId } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, RefreshCw, AlertTriangle, UploadCloud } from 'lucide-react';
+import { ArrowRight, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   Card,
-  CardHeader,
   CardBody,
   Button,
   Field,
@@ -36,12 +35,10 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
   initialRecognitionType = '',
   initialCedulas = ''
 }) => {
-  const fileInputId = useId();
   const {
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors }
   } = useForm<Step1DataLoadFormData>({
     resolver: zodResolver(step1DataLoadSchema),
@@ -56,23 +53,6 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
   const watchedCedulas = watch('cedulas') || '';
   const parsedCedulas = parseCedulasFromText(watchedCedulas);
   const parsedCount = parsedCedulas.length;
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (content) {
-        const existing = watchedCedulas.trim();
-        const combined = existing ? `${existing}\n${content}` : content;
-        setValue('cedulas', combined, { shouldValidate: true, shouldDirty: true });
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
 
   return (
     <div data-walkthrough="wizard-step-container" className="space-y-4">
@@ -95,18 +75,6 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
       )}
 
       <Card>
-        <CardHeader className="bg-primary/5 border-b border-primary/10">
-          <div>
-            <h2 className="text-lg font-bold text-neutral">Carga de Datos del Lote</h2>
-            <p className="text-xs text-neutral/75">
-              Ingresa el tipo de reconocimiento y la lista de cédulas. La estructura geográfica y las unidades se auto-detectarán.
-            </p>
-          </div>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-primary/10 text-primary rounded-full shrink-0">
-            Paso 1 de 2
-          </span>
-        </CardHeader>
-
         <CardBody className="space-y-6">
           <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-6">
             {/* Metadatos Generales */}
@@ -140,41 +108,19 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
 
             {/* Caja Única de Cédulas */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="field-batch-cedulas"
-                  className="block text-sm font-semibold text-neutral"
-                >
-                  Cédulas de Identidad *
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-neutral/10 text-neutral/75">
-                    {parsedCount} {parsedCount === 1 ? 'cédula detectada' : 'cédulas detectadas'}
-                  </span>
-                  <label
-                    htmlFor={fileInputId}
-                    className="text-xs text-primary font-bold hover:underline cursor-pointer inline-flex items-center gap-1"
-                  >
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    <span>Importar archivo</span>
-                    <input
-                      id={fileInputId}
-                      type="file"
-                      accept=".csv,.txt"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                      disabled={isVerifying}
-                    />
-                  </label>
-                </div>
-              </div>
+              <label
+                htmlFor="field-batch-cedulas"
+                className="block text-sm font-semibold text-neutral"
+              >
+                Cédulas de Identidad *
+              </label>
 
               <textarea
                 id="field-batch-cedulas"
                 {...register('cedulas')}
                 aria-label="Cédulas de Identidad"
                 rows={6}
-                placeholder={`Pega aquí las cédulas una por línea o separadas por comas.\nEjemplos:\n12345678\n23456789\n34567890`}
+                placeholder={`12345678\n23456789\n34567890`}
                 className="w-full rounded-field p-4 bg-primary/5 border border-primary/70 text-neutral text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 disabled={isVerifying}
               />

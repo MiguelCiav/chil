@@ -15,21 +15,25 @@ describe('Step1DataLoad UI cleanup', () => {
     onSubmitStep1: vi.fn()
   };
 
-  it('right-aligns Paso 1 de 2 directly inside CardHeader and removes adult/youth hints', () => {
+  it('renders only recognition type, batch comment, and cedulas fields without CardHeader or removed badges', () => {
     render(
       <MemoryRouter>
         <Step1DataLoad {...defaultProps} />
       </MemoryRouter>
     );
 
-    const stepBadge = screen.getByText('Paso 1 de 2');
-    const title = screen.getByText('Carga de Datos del Lote');
-    expect(stepBadge).toBeInTheDocument();
-    // Title wrapper div and step badge must be siblings under CardHeader
-    expect(title.parentElement?.parentElement).toBe(stepBadge.parentElement);
-    expect(stepBadge.parentElement).toHaveClass('justify-between');
+    expect(screen.queryByText('Carga de Datos del Lote')).not.toBeInTheDocument();
+    expect(screen.queryByText('Paso 1 de 2')).not.toBeInTheDocument();
+    expect(screen.queryByText(/cédulas? detectadas?/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Importar archivo')).not.toBeInTheDocument();
 
+    expect(screen.getByLabelText('Tipo de Reconocimiento')).toBeInTheDocument();
+    expect(screen.getByLabelText('Título o Comentario del Lote')).toBeInTheDocument();
     expect(screen.getByText('Cédulas de Identidad *')).toBeInTheDocument();
+    expect(screen.getByLabelText('Cédulas de Identidad')).toHaveAttribute(
+      'placeholder',
+      '12345678\n23456789\n34567890'
+    );
     expect(screen.queryByText(/Jóvenes y Adultos/i)).not.toBeInTheDocument();
     expect(
       screen.queryByText(/Nota: No necesitas separar jóvenes de adultos/i)
@@ -38,11 +42,13 @@ describe('Step1DataLoad UI cleanup', () => {
 });
 
 describe('WizardStepper', () => {
-  it('renders step titles without the removed subtitles', () => {
+  it('renders step titles Carga and Confirmación without removed subtitles', () => {
     render(<WizardStepper currentStep={1} onStepClick={vi.fn()} />);
 
-    expect(screen.getByText('Carga de Datos')).toBeInTheDocument();
-    expect(screen.getByText('Edición y Confirmación')).toBeInTheDocument();
+    expect(screen.getByText('Carga')).toBeInTheDocument();
+    expect(screen.getByText('Confirmación')).toBeInTheDocument();
+    expect(screen.queryByText('Carga de Datos')).not.toBeInTheDocument();
+    expect(screen.queryByText('Edición y Confirmación')).not.toBeInTheDocument();
     expect(screen.queryByText('Cédulas y Reconocimiento')).not.toBeInTheDocument();
     expect(screen.queryByText('Revisión y Emisión')).not.toBeInTheDocument();
   });

@@ -13,11 +13,14 @@ describe('GroupSummaryTable Component', () => {
     { id: 6, name: 'Grupo Paramacay', count: 1, percentage: 2, parentName: 'Distrito Valencia' }
   ];
 
-  it('renders header, badge, and groups list', () => {
+  it('renders header and total count of groups without top-right badge', () => {
     render(<GroupSummaryTable groups={mockGroups} />);
 
     expect(screen.getByText('Reconocimientos entregados por Grupo Scout')).toBeInTheDocument();
-    expect(screen.getByText('6 grupos')).toBeInTheDocument();
+    expect(screen.queryByText('6 grupos')).not.toBeInTheDocument();
+    // Bottom-right count of all 6 groups stays visible even when collapsed to Top 5
+    expect(screen.getByText('Total de grupos')).toBeInTheDocument();
+    expect(screen.getByText('6')).toBeInTheDocument();
 
     // By default, displays first 5 items
     expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
@@ -44,7 +47,9 @@ describe('GroupSummaryTable Component', () => {
   it('renders empty state message when groups list is empty', () => {
     render(<GroupSummaryTable groups={[]} />);
 
-    expect(screen.getByText('0 grupos')).toBeInTheDocument();
+    expect(screen.queryByText('0 grupos')).not.toBeInTheDocument();
+    expect(screen.getByText('Total de grupos')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
     expect(
       screen.getByText('No hay registros disponibles por grupo scout para los filtros seleccionados.')
     ).toBeInTheDocument();

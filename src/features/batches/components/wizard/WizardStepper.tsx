@@ -14,12 +14,12 @@ export const WizardStepper: React.FC<WizardStepperProps> = ({
   const steps = [
     {
       step: 1 as const,
-      title: 'Carga de Datos',
+      title: 'Carga',
       icon: <UploadCloud className="w-5 h-5" />
     },
     {
       step: 2 as const,
-      title: 'Edición y Confirmación',
+      title: 'Confirmación',
       icon: <CheckCircle2 className="w-5 h-5" />
     }
   ];

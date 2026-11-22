@@ -1,9 +1,11 @@
 import { Region, District, ScoutGroup } from '../../../types';
+import { DatePeriodFilter, matchesDateRange } from '../../../utils/datePeriod';
 import { SummaryRowData } from '../types';
 
 export type MemberTypeFilter = 'all' | 'young' | 'adult';
 export type RegistryStatusFilter = 'all' | 'active' | 'pending' | 'exceptional';
-export type DatePeriodFilter = 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';
+export type { DatePeriodFilter };
+export { matchesDateRange };
 
 export interface SummaryFilterValues {
   searchTerm: string;
@@ -93,64 +95,6 @@ export function resolveHierarchyName(id?: number, rawName?: string): string {
   if (!id || id === 0) return 'No aplica';
   if (!rawName || rawName.toLowerCase() === 'no aplica') return 'No aplica';
   return rawName;
-}
-
-function matchesCustomDateRange(itemDate: Date, startDate: string, endDate: string): boolean {
-  if (startDate && endDate) {
-    const sDate = new Date(`${startDate}T00:00:00.000`);
-    const eDate = new Date(`${endDate}T23:59:59.999`);
-    return itemDate >= sDate && itemDate <= eDate;
-  }
-  if (startDate) {
-    const sDate = new Date(`${startDate}T00:00:00.000`);
-    return itemDate >= sDate;
-  }
-  if (endDate) {
-    const eDate = new Date(`${endDate}T23:59:59.999`);
-    return itemDate <= eDate;
-  }
-  return true;
-}
-
-function matchesRelativePeriod(itemDate: Date, period: string): boolean {
-  const now = new Date();
-  if (period === 'this-year') {
-    return itemDate.getFullYear() === now.getFullYear();
-  }
-  if (period === 'this-month') {
-    return (
-      itemDate.getFullYear() === now.getFullYear() &&
-      itemDate.getMonth() === now.getMonth()
-    );
-  }
-  if (period === 'last-30') {
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    thirtyDaysAgo.setHours(0, 0, 0, 0);
-    return itemDate >= thirtyDaysAgo && itemDate <= now;
-  }
-  if (period === 'last-90') {
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    ninetyDaysAgo.setHours(0, 0, 0, 0);
-    return itemDate >= ninetyDaysAgo && itemDate <= now;
-  }
-  return true;
-}
-
-export function matchesDateRange(
-  createdAt: string,
-  period: string,
-  startDate: string,
-  endDate: string
-): boolean {
-  if (!createdAt) return false;
-  const itemDate = new Date(createdAt);
-  if (Number.isNaN(itemDate.getTime())) return false;
-
-  if (period === 'all') return true;
-  if (period === 'custom') {
-    return matchesCustomDateRange(itemDate, startDate, endDate);
-  }
-  return matchesRelativePeriod(itemDate, period);
 }
 
 export function matchesSummarySearchTerm(row: SummaryRowData, term: string): boolean {

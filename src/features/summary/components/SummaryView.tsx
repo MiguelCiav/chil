@@ -6,21 +6,23 @@ import {
   useReactTable,
   Row
 } from '@tanstack/react-table';
-import { Download, AlertCircle, RotateCcw } from 'lucide-react';
+import { Download, AlertCircle } from 'lucide-react';
 
 import {
   Card,
-  CardBody,
   Button,
   Toast,
-  SearchInput,
   Select,
-  Field,
   ErrorAlert,
   DataTable,
   Pagination
 } from '../../../components';
-import { MemberStatusBadge, HierarchyFilterSelects } from '../../../domain/components';
+import {
+  buildCommonFilterBadges,
+  FilterCard,
+  MemberStatusBadge,
+  HierarchyFilterSelects
+} from '../../../domain/components';
 import {
   getAllBatches,
   getAllMembers,
@@ -316,6 +318,86 @@ export const SummaryView: React.FC = () => {
 
   const hasActiveFilters = useMemo(() => hasActiveSummaryFilters(filters), [filters]);
 
+  const activeFilterBadges = useMemo(() => {
+    const badges = buildCommonFilterBadges({
+      recognition: {
+        id: filters.selectedRecognition,
+        options: recognitionTypes,
+        onRemove: () => updateFilter('selectedRecognition', '')
+      },
+      region: {
+        id: filters.selectedRegion,
+        options: regions,
+        onRemove: () =>
+          setFilters(prev => ({
+            ...prev,
+            selectedRegion: '',
+            selectedDistrict: '',
+            selectedGroup: ''
+          }))
+      },
+      district: {
+        id: filters.selectedDistrict,
+        options: districts,
+        onRemove: () =>
+          setFilters(prev => ({
+            ...prev,
+            selectedDistrict: '',
+            selectedGroup: ''
+          }))
+      },
+      group: {
+        id: filters.selectedGroup,
+        options: groups,
+        onRemove: () => updateFilter('selectedGroup', '')
+      },
+      period: {
+        value: filters.selectedDatePeriod,
+        startDate: filters.customStartDate,
+        endDate: filters.customEndDate,
+        onRemove: () =>
+          setFilters(prev => ({
+            ...prev,
+            selectedDatePeriod: 'all',
+            customStartDate: '',
+            customEndDate: ''
+          }))
+      }
+    });
+
+    if (filters.selectedUnit) {
+      badges.push({
+        id: 'unit',
+        label: 'Unidad',
+        value:
+          filters.selectedUnit === 'no_scout'
+            ? 'No scout'
+            : getUnitLabel(filters.selectedUnit as Parameters<typeof getUnitLabel>[0]),
+        onRemove: () => updateFilter('selectedUnit', '')
+      });
+    }
+
+    if (filters.selectedMemberType !== 'all') {
+      badges.push({
+        id: 'memberType',
+        label: 'Tipo',
+        value: filters.selectedMemberType === 'young' ? 'Jóvenes' : 'Adultos',
+        onRemove: () => updateFilter('selectedMemberType', 'all')
+      });
+    }
+
+    if (filters.selectedStatus !== 'all') {
+      badges.push({
+        id: 'status',
+        label: 'Estatus',
+        value: getMemberStatusLabel(filters.selectedStatus),
+        onRemove: () => updateFilter('selectedStatus', 'all')
+      });
+    }
+
+    return badges;
+  }, [filters, recognitionTypes, regions, districts, groups, updateFilter]);
+
   const handleResetFilters = () => {
     setFilters(INITIAL_SUMMARY_FILTER_VALUES);
   };
@@ -400,150 +482,96 @@ export const SummaryView: React.FC = () => {
       )}
 
       {/* Filter Controls Bar */}
-      <Card>
-        <CardBody padding="sm" className="sm:p-5 space-y-4">
-          <SearchInput
-            size="sm"
-            value={filters.searchTerm}
-            onChange={e => updateFilter('searchTerm', e.target.value)}
-            onClear={() => updateFilter('searchTerm', '')}
-            placeholder="Buscar por nombre, cédula, lote, reconocimiento, código, región, distrito, grupo..."
-            aria-label="Búsqueda global"
-          />
+      <FilterCard
+        searchValue={filters.searchTerm}
+        onSearchChange={val => updateFilter('searchTerm', val)}
+        searchPlaceholder="Buscar por nombre, cédula, lote, reconocimiento, código, región, distrito, grupo..."
+        searchAriaLabel="Búsqueda global"
+        period={filters.selectedDatePeriod}
+        onPeriodChange={val => updateFilter('selectedDatePeriod', val)}
+        periodSelectId="summary-filter-period"
+        customStartDate={filters.customStartDate}
+        customEndDate={filters.customEndDate}
+        onCustomStartDateChange={val => updateFilter('customStartDate', val)}
+        onCustomEndDateChange={val => updateFilter('customEndDate', val)}
+        customStartId="summary-custom-start"
+        customEndId="summary-custom-end"
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={handleResetFilters}
+        resetAriaLabel="Limpiar todos los filtros"
+        activeFilters={activeFilterBadges}
+      >
+        <Select
+          id="summary-filter-rec"
+          label="Reconocimiento"
+          size="sm"
+          aria-label="Filtrar por reconocimiento"
+          value={filters.selectedRecognition}
+          onChange={e => updateFilter('selectedRecognition', e.target.value)}
+        >
+          <option value="">Todos los reconocimientos</option>
+          {recognitionTypes.map(r => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+        </Select>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
-            <Select
-              id="summary-filter-rec"
-              label="Reconocimiento"
-              size="sm"
-              aria-label="Filtrar por reconocimiento"
-              value={filters.selectedRecognition}
-              onChange={e => updateFilter('selectedRecognition', e.target.value)}
-            >
-              <option value="">Todos los reconocimientos</option>
-              {recognitionTypes.map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </Select>
+        <HierarchyFilterSelects
+          regions={regions}
+          districts={districts}
+          groups={groups}
+          regionId={filters.selectedRegion}
+          districtId={filters.selectedDistrict}
+          groupId={filters.selectedGroup}
+          showGroup
+          onRegionChange={val => updateFilter('selectedRegion', val)}
+          onDistrictChange={val => updateFilter('selectedDistrict', val)}
+          onGroupChange={val => updateFilter('selectedGroup', val)}
+        />
 
-            <HierarchyFilterSelects
-              regions={regions}
-              districts={districts}
-              groups={groups}
-              regionId={filters.selectedRegion}
-              districtId={filters.selectedDistrict}
-              groupId={filters.selectedGroup}
-              showGroup
-              onRegionChange={val => updateFilter('selectedRegion', val)}
-              onDistrictChange={val => updateFilter('selectedDistrict', val)}
-              onGroupChange={val => updateFilter('selectedGroup', val)}
-            />
+        <Select
+          id="summary-filter-unit"
+          label="Unidad Scout"
+          size="sm"
+          aria-label="Filtrar por unidad"
+          value={filters.selectedUnit}
+          onChange={e => updateFilter('selectedUnit', e.target.value)}
+        >
+          <option value="">Todas las unidades</option>
+          <option value="manada">Manada</option>
+          <option value="tropa">Tropa</option>
+          <option value="caminantes">Caminantes</option>
+          <option value="clan">Clan</option>
+          <option value="institucional">Institucional</option>
+          <option value="no_scout">No scout</option>
+        </Select>
 
-            <Select
-              id="summary-filter-unit"
-              label="Unidad Scout"
-              size="sm"
-              aria-label="Filtrar por unidad"
-              value={filters.selectedUnit}
-              onChange={e => updateFilter('selectedUnit', e.target.value)}
-            >
-              <option value="">Todas las unidades</option>
-              <option value="manada">Manada</option>
-              <option value="tropa">Tropa</option>
-              <option value="caminantes">Caminantes</option>
-              <option value="clan">Clan</option>
-              <option value="institucional">Institucional</option>
-              <option value="no_scout">No scout</option>
-            </Select>
+        <Select
+          id="summary-filter-member-type"
+          label="Tipo de Miembro"
+          size="sm"
+          aria-label="Filtrar por tipo de miembro"
+          value={filters.selectedMemberType}
+          onChange={e => updateFilter('selectedMemberType', e.target.value as MemberTypeFilter)}
+        >
+          <option value="all">Todos los tipos</option>
+          <option value="young">Jóvenes</option>
+          <option value="adult">Adultos</option>
+        </Select>
 
-            <Select
-              id="summary-filter-member-type"
-              label="Tipo de Miembro"
-              size="sm"
-              aria-label="Filtrar por tipo de miembro"
-              value={filters.selectedMemberType}
-              onChange={e => updateFilter('selectedMemberType', e.target.value as MemberTypeFilter)}
-            >
-              <option value="all">Todos los tipos</option>
-              <option value="young">Jóvenes</option>
-              <option value="adult">Adultos</option>
-            </Select>
-
-            <Select
-              id="summary-filter-status"
-              label="Estatus"
-              size="sm"
-              aria-label="Filtrar por estatus"
-              value={filters.selectedStatus}
-              onChange={e => updateFilter('selectedStatus', e.target.value as RegistryStatusFilter)}
-            >
-              <option value="all">Todos los estatus</option>
-              <option value="active">Registro Válido</option>
-              <option value="exceptional">Emisión Excepcional</option>
-              <option value="pending">Registro Inválido</option>
-            </Select>
-
-            <Select
-              id="summary-filter-period"
-              label="Fecha / Período"
-              size="sm"
-              aria-label="Filtrar por período"
-              value={filters.selectedDatePeriod}
-              onChange={e => updateFilter('selectedDatePeriod', e.target.value as DatePeriodFilter)}
-            >
-              <option value="all">Todo el histórico</option>
-              <option value="this-year">Este Año</option>
-              <option value="this-month">Este Mes</option>
-              <option value="last-30">Últimos 30 días</option>
-              <option value="last-90">Últimos 90 días</option>
-              <option value="custom">Rango Personalizado</option>
-            </Select>
-
-            <div className="flex items-end">
-              {hasActiveFilters && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResetFilters}
-                  icon={<RotateCcw className="w-3.5 h-3.5" />}
-                  aria-label="Limpiar todos los filtros"
-                  className="w-full text-red-700 border-red-300 hover:bg-red-50"
-                >
-                  Limpiar filtros
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {filters.selectedDatePeriod === 'custom' && (
-            <div className="pt-2 border-t border-gray-100 flex flex-wrap items-end gap-3 text-xs">
-              <div className="w-40">
-                <Field
-                  id="summary-custom-start"
-                  label="Desde"
-                  size="sm"
-                  type="date"
-                  value={filters.customStartDate}
-                  onChange={e => updateFilter('customStartDate', e.target.value)}
-                  aria-label="Fecha inicio personalizado"
-                />
-              </div>
-              <div className="w-40">
-                <Field
-                  id="summary-custom-end"
-                  label="Hasta"
-                  size="sm"
-                  type="date"
-                  value={filters.customEndDate}
-                  onChange={e => updateFilter('customEndDate', e.target.value)}
-                  aria-label="Fecha fin personalizado"
-                />
-              </div>
-            </div>
-          )}
-        </CardBody>
-      </Card>
+        <Select
+          id="summary-filter-status"
+          label="Estatus"
+          size="sm"
+          aria-label="Filtrar por estatus"
+          value={filters.selectedStatus}
+          onChange={e => updateFilter('selectedStatus', e.target.value as RegistryStatusFilter)}
+        >
+          <option value="all">Todos los estatus</option>
+          <option value="active">Registro Válido</option>
+          <option value="exceptional">Emisión Excepcional</option>
+          <option value="pending">Registro Inválido</option>
+        </Select>
+      </FilterCard>
 
       {/* TanStack Table Container */}
       <Card>

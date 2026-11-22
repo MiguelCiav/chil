@@ -1,6 +1,6 @@
 import React from 'react';
+import { Download } from 'lucide-react';
 import { useStatisticsData } from '../hooks/useStatisticsData';
-import { StatKpiGrid } from './StatKpiGrid';
 import { FilterBar } from './FilterBar';
 import { RegionSummaryTable } from './charts/RegionSummaryTable';
 import { DistrictSummaryTable } from './charts/DistrictSummaryTable';
@@ -8,7 +8,8 @@ import { GroupSummaryTable } from './charts/GroupSummaryTable';
 import { UnitDistributionCard } from './charts/UnitDistributionCard';
 import { DemographicsDonut } from './charts/DemographicsDonut';
 import { MonthlyTrendChart } from './charts/MonthlyTrendChart';
-import { ErrorAlert } from '../../../components';
+import { Button, ErrorAlert } from '../../../components';
+import { exportStatisticsPdf } from '../utils/statsPdfExport';
 
 export const StatisticsDashboard: React.FC = () => {
   const {
@@ -44,16 +45,6 @@ export const StatisticsDashboard: React.FC = () => {
         {/* Filter Bar Skeleton */}
         <div className="h-32 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
 
-        {/* KPI Grid Skeleton */}
-        <div
-          data-testid="kpi-skeleton-grid"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
-          ))}
-        </div>
-
         {/* Tables Skeleton */}
         <div className="space-y-6">
           <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
@@ -74,6 +65,11 @@ export const StatisticsDashboard: React.FC = () => {
     );
   }
 
+  const handleExportPdf = () => {
+    const summary = getFilterSummaryLabels();
+    exportStatisticsPdf(stats, summary);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Page Header */}
@@ -86,6 +82,19 @@ export const StatisticsDashboard: React.FC = () => {
             Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
           </p>
         </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleExportPdf}
+            icon={<Download className="w-4 h-4" />}
+            className="whitespace-nowrap"
+            aria-label="Exportar todo"
+          >
+            Exportar todo
+          </Button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -97,12 +106,7 @@ export const StatisticsDashboard: React.FC = () => {
         regions={regions}
         availableDistricts={availableDistricts}
         recognitionTypes={recognitionTypes}
-        stats={stats}
-        getFilterSummaryLabels={getFilterSummaryLabels}
       />
-
-      {/* Top 5 KPI Metrics Grid */}
-      <StatKpiGrid metrics={stats.kpis} yoy={yoyComparison} />
 
       {/* Section 1: Tabla de reconocimientos entregados por Región */}
       <div>

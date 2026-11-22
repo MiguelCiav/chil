@@ -248,6 +248,7 @@ describe('SummaryView component', () => {
       expect(screen.getByText('V-1001')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const recSelect = screen.getByLabelText(/Filtrar por reconocimiento/i);
 
     // Filter by Go Solar
@@ -274,6 +275,7 @@ describe('SummaryView component', () => {
       expect(screen.getByText('V-1001')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const regionSelect = screen.getByLabelText(/Filtrar por región/i);
 
     // Select Región Andina (id 2)
@@ -303,6 +305,7 @@ describe('SummaryView component', () => {
       expect(screen.getByText('V-1001')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
 
     // Select Jóvenes
@@ -329,6 +332,7 @@ describe('SummaryView component', () => {
       expect(screen.getByText('V-1001')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const statusSelect = screen.getByLabelText(/Filtrar por estatus/i);
 
     // Select Registro Válido (active)
@@ -364,6 +368,7 @@ describe('SummaryView component', () => {
       expect(screen.getByText('V-1001')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const periodSelect = screen.getByLabelText(/Filtrar por período/i);
 
     // Predefined period: Este Año
@@ -422,6 +427,7 @@ describe('SummaryView component', () => {
     });
 
     // Filter to young members only
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
     fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
 
@@ -452,6 +458,7 @@ describe('SummaryView component', () => {
     });
 
     // Filter to young members only
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const memberTypeSelect = screen.getByLabelText(/Filtrar por tipo de miembro/i);
     fireEvent.change(memberTypeSelect, { target: { value: 'young' } });
 
@@ -592,6 +599,7 @@ describe('SummaryView component', () => {
     });
 
     // Filter by Manada
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const unitFilter = screen.getByLabelText(/Filtrar por unidad/i);
     fireEvent.change(unitFilter, { target: { value: 'manada' } });
 
@@ -686,6 +694,7 @@ describe('SummaryView component', () => {
       expect(screen.getByText('Nora')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
     const regionSelect = screen.getByLabelText(/Filtrar por región/i) as HTMLSelectElement;
     const districtSelect = screen.getByLabelText(/Filtrar por distrito/i) as HTMLSelectElement;
     const groupSelect = screen.getByLabelText(/Filtrar por grupo/i) as HTMLSelectElement;

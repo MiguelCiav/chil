@@ -4,7 +4,7 @@
 Defines TypeScript interfaces for statistics filtering, KPI metrics, monthly trends, recognition rankings, demographics, geographic/status/unit breakdowns, Year-over-Year (YoY) comparison structures, and `StatisticsDataset`.
 
 ## Interface
-- `index.ts:StatisticsFilterState`: Filter state interface (`period`, `startDate`, `endDate`, `recognitionId`, `regionId`, `districtId`, `memberType`).
+- `index.ts:StatisticsFilterState`: Filter state interface (`searchTerm`, `period`, `startDate`, `endDate`, `recognitionId`, `regionId`, `districtId`, `memberType`).
 - `index.ts:KpiMetrics`: Top-level KPI summary interface.
 - `index.ts:MonthlyTrendData`: Monthly series item interface.
 - `index.ts:RecognitionRankingData`: Recognition ranking item interface.

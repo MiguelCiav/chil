@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StatisticsDashboard } from '../StatisticsDashboard';
 import * as batchApi from '../../../batches/api';
@@ -122,21 +122,23 @@ describe('StatisticsDashboard Component', () => {
     vi.mocked(recognitionApi.getAllRecognitionTypes).mockResolvedValue(mockRecTypes);
   });
 
-  it('renders main dashboard layout with KPI grid and charts', async () => {
+  it('renders main dashboard layout starting with region breakdown and without KPI summary or card subtitles', async () => {
     render(<StatisticsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    // Verify Top 4 Executive KPI Cards
-    expect(screen.getAllByText('Total Reconocimientos').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText('Total Lotes')).not.toBeInTheDocument();
-    expect(screen.getByText('Más Entregado')).toBeInTheDocument();
-    expect(screen.getByText('Regiones y Distritos')).toBeInTheDocument();
-    expect(screen.getAllByText('Demografía').length).toBeGreaterThanOrEqual(1);
+    // Filter card renders search input and inline controls without a card title
+    expect(screen.queryByText('Filtros y Segmentación de Datos')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Buscar en estadísticas')).toBeInTheDocument();
 
-    // Verify 5 Sections
+    // Top KPI summary cards removed
+    expect(screen.queryByText('Total Lotes')).not.toBeInTheDocument();
+    expect(screen.queryByText('Más Entregado')).not.toBeInTheDocument();
+    expect(screen.queryByText('Regiones y Distritos')).not.toBeInTheDocument();
+
+    // Verify section headings and absence of card subtitles
     expect(screen.getByText('Reconocimientos entregados por Región')).toBeInTheDocument();
     expect(screen.getByText('Reconocimientos entregados por Distrito')).toBeInTheDocument();
     expect(screen.getByText('Reconocimientos entregados por Grupo Scout')).toBeInTheDocument();
@@ -144,19 +146,54 @@ describe('StatisticsDashboard Component', () => {
     expect(screen.getByText('Resumen de reconocimientos entregados a Jóvenes y Adultos')).toBeInTheDocument();
     expect(screen.getByText('Resumen Mensual de Reconocimientos')).toBeInTheDocument();
 
+    expect(screen.queryByText(/Distribución territorial consolidada por región scout/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución territorial por distrito y región scout/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución territorial por grupo scout y distrito correspondiente/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución de reconocimientos según la unidad scout/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución demográfica entre scouts jóvenes y dirigentes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución de reconocimientos otorgados a lo largo del año/i)).not.toBeInTheDocument();
+
+    // Verify bottom-right descriptive totals
+    expect(screen.getByText('Total de regiones')).toBeInTheDocument();
+    expect(screen.getByText('Total de distritos')).toBeInTheDocument();
+    expect(screen.getByText('Total de grupos')).toBeInTheDocument();
+    expect(screen.getByText('Total de reconocimientos')).toBeInTheDocument();
+
     // Verify validation status card is removed
     expect(screen.queryByText('Calidad y Estatus de Validación')).not.toBeInTheDocument();
   });
 
-  it('filters data when changing region and allows resetting filters', async () => {
+  it('filters data when using search input or changing region and allows resetting filters', async () => {
     render(<StatisticsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
+    const searchInput = screen.getByLabelText('Buscar en estadísticas');
+    fireEvent.change(searchInput, { target: { value: 'Zulia' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Limpiar filtros')).toBeInTheDocument();
+      const regionTable = screen.getAllByRole('table')[0];
+      expect(within(regionTable).queryByText('Región Capital')).not.toBeInTheDocument();
+      expect(within(regionTable).getByText('Región Zulia')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Limpiar filtros'));
+    expect(within(screen.getAllByRole('table')[0]).getByText('Región Capital')).toBeInTheDocument();
+
+    // Open collapsible filters panel
+    const toggleBtn = screen.getByRole('button', { name: /Filtros/i });
+    fireEvent.click(toggleBtn);
+
     const regionSelect = screen.getByLabelText('Filtrar por región');
     fireEvent.change(regionSelect, { target: { value: '1' } });
+
+    // Collapse filters panel and verify active filter chip summary appears
+    fireEvent.click(toggleBtn);
+    expect(screen.getByText('Filtros activos:')).toBeInTheDocument();
+    expect(screen.getByLabelText('Quitar filtro Región')).toBeInTheDocument();
 
     // "Limpiar filtros" button appears
     await waitFor(() => {
@@ -169,14 +206,15 @@ describe('StatisticsDashboard Component', () => {
     expect(screen.queryByText('Limpiar filtros')).not.toBeInTheDocument();
   });
 
-  it('triggers PDF export when clicking export button', async () => {
+  it('triggers PDF export when clicking Exportar todo button in module header', async () => {
     render(<StatisticsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    const exportBtn = screen.getByRole('button', { name: /Exportar Reporte Ejecutivo PDF/i });
+    const exportBtn = screen.getByRole('button', { name: 'Exportar todo' });
+    expect(exportBtn).toHaveTextContent('Exportar todo');
     fireEvent.click(exportBtn);
 
     expect(statsPdfExport.exportStatisticsPdf).toHaveBeenCalledTimes(1);
@@ -253,22 +291,22 @@ describe('StatisticsDashboard Component', () => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    // Check comparative column headers
+    // Check comparative column headers & bottom-right year totals on Region, District, and Monthly sections
     expect(screen.getAllByText('Total (2026)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Año Anterior (2025)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Variación').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Año 2026')).toHaveLength(3);
+    expect(screen.getAllByText('Año 2025')).toHaveLength(3);
   });
 
-  it('renders 4 KPI skeleton cards matching StatKpiGrid column count while loading', () => {
+  it('renders loading skeletons without the removed KPI skeleton grid while loading', () => {
     vi.mocked(batchApi.getAllBatches).mockReturnValue(new Promise(() => {}));
 
     render(<StatisticsDashboard />);
 
     const status = screen.getByRole('status', { name: 'Cargando estadísticas' });
     expect(status).toBeInTheDocument();
-    const kpiSkeletonGrid = screen.getByTestId('kpi-skeleton-grid');
-    expect(kpiSkeletonGrid).toHaveClass('lg:grid-cols-4');
-    expect(kpiSkeletonGrid.children).toHaveLength(4);
+    expect(screen.queryByTestId('kpi-skeleton-grid')).not.toBeInTheDocument();
   });
 });
 

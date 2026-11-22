@@ -120,17 +120,19 @@ export function resolveMemberHierarchy(
 export function getAvailableDistricts(
   districts: readonly District[],
   regionId: string | number | undefined,
-  options?: { includeNoAplicaDistrict?: boolean }
+  options?: { includeNoAplicaDistrict?: boolean; allowAllWhenUnset?: boolean }
 ): District[] {
-  if (
-    regionId === undefined ||
-    regionId === null ||
-    regionId === '' ||
-    regionId === 'nacional' ||
-    regionId === '0' ||
-    regionId === 0
-  ) {
+  if (regionId === 'nacional' || regionId === '0' || regionId === 0) {
     return [];
+  }
+
+  if (regionId === undefined || regionId === null || regionId === '') {
+    if (!options?.allowAllWhenUnset) {
+      return [];
+    }
+    return districts.filter(
+      d => d.id !== 0 && (options?.includeNoAplicaDistrict || !isNoAplicaDistrict(d))
+    );
   }
 
   const numericRegionId = Number(regionId);
