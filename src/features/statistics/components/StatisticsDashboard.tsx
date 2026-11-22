@@ -1,6 +1,5 @@
 import React from 'react';
 import { useStatisticsData } from '../hooks/useStatisticsData';
-import { StatKpiGrid } from './StatKpiGrid';
 import { FilterBar } from './FilterBar';
 import { RegionSummaryTable } from './charts/RegionSummaryTable';
 import { DistrictSummaryTable } from './charts/DistrictSummaryTable';
@@ -43,16 +42,6 @@ export const StatisticsDashboard: React.FC = () => {
 
         {/* Filter Bar Skeleton */}
         <div className="h-32 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
-
-        {/* KPI Grid Skeleton */}
-        <div
-          data-testid="kpi-skeleton-grid"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
-          ))}
-        </div>
 
         {/* Tables Skeleton */}
         <div className="space-y-6">
@@ -100,9 +89,6 @@ export const StatisticsDashboard: React.FC = () => {
         stats={stats}
         getFilterSummaryLabels={getFilterSummaryLabels}
       />
-
-      {/* Top 5 KPI Metrics Grid */}
-      <StatKpiGrid metrics={stats.kpis} yoy={yoyComparison} />
 
       {/* Section 1: Tabla de reconocimientos entregados por Región */}
       <div>

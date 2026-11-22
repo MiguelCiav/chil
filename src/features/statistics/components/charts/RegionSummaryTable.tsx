@@ -14,7 +14,6 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
   return (
     <TerritorialSummaryTable
       title="Reconocimientos entregados por Región"
-      subtitle="Distribución territorial consolidada por región scout"
       icon={<MapPin className="w-5 h-5" />}
       items={regions}
       yoyItems={hasYoY && yoy ? yoy.regions : undefined}
@@ -24,8 +23,7 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
           : undefined
       }
       entityLabel="Región"
-      countLabelSingular="región"
-      countLabelPlural="regiones"
+      totalLabel="Total de regiones"
       showAllLabel="Ver todas"
       accentColor="emerald"
       emptyMessage="No hay registros disponibles por región para los filtros seleccionados."

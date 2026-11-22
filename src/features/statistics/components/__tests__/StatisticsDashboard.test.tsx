@@ -122,27 +122,38 @@ describe('StatisticsDashboard Component', () => {
     vi.mocked(recognitionApi.getAllRecognitionTypes).mockResolvedValue(mockRecTypes);
   });
 
-  it('renders main dashboard layout with KPI grid and charts', async () => {
+  it('renders main dashboard layout starting with region breakdown and without KPI summary or card subtitles', async () => {
     render(<StatisticsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    // Verify Top 4 Executive KPI Cards
-    expect(screen.getAllByText('Total Reconocimientos').length).toBeGreaterThanOrEqual(1);
+    // Top KPI summary cards removed
     expect(screen.queryByText('Total Lotes')).not.toBeInTheDocument();
-    expect(screen.getByText('Más Entregado')).toBeInTheDocument();
-    expect(screen.getByText('Regiones y Distritos')).toBeInTheDocument();
-    expect(screen.getAllByText('Demografía').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('Más Entregado')).not.toBeInTheDocument();
+    expect(screen.queryByText('Regiones y Distritos')).not.toBeInTheDocument();
 
-    // Verify 5 Sections
+    // Verify section headings and absence of card subtitles
     expect(screen.getByText('Reconocimientos entregados por Región')).toBeInTheDocument();
     expect(screen.getByText('Reconocimientos entregados por Distrito')).toBeInTheDocument();
     expect(screen.getByText('Reconocimientos entregados por Grupo Scout')).toBeInTheDocument();
     expect(screen.getByText('Reconocimientos entregados por Unidad')).toBeInTheDocument();
     expect(screen.getByText('Resumen de reconocimientos entregados a Jóvenes y Adultos')).toBeInTheDocument();
     expect(screen.getByText('Resumen Mensual de Reconocimientos')).toBeInTheDocument();
+
+    expect(screen.queryByText(/Distribución territorial consolidada por región scout/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución territorial por distrito y región scout/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución territorial por grupo scout y distrito correspondiente/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución de reconocimientos según la unidad scout/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución demográfica entre scouts jóvenes y dirigentes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Distribución de reconocimientos otorgados a lo largo del año/i)).not.toBeInTheDocument();
+
+    // Verify bottom-right descriptive totals
+    expect(screen.getByText('Total de regiones')).toBeInTheDocument();
+    expect(screen.getByText('Total de distritos')).toBeInTheDocument();
+    expect(screen.getByText('Total de grupos')).toBeInTheDocument();
+    expect(screen.getByText('Total de reconocimientos')).toBeInTheDocument();
 
     // Verify validation status card is removed
     expect(screen.queryByText('Calidad y Estatus de Validación')).not.toBeInTheDocument();
@@ -253,22 +264,22 @@ describe('StatisticsDashboard Component', () => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    // Check comparative column headers
+    // Check comparative column headers & bottom-right year totals on Region, District, and Monthly sections
     expect(screen.getAllByText('Total (2026)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Año Anterior (2025)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Variación').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Año 2026')).toHaveLength(3);
+    expect(screen.getAllByText('Año 2025')).toHaveLength(3);
   });
 
-  it('renders 4 KPI skeleton cards matching StatKpiGrid column count while loading', () => {
+  it('renders loading skeletons without the removed KPI skeleton grid while loading', () => {
     vi.mocked(batchApi.getAllBatches).mockReturnValue(new Promise(() => {}));
 
     render(<StatisticsDashboard />);
 
     const status = screen.getByRole('status', { name: 'Cargando estadísticas' });
     expect(status).toBeInTheDocument();
-    const kpiSkeletonGrid = screen.getByTestId('kpi-skeleton-grid');
-    expect(kpiSkeletonGrid).toHaveClass('lg:grid-cols-4');
-    expect(kpiSkeletonGrid.children).toHaveLength(4);
+    expect(screen.queryByTestId('kpi-skeleton-grid')).not.toBeInTheDocument();
   });
 });
 

@@ -4,7 +4,8 @@
 Implements the data visualization cards, SVG charts, and geographic/unit summary tables for the statistics dashboard, supporting standard and Year-over-Year (YoY) comparison views.
 
 ## Interface
-- `TerritorialSummaryTable.tsx:TerritorialSummaryTable`: Shared card-wrapped summary table accepting `accentColor: 'emerald' | 'indigo'` and optional YoY series/years, unifying Standard and YoY columns and Top-5 `<Button variant="ghost" size="sm">` expansion.
+- `SectionTotalFooter.tsx:SectionTotalFooter`: Shared bottom-right total summary displaying descriptive `totalLabel` (`"Total de regiones"`, `"Total de distritos"`, `"Total de grupos"`, `"Total de reconocimientos"`) in standard mode and alongside `Año <current>` / `Año <previous>` in YoY mode.
+- `TerritorialSummaryTable.tsx:TerritorialSummaryTable`: Shared card-wrapped summary table accepting title-only headers (no subtitles or top-right entity-count badges), `accentColor: 'emerald' | 'indigo'`, and optional YoY series/years, unifying Standard and YoY columns, Top-5 `<Button variant="ghost" size="sm">` expansion, and `<SectionTotalFooter>` showing total entity counts (all items / per-year active entities in YoY mode) regardless of Top-5 collapse state.
 - `DemographicsDonut.tsx:DemographicsDonut`: `React.FC<{ data: DemographicsData; yoy?: YoYComparisonData }>` rendering an SVG donut chart and breakdown for young vs. adult recipients inside `<Card>`.
 - `DistrictSummaryTable.tsx:DistrictSummaryTable`: `React.FC<{ districts: GeographicItem[]; yoy?: YoYComparisonData }>` delegating district breakdown rendering to `TerritorialSummaryTable`.
 - `GroupSummaryTable.tsx:GroupSummaryTable`: `React.FC<{ groups?: GeographicItem[] }>` delegating Scout group breakdown rendering to `TerritorialSummaryTable`.

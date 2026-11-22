@@ -3,6 +3,7 @@ import { TrendingUp } from 'lucide-react';
 import { Card, CardBody } from '../../../../components';
 import { MonthlyTrendData, YoYComparisonData, YoYMonthlyItem } from '../../types';
 import { YoYVariationBadge } from '../YoYVariationBadge';
+import { SectionTotalFooter } from './SectionTotalFooter';
 
 interface MonthlyTrendChartProps {
   data: MonthlyTrendData[];
@@ -549,51 +550,17 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
     <Card className="h-full">
       <CardBody className="p-5 flex flex-col justify-between h-full font-sans">
       {/* Card Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 text-primary rounded-xl" aria-hidden="true">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="font-bold text-neutral text-base tracking-tight">
-              Resumen Mensual de Reconocimientos
-            </h3>
-            <p className="text-xs text-neutral/75">
-              Distribución de reconocimientos otorgados a lo largo del año {displayYear}
-              {hasYoY && yoy && ` • Comparativa vs ${prevYear}`}
-            </p>
-          </div>
+      <div className="flex items-center gap-2 mb-4">
+        <div className="p-2 bg-primary/10 text-primary rounded-xl" aria-hidden="true">
+          <TrendingUp className="w-5 h-5" />
         </div>
-
-        <div className="text-right flex items-center gap-4 sm:gap-6 self-start sm:self-auto">
-          {hasYoY && yoy ? (
-            <>
-              <div>
-                <span className="text-xs font-semibold text-neutral/75">Año {displayYear}</span>
-                <p className="text-lg font-extrabold text-primary leading-none">
-                  {yoy.totalDiplomas.current}
-                </p>
-              </div>
-              <div className="border-l border-primary/20 pl-4">
-                <span className="text-xs font-semibold text-neutral/75">Año {prevYear}</span>
-                <p className="text-lg font-bold text-neutral/75 leading-none">
-                  {yoy.totalDiplomas.previous}
-                </p>
-              </div>
-            </>
-          ) : (
-            <div>
-              <span className="text-xs font-semibold text-neutral/75">Total año</span>
-              <p className="text-lg font-extrabold text-primary leading-none">
-                {totalPeriodDiplomas}
-              </p>
-            </div>
-          )}
-        </div>
+        <h3 className="font-bold text-neutral text-base tracking-tight">
+          Resumen Mensual de Reconocimientos
+        </h3>
       </div>
 
       {/* Monthly Summary Table */}
-      <div className="overflow-x-auto mb-6">
+      <div className="overflow-x-auto">
         <MonthlySummaryTable
           data={data}
           yoy={yoy}
@@ -602,7 +569,18 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
         />
       </div>
 
-      {/* Interactive SVG Chart Directly Below */}
+      {/* Section Total */}
+      <div className="pt-3 mt-3 mb-5 border-t border-gray-100 flex justify-end">
+        <SectionTotalFooter
+          totalLabel="Total de reconocimientos"
+          currentTotal={hasYoY && yoy ? yoy.totalDiplomas.current : totalPeriodDiplomas}
+          previousTotal={hasYoY && yoy ? yoy.totalDiplomas.previous : undefined}
+          currentYear={hasYoY && yoy ? displayYear : undefined}
+          previousYear={hasYoY && yoy ? prevYear : undefined}
+        />
+      </div>
+
+      {/* Interactive SVG Chart Directly Below Total */}
       <div className="relative w-full overflow-hidden">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}

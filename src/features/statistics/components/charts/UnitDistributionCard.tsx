@@ -33,7 +33,7 @@ function computeUnitMaxCount(
 }
 
 export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data, yoy }) => {
-  const { items, totalCount } = data;
+  const { items } = data;
   const hasYoY = Boolean(yoy?.hasPreviousYearData);
   const maxCount = computeUnitMaxCount(items, yoy, hasYoY);
 
@@ -63,28 +63,13 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
     <Card>
       <CardBody className="p-5 space-y-4 font-sans">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-primary/10 text-primary rounded-xl" aria-hidden="true">
-              <Compass className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-neutral text-base tracking-tight">
-                Reconocimientos entregados por Unidad
-              </h3>
-              <p className="text-xs text-neutral/75">
-                Distribución de reconocimientos según la unidad scout o emisión directa
-                {hasYoY && yoy && ` • Comparativa ${yoy.previousYear} vs ${yoy.currentYear}`}
-              </p>
-            </div>
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-primary/10 text-primary rounded-xl" aria-hidden="true">
+            <Compass className="w-5 h-5" />
           </div>
-
-          <div className="flex items-center gap-2 text-xs font-semibold">
-            <span className="text-neutral/75">Total Reconocimientos:</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-extrabold">
-              {totalCount}
-            </span>
-          </div>
+          <h3 className="font-bold text-neutral text-base tracking-tight">
+            Reconocimientos entregados por Unidad
+          </h3>
         </div>
 
         {/* Segmented Stacked Progress Bar */}

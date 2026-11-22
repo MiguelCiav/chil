@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardBody, Button } from '../../../../components';
 import { GeographicItem } from '../../types';
 import { YoYVariationBadge } from '../YoYVariationBadge';
+import { SectionTotalFooter } from './SectionTotalFooter';
 
 export interface YoYTerritorialSummaryItem {
   id: number | string;
@@ -17,15 +18,13 @@ export interface YoYTerritorialSummaryItem {
 
 export interface TerritorialSummaryTableProps {
   title: string;
-  subtitle?: string;
   icon: React.ReactNode;
   items: readonly GeographicItem[];
   yoyItems?: readonly YoYTerritorialSummaryItem[];
   yoyYears?: { currentYear: number; previousYear: number };
   entityLabel: string;
   parentLabel?: string;
-  countLabelSingular: string;
-  countLabelPlural: string;
+  totalLabel: string;
   showAllLabel: string;
   accentColor: 'emerald' | 'indigo';
   emptyMessage: string;
@@ -61,15 +60,13 @@ function getProgressColor(
 
 export const TerritorialSummaryTable: React.FC<TerritorialSummaryTableProps> = ({
   title,
-  subtitle,
   icon,
   items,
   yoyItems,
   yoyYears,
   entityLabel,
   parentLabel,
-  countLabelSingular,
-  countLabelPlural,
+  totalLabel,
   showAllLabel,
   accentColor,
   emptyMessage
@@ -86,6 +83,15 @@ export const TerritorialSummaryTable: React.FC<TerritorialSummaryTableProps> = (
       : items.length > 0
         ? Math.max(...items.map(i => i.count), 1)
         : 1;
+
+  const totalCurrent =
+    hasYoY && yoyItems
+      ? yoyItems.filter(item => item.currentCount > 0).length
+      : items.length;
+  const totalPrevious =
+    hasYoY && yoyItems
+      ? yoyItems.filter(item => item.previousCount > 0).length
+      : undefined;
 
   const displayedRows = hasYoY && yoyItems
     ? (showAll ? yoyItems : yoyItems.slice(0, 5)).map(item => ({
@@ -113,24 +119,11 @@ export const TerritorialSummaryTable: React.FC<TerritorialSummaryTableProps> = (
     <Card>
       <CardBody className="p-5 space-y-4 font-sans">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-xl ${accent.iconBox}`} aria-hidden="true">
-              {icon}
-            </div>
-            <div>
-              <h3 className="font-bold text-neutral text-base tracking-tight">{title}</h3>
-              {subtitle && (
-                <p className="text-xs text-neutral/75">
-                  {subtitle}
-                  {hasYoY && yoyYears && ` • Comparativa ${yoyYears.previousYear} vs ${yoyYears.currentYear}`}
-                </p>
-              )}
-            </div>
+        <div className="flex items-center gap-2">
+          <div className={`p-2 rounded-xl ${accent.iconBox}`} aria-hidden="true">
+            {icon}
           </div>
-          <span className="text-xs font-semibold text-neutral/75 bg-gray-100 px-2.5 py-1 rounded-full">
-            {itemsCount} {itemsCount === 1 ? countLabelSingular : countLabelPlural}
-          </span>
+          <h3 className="font-bold text-neutral text-base tracking-tight">{title}</h3>
         </div>
 
         {/* Table Content */}
@@ -213,30 +206,40 @@ export const TerritorialSummaryTable: React.FC<TerritorialSummaryTableProps> = (
           </div>
         )}
 
-        {/* Show more toggle */}
-        {itemsCount > 5 && (
-          <div className="pt-2 border-t border-gray-100 text-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAll(!showAll)}
-              className={`text-xs font-semibold ${accent.toggleText}`}
-            >
-              {showAll ? (
-                <>
-                  <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
-                  Mostrar menos
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
-                  {showAllLabel} ({itemsCount})
-                </>
-              )}
-            </Button>
+        {/* Show more toggle + bottom-right Section Total */}
+        <div className="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            {itemsCount > 5 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAll(!showAll)}
+                className={`text-xs font-semibold ${accent.toggleText}`}
+              >
+                {showAll ? (
+                  <>
+                    <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
+                    Mostrar menos
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+                    {showAllLabel} ({itemsCount})
+                  </>
+                )}
+              </Button>
+            )}
           </div>
-        )}
+
+          <SectionTotalFooter
+            totalLabel={totalLabel}
+            currentTotal={totalCurrent}
+            previousTotal={totalPrevious}
+            currentYear={yoyYears?.currentYear}
+            previousYear={yoyYears?.previousYear}
+          />
+        </div>
       </CardBody>
     </Card>
   );

@@ -168,9 +168,7 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
 
     await waitFor(() => {
       expect(api.batchUpdateMembers).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith('/lotes/exito', {
-        state: { batchId: 777, name: 'Mi Lote Completo' }
-      });
+      expect(mockNavigate).toHaveBeenCalledWith('/lotes/777');
     });
   });
 
@@ -256,9 +254,7 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
     await waitFor(() => {
       expect(api.batchUpdateMembers).toHaveBeenCalled();
       expect(recognitionsModule.downloadSingleCertificatePdf).not.toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith('/lotes/exito', {
-        state: { batchId: 888, name: '' }
-      });
+      expect(mockNavigate).toHaveBeenCalledWith('/lotes/888');
     });
   });
 

@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { StatisticsDataset, YoYComparisonData } from '../types';
+import { StatisticsDataset } from '../types';
 
 export interface FilterSummaryLabels {
   periodLabel?: string;
@@ -30,7 +30,6 @@ const COLORS = {
   white: [255, 255, 255] as RgbTuple,
   sky: [2, 132, 199] as RgbTuple,
   skyText: [3, 105, 161] as RgbTuple,
-  skyBg: [240, 249, 255] as RgbTuple,
   amber: [245, 158, 11] as RgbTuple,
   amberText: [180, 83, 9] as RgbTuple,
   emeraldDark: [5, 150, 105] as RgbTuple,
@@ -39,7 +38,6 @@ const COLORS = {
   indigoDark: [79, 70, 229] as RgbTuple,
   indigoMed: [99, 102, 241] as RgbTuple,
   indigoLight: [129, 140, 248] as RgbTuple,
-  purple: [126, 34, 206] as RgbTuple,
   rose: [190, 18, 60] as RgbTuple,
   slatePrev: [203, 213, 225] as RgbTuple
 } as const;
@@ -54,17 +52,6 @@ const UNIT_RGB_COLORS: Record<string, RgbTuple> = {
 };
 
 export type PageBreakChecker = (doc: jsPDF, currentY: number, requiredSpace: number) => number;
-
-export interface KpiBoxParams {
-  doc: jsPDF;
-  stats: StatisticsDataset;
-  hasYoY?: boolean;
-  yoy?: YoYComparisonData;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 
 export interface MonthlyBarParams {
   doc: jsPDF;
@@ -126,49 +113,91 @@ function formatVariationText(diff: number, percentChange: number | null): string
   return `${diffSign}${diff}${pctStr}`;
 }
 
-function drawSectionHeaderCard(
-  doc: jsPDF,
-  options: {
-    title: string;
-    subtitle: string;
-    badgeText?: string;
-    accentRgb: RgbTuple;
-    y: number;
-    borderRgb?: RgbTuple;
-  }
-): number {
-  const { title, subtitle, badgeText, accentRgb, y, borderRgb = COLORS.cardBorder } = options;
-
-  setRgbFill(doc, COLORS.white);
-  setRgbDraw(doc, borderRgb);
-  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 13, 2, 2, 'FD');
-
-  // Icon accent pill matching web card icon wrapper
-  setRgbFill(doc, accentRgb);
-  doc.roundedRect(MARGIN + 3.5, y + 3.2, 1.8, 6.6, 0.9, 0.9, 'F');
-
+function drawSectionHeader(doc: jsPDF, title: string, y: number): number {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   setRgbText(doc, COLORS.neutral);
-  doc.text(title, MARGIN + 7.5, y + 5.8);
+  doc.text(title, MARGIN, y + 5.2);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.8);
-  setRgbText(doc, COLORS.muted);
-  doc.text(subtitle, MARGIN + 7.5, y + 10);
+  return y + 9;
+}
 
-  if (badgeText) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.8);
-    const pillW = Math.max(badgeText.length * 1.45 + 6, 18);
-    const pillX = MARGIN + CONTENT_WIDTH - pillW - 3.5;
-    setRgbFill(doc, COLORS.rowDivider);
-    doc.roundedRect(pillX, y + 3.6, pillW, 5.4, 2.5, 2.5, 'F');
-    setRgbText(doc, COLORS.muted);
-    doc.text(badgeText, pillX + pillW / 2, y + 7.1, { align: 'center' });
+function beginNextSection(
+  doc: jsPDF,
+  currentY: number,
+  requiredSpace: number,
+  onBreak: PageBreakChecker
+): number {
+  const nextY = onBreak(doc, currentY, requiredSpace + 7);
+  // Skip drawing a separator when a page break occurs; drawHeaderSmall already renders a top rule.
+  if (nextY !== currentY) {
+    return nextY;
   }
 
-  return y + 15;
+  setRgbDraw(doc, COLORS.cardBorder);
+  doc.line(MARGIN, nextY + 3, MARGIN + CONTENT_WIDTH, nextY + 3);
+  return nextY + 7;
+}
+
+function drawSectionTotalFooter(
+  doc: jsPDF,
+  startY: number,
+  options: {
+    totalLabel: string;
+    currentTotal: number;
+    previousTotal?: number;
+    currentYear?: number;
+    previousYear?: number;
+  },
+  onBreak: PageBreakChecker = checkPageBreak
+): number {
+  const { totalLabel, currentTotal, previousTotal, currentYear, previousYear } = options;
+  const showYoY =
+    previousTotal !== undefined &&
+    currentYear !== undefined &&
+    previousYear !== undefined;
+
+  const y = onBreak(doc, startY + 2, 12);
+  const rightEdge = MARGIN + CONTENT_WIDTH;
+
+  if (showYoY) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    setRgbText(doc, COLORS.muted);
+    doc.text(`Año ${previousYear}`, rightEdge, y + 3, { align: 'right' });
+
+    doc.setFontSize(12);
+    setRgbText(doc, COLORS.muted);
+    doc.text(String(previousTotal), rightEdge, y + 8, { align: 'right' });
+
+    const dividerX = rightEdge - 22;
+    setRgbDraw(doc, COLORS.primaryTintBorder);
+    doc.line(dividerX, y + 0.8, dividerX, y + 8.8);
+
+    const currRight = dividerX - 4;
+    doc.setFontSize(7);
+    setRgbText(doc, COLORS.muted);
+    doc.text(`Año ${currentYear}`, currRight, y + 3, { align: 'right' });
+
+    doc.setFontSize(13);
+    setRgbText(doc, COLORS.primary);
+    doc.text(String(currentTotal), currRight, y + 8, { align: 'right' });
+
+    doc.setFontSize(7.5);
+    setRgbText(doc, COLORS.muted);
+    doc.text(totalLabel, currRight - 22, y + 6.5, { align: 'right' });
+  } else {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    setRgbText(doc, COLORS.muted);
+    doc.text(totalLabel, rightEdge, y + 3, { align: 'right' });
+
+    doc.setFontSize(13);
+    setRgbText(doc, COLORS.primary);
+    doc.text(String(currentTotal), rightEdge, y + 8, { align: 'right' });
+  }
+
+  return y + 11;
 }
 
 function drawTableHeaderBar(doc: jsPDF, y: number): void {
@@ -227,16 +256,14 @@ function drawFilterSummaryBox(doc: jsPDF, filterSummary: FilterSummaryLabels, y:
 }
 
 /**
- * Draws the web-matching page header and applied filters bar.
+ * Draws the borderless document masthead header and optional applied filters bar.
  */
 export function drawReportHeader(
   doc: jsPDF,
-  stats: StatisticsDataset,
+  _stats: StatisticsDataset,
   filterSummary?: FilterSummaryLabels,
   startY: number = 14
 ): number {
-  const yoy = stats.yoyComparison;
-  const hasYoY = Boolean(yoy?.hasPreviousYearData);
   const todayStr = new Date().toLocaleDateString('es-VE', {
     day: '2-digit',
     month: 'long',
@@ -245,217 +272,27 @@ export function drawReportHeader(
 
   let y = startY;
 
-  // Web-matching crisp light header card
-  setRgbFill(doc, COLORS.white);
-  setRgbDraw(doc, COLORS.primaryTintBorder);
-  doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 21, 2.5, 2.5, 'FD');
-
-  // Left brand accent bar
+  // Borderless masthead header with decorative left brand accent bar
   setRgbFill(doc, COLORS.primary);
-  doc.roundedRect(MARGIN, y, 2.2, 21, 1, 1, 'F');
+  doc.roundedRect(MARGIN, y + 0.8, 2.2, 12.2, 1, 1, 'F');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   setRgbText(doc, COLORS.neutral);
-  doc.text('Estadísticas y Análisis', MARGIN + 6, y + 8);
+  doc.text('Estadísticas y Análisis', MARGIN + 5.5, y + 6.2);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7.2);
   setRgbText(doc, COLORS.muted);
-  doc.text(
-    'Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.',
-    MARGIN + 6,
-    y + 13.5
-  );
+  doc.text(`Asociación de Scouts de Venezuela • Sistema Chil • Emitido el ${todayStr}`, MARGIN + 5.5, y + 11.4);
 
-  doc.setFontSize(6.8);
-  setRgbText(doc, COLORS.subtle);
-  doc.text(`Asociación de Scouts de Venezuela • Sistema Chil • Emitido el ${todayStr}`, MARGIN + 6, y + 18);
-
-  if (hasYoY && yoy) {
-    const pillLabel = `Reporte Comparativo Anual (${yoy.previousYear} vs ${yoy.currentYear})`;
-    const pillW = Math.max(pillLabel.length * 1.48 + 6, 56);
-    const pillX = MARGIN + CONTENT_WIDTH - pillW - 4;
-    setRgbFill(doc, COLORS.skyBg);
-    setRgbDraw(doc, [186, 230, 253]);
-    doc.roundedRect(pillX, y + 4.5, pillW, 6.2, 2, 2, 'FD');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.6);
-    setRgbText(doc, COLORS.skyText);
-    doc.text(pillLabel, pillX + pillW / 2, y + 8.6, { align: 'center' });
-  }
-
-  y += 24;
+  y += 17;
 
   if (filterSummary) {
     y = drawFilterSummaryBox(doc, filterSummary, y);
   }
 
   return y;
-}
-
-function drawKpiCardShell(x: number, y: number, w: number, h: number, doc: jsPDF): void {
-  setRgbFill(doc, COLORS.white);
-  setRgbDraw(doc, COLORS.cardBorder);
-  doc.roundedRect(x, y, w, h, 2, 2, 'FD');
-}
-
-function drawKpiDiplomasCard(params: KpiBoxParams): void {
-  const { doc, stats, hasYoY, yoy, x, y, w, h } = params;
-  drawKpiCardShell(x, y, w, h, doc);
-
-  setRgbFill(doc, COLORS.primaryTintBg);
-  doc.roundedRect(x + w - 8, y + 2.5, 5.5, 5.5, 1.5, 1.5, 'F');
-  setRgbFill(doc, COLORS.primary);
-  doc.roundedRect(x + w - 6.3, y + 4.2, 2.1, 2.1, 0.5, 0.5, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6);
-  setRgbText(doc, COLORS.muted);
-  doc.text('TOTAL RECONOCIMIENTOS', x + 3, y + 5.5);
-
-  doc.setFontSize(13.5);
-  setRgbText(doc, COLORS.neutral);
-  doc.text(String(stats.kpis.totalDiplomas), x + 3, y + 12.5);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.3);
-  setRgbText(doc, COLORS.muted);
-  doc.text(`de ${stats.kpis.totalMembers} miembros procesados`, x + 3, y + 16.5);
-
-  if (hasYoY && yoy) {
-    setRgbDraw(doc, COLORS.rowDivider);
-    doc.line(x + 3, y + 18.2, x + w - 3, y + 18.2);
-    doc.setFontSize(6);
-    setRgbText(doc, COLORS.muted);
-    doc.text(`vs ${yoy.previousYear}:`, x + 3, y + 21.5);
-    doc.setFont('helvetica', 'bold');
-    setRgbText(doc, yoy.totalDiplomas.diff >= 0 ? COLORS.emeraldDark : COLORS.rose);
-    doc.text(
-      formatVariationText(yoy.totalDiplomas.diff, yoy.totalDiplomas.percentChange),
-      x + w - 3,
-      y + 21.5,
-      { align: 'right' }
-    );
-  }
-}
-
-function drawKpiTopRecognitionCard(params: KpiBoxParams): void {
-  const { doc, stats, x, y, w, h } = params;
-  drawKpiCardShell(x, y, w, h, doc);
-
-  setRgbFill(doc, [236, 253, 245]);
-  doc.roundedRect(x + w - 8, y + 2.5, 5.5, 5.5, 1.5, 1.5, 'F');
-  setRgbFill(doc, COLORS.emeraldDark);
-  doc.roundedRect(x + w - 6.3, y + 4.2, 2.1, 2.1, 0.5, 0.5, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6);
-  setRgbText(doc, COLORS.muted);
-  doc.text('MÁS ENTREGADO', x + 3, y + 5.5);
-
-  doc.setFontSize(9.2);
-  setRgbText(doc, [4, 120, 87]);
-  const topRecDisplay = (stats.kpis.topRecognitionName ?? '-').substring(0, 20);
-  doc.text(topRecDisplay, x + 3, y + 12);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.3);
-  setRgbText(doc, COLORS.muted);
-  doc.text(`${stats.kpis.topRecognitionCount ?? 0} reconocimientos emitidos`, x + 3, y + 16.5);
-}
-
-function drawKpiTerritoryCard(params: KpiBoxParams): void {
-  const { doc, stats, x, y, w, h } = params;
-  drawKpiCardShell(x, y, w, h, doc);
-
-  setRgbFill(doc, [243, 232, 255]);
-  doc.roundedRect(x + w - 8, y + 2.5, 5.5, 5.5, 1.5, 1.5, 'F');
-  setRgbFill(doc, COLORS.purple);
-  doc.roundedRect(x + w - 6.3, y + 4.2, 2.1, 2.1, 0.5, 0.5, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6);
-  setRgbText(doc, COLORS.muted);
-  doc.text('REGIONES Y DISTRITOS', x + 3, y + 5.5);
-
-  doc.setFontSize(12.5);
-  setRgbText(doc, COLORS.purple);
-  doc.text(`${stats.kpis.activeRegionsCount} Regiones`, x + 3, y + 12.5);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.3);
-  setRgbText(doc, COLORS.muted);
-  doc.text(
-    `en ${stats.kpis.activeDistrictsCount} distritos y ${stats.kpis.activeGroupsCount} grupos`,
-    x + 3,
-    y + 16.5
-  );
-}
-
-function drawKpiDemographicsCard(params: KpiBoxParams): void {
-  const { doc, stats, hasYoY, yoy, x, y, w, h } = params;
-  drawKpiCardShell(x, y, w, h, doc);
-
-  setRgbFill(doc, COLORS.skyBg);
-  doc.roundedRect(x + w - 8, y + 2.5, 5.5, 5.5, 1.5, 1.5, 'F');
-  setRgbFill(doc, COLORS.sky);
-  doc.roundedRect(x + w - 6.3, y + 4.2, 2.1, 2.1, 0.5, 0.5, 'F');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6);
-  setRgbText(doc, COLORS.muted);
-  doc.text('DEMOGRAFÍA', x + 3, y + 5.5);
-
-  doc.setFontSize(12);
-  setRgbText(doc, COLORS.skyText);
-  doc.text(`${stats.demographics.youngPercentage}% Jóvenes`, x + 3, y + 12.5);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.1);
-  setRgbText(doc, COLORS.muted);
-  doc.text(
-    `${stats.demographics.youngCount} jóv. / ${stats.demographics.adultCount} adul. (${stats.demographics.adultPercentage}%)`,
-    x + 3,
-    y + 16.5
-  );
-
-  if (hasYoY && yoy) {
-    setRgbDraw(doc, COLORS.rowDivider);
-    doc.line(x + 3, y + 18.2, x + w - 3, y + 18.2);
-    const jDiff = yoy.demographics.young.diff;
-    const aDiff = yoy.demographics.adult.diff;
-    doc.setFontSize(5.8);
-    setRgbText(doc, COLORS.muted);
-    doc.text(`vs ${yoy.previousYear}:`, x + 3, y + 21.5);
-    doc.setFont('helvetica', 'bold');
-    setRgbText(doc, jDiff >= 0 ? COLORS.emeraldDark : COLORS.rose);
-    doc.text(`J:${jDiff >= 0 ? '+' : ''}${jDiff} | A:${aDiff >= 0 ? '+' : ''}${aDiff}`, x + w - 3, y + 21.5, {
-      align: 'right'
-    });
-  }
-}
-
-/**
- * Draws the 4 web-matching KPI cards (`StatKpiGrid`).
- */
-export function drawKpiSummaryBoxes(
-  doc: jsPDF,
-  stats: StatisticsDataset,
-  startY: number
-): number {
-  const yoy = stats.yoyComparison;
-  const hasYoY = Boolean(yoy?.hasPreviousYearData);
-  const gap = 3;
-  const cardW = (CONTENT_WIDTH - gap * 3) / 4;
-  const cardH = hasYoY ? 23.5 : 19;
-
-  drawKpiDiplomasCard({ doc, stats, hasYoY, yoy, x: MARGIN, y: startY, w: cardW, h: cardH });
-  drawKpiTopRecognitionCard({ doc, stats, hasYoY, yoy, x: MARGIN + cardW + gap, y: startY, w: cardW, h: cardH });
-  drawKpiTerritoryCard({ doc, stats, hasYoY, yoy, x: MARGIN + 2 * (cardW + gap), y: startY, w: cardW, h: cardH });
-  drawKpiDemographicsCard({ doc, stats, hasYoY, yoy, x: MARGIN + 3 * (cardW + gap), y: startY, w: cardW, h: cardH });
-
-  return startY + cardH + 6;
 }
 
 function drawRegionTableYoY(doc: jsPDF, stats: StatisticsDataset, startY: number, onBreak: PageBreakChecker): number {
@@ -749,57 +586,75 @@ export function drawGeographicTables(
   const hasYoY = Boolean(stats.yoyComparison?.hasPreviousYearData);
   const yoy = stats.yoyComparison;
 
-  // SECTION 1: Region Table
+  // Region Table
   y = onBreak(doc, y, 35);
-  const regCount = hasYoY && yoy ? yoy.regions.length : stats.geographic.regions.length;
-  y = drawSectionHeaderCard(doc, {
-    title: '1. Reconocimientos Entregados por Región',
-    subtitle: 'Distribución de los reconocimientos válidos entregados por región territorial',
-    badgeText: `${regCount} ${regCount === 1 ? 'región' : 'regiones'}`,
-    accentRgb: COLORS.emeraldDark,
-    borderRgb: COLORS.primaryTintBorder,
-    y
-  });
+  const regTotalCurr =
+    hasYoY && yoy
+      ? yoy.regions.filter(r => r.currentCount > 0).length
+      : stats.geographic.regions.length;
+  const regTotalPrev =
+    hasYoY && yoy ? yoy.regions.filter(r => r.previousCount > 0).length : undefined;
+
+  y = drawSectionHeader(doc, 'Reconocimientos Entregados por Región', y);
 
   y = hasYoY
     ? drawRegionTableYoY(doc, stats, y, onBreak)
     : drawRegionTableStandard(doc, stats, y, onBreak);
 
-  y += 6;
+  y = drawSectionTotalFooter(
+    doc,
+    y,
+    {
+      totalLabel: 'Total de regiones',
+      currentTotal: regTotalCurr,
+      previousTotal: regTotalPrev,
+      currentYear: hasYoY && yoy ? yoy.currentYear : undefined,
+      previousYear: hasYoY && yoy ? yoy.previousYear : undefined
+    },
+    onBreak
+  );
 
-  // SECTION 2: District Table
-  y = onBreak(doc, y, 35);
-  const distCount = hasYoY && yoy ? yoy.districts.length : stats.geographic.districts.length;
-  y = drawSectionHeaderCard(doc, {
-    title: '2. Reconocimientos Entregados por Distrito',
-    subtitle: 'Distribución territorial por distrito y su región correspondiente',
-    badgeText: `${distCount} ${distCount === 1 ? 'distrito' : 'distritos'}`,
-    accentRgb: COLORS.emeraldMed,
-    borderRgb: COLORS.primaryTintBorder,
-    y
-  });
+  // District Table
+  y = beginNextSection(doc, y, 35, onBreak);
+  const distTotalCurr =
+    hasYoY && yoy
+      ? yoy.districts.filter(d => d.currentCount > 0).length
+      : stats.geographic.districts.length;
+  const distTotalPrev =
+    hasYoY && yoy ? yoy.districts.filter(d => d.previousCount > 0).length : undefined;
+
+  y = drawSectionHeader(doc, 'Reconocimientos Entregados por Distrito', y);
 
   y = hasYoY
     ? drawDistrictTableYoY(doc, stats, y, onBreak)
     : drawDistrictTableStandard(doc, stats, y, onBreak);
 
-  y += 6;
+  y = drawSectionTotalFooter(
+    doc,
+    y,
+    {
+      totalLabel: 'Total de distritos',
+      currentTotal: distTotalCurr,
+      previousTotal: distTotalPrev,
+      currentYear: hasYoY && yoy ? yoy.currentYear : undefined,
+      previousYear: hasYoY && yoy ? yoy.previousYear : undefined
+    },
+    onBreak
+  );
 
-  // SECTION 2b: Scout Group Table (matching GroupSummaryTable)
+  // Scout Group Table (matching GroupSummaryTable)
   if (stats.geographic.groups) {
-    y = onBreak(doc, y, 35);
-    const groupCount = stats.geographic.groups.length;
-    y = drawSectionHeaderCard(doc, {
-      title: '2b. Reconocimientos Entregados por Grupo Scout',
-      subtitle: 'Distribución territorial por grupo scout y distrito correspondiente',
-      badgeText: `${groupCount} ${groupCount === 1 ? 'grupo' : 'grupos'}`,
-      accentRgb: COLORS.indigoMed,
-      borderRgb: COLORS.primaryTintBorder,
-      y
-    });
+    y = beginNextSection(doc, y, 35, onBreak);
+    const groupTotal = stats.geographic.groups.length;
+    y = drawSectionHeader(doc, 'Reconocimientos Entregados por Grupo Scout', y);
 
     y = drawGroupTableStandard(doc, stats, y, onBreak);
-    y += 6;
+    y = drawSectionTotalFooter(
+      doc,
+      y,
+      { totalLabel: 'Total de grupos', currentTotal: groupTotal },
+      onBreak
+    );
   }
 
   return y;
@@ -1152,16 +1007,10 @@ export function drawUnitAndDemographicsTables(
     ? yoy.units.length > 0
     : Boolean(stats.unitDistribution?.items?.length > 0);
 
-  // SECTION 3: Unit Table (conditional)
+  // Unit Table (conditional)
   if (hasUnitData) {
-    y = onBreak(doc, y, 50);
-    y = drawSectionHeaderCard(doc, {
-      title: '3. Reconocimientos Entregados por Unidad Scout',
-      subtitle: 'Distribución de reconocimientos según la unidad scout o emisión directa',
-      badgeText: `Total: ${stats.unitDistribution.totalCount}`,
-      accentRgb: COLORS.primary,
-      y
-    });
+    y = beginNextSection(doc, y, 50, onBreak);
+    y = drawSectionHeader(doc, 'Reconocimientos Entregados por Unidad Scout', y);
 
     y = drawUnitSegmentedBar(doc, stats, y);
 
@@ -1177,35 +1026,23 @@ export function drawUnitAndDemographicsTables(
       MARGIN + 2,
       y + 4.5
     );
-    y += 9;
+    y += 7;
   }
 
-  // SECTION 4: Demographics Donut + Table
-  y = onBreak(doc, y, 48);
-  y = drawSectionHeaderCard(doc, {
-    title: '4. Resumen Demográfico (Jóvenes y Adultos)',
-    subtitle: 'Distribución demográfica entre scouts jóvenes y dirigentes/adultos',
-    badgeText: `${stats.demographics.totalCount} total`,
-    accentRgb: COLORS.sky,
-    y
-  });
+  // Demographics Donut + Table (unframed)
+  y = beginNextSection(doc, y, 42, onBreak);
+  y = drawSectionHeader(doc, 'Resumen Demográfico (Jóvenes y Adultos)', y);
 
   const panelY = y;
-  setRgbFill(doc, COLORS.white);
-  setRgbDraw(doc, COLORS.cardBorder);
-  doc.roundedRect(MARGIN, panelY, CONTENT_WIDTH, 32, 2, 2, 'FD');
+  drawDemographicsDonutGraphic(doc, stats, MARGIN + 20, panelY + 15);
 
-  drawDemographicsDonutGraphic(doc, stats, MARGIN + 22, panelY + 16);
+  const tableX = MARGIN + 44;
+  const tableW = CONTENT_WIDTH - 44;
+  const tableEndY = (hasYoY && yoy)
+    ? drawDemographicsTableYoY(doc, stats, tableX, tableW, panelY + 2)
+    : drawDemographicsTableStandard(doc, stats, tableX, tableW, panelY + 2);
 
-  const tableX = MARGIN + 46;
-  const tableW = CONTENT_WIDTH - 49;
-  if (hasYoY && yoy) {
-    drawDemographicsTableYoY(doc, stats, tableX, tableW, panelY + 3.2);
-  } else {
-    drawDemographicsTableStandard(doc, stats, tableX, tableW, panelY + 3.2);
-  }
-
-  return panelY + 38;
+  return Math.max(panelY + 32, tableEndY + 3);
 }
 
 function drawMonthlyTableYoY(doc: jsPDF, stats: StatisticsDataset, startY: number, onBreak: PageBreakChecker): number {
@@ -1348,20 +1185,16 @@ function drawMonthlyChartContainer(
   maxMonthlyVal: number
 ): { chartBottomY: number; chartStartX: number; plotWidth: number } {
   const chartBottomY = y + chartHeight;
-  const chartStartX = MARGIN + 12;
-  const plotWidth = chartWidth - 16;
+  const chartStartX = MARGIN + 10;
+  const plotWidth = chartWidth - 12;
 
-  setRgbFill(doc, COLORS.white);
-  setRgbDraw(doc, COLORS.cardBorder);
-  doc.roundedRect(MARGIN, y, chartWidth, chartHeight + 10, 2, 2, 'FD');
-
-  // Horizontal Y-axis gridlines matching web (0, mid, max)
+  // Horizontal Y-axis gridlines matching web (0, mid, max) without enclosing chart borders
   const usableHeight = chartHeight - 8;
   const yTicks = [0, Math.round(maxMonthlyVal / 2), maxMonthlyVal];
   yTicks.forEach(val => {
     const tickY = chartBottomY - (val / maxMonthlyVal) * usableHeight;
     setRgbDraw(doc, COLORS.rowDivider);
-    doc.line(chartStartX, tickY, MARGIN + chartWidth - 4, tickY);
+    doc.line(chartStartX, tickY, MARGIN + chartWidth - 2, tickY);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(5.8);
@@ -1484,7 +1317,7 @@ function drawMonthlyChartStandard(doc: jsPDF, stats: StatisticsDataset, startY: 
 }
 
 /**
- * Draws Section 5: Monthly summary table and spaced histogram chart.
+ * Draws the Monthly summary table and spaced histogram chart.
  */
 export function drawMonthlyTrendSection(
   doc: jsPDF,
@@ -1492,26 +1325,31 @@ export function drawMonthlyTrendSection(
   startY: number,
   onBreak: PageBreakChecker = checkPageBreak
 ): number {
-  let y = onBreak(doc, startY, 75);
+  let y = beginNextSection(doc, startY, 75, onBreak);
   const yoy = stats.yoyComparison;
   const hasYoY = Boolean(yoy?.hasPreviousYearData);
   const totalPeriodDiplomas = stats.monthlyTrends.reduce((acc, m) => acc + m.totalCount, 0);
 
-  y = drawSectionHeaderCard(doc, {
-    title: '5. Resumen Mensual de Reconocimientos',
-    subtitle: 'Distribución mensual de reconocimientos otorgados y tendencia temporal',
-    badgeText: hasYoY && yoy
-      ? `${yoy.currentYear}: ${yoy.totalDiplomas.current} | ${yoy.previousYear}: ${yoy.totalDiplomas.previous}`
-      : `Total: ${totalPeriodDiplomas}`,
-    accentRgb: COLORS.sky,
-    y
-  });
+  y = drawSectionHeader(doc, 'Resumen Mensual de Reconocimientos', y);
 
   y = (hasYoY && yoy)
     ? drawMonthlyTableYoY(doc, stats, y, onBreak)
     : drawMonthlyTableStandard(doc, stats, y, onBreak);
 
-  y += 6;
+  y = drawSectionTotalFooter(
+    doc,
+    y + 1,
+    {
+      totalLabel: 'Total de reconocimientos',
+      currentTotal: hasYoY && yoy ? yoy.totalDiplomas.current : totalPeriodDiplomas,
+      previousTotal: hasYoY && yoy ? yoy.totalDiplomas.previous : undefined,
+      currentYear: hasYoY && yoy ? yoy.currentYear : undefined,
+      previousYear: hasYoY && yoy ? yoy.previousYear : undefined
+    },
+    onBreak
+  );
+
+  y += 4;
 
   y = (hasYoY && yoy)
     ? drawMonthlyChartYoY(doc, stats, y, onBreak)
@@ -1555,7 +1393,6 @@ export function exportStatisticsPdf(
   const fileName = `Reporte_Estadistico_Chil_${dateFileTag}.pdf`;
 
   let y = drawReportHeader(doc, stats, filterSummary, 14);
-  y = drawKpiSummaryBoxes(doc, stats, y);
   y = drawGeographicTables(doc, stats, y, checkPageBreak);
   y = drawUnitAndDemographicsTables(doc, stats, y, checkPageBreak);
   drawMonthlyTrendSection(doc, stats, y, checkPageBreak);

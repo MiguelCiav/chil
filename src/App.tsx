@@ -2,7 +2,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './layouts/MainLayout';
 import { ScraperSettingsModal } from './domain/components/navigation';
 import { ScraperSettingsProvider } from './context/ScraperSettingsContext';
-import { NewBatchWizard, BatchDetail, BatchList, SuccessPage } from './features/batches';
+import { NewBatchWizard, BatchDetail, BatchList } from './features/batches';
 import { RecognitionCatalog, CertificateDesigner } from './features/recognitions';
 import { SummaryView } from './features/summary';
 import { StatisticsDashboard } from './features/statistics';
@@ -65,14 +65,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <BatchDetail />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/lotes/exito"
-              element={
-                <ProtectedRoute>
-                  <SuccessPage />
                 </ProtectedRoute>
               }
             />

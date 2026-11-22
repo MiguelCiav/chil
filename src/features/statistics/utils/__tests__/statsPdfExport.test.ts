@@ -28,6 +28,49 @@ vi.mock('jspdf', () => {
   };
 });
 
+function getBodySectionSeparatorLines(): Array<readonly [number, number, number, number]> {
+  const events: Array<{ order: number; kind: 'color'; rgb: [number, number, number] } | { order: number; kind: 'line'; args: [number, number, number, number] }> = [];
+
+  mockDocInstance.setDrawColor.mock.calls.forEach((args, idx) => {
+    events.push({
+      order: mockDocInstance.setDrawColor.mock.invocationCallOrder[idx],
+      kind: 'color',
+      rgb: [args[0], args[1], args[2]]
+    });
+  });
+
+  mockDocInstance.line.mock.calls.forEach((args, idx) => {
+    events.push({
+      order: mockDocInstance.line.mock.invocationCallOrder[idx],
+      kind: 'line',
+      args: [args[0], args[1], args[2], args[3]]
+    });
+  });
+
+  events.sort((a, b) => a.order - b.order);
+
+  let activeRgb: [number, number, number] | null = null;
+  const separators: Array<readonly [number, number, number, number]> = [];
+  for (const event of events) {
+    if (event.kind === 'color') {
+      activeRgb = event.rgb;
+    } else if (
+      activeRgb?.[0] === 229 &&
+      activeRgb?.[1] === 231 &&
+      activeRgb?.[2] === 235 &&
+      event.args[0] === 14 &&
+      event.args[2] === 196 &&
+      event.args[1] === event.args[3] &&
+      event.args[1] > 16 &&
+      event.args[1] < 285
+    ) {
+      separators.push(event.args);
+    }
+  }
+
+  return separators;
+}
+
 describe('statsPdfExport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -152,7 +195,7 @@ describe('statsPdfExport', () => {
     filteredBatchesCount: 5
   };
 
-  it('generates PDF report matching web dashboard cards, donut, segmented bar, groups, and monthly chart', () => {
+  it('generates PDF report starting at regions without KPI summary, subtitles, or bordered section/chart frames', () => {
     const filename = exportStatisticsPdf(mockStats, {
       periodLabel: 'Este Año',
       regionLabel: 'Región Capital',
@@ -162,26 +205,41 @@ describe('statsPdfExport', () => {
     expect(filename).toMatch(/^Reporte_Estadistico_Chil_\d{8}\.pdf$/);
     expect(mockDocInstance.save).toHaveBeenCalledWith(filename);
 
-    // Checks web-matching header content
+    // Checks header title and institutional metadata without subtitle
     expect(mockDocInstance.text).toHaveBeenCalledWith(
       'Estadísticas y Análisis',
       expect.any(Number),
       expect.any(Number)
     );
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      expect.stringMatching(/^Asociación de Scouts de Venezuela • Sistema Chil • Emitido el /),
+      expect.any(Number),
+      expect.any(Number)
+    );
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      'Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.',
+      expect.any(Number),
+      expect.any(Number)
+    );
 
-    // Checks 4 web KPI cards (and no legacy TOTAL LOTES card)
-    expect(mockDocInstance.text).toHaveBeenCalledWith(
-      'TOTAL RECONOCIMIENTOS',
+    // Checks top KPI summary cards are omitted from PDF
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      'de 20 miembros procesados',
       expect.any(Number),
       expect.any(Number)
     );
-    expect(mockDocInstance.text).toHaveBeenCalledWith(
-      '15',
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      'MÁS ENTREGADO',
       expect.any(Number),
       expect.any(Number)
     );
-    expect(mockDocInstance.text).toHaveBeenCalledWith(
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
       'REGIONES Y DISTRITOS',
+      expect.any(Number),
+      expect.any(Number)
+    );
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      'DEMOGRAFÍA',
       expect.any(Number),
       expect.any(Number)
     );
@@ -191,9 +249,54 @@ describe('statsPdfExport', () => {
       expect.any(Number)
     );
 
-    // Checks Section 1: Region table
+    // Checks only the active filter summary uses 'FD' borders (masthead, section headers, and charts are borderless)
+    const borderedRects = mockDocInstance.roundedRect.mock.calls.filter(
+      call => call[call.length - 1] === 'FD'
+    );
+    expect(borderedRects).toHaveLength(1);
+
+    // Checks section headers have no left colored accent bars (1.8x5.4) and titles align at MARGIN (14)
+    const sectionAccentBars = mockDocInstance.roundedRect.mock.calls.filter(
+      call => call[0] === 14 && call[2] === 1.8 && call[3] === 5.4
+    );
+    expect(sectionAccentBars).toHaveLength(0);
+
+    // Checks horizontal cardBorder section separators between consecutive same-page sections (4: Region->District, District->Group, Group->Unit, Demographics->Monthly; Unit->Demographics breaks to page 2)
+    expect(getBodySectionSeparatorLines()).toHaveLength(4);
+
+    // Checks section titles omit numeric prefixes
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      expect.stringMatching(/^\d+[a-z]?\.\s+(Reconocimientos Entregados|Resumen )/),
+      expect.any(Number),
+      expect.any(Number)
+    );
+
+    // Checks Section: Region table (first section) without number, subtitle, and with descriptive bottom-right total
     expect(mockDocInstance.text).toHaveBeenCalledWith(
-      '1. Reconocimientos Entregados por Región',
+      'Reconocimientos Entregados por Región',
+      14,
+      expect.any(Number)
+    );
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      'Total de regiones',
+      expect.any(Number),
+      expect.any(Number),
+      { align: 'right' }
+    );
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      'Total de distritos',
+      expect.any(Number),
+      expect.any(Number),
+      { align: 'right' }
+    );
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      'Total de grupos',
+      expect.any(Number),
+      expect.any(Number),
+      { align: 'right' }
+    );
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      'Distribución de los reconocimientos válidos entregados por región territorial',
       expect.any(Number),
       expect.any(Number)
     );
@@ -203,10 +306,10 @@ describe('statsPdfExport', () => {
       expect.any(Number)
     );
 
-    // Checks Section 2: District table
+    // Checks Section: District table
     expect(mockDocInstance.text).toHaveBeenCalledWith(
-      '2. Reconocimientos Entregados por Distrito',
-      expect.any(Number),
+      'Reconocimientos Entregados por Distrito',
+      14,
       expect.any(Number)
     );
     expect(mockDocInstance.text).toHaveBeenCalledWith(
@@ -215,10 +318,10 @@ describe('statsPdfExport', () => {
       expect.any(Number)
     );
 
-    // Checks Section 2b: Scout Group table
+    // Checks Section: Scout Group table
     expect(mockDocInstance.text).toHaveBeenCalledWith(
-      '2b. Reconocimientos Entregados por Grupo Scout',
-      expect.any(Number),
+      'Reconocimientos Entregados por Grupo Scout',
+      14,
       expect.any(Number)
     );
     expect(mockDocInstance.text).toHaveBeenCalledWith(
@@ -227,10 +330,10 @@ describe('statsPdfExport', () => {
       expect.any(Number)
     );
 
-    // Checks Section 3: Unit table & segmented bar
+    // Checks Section: Unit table & segmented bar
     expect(mockDocInstance.text).toHaveBeenCalledWith(
-      '3. Reconocimientos Entregados por Unidad Scout',
-      expect.any(Number),
+      'Reconocimientos Entregados por Unidad Scout',
+      14,
       expect.any(Number)
     );
     expect(mockDocInstance.text).toHaveBeenCalledWith(
@@ -239,19 +342,39 @@ describe('statsPdfExport', () => {
       expect.any(Number)
     );
 
-    // Checks Section 4: Demographics Donut chart & table
+    // Checks Section: Demographics Donut chart & table
     expect(mockDocInstance.text).toHaveBeenCalledWith(
-      '4. Resumen Demográfico (Jóvenes y Adultos)',
-      expect.any(Number),
+      'Resumen Demográfico (Jóvenes y Adultos)',
+      14,
       expect.any(Number)
     );
     expect(mockDocInstance.circle).toHaveBeenCalled();
     expect(mockDocInstance.lines).toHaveBeenCalled();
 
-    // Checks Section 5: Monthly table and chart
-    expect(mockDocInstance.text).toHaveBeenCalledWith(
-      '5. Resumen Mensual de Reconocimientos',
+    // Top-right entity-count badges are removed
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      '2 regiones',
       expect.any(Number),
+      expect.any(Number),
+      { align: 'center' }
+    );
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      '1 distrito',
+      expect.any(Number),
+      expect.any(Number),
+      { align: 'center' }
+    );
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      '1 grupo',
+      expect.any(Number),
+      expect.any(Number),
+      { align: 'center' }
+    );
+
+    // Checks Section: Monthly table, Total above chart, and chart below Total
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      'Resumen Mensual de Reconocimientos',
+      14,
       expect.any(Number)
     );
     expect(mockDocInstance.text).toHaveBeenCalledWith(
@@ -259,6 +382,16 @@ describe('statsPdfExport', () => {
       expect.any(Number),
       expect.any(Number)
     );
+    const section5TotalCallIdx = mockDocInstance.text.mock.calls.reduce(
+      (last, call, idx) =>
+        call[0] === 'Total de reconocimientos' && call[3]?.align === 'right' ? idx : last,
+      -1
+    );
+    const monthlyChartHeadingIdx = mockDocInstance.text.mock.calls.findIndex(
+      call => call[0] === 'Gráfico de Tendencia Mensual de Reconocimientos:'
+    );
+    expect(section5TotalCallIdx).toBeGreaterThan(-1);
+    expect(monthlyChartHeadingIdx).toBeGreaterThan(section5TotalCallIdx);
 
     // Checks footer stamping on pages
     expect(mockDocInstance.setPage).toHaveBeenCalledWith(1);
@@ -323,13 +456,45 @@ describe('statsPdfExport', () => {
     expect(filename).toBeDefined();
     expect(mockDocInstance.save).toHaveBeenCalled();
 
-    // Check comparative subtitle pill in header
-    expect(mockDocInstance.text).toHaveBeenCalledWith(
+    // Comparative annual pill badge is omitted in header
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
       'Reporte Comparativo Anual (2024 vs 2025)',
       expect.any(Number),
       expect.any(Number),
       { align: 'center' }
     );
+    expect(mockDocInstance.text).not.toHaveBeenCalledWith(
+      expect.stringContaining('Reporte Comparativo Anual'),
+      expect.any(Number),
+      expect.any(Number)
+    );
+
+    // Zero bordered 'FD' boxes when no filterSummary is provided
+    const borderedRects = mockDocInstance.roundedRect.mock.calls.filter(
+      call => call[call.length - 1] === 'FD'
+    );
+    expect(borderedRects).toHaveLength(0);
+
+    // Bottom-right YoY section totals rendered on Region, District, and Monthly (before chart)
+    const yoyCurrCalls = mockDocInstance.text.mock.calls.filter(
+      call => call[0] === 'Año 2025' && call[3]?.align === 'right'
+    );
+    const yoyPrevCalls = mockDocInstance.text.mock.calls.filter(
+      call => call[0] === 'Año 2024' && call[3]?.align === 'right'
+    );
+    expect(yoyCurrCalls).toHaveLength(3);
+    expect(yoyPrevCalls).toHaveLength(3);
+
+    // Monthly comparative chart renders below the Monthly YoY Total
+    const lastYoYTotalIdx = mockDocInstance.text.mock.calls.reduce(
+      (last, call, idx) =>
+        call[0] === 'Año 2025' && call[3]?.align === 'right' ? idx : last,
+      -1
+    );
+    const yoyChartHeadingIdx = mockDocInstance.text.mock.calls.findIndex(
+      call => call[0] === 'Gráfico de Tendencia Mensual y Comparativa:'
+    );
+    expect(yoyChartHeadingIdx).toBeGreaterThan(lastYoYTotalIdx);
 
     // Check comparative chart title
     expect(mockDocInstance.text).toHaveBeenCalledWith(

@@ -41,25 +41,13 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
     <Card>
       <CardBody className="p-5 space-y-4 font-sans">
         {/* Card Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-sky-500/10 text-sky-700 rounded-xl" aria-hidden="true">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-neutral text-base tracking-tight">
-                Resumen de reconocimientos entregados a Jóvenes y Adultos
-              </h3>
-              <p className="text-xs text-neutral/75">
-                Distribución demográfica entre scouts jóvenes y dirigentes/adultos
-                {hasYoY && yoy && ` • Comparativa ${yoy.previousYear} vs ${yoy.currentYear}`}
-              </p>
-            </div>
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-sky-500/10 text-sky-700 rounded-xl" aria-hidden="true">
+            <Users className="w-5 h-5" />
           </div>
-
-          <span className="text-xs font-semibold text-neutral/75 bg-gray-100 px-2.5 py-1 rounded-full">
-            {totalCount} total
-          </span>
+          <h3 className="font-bold text-neutral text-base tracking-tight">
+            Resumen de reconocimientos entregados a Jóvenes y Adultos
+          </h3>
         </div>
 
         {/* Donut & Table Grid */}
