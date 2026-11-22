@@ -12,6 +12,12 @@ on:
       - 'docs/**'
       - '*.md'
   workflow_dispatch:
+    inputs:
+      run_deploy:
+        description: 'Run Firebase Hosting & Firestore deploy (main branch only)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,7 +30,6 @@ permissions:
 jobs:
   verify:
     name: Lint, Test & Quality Scan
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,7 +65,8 @@ jobs:
 
   deploy:
     name: Deploy to Firebase
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    needs: verify
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.run_deploy)) && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
