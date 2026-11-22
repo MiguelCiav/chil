@@ -1,13 +1,27 @@
 import React, { ReactNode, HTMLAttributes } from 'react';
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
+export type CardOverflow = 'hidden' | 'visible';
+export type CardBodyPadding = 'md' | 'sm' | 'none';
+
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
+  overflow?: CardOverflow;
   className?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '', ...rest }) => {
+export const Card: React.FC<CardProps> = ({
+  children,
+  overflow = 'hidden',
+  className = '',
+  ...rest
+}) => {
+  const overflowClass = overflow === 'visible' ? 'overflow-visible' : 'overflow-hidden';
+
   return (
-    <div className={`bg-white border border-primary/20 rounded-2xl flex flex-col overflow-hidden ${className}`} {...rest}>
+    <div
+      className={`bg-white border border-primary/20 rounded-2xl flex flex-col ${overflowClass} ${className}`}
+      {...rest}
+    >
       {children}
     </div>
   );
@@ -24,13 +38,25 @@ export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = ''
   </div>
 );
 
-interface CardBodyProps extends HTMLAttributes<HTMLDivElement> {
+export interface CardBodyProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
+  padding?: CardBodyPadding;
   className?: string;
 }
 
-export const CardBody: React.FC<CardBodyProps> = ({ children, className = '', ...rest }) => (
-  <div className={`p-6 bg-white flex-1 ${className}`} {...rest}>
+const CARD_BODY_PADDING: Record<CardBodyPadding, string> = {
+  md: 'p-6',
+  sm: 'p-4',
+  none: 'p-0'
+};
+
+export const CardBody: React.FC<CardBodyProps> = ({
+  children,
+  padding = 'md',
+  className = '',
+  ...rest
+}) => (
+  <div className={`${CARD_BODY_PADDING[padding]} bg-white flex-1 ${className}`} {...rest}>
     {children}
   </div>
 );

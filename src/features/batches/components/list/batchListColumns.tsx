@@ -1,10 +1,9 @@
-import { ColumnDef, flexRender, Row } from '@tanstack/react-table';
+import { ColumnDef } from '@tanstack/react-table';
 import {
   FileText,
   Download,
   Trash2,
-  MoreVertical,
-  AlertCircle
+  MoreVertical
 } from 'lucide-react';
 import { getRecognitionBadgeStyle } from '../../api';
 import type {
@@ -192,49 +191,6 @@ export function renderBatchActionsCell(props: BatchActionsCellProps) {
       )}
     </div>
   );
-}
-
-export function renderBatchTableRows(
-  loading: boolean,
-  rows: Row<BatchRowData>[],
-  columnsCount: number
-) {
-  if (loading) {
-    return (
-      <tr>
-        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/50 font-medium">
-          Cargando listado de lotes...
-        </td>
-      </tr>
-    );
-  }
-  if (rows.length === 0) {
-    return (
-      <tr>
-        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/60">
-          <div className="space-y-2">
-            <AlertCircle className="w-8 h-8 text-neutral/30 mx-auto" />
-            <p className="font-semibold text-neutral">No se encontraron lotes registrados.</p>
-            <p className="text-xs text-neutral/50">Cree un nuevo lote o modifique los filtros activos.</p>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-  return rows.map(row => {
-    return (
-      <tr
-        key={row.id}
-        className="hover:bg-primary/5 transition-colors bg-white"
-      >
-        {row.getVisibleCells().map(cell => (
-          <td key={cell.id} className="px-6 py-4 text-sm whitespace-nowrap text-neutral">
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </td>
-        ))}
-      </tr>
-    );
-  });
 }
 
 export function createBatchListColumns(params: BatchListColumnsParams): ColumnDef<BatchRowData>[] {

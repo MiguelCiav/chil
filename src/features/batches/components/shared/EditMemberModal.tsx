@@ -1,8 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
-import { Button } from '../../../../components/Button';
-import { Field } from '../../../../components/Field';
-import { isNoAplicaDistrict } from '../../../../utils/memberHierarchy';
+import React, { useState } from 'react';
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Field,
+  Select
+} from '../../../../components';
+import { MemberHierarchySelects } from '../../../../domain/components';
 import { ScoutGroup, ScoutMember, ScoutUnit, Region, District } from '../../types';
 
 export interface EditMemberModalProps {
@@ -27,20 +33,6 @@ interface EditMemberFormProps {
   showContactFields?: boolean;
 }
 
-function getFilteredDistricts(districts: District[], regionId?: number): District[] {
-  if (!regionId || regionId === 0) {
-    return districts.filter((d) => d.id !== 0 && !isNoAplicaDistrict(d));
-  }
-  return districts.filter((d) => d.id !== 0 && !isNoAplicaDistrict(d) && d.region_id === regionId);
-}
-
-function getFilteredGroups(groups: ScoutGroup[], districtId?: number): ScoutGroup[] {
-  if (!districtId || districtId === 0) {
-    return groups.filter((g) => g.id !== 0);
-  }
-  return groups.filter((g) => g.id !== 0 && g.district_id === districtId);
-}
-
 function getExceptionalRecognitionCode(
   member: ScoutMember,
   isChecked: boolean
@@ -55,6 +47,28 @@ function getExceptionalRecognitionCode(
   return `REC-${suffix}`;
 }
 
+function computeNextMemberUnitState(
+  editingMember: ScoutMember,
+  newUnit: ScoutUnit
+): ScoutMember {
+  const wasUnverified =
+    editingMember.verified_in_registry === false ||
+    (!editingMember.verified_in_registry && editingMember.unit === 'no_scout');
+  const isChangingToScout = newUnit !== 'no_scout';
+  let nextStatus = editingMember.status;
+  if (newUnit === 'no_scout') {
+    nextStatus = 'active';
+  } else if (wasUnverified && isChangingToScout && editingMember.status === 'active') {
+    nextStatus = 'pending';
+  }
+
+  return {
+    ...editingMember,
+    unit: newUnit,
+    status: nextStatus
+  };
+}
+
 const EditMemberForm: React.FC<EditMemberFormProps> = ({
   member,
   onClose,
@@ -65,14 +79,6 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
   showContactFields = true
 }) => {
   const [editingMember, setEditingMember] = useState<ScoutMember>(() => ({ ...member }));
-
-  const availableDistricts = useMemo(() => {
-    return getFilteredDistricts(districts, editingMember.region_id);
-  }, [districts, editingMember.region_id]);
-
-  const availableGroups = useMemo(() => {
-    return getFilteredGroups(groups, editingMember.district_id);
-  }, [groups, editingMember.district_id]);
 
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -87,6 +93,28 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
 
     await onSave(editingMember);
   };
+
+  const unitValue =
+    editingMember.unit ||
+    (editingMember.member_type === 'young' ? 'tropa' : 'institucional');
+
+  const unitSelect = (
+    <Select
+      id="member-unit-select"
+      label="Unidad Scout *"
+      value={unitValue}
+      onChange={(e) =>
+        setEditingMember(computeNextMemberUnitState(editingMember, e.target.value as ScoutUnit))
+      }
+    >
+      <option value="manada">Manada</option>
+      <option value="tropa">Tropa</option>
+      <option value="caminantes">Caminantes</option>
+      <option value="clan">Clan</option>
+      <option value="institucional">Institucional</option>
+      <option value="no_scout">No scout</option>
+    </Select>
+  );
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
@@ -115,276 +143,53 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
               required
             />
           )}
-          <div>
-            <label
-              htmlFor="member-type-select"
-              className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-            >
-              Tipo de Miembro *
-            </label>
-            <select
-              id="member-type-select"
-              value={editingMember.member_type}
-              onChange={(e) =>
-                setEditingMember({
-                  ...editingMember,
-                  member_type: e.target.value as 'young' | 'adult'
-                })
-              }
-              className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-            >
-              <option value="young">Joven</option>
-              <option value="adult">Adulto</option>
-            </select>
-          </div>
-          {!showContactFields && (
-            <div className="w-full">
-              <label
-                htmlFor="member-unit-select"
-                className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-              >
-                Unidad Scout *
-              </label>
-              <select
-                id="member-unit-select"
-                value={
-                  editingMember.unit ||
-                  (editingMember.member_type === 'young' ? 'tropa' : 'institucional')
-                }
-                onChange={(e) => {
-                  const newUnit = e.target.value as ScoutUnit;
-                  const wasUnverified =
-                    editingMember.verified_in_registry === false ||
-                    (!editingMember.verified_in_registry && editingMember.unit === 'no_scout');
-                  const isChangingToScout = newUnit !== 'no_scout';
-                  let nextStatus = editingMember.status;
-                  if (newUnit === 'no_scout') {
-                    nextStatus = 'active';
-                  } else if (
-                    wasUnverified &&
-                    isChangingToScout &&
-                    editingMember.status === 'active'
-                  ) {
-                    nextStatus = 'pending';
-                  }
-
-                  setEditingMember({
-                    ...editingMember,
-                    unit: newUnit,
-                    status: nextStatus
-                  });
-                }}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              >
-                <option value="manada">Manada</option>
-                <option value="tropa">Tropa</option>
-                <option value="caminantes">Caminantes</option>
-                <option value="clan">Clan</option>
-                <option value="institucional">Institucional</option>
-                <option value="no_scout">No scout</option>
-              </select>
-            </div>
-          )}
+          <Select
+            id="member-type-select"
+            label="Tipo de Miembro *"
+            value={editingMember.member_type}
+            onChange={(e) =>
+              setEditingMember({
+                ...editingMember,
+                member_type: e.target.value as 'young' | 'adult'
+              })
+            }
+          >
+            <option value="young">Joven</option>
+            <option value="adult">Adulto</option>
+          </Select>
+          {!showContactFields && unitSelect}
         </div>
-        {showContactFields && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="w-full">
-              <label
-                htmlFor="member-unit-select"
-                className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-              >
-                Unidad Scout *
-              </label>
-              <select
-                id="member-unit-select"
-                value={
-                  editingMember.unit ||
-                  (editingMember.member_type === 'young' ? 'tropa' : 'institucional')
-                }
-                onChange={(e) => {
-                  const newUnit = e.target.value as ScoutUnit;
-                  const wasUnverified =
-                    editingMember.verified_in_registry === false ||
-                    (!editingMember.verified_in_registry && editingMember.unit === 'no_scout');
-                  const isChangingToScout = newUnit !== 'no_scout';
-                  let nextStatus = editingMember.status;
-                  if (newUnit === 'no_scout') {
-                    nextStatus = 'active';
-                  } else if (
-                    wasUnverified &&
-                    isChangingToScout &&
-                    editingMember.status === 'active'
-                  ) {
-                    nextStatus = 'pending';
-                  }
 
-                  setEditingMember({
-                    ...editingMember,
-                    unit: newUnit,
-                    status: nextStatus
-                  });
-                }}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              >
-                <option value="manada">Manada</option>
-                <option value="tropa">Tropa</option>
-                <option value="caminantes">Caminantes</option>
-                <option value="clan">Clan</option>
-                <option value="institucional">Institucional</option>
-                <option value="no_scout">No scout</option>
-              </select>
-            </div>
-          </div>
+        {showContactFields && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{unitSelect}</div>
         )}
 
         {(regions.length > 0 || districts.length > 0 || groups.length > 0) && (
-          <div className="space-y-4 pt-2 border-t border-gray-100">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral/70">
+          <div className="space-y-3 pt-2 border-t border-gray-100">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-neutral/75">
               Estructura Scout
             </h4>
-            {regions.length > 0 && (
-              <div className="w-full">
-                <label
-                  htmlFor="member-region-select"
-                  className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-                >
-                  Región Scout
-                </label>
-                <select
-                  id="member-region-select"
-                  value={editingMember.region_id ?? 0}
-                  onChange={(e) => {
-                    const newRegId = Number(e.target.value);
-                    const selectedRegion = regions.find((r) => r.id === newRegId);
-                    const updated: ScoutMember = {
-                      ...editingMember,
-                      region_id: newRegId,
-                      region_name: newRegId === 0 ? undefined : selectedRegion?.name
-                    };
-                    const isValidDist =
-                      newRegId !== 0 &&
-                      districts.some(
-                        (d) =>
-                          d.id === editingMember.district_id &&
-                          d.region_id === newRegId &&
-                          !isNoAplicaDistrict(d)
-                      );
-                    if (!isValidDist) {
-                      updated.district_id = 0;
-                      updated.district_name = undefined;
-                      updated.group_id = 0;
-                      updated.group_name = undefined;
-                    }
-                    setEditingMember(updated);
-                  }}
-                  className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                >
-                  <option value={0}>Sin región / No aplica</option>
-                  {regions
-                    .filter((r) => r.id !== 0)
-                    .map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
-
-            {districts.length > 0 && (
-              <div className="w-full">
-                <label
-                  htmlFor="member-district-select"
-                  className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-                >
-                  Distrito Scout
-                </label>
-                <select
-                  id="member-district-select"
-                  value={editingMember.district_id ?? 0}
-                  onChange={(e) => {
-                    const newDistId = Number(e.target.value);
-                    const selectedDistrict = districts.find((d) => d.id === newDistId);
-                    const updated: ScoutMember = {
-                      ...editingMember,
-                      district_id: newDistId,
-                      district_name: newDistId === 0 ? undefined : selectedDistrict?.name
-                    };
-                    if (newDistId > 0 && selectedDistrict?.region_id) {
-                      updated.region_id = selectedDistrict.region_id;
-                      updated.region_name = regions.find(
-                        (r) => r.id === selectedDistrict.region_id
-                      )?.name;
-                    }
-                    const isValidGrp =
-                      newDistId !== 0 &&
-                      groups.some(
-                        (g) => g.id === editingMember.group_id && g.district_id === newDistId
-                      );
-                    if (!isValidGrp) {
-                      updated.group_id = 0;
-                      updated.group_name = undefined;
-                    }
-                    setEditingMember(updated);
-                  }}
-                  className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                >
-                  <option value={0}>Sin distrito / No aplica</option>
-                  {availableDistricts.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {groups.length > 0 && (
-              <div className="w-full">
-                <label
-                  htmlFor="member-group-select"
-                  className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-                >
-                  Grupo Scout
-                </label>
-                <select
-                  id="member-group-select"
-                  value={editingMember.group_id ?? 0}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    const selectedGroup = groups.find((g) => g.id === val);
-                    const updated: ScoutMember = {
-                      ...editingMember,
-                      group_id: val,
-                      group_name: val === 0 ? undefined : selectedGroup?.name
-                    };
-                    if (val > 0 && selectedGroup) {
-                      const parentDist = districts.find((d) => d.id === selectedGroup.district_id);
-                      const normalizedDistId =
-                        parentDist && !isNoAplicaDistrict(parentDist) ? parentDist.id : 0;
-                      updated.district_id = normalizedDistId;
-                      updated.district_name =
-                        normalizedDistId === 0 ? undefined : parentDist?.name;
-                      if (parentDist?.region_id) {
-                        updated.region_id = parentDist.region_id;
-                        updated.region_name = regions.find(
-                          (r) => r.id === parentDist.region_id
-                        )?.name;
-                      }
-                    }
-                    setEditingMember(updated);
-                  }}
-                  className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                >
-                  <option value={0}>Sin grupo asignado / No aplica</option>
-                  {availableGroups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <MemberHierarchySelects
+              hideWhenEmpty
+              regions={regions}
+              districts={districts}
+              groups={groups}
+              regionId={editingMember.region_id ?? 0}
+              districtId={editingMember.district_id ?? 0}
+              groupId={editingMember.group_id ?? 0}
+              onChange={(next) =>
+                setEditingMember({
+                  ...editingMember,
+                  region_id: next.region_id,
+                  region_name: next.region_id === 0 ? undefined : next.region_name || undefined,
+                  district_id: next.district_id,
+                  district_name:
+                    next.district_id === 0 ? undefined : next.district_name || undefined,
+                  group_id: next.group_id,
+                  group_name: next.group_id === 0 ? undefined : next.group_name || undefined
+                })
+              }
+            />
           </div>
         )}
 
@@ -420,16 +225,12 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
               registro nacional validado.
             </p>
             {editingMember.status === 'exceptional' && (
-              <div className="space-y-1.5 pt-1">
-                <label
-                  htmlFor="detail-exceptional-reason"
-                  className="block uppercase text-xs font-bold tracking-wide text-purple-900"
-                >
-                  Justificación de la emisión excepcional *
-                </label>
-                <textarea
+              <div className="pt-1">
+                <Field
                   id="detail-exceptional-reason"
+                  label="Justificación de la emisión excepcional *"
                   aria-label="Justificación de la emisión excepcional"
+                  multiline
                   rows={3}
                   required
                   placeholder="Indique el motivo por el cual se autoriza la emisión sin registro activo en el sistema..."
@@ -437,7 +238,7 @@ const EditMemberForm: React.FC<EditMemberFormProps> = ({
                   onChange={(e) =>
                     setEditingMember({ ...editingMember, exceptional_reason: e.target.value })
                   }
-                  className="w-full rounded-xl px-3.5 py-2.5 bg-white border border-purple-300 text-neutral focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs sm:text-sm placeholder:text-neutral/40 transition-all"
+                  className="bg-white border-purple-600 focus-visible:ring-purple-700"
                 />
               </div>
             )}

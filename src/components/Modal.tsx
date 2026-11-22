@@ -1,5 +1,8 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,6 +15,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const [mounted, setMounted] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Adjust state during render when isOpen prop changes (React recommended pattern)
   if (isOpen !== prevIsOpen) {
@@ -45,6 +50,54 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
     }
   }, [isOpen]);
 
+  // Trap focus inside dialog, handle Escape globally, and restore trigger focus on close
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    if (dialog) {
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        dialog.focus();
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isClosing) {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialog) return;
+
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus?.();
+    };
+  }, [isOpen, isClosing, onClose]);
+
   if (!mounted) return null;
 
   return (
@@ -59,16 +112,15 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
           if (!isClosing) onClose();
         }}
         aria-hidden="true"
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && !isClosing) onClose();
-        }}
       />
 
       {/* Modal Content - No shadow, subtle primary border, rounded with smooth pop in/out animation */}
       <dialog
+        ref={dialogRef}
         open
+        tabIndex={-1}
         aria-modal="true"
-        className={`relative bg-white border border-primary/20 rounded-2xl flex flex-col w-full max-h-[90vh] overflow-hidden m-0 p-0 text-neutral ${
+        className={`relative bg-white border border-primary/20 rounded-2xl flex flex-col w-full max-h-[90vh] overflow-hidden m-0 p-0 text-neutral focus:outline-none ${
           isClosing ? 'animate-modal-pop-out' : 'animate-modal-pop'
         } ${className}`}
       >
@@ -91,10 +143,10 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({ children, onClose, cla
       <button
         type="button"
         onClick={onClose}
-        className="p-1.5 text-neutral/60 hover:text-primary transition-colors rounded-lg hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary"
+        className="p-1.5 text-neutral/70 hover:text-primary transition-colors rounded-lg hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         aria-label="Cerrar modal"
       >
-        <X size={20} />
+        <X size={20} aria-hidden="true" />
       </button>
     )}
   </div>

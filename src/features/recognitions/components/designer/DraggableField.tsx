@@ -1,7 +1,12 @@
 import React from 'react';
 import { Move } from 'lucide-react';
 import { RecognitionFieldConfig } from '../../types';
-import { getFontFamilyStyle, getAlignTransform } from './designerUtils';
+import {
+  getFontFamilyStyle,
+  getAlignTransform,
+  isScoutsPlanarFont,
+  roundPercentCoordinate
+} from './designerUtils';
 
 export interface DraggableFieldProps {
   field: RecognitionFieldConfig;
@@ -30,7 +35,7 @@ function getFieldClass(isPreviewMode: boolean, isSelected: boolean, isDragging: 
 }
 
 function getFieldFontWeight(fontWeight?: string, fontFamily?: string): number {
-  if (fontFamily === 'scouts-gt-planar-bold' || fontFamily === 'Scouts GT Planar') {
+  if (isScoutsPlanarFont(fontFamily)) {
     return 700;
   }
   return fontWeight === 'bold' ? 700 : 400;
@@ -125,8 +130,8 @@ export const DraggableField: React.FC<DraggableFieldProps> = React.memo(
             onSelect(field.id);
           }
 
-          const nextX = Math.max(2, Math.min(98, Math.round((field.x + deltaX) * 10) / 10));
-          const nextY = Math.max(2, Math.min(98, Math.round((field.y + deltaY) * 10) / 10));
+          const nextX = roundPercentCoordinate(field.x + deltaX, 2, 98);
+          const nextY = roundPercentCoordinate(field.y + deltaY, 2, 98);
 
           if (onNudgeField) {
             onNudgeField(field.id, deltaX, deltaY);

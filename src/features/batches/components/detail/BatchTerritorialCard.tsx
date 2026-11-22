@@ -26,16 +26,16 @@ const TerritorialColumn: React.FC<TerritorialColumnProps> = ({
   const visibleItems = isExpanded ? items : items.slice(0, 3);
 
   return (
-    <div className="bg-[#faf8f5] rounded-xl p-4 border border-gray-200/80 flex flex-col space-y-2.5">
-      <div className="flex items-center justify-between border-b border-gray-200/80 pb-2">
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-neutral/60">
+    <div className="bg-[#faf8f5] rounded-xl p-4 border border-primary/15 flex flex-col space-y-2.5">
+      <div className="flex items-center justify-between border-b border-primary/15 pb-2">
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-neutral/75">
           {title}
         </h3>
-        <span className="text-xs font-bold text-neutral/50">{items.length}</span>
+        <span className="text-xs font-bold text-neutral/75">{items.length}</span>
       </div>
 
       {visibleItems.length === 0 ? (
-        <p className="text-xs italic text-neutral/40 py-2">{emptyLabel}</p>
+        <p className="text-xs italic text-neutral/75 py-2">{emptyLabel}</p>
       ) : (
         <ul className="space-y-2">
           {visibleItems.map((item) => (
@@ -48,7 +48,7 @@ const TerritorialColumn: React.FC<TerritorialColumnProps> = ({
               </span>
               <span className="flex items-center gap-1.5 flex-shrink-0 font-mono text-xs">
                 <span className="font-bold text-neutral">{item.count}</span>
-                <span className="text-neutral/50">({item.percentage}%)</span>
+                <span className="text-neutral/75">({item.percentage}%)</span>
               </span>
             </li>
           ))}
@@ -76,18 +76,18 @@ export const BatchTerritorialCard: React.FC<BatchTerritorialCardProps> = ({ brea
     regions.length > 3 || districts.length > 3 || groups.length > 3;
 
   return (
-    <Card className="border-gray-200" data-walkthrough="batch-detail-territorial-card">
+    <Card data-walkthrough="batch-detail-territorial-card">
       <CardBody className="p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#e6f7eb] text-[#1b7a37] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center flex-shrink-0" aria-hidden="true">
               <MapPin className="w-5 h-5" />
             </div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h2 className="font-bold text-neutral text-base">
                 Distribución Territorial del Lote
               </h2>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#f5f5f4] text-neutral/70 border border-gray-200">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/5 text-neutral/80 border border-primary/20">
                 {totalMembers} miembros
               </span>
             </div>
@@ -139,7 +139,7 @@ export const BatchTerritorialCard: React.FC<BatchTerritorialCardProps> = ({ brea
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             {noScoutCount > 0 && (
               <div className="bg-[#f5f5f4] border border-gray-200 rounded-xl px-3.5 py-2 flex items-center justify-between text-xs">
-                <span className="font-bold text-neutral/70">Miembros no scout</span>
+                <span className="font-bold text-neutral/75">Miembros no scout</span>
                 <span className="font-mono font-bold text-neutral">
                   {noScoutCount} ({noScoutPercentage}%)
                 </span>

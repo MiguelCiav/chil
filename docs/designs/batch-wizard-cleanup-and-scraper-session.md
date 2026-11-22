@@ -4,6 +4,9 @@
 *   **Status:** Implemented
 *   **Date:** 2026-11-12
 
+> [!NOTE]
+> **Historical Evolution:** The `QuickRecognition` flow (`quickRecognitionHelpers.ts`, `useQuickRecognition.ts`, and `__tests__/useQuickRecognition.test.ts`) referenced in Section 4 was subsequently retired from `src/`; `src/features/batches/hooks/` now retains only `useCertificateZipDownload.ts`.
+
 --------------------------------------------------------------------------------
 
 ## Overview

@@ -33,7 +33,7 @@ describe('LoginPage component', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: 'Iniciar Sesión' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Iniciar Sesión' })).toBeInTheDocument();
     expect(screen.getByLabelText(/Correo Electrónico/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Contraseña$/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar Sesión' })).toBeInTheDocument();
@@ -138,9 +138,9 @@ describe('LoginPage component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar Sesión' }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText('Correo electrónico o contraseña incorrectos.')
-      ).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Correo electrónico o contraseña incorrectos.'
+      );
     });
   });
 

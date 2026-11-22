@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
+  getAvailableDistricts,
+  getAvailableGroups,
   isNoAplicaDistrict,
   NO_APLICA_DISTRICT_NAME,
-  resolveMemberHierarchy
+  resolveMemberHierarchy,
+  resolveParentHierarchyForSelection
 } from '../memberHierarchy';
 import type { Batch } from '../../types/batch';
 import type { District, Region, ScoutGroup } from '../../types/hierarchy';
@@ -195,6 +198,58 @@ describe('memberHierarchy', () => {
       districtId: 0,
       groupId: 0,
       isNationalInstitutional: true
+    });
+  });
+
+  it('filters available districts excluding sentinel 0, nacional, and NO APLICA unless opted in', () => {
+    expect(getAvailableDistricts(mockDistricts, '')).toEqual([]);
+    expect(getAvailableDistricts(mockDistricts, 'nacional')).toEqual([]);
+    expect(getAvailableDistricts(mockDistricts, '0')).toEqual([]);
+    expect(getAvailableDistricts(mockDistricts, 0)).toEqual([]);
+
+    expect(getAvailableDistricts(mockDistricts, 2).map(d => d.id)).toEqual([20]);
+    expect(
+      getAvailableDistricts(mockDistricts, '2', { includeNoAplicaDistrict: true }).map(d => d.id)
+    ).toEqual([20, 34]);
+  });
+
+  it('filters available groups by district, parent region, or allowAllWhenUnset', () => {
+    expect(getAvailableGroups(mockGroups, mockDistricts, 'nacional', '')).toEqual([]);
+    expect(getAvailableGroups(mockGroups, mockDistricts, '0', '')).toEqual([]);
+    expect(getAvailableGroups(mockGroups, mockDistricts, '2', '0')).toEqual([]);
+    expect(getAvailableGroups(mockGroups, mockDistricts, '', '')).toEqual([]);
+
+    expect(getAvailableGroups(mockGroups, mockDistricts, '2', '20').map(g => g.id)).toEqual([200]);
+    expect(getAvailableGroups(mockGroups, mockDistricts, '2', '').map(g => g.id)).toEqual([200, 300]);
+    expect(
+      getAvailableGroups(mockGroups, mockDistricts, 0, 0, { allowAllWhenUnset: true }).map(g => g.id)
+    ).toEqual([100, 200, 300]);
+  });
+
+  it('resolves upward parent hierarchy and normalizes NO APLICA parent districts to 0', () => {
+    expect(resolveParentHierarchyForSelection('group', 100, hierarchy)).toEqual({
+      region_id: 1,
+      region_name: 'Metropolitana',
+      district_id: 10,
+      district_name: 'Avila',
+      group_id: 100,
+      group_name: 'Don Bosco'
+    });
+
+    expect(resolveParentHierarchyForSelection('group', 300, hierarchy)).toEqual({
+      region_id: 2,
+      region_name: 'Aragua',
+      district_id: 0,
+      district_name: '',
+      group_id: 300,
+      group_name: 'Grupo Sin Distrito'
+    });
+
+    expect(resolveParentHierarchyForSelection('district', 20, hierarchy)).toEqual({
+      region_id: 2,
+      region_name: 'Aragua',
+      district_id: 20,
+      district_name: 'Maracay'
     });
   });
 });

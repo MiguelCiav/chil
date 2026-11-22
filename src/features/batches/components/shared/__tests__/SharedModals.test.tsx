@@ -386,5 +386,205 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
         );
       });
     });
+
+    it('allows changing unit in wizard mode (manada -> tropa)', async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const memberWithUnit: ScoutMember = {
+        identity: 'V-55555555',
+        first_names: 'Valeria',
+        last_names: 'Lobezna',
+        birth_date: '2015-06-01',
+        member_type: 'young',
+        unit: 'manada',
+        status: 'active',
+        batch_id: 123,
+        recognition_code: 'REC-MAN-01',
+        verified_in_registry: true
+      };
+
+      render(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={memberWithUnit}
+          onSave={onSave}
+          showContactFields={false}
+        />
+      );
+
+      const unitSelect = screen.getByLabelText(/Unidad Scout \*/i);
+      expect(unitSelect).toHaveValue('manada');
+
+      fireEvent.change(unitSelect, { target: { value: 'tropa' } });
+      expect(unitSelect).toHaveValue('tropa');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            identity: 'V-55555555',
+            unit: 'tropa'
+          })
+        );
+      });
+    });
+
+    it('sets status to pending when changing unverified no_scout member to a scout unit', async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const unverifiedNoScout: ScoutMember = {
+        identity: 'V-77777777',
+        first_names: 'Colaborador',
+        last_names: 'Externo',
+        birth_date: '1985-01-01',
+        member_type: 'adult',
+        unit: 'no_scout',
+        status: 'active',
+        verified_in_registry: false,
+        batch_id: 123,
+        recognition_code: 'REC-EXT-01'
+      };
+
+      render(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={unverifiedNoScout}
+          onSave={onSave}
+          showContactFields={false}
+        />
+      );
+
+      const unitSelect = screen.getByLabelText(/Unidad Scout \*/i);
+      expect(unitSelect).toHaveValue('no_scout');
+
+      fireEvent.change(unitSelect, { target: { value: 'clan' } });
+
+      await waitFor(() => {
+        expect(
+          screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i)
+        ).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            identity: 'V-77777777',
+            unit: 'clan',
+            status: 'pending'
+          })
+        );
+      });
+    });
+
+    it('allows selecting Grupo Scout in wizard mode and saves with updated group_id', async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const wizardMember: ScoutMember = {
+        identity: 'V-11111111',
+        first_names: 'Ana',
+        last_names: 'Perez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 123,
+        recognition_code: 'REC-A8F2'
+      };
+      const localGroups: ScoutGroup[] = [
+        { id: 101, name: 'Grupo San Luis', district_id: 1 },
+        { id: 102, name: 'Grupo La Salle', district_id: 1 }
+      ];
+
+      render(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={wizardMember}
+          onSave={onSave}
+          groups={localGroups}
+          showContactFields={false}
+        />
+      );
+
+      const groupSelect = screen.getByLabelText(/Grupo Scout/i);
+      expect(groupSelect).toBeInTheDocument();
+
+      fireEvent.change(groupSelect, { target: { value: '102' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            identity: 'V-11111111',
+            group_id: 102
+          })
+        );
+      });
+    });
+
+    it('allows selecting Region, District, and Group in wizard mode and saves updated hierarchy', async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const wizardMember: ScoutMember = {
+        identity: 'V-11111111',
+        first_names: 'Ana',
+        last_names: 'Perez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 123,
+        recognition_code: 'REC-A8F2'
+      };
+      const localRegions: Region[] = [
+        { id: 1, name: 'Región Capital' },
+        { id: 2, name: 'Región Aragua' }
+      ];
+      const localDistricts: District[] = [
+        { id: 10, name: 'Distrito Sucre', region_id: 1 },
+        { id: 20, name: 'Distrito Girardot', region_id: 2 }
+      ];
+      const localGroups: ScoutGroup[] = [
+        { id: 101, name: 'Grupo San Luis', district_id: 10 },
+        { id: 201, name: 'Grupo Maracay', district_id: 20 }
+      ];
+
+      render(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={wizardMember}
+          onSave={onSave}
+          regions={localRegions}
+          districts={localDistricts}
+          groups={localGroups}
+          showContactFields={false}
+        />
+      );
+
+      const regionSelect = screen.getByLabelText(/Región Scout/i);
+      const districtSelect = screen.getByLabelText(/Distrito Scout/i);
+      const groupSelect = screen.getByLabelText(/Grupo Scout/i);
+
+      expect(regionSelect).toBeInTheDocument();
+      expect(districtSelect).toBeInTheDocument();
+      expect(groupSelect).toBeInTheDocument();
+
+      fireEvent.change(regionSelect, { target: { value: '2' } });
+      fireEvent.change(districtSelect, { target: { value: '20' } });
+      fireEvent.change(groupSelect, { target: { value: '201' } });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            identity: 'V-11111111',
+            region_id: 2,
+            district_id: 20,
+            group_id: 201
+          })
+        );
+      });
+    });
   });
 });

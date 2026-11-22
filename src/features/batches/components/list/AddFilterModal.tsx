@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
+import { Field } from '../../../../components/Field';
+import { Select } from '../../../../components/Select';
 import { isNoAplicaDistrict } from '../../../../utils/memberHierarchy';
 import { Region, District, ScoutGroup, ActiveFilterChip } from '../../types';
 import { RecognitionType } from '../../../recognitions';
@@ -93,38 +95,32 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
           Añadir Filtro al Listado
         </ModalHeader>
         <ModalBody className="space-y-4">
-          <div>
-            <label htmlFor="filter-type-select" className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral">
-              Tipo de Filtro
-            </label>
-            <select
-              id="filter-type-select"
-              value={filterType}
-              onChange={e => {
-                setFilterType(e.target.value as FilterType);
-                setFilterValue('');
-              }}
-              className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-            >
-              <option value="region">Región Scout</option>
-              <option value="district">Distrito Scout</option>
-              <option value="group">Grupo Scout</option>
-              <option value="completeness">Completitud</option>
-              <option value="recognition">Tipo de Reconocimiento</option>
-              <option value="date">Fecha / Período</option>
-            </select>
-          </div>
+          <Select
+            id="filter-type-select"
+            label="Tipo de Filtro"
+            value={filterType}
+            onChange={e => {
+              setFilterType(e.target.value as FilterType);
+              setFilterValue('');
+            }}
+          >
+            <option value="region">Región Scout</option>
+            <option value="district">Distrito Scout</option>
+            <option value="group">Grupo Scout</option>
+            <option value="completeness">Completitud</option>
+            <option value="recognition">Tipo de Reconocimiento</option>
+            <option value="date">Fecha / Período</option>
+          </Select>
 
           <div>
-            <label htmlFor="filter-value-select" className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral">
+            <label htmlFor="filter-value-select" className="block text-sm font-semibold mb-2 text-neutral">
               Valor del Filtro
             </label>
             {filterType === 'region' && (
-              <select
+              <Select
                 id="filter-value-select"
                 value={filterValue}
                 onChange={e => setFilterValue(e.target.value)}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 required
               >
                 <option value="">Seleccione una región</option>
@@ -135,15 +131,14 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
                   .map(r => (
                     <option key={r.id} value={`id:${r.id}`}>{r.name}</option>
                   ))}
-              </select>
+              </Select>
             )}
 
             {filterType === 'district' && (
-              <select
+              <Select
                 id="filter-value-select"
                 value={filterValue}
                 onChange={e => setFilterValue(e.target.value)}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 required
               >
                 <option value="">Seleccione un distrito</option>
@@ -153,15 +148,14 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
                   .map(d => (
                     <option key={d.id} value={`id:${d.id}`}>{d.name}</option>
                   ))}
-              </select>
+              </Select>
             )}
 
             {filterType === 'group' && (
-              <select
+              <Select
                 id="filter-value-select"
                 value={filterValue}
                 onChange={e => setFilterValue(e.target.value)}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 required
               >
                 <option value="">Seleccione un grupo scout</option>
@@ -172,123 +166,101 @@ export const AddFilterModal: React.FC<AddFilterModalProps> = ({
                   .map(g => (
                     <option key={g.id} value={`id:${g.id}`}>{g.name}</option>
                   ))}
-              </select>
+              </Select>
             )}
 
             {filterType === 'completeness' && (
-              <select
+              <Select
                 id="filter-value-select"
                 value={filterValue}
                 onChange={e => setFilterValue(e.target.value)}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 required
               >
                 <option value="">Seleccione un estado</option>
                 <option value="complete">Todos registrados</option>
                 <option value="pending">Registros pendientes</option>
                 <option value="empty">Sin miembros</option>
-              </select>
+              </Select>
             )}
 
             {filterType === 'recognition' && (
-              <select
+              <Select
                 id="filter-value-select"
                 value={filterValue}
                 onChange={e => setFilterValue(e.target.value)}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                 required
               >
                 <option value="">Seleccione un reconocimiento</option>
                 {(recognitionTypes.length > 0 ? recognitionTypes : RECOGNITION_TYPES).map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
-              </select>
+              </Select>
             )}
 
             {filterType === 'date' && (
               <div className="space-y-3">
-                <div>
-                  <label htmlFor="date-mode-select" className="block text-xs font-semibold mb-1 text-neutral/70">
-                    Modalidad
-                  </label>
-                  <select
-                    id="date-mode-select"
-                    value={dateFilterMode}
-                    onChange={e => setDateFilterMode(e.target.value as DateFilterMode)}
-                    className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                  >
-                    <option value="predefined">Período predefinido</option>
-                    <option value="range">Rango de fechas</option>
-                    <option value="specific">Fecha específica</option>
-                  </select>
-                </div>
+                <Select
+                  id="date-mode-select"
+                  label="Modalidad"
+                  size="sm"
+                  value={dateFilterMode}
+                  onChange={e => setDateFilterMode(e.target.value as DateFilterMode)}
+                >
+                  <option value="predefined">Período predefinido</option>
+                  <option value="range">Rango de fechas</option>
+                  <option value="specific">Fecha específica</option>
+                </Select>
 
                 {dateFilterMode === 'predefined' && (
-                  <div>
-                    <label htmlFor="date-predefined-select" className="block text-xs font-semibold mb-1 text-neutral/70">
-                      Período
-                    </label>
-                    <select
-                      id="date-predefined-select"
-                      value={datePredefinedValue}
-                      onChange={e => setDatePredefinedValue(e.target.value)}
-                      className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                      required
-                    >
-                      <option value="Este Año">Este Año</option>
-                      <option value="Últimos 30 días">Últimos 30 días</option>
-                      <option value="Últimos 90 días">Últimos 90 días</option>
-                      <option value="Este Mes">Este Mes</option>
-                      <option value="Todo el histórico">Todo el histórico</option>
-                    </select>
-                  </div>
+                  <Select
+                    id="date-predefined-select"
+                    label="Período"
+                    size="sm"
+                    value={datePredefinedValue}
+                    onChange={e => setDatePredefinedValue(e.target.value)}
+                    required
+                  >
+                    <option value="Este Año">Este Año</option>
+                    <option value="Últimos 30 días">Últimos 30 días</option>
+                    <option value="Últimos 90 días">Últimos 90 días</option>
+                    <option value="Este Mes">Este Mes</option>
+                    <option value="Todo el histórico">Todo el histórico</option>
+                  </Select>
                 )}
 
                 {dateFilterMode === 'range' && (
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="date-start-input" className="block text-xs font-semibold mb-1 text-neutral/70">
-                        Fecha Inicio
-                      </label>
-                      <input
-                        id="date-start-input"
-                        type="date"
-                        value={dateRangeStart}
-                        onChange={e => setDateRangeStart(e.target.value)}
-                        className="w-full rounded-field px-3 py-2 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="date-end-input" className="block text-xs font-semibold mb-1 text-neutral/70">
-                        Fecha Fin
-                      </label>
-                      <input
-                        id="date-end-input"
-                        type="date"
-                        value={dateRangeEnd}
-                        onChange={e => setDateRangeEnd(e.target.value)}
-                        className="w-full rounded-field px-3 py-2 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                        required
-                      />
-                    </div>
+                    <Field
+                      id="date-start-input"
+                      label="Fecha Inicio"
+                      size="sm"
+                      type="date"
+                      value={dateRangeStart}
+                      onChange={e => setDateRangeStart(e.target.value)}
+                      required
+                    />
+                    <Field
+                      id="date-end-input"
+                      label="Fecha Fin"
+                      size="sm"
+                      type="date"
+                      value={dateRangeEnd}
+                      onChange={e => setDateRangeEnd(e.target.value)}
+                      required
+                    />
                   </div>
                 )}
 
                 {dateFilterMode === 'specific' && (
-                  <div>
-                    <label htmlFor="date-specific-input" className="block text-xs font-semibold mb-1 text-neutral/70">
-                      Fecha
-                    </label>
-                    <input
-                      id="date-specific-input"
-                      type="date"
-                      value={dateSpecificValue}
-                      onChange={e => setDateSpecificValue(e.target.value)}
-                      className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                      required
-                    />
-                  </div>
+                  <Field
+                    id="date-specific-input"
+                    label="Fecha"
+                    size="sm"
+                    type="date"
+                    value={dateSpecificValue}
+                    onChange={e => setDateSpecificValue(e.target.value)}
+                    required
+                  />
                 )}
               </div>
             )}

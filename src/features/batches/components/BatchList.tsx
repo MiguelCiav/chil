@@ -1,21 +1,23 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getCoreRowModel,
   getPaginationRowModel,
-  useReactTable,
-  flexRender
+  useReactTable
 } from '@tanstack/react-table';
 import {
   X,
   Plus,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle2,
-  GitMerge
+  GitMerge,
+  AlertCircle
 } from 'lucide-react';
 
 import { Button } from '../../../components/Button';
+import { Card } from '../../../components/Card';
+import { DataTable } from '../../../components/DataTable';
+import { ErrorAlert } from '../../../components/ErrorAlert';
+import { Pagination } from '../../../components/Pagination';
+import { Toast } from '../../../components/Toast';
 import {
   useWalkthrough,
   WalkthroughOverlay,
@@ -58,13 +60,14 @@ import {
   formatBatchDate,
   matchesActiveFilters,
   createBatchListColumns,
-  renderBatchTableRows,
   AddFilterModal,
-  DeleteBatchModal,
   MergeBatchesModal,
   BatchMergeOption
 } from './list';
-import { CertificateZipProgressModal } from './shared';
+import {
+  CertificateZipProgressModal,
+  DeleteBatchModal
+} from './shared';
 import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
 
 export type { FilterType, DateFilterMode, PredefinedPeriod };
@@ -97,6 +100,7 @@ export const BatchList: React.FC = () => {
   const [groups, setGroups] = useState<ScoutGroup[]>([]);
   const [recognitionTypes, setRecognitionTypes] = useState<RecognitionType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Deletion modal state
   const [batchToDelete, setBatchToDelete] = useState<BatchRowData | null>(null);
@@ -106,8 +110,28 @@ export const BatchList: React.FC = () => {
   // Toast notification
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const zipDownload = useCertificateZipDownload();
+
+  const triggerToast = useCallback((message: string, durationMs = 4000) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastMessage(message);
+    setShowToast(true);
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+    }, durationMs);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Filter state
   const [activeFilters, setActiveFilters] = useState<ActiveFilterChip[]>([
@@ -122,7 +146,9 @@ export const BatchList: React.FC = () => {
   // Dropdown action menu state per row
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
 
-  useEffect(() => {
+  const loadBatchesData = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     Promise.all([
       getAllBatches(user?.uid),
       getAllMembers(user?.uid),
@@ -139,11 +165,16 @@ export const BatchList: React.FC = () => {
       })
       .catch(err => {
         console.error("Error loading batches list data:", err);
+        setLoadError('No se pudo cargar el listado de lotes.');
       })
       .finally(() => {
         setLoading(false);
       });
   }, [user?.uid]);
+
+  useEffect(() => {
+    loadBatchesData();
+  }, [loadBatchesData]);
 
   const resolveRecognitionName = useCallback((recType?: string) => {
     if (!recType) return '-';
@@ -199,9 +230,7 @@ export const BatchList: React.FC = () => {
           scopeLabel: `Lote #${batchId}`,
           initialTotal: 0,
           onSuccess: (fileName) => {
-            setToastMessage(`Reconocimientos descargados: ${fileName}`);
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 4000);
+            triggerToast(`Reconocimientos descargados: ${fileName}`, 4000);
           },
           onError: (err) => {
             console.error('Error downloading PDF:', err);
@@ -210,7 +239,7 @@ export const BatchList: React.FC = () => {
         }
       );
     },
-    [startDownload, batches, members, regions, districts, groups]
+    [startDownload, batches, members, regions, districts, groups, triggerToast]
   );
 
   const handleDeleteClick = useCallback((rowData: BatchRowData) => {
@@ -228,9 +257,7 @@ export const BatchList: React.FC = () => {
       setMembers(prev => prev.filter(m => m.batch_id !== batchToDelete.id));
       setIsDeleteModalOpen(false);
       setBatchToDelete(null);
-      setToastMessage('Lote eliminado exitosamente');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      triggerToast('Lote eliminado exitosamente', 3000);
     } catch (err) {
       console.error("Error deleting batch:", err);
       alert("Error al eliminar el lote.");
@@ -320,7 +347,6 @@ export const BatchList: React.FC = () => {
     }
   });
 
-  const currentPageRows = table.getRowModel().rows;
   const totalCount = filteredData.length;
 
   // Selected batches for merging
@@ -346,9 +372,7 @@ export const BatchList: React.FC = () => {
 
   const handleMergeSuccess = useCallback(async (newBatch: Batch) => {
     // 1. Show success toast
-    setToastMessage(`¡Lotes fusionados exitosamente en el Lote #${newBatch.id}!`);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 4000);
+    triggerToast(`¡Lotes fusionados exitosamente en el Lote #${newBatch.id}!`, 4000);
 
     // 2. Clear selection and close modal
     setRowSelection({});
@@ -365,16 +389,17 @@ export const BatchList: React.FC = () => {
     } catch (err) {
       console.error('Error refreshing members after merge:', err);
     }
-  }, [selectedBatches, user?.uid]);
+  }, [selectedBatches, triggerToast, user?.uid]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Toast Notification */}
       {showToast && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
-          <CheckCircle2 className="w-5 h-5 text-green-400" />
-          <span className="text-sm font-semibold">{toastMessage}</span>
-        </div>
+        <Toast
+          message={toastMessage}
+          variant="success"
+          onDismiss={() => setShowToast(false)}
+        />
       )}
 
       {/* Header Section */}
@@ -386,7 +411,7 @@ export const BatchList: React.FC = () => {
             </h1>
             <WalkthroughHelpButton onClick={() => startTour()} />
           </div>
-          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+          <p className="text-xs sm:text-sm text-neutral/75 mt-1">
             Gestione y descargue los lotes de reconocimientos emitidos.
           </p>
         </div>
@@ -415,6 +440,14 @@ export const BatchList: React.FC = () => {
         </div>
       </div>
 
+      {loadError && (
+        <ErrorAlert
+          variant="inline"
+          message={loadError}
+          onRetry={loadBatchesData}
+        />
+      )}
+
       {/* Filtros Activos Bar */}
       <div data-walkthrough="batch-list-filters" className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -422,22 +455,22 @@ export const BatchList: React.FC = () => {
           {activeFilters.map(chip => (
             <span
               key={chip.id}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#f0eee9] text-neutral/80 border border-gray-200"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary/70 text-neutral border border-primary/20"
             >
               <span>{chip.label}: {chip.value}</span>
               <button
                 type="button"
                 onClick={() => removeFilter(chip.id)}
-                className="hover:text-red-600 transition-colors focus:outline-none"
+                className="hover:text-red-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
                 aria-label={`Eliminar filtro ${chip.label}`}
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             </span>
           ))}
 
           {activeFilters.length === 0 && (
-            <span className="text-xs text-neutral/40 italic">Ningún filtro aplicado</span>
+            <span className="text-xs text-neutral/75 italic">Ningún filtro aplicado</span>
           )}
         </div>
 
@@ -452,57 +485,32 @@ export const BatchList: React.FC = () => {
       </div>
 
       {/* Batches Data Table */}
-      <div data-walkthrough="batch-list-table" className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white">
-        <div className="overflow-x-auto min-h-[260px] pb-12">
-          <table className="w-full text-left border-collapse font-sans">
-            <thead>
-              <tr className="bg-primary/10 border-b border-primary/20">
-                {table.getHeaderGroups().map(headerGroup => (
-                  headerGroup.headers.map(header => (
-                    <th
-                      key={header.id}
-                      className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider"
-                    >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {renderBatchTableRows(loading, currentPageRows, columns.length)}
-            </tbody>
-          </table>
-        </div>
+      <Card data-walkthrough="batch-list-table">
+        <DataTable
+          table={table}
+          columnCount={columns.length}
+          bordered={false}
+          loading={loading}
+          loadingMessage="Cargando listado de lotes..."
+          scrollContainerClassName="min-h-[260px] pb-12"
+          emptyState={
+            <div className="space-y-2">
+              <AlertCircle className="w-8 h-8 text-neutral/75 mx-auto" aria-hidden="true" />
+              <p className="font-semibold text-neutral">No se encontraron lotes registrados.</p>
+              <p className="text-xs text-neutral/75">Cree un nuevo lote o modifique los filtros activos.</p>
+            </div>
+          }
+        />
 
         {/* Table Footer with Pagination Controls */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-between text-xs font-semibold text-neutral/60">
-          <div>
-            Mostrando {currentPageRows.length} de {totalCount} lotes
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Página anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Página siguiente"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+        <Pagination
+          table={table}
+          totalCount={totalCount}
+          itemLabel="lotes"
+          mode="summary"
+          counterFormat="count"
+        />
+      </Card>
 
       {/* Modal: Confirmar Eliminación de Lote */}
       <DeleteBatchModal

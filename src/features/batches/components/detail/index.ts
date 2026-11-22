@@ -7,6 +7,4 @@ export * from './ScopedExportSplitButton';
 export * from './BatchMembersTable';
 export * from './BatchSummaryCards';
 export * from './BatchTerritorialCard';
-export * from './DeleteBatchModal';
-export * from './EditMemberModal';
 export * from './MemberQuickViewModal';

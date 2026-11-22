@@ -4,6 +4,9 @@
 *   **Status:** Implemented
 *   **Date:** 2026-11-16
 
+> [!NOTE]
+> **Historical Evolution:** The inline amber `'warning'` notification banner originally implemented in `CertificateDesigner.tsx` (Phase 3 Item 1) was subsequently unified into the shared [`Toast`](../../src/components/Toast.tsx) component.
+
 --------------------------------------------------------------------------------
 
 ## Overview

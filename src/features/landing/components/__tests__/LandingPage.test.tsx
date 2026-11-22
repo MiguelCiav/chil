@@ -1,239 +1,235 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LandingPage } from '../LandingPage';
 import { HeroSection } from '../HeroSection';
 import { FeatureGridSection } from '../FeatureGridSection';
 import { WorkflowSection } from '../WorkflowSection';
 import { LandingFooter } from '../LandingFooter';
-import * as authFeature from '../../../auth';
+import { RevealOnScroll } from '../RevealOnScroll';
 
-vi.mock('../../../auth', async () => {
-  const actual = await vi.importActual<typeof import('../../../auth')>('../../../auth');
-  return {
-    ...actual,
-    useAuth: vi.fn()
-  };
-});
+type ObserverRecord = {
+  callback: IntersectionObserverCallback;
+  observed: Element[];
+};
 
-describe('Landing Page Feature', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+function installMockIntersectionObserver() {
+  const records: ObserverRecord[] = [];
+  class MockIntersectionObserver implements IntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = '';
+    readonly thresholds = [];
+    private record: ObserverRecord;
+    constructor(callback: IntersectionObserverCallback) {
+      this.record = { callback, observed: [] };
+      records.push(this.record);
+    }
+    observe = (el: Element) => {
+      this.record.observed.push(el);
+    };
+    disconnect = vi.fn();
+    unobserve = vi.fn();
+    takeRecords = vi.fn(() => []);
+  }
+  vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+  return records;
+}
+
+describe('Landing Feature Components', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  describe('RevealOnScroll', () => {
+    it('renders children visible immediately when IntersectionObserver is unavailable', () => {
+      vi.stubGlobal('IntersectionObserver', undefined);
+      const { container } = render(
+        <RevealOnScroll>
+          <p>Contenido visible sin observer</p>
+        </RevealOnScroll>
+      );
+      expect(container.firstElementChild).toHaveClass('opacity-100');
+    });
+
+    it('transitions from hidden to visible when the observer reports an intersection', () => {
+      const records = installMockIntersectionObserver();
+      const { container } = render(
+        <RevealOnScroll>
+          <p>Bloque animado</p>
+        </RevealOnScroll>
+      );
+      expect(container.firstElementChild).toHaveClass('opacity-0');
+
+      act(() => {
+        records[0].callback(
+          [{ isIntersecting: true, target: records[0].observed[0] } as IntersectionObserverEntry],
+          {} as IntersectionObserver
+        );
+      });
+      expect(container.firstElementChild).toHaveClass('opacity-100');
+    });
+
+    it('renders children visible immediately when prefers-reduced-motion is enabled', () => {
+      vi.stubGlobal('IntersectionObserver', vi.fn());
+      vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
+      const { container } = render(
+        <RevealOnScroll>
+          <p>Movimiento reducido</p>
+        </RevealOnScroll>
+      );
+      expect(container.firstElementChild).toHaveClass('opacity-100');
+    });
   });
 
   describe('HeroSection', () => {
-    it('renders prominent logo, brand name, title, subtitle and centered CTA buttons', () => {
+    it('renders the parchment hero banner, Chil crest, World Scouting logo, headline, descriptor and auth links without a navbar', () => {
       render(
         <MemoryRouter>
           <HeroSection />
         </MemoryRouter>
       );
 
-      // World Scouting Logo and Top Gradient
-      const wsctLogo = screen.getByAltText('World Scouting');
-      expect(wsctLogo).toBeInTheDocument();
-      expect(screen.getByTestId('hero-top-gradient')).toBeInTheDocument();
-
-      // Logo and Brand Name
-      const logoImg = screen.getByAltText('Chil Logo');
-      expect(logoImg).toBeInTheDocument();
-      expect(screen.getByText('Chil')).toBeInTheDocument();
-
-      // Headline and Subtitle
       expect(
         screen.getByRole('heading', {
           level: 1,
-          name: /Un Sistema Scout de Emisión y Control de Reconocimientos/i
+          name: /Valida registros\.\s*Reconoce rápido\./i
         })
       ).toBeInTheDocument();
-
       expect(
-        screen.getByText(
-          /La plataforma moderna, ágil y usable para gestionar lotes de reconocimientos, hacer diseños visuales interactivos y generar analítica en el Movimiento\./i
-        )
+        screen.getByText(/Sistema Scout de Emisión y Control de Reconocimientos/i)
       ).toBeInTheDocument();
+      expect(screen.getByAltText('Chil Logo')).toBeInTheDocument();
+      expect(screen.getByAltText('World Scouting')).toBeInTheDocument();
+      expect(screen.getByTestId('hero-top-gradient')).toBeInTheDocument();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
 
-      // CTA Buttons and Links
-      const registerBtn = screen.getByRole('link', {
-        name: /Comenzar Ahora/i
-      });
-      expect(registerBtn).toHaveAttribute('href', '/registro');
+      const start = screen.getByRole('link', { name: /Comenzar Ahora/i });
+      expect(start).toHaveAttribute('href', '/registro');
+      expect(start.querySelector('button')).toBeNull();
 
-      const loginBtn = screen.getByRole('link', {
-        name: /Iniciar Sesión/i
-      });
-      expect(loginBtn).toHaveAttribute('href', '/login');
+      const login = screen.getByRole('link', { name: /Iniciar Sesión/i });
+      expect(login).toHaveAttribute('href', '/login');
+      expect(login.querySelector('button')).toBeNull();
     });
   });
 
   describe('FeatureGridSection', () => {
-    it('renders all 6 capability cards with titles and descriptions', () => {
+    it('renders the oversized statement and the four product chapters with anchor ids', () => {
+      vi.stubGlobal('IntersectionObserver', undefined);
       render(<FeatureGridSection />);
 
       expect(
-        screen.getByRole('heading', {
-          level: 2,
-          name: /Todo lo necesario para la gestión de reconocimientos/i
-        })
+        screen.getByRole('heading', { level: 2, name: /Genera lotes de reconocimientos En una sola herramienta/i })
       ).toBeInTheDocument();
 
-      // 1. Exportación Flexible en PDF y ZIP
-      expect(
-        screen.getByRole('heading', { level: 3, name: 'Exportación Flexible en PDF y ZIP' })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Descarga diplomas individuales en PDF, archivos ZIP completos o por grupo/i)
-      ).toBeInTheDocument();
+      const chapters = [
+        ['lotes-masivos', /Pega las cédulas\. Chil te dice quién está al día\./i],
+        ['disenador-plantillas', /Tu reconocimiento oficial, con cada nombre en su sitio\./i],
+        ['exportacion-flexible', /Un ZIP por grupo\. Listo para entregar\./i],
+        ['analitica-territorial', /Tu año completo, de un vistazo\./i]
+      ] as const;
 
-      // 2. Lotes Masivos
-      expect(screen.getByRole('heading', { level: 3, name: 'Lotes Masivos' })).toBeInTheDocument();
-      expect(
-        screen.getByText(/Carga de cédulas, verificación automática en el sistema de registro scout/i)
-      ).toBeInTheDocument();
+      for (const [id, title] of chapters) {
+        const article = document.getElementById(id);
+        expect(article).not.toBeNull();
+        expect(within(article as HTMLElement).getByRole('heading', { level: 3, name: title })).toBeInTheDocument();
+      }
+    });
 
-      // 3. Diseñador de Plantillas
-      expect(
-        screen.getByRole('heading', { level: 3, name: 'Diseñador de Plantillas' })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Editor visual interactivo adaptado a cualquier dimensión de diploma/i)
-      ).toBeInTheDocument();
+    it('activates the chapter that the observer reports in the viewport middle band', () => {
+      const records = installMockIntersectionObserver();
+      const { container } = render(<FeatureGridSection />);
 
-      // 4. Unidades Scouts & No Scout
-      expect(
-        screen.getByRole('heading', { level: 3, name: 'Unidades Scouts & No Scout' })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Soporte completo para Manada, Tropa, Caminantes, Clan/i)
-      ).toBeInTheDocument();
+      const chapterObserver = records.find((record) => record.observed.length === 4);
+      expect(chapterObserver).toBeDefined();
 
-      // 5. Analítica Territorial
-      expect(
-        screen.getByRole('heading', { level: 3, name: 'Analítica Territorial' })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Métricas interanuales \(Year-over-Year\), distribución geográfica/i)
-      ).toBeInTheDocument();
+      const progressLabels = () =>
+        Array.from(container.querySelectorAll('p.text-sm.font-bold')).filter((el) =>
+          ['Verifica', 'Diseña', 'Exporta', 'Analiza'].includes(el.textContent ?? '')
+        );
 
-      // 6. Aislamiento y Seguridad
-      expect(
-        screen.getByRole('heading', { level: 3, name: 'Aislamiento y Seguridad' })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Privacidad, seguridad y control total sobre los lotes y datos/i)
-      ).toBeInTheDocument();
+      expect(progressLabels()[0]).toHaveClass('text-primary');
+
+      act(() => {
+        chapterObserver!.callback(
+          [{ isIntersecting: true, target: chapterObserver!.observed[2] } as IntersectionObserverEntry],
+          {} as IntersectionObserver
+        );
+      });
+
+      expect(progressLabels()[2]).toHaveClass('text-primary');
+      expect(progressLabels()[0]).not.toHaveClass('text-primary');
     });
   });
 
   describe('WorkflowSection', () => {
-    it('renders the 3-step workflow section', () => {
+    it('renders the continuous recognition marquee with pause control, manifesto and three product facts', () => {
       render(<WorkflowSection />);
 
-      expect(
-        screen.getByRole('heading', { level: 2, name: /¿Cómo funciona Chil\?/i })
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Mensajeros de la Paz, Scouts del Mundo/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Insignia de Madera/i)).not.toBeInTheDocument();
 
-      expect(screen.getByRole('heading', { level: 3, name: '1. Configurar' })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { level: 3, name: '2. Verificar' })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { level: 3, name: '3. Emitir' })).toBeInTheDocument();
+      const toggle = screen.getByRole('button', { name: /Pausar cinta de reconocimientos/i });
+      expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+      fireEvent.click(toggle);
+      expect(screen.getByRole('button', { name: /Reanudar cinta de reconocimientos/i })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
 
       expect(
-        screen.getByText(/Selecciona el tipo de reconocimiento del catálogo oficial/i)
+        screen.getByRole('heading', { level: 2, name: /Menos tiempo en planillas\. Más tiempo para tus objetivos\./i })
       ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Ingresa las cédulas para consultar automáticamente la membresía/i)
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Genera los reconocimientos PDF de alta resolución con códigos únicos/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText('1:1')).toBeInTheDocument();
+      expect(screen.getByText('AES-256')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 3, name: /Ramas y categorías reconocidas/i })).toBeInTheDocument();
     });
   });
 
   describe('LandingFooter', () => {
-    it('renders public footer with links to login, register, branding and scout attribution', () => {
+    it('renders the closing CTA, section anchors, auth links and current year', () => {
       render(
         <MemoryRouter>
           <LandingFooter />
         </MemoryRouter>
       );
 
-      expect(
-        screen.getByText(/Sistema de Emisión y Control de Reconocimientos Scouts/i)
-      ).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Iniciar Sesión/i })).toHaveAttribute('href', '/login');
-      expect(screen.getByRole('link', { name: /Crear Cuenta \/ Registrarse/i })).toHaveAttribute(
+      expect(screen.getByRole('heading', { level: 2, name: /Tu próximo lote empieza hoy\./i })).toBeInTheDocument();
+
+      const register = screen.getByRole('link', { name: /Crear cuenta gratuita/i });
+      expect(register).toHaveAttribute('href', '/registro');
+      expect(register.querySelector('button')).toBeNull();
+      expect(screen.getByRole('link', { name: /Ya tengo cuenta/i })).toHaveAttribute('href', '/login');
+
+      const nav = screen.getByRole('navigation', { name: /Secciones de la página/i });
+      expect(within(nav).getByRole('link', { name: 'Verificación' })).toHaveAttribute('href', '#lotes-masivos');
+      expect(within(nav).getByRole('link', { name: 'Diseñador de reconocimientos' })).toHaveAttribute(
         'href',
-        '/registro'
+        '#disenador-plantillas'
       );
-      expect(
-        screen.getByText(new RegExp(`© ${new Date().getFullYear()} Chil`, 'i'))
-      ).toBeInTheDocument();
-      expect(screen.getByText(/para el Movimiento Scout/i)).toBeInTheDocument();
+      expect(within(nav).getByRole('link', { name: 'Analítica' })).toHaveAttribute('href', '#analitica-territorial');
+
+      const year = new Date().getFullYear().toString();
+      expect(screen.getByText(new RegExp(`© ${year} Chil\\. Todos los derechos reservados\\.`))).toBeInTheDocument();
     });
   });
 
-  describe('LandingPage Orchestrator', () => {
-    it('renders full landing page with all subcomponents', () => {
+  describe('LandingPage composition and routing', () => {
+    it('composes hero, showcase, manifesto and closing sections', () => {
       render(
         <MemoryRouter>
           <LandingPage />
         </MemoryRouter>
       );
 
-      // Hero
-      expect(
-        screen.getByRole('heading', {
-          level: 1,
-          name: /Un Sistema Scout de Emisión y Control de Reconocimientos/i
-        })
-      ).toBeInTheDocument();
-
-      // Capabilities
-      expect(
-        screen.getByRole('heading', {
-          level: 2,
-          name: /Todo lo necesario para la gestión de reconocimientos/i
-        })
-      ).toBeInTheDocument();
-
-      // Workflow
-      expect(
-        screen.getByRole('heading', { level: 2, name: /¿Cómo funciona Chil\?/i })
-      ).toBeInTheDocument();
-
-      // Footer
-      expect(screen.getByText(/para el Movimiento Scout/i)).toBeInTheDocument();
-    });
-  });
-
-  describe('App Routing Integration for Landing Page', () => {
-    it('renders LandingPage at root "/" when user is unauthenticated', () => {
-      vi.mocked(authFeature.useAuth).mockReturnValue({
-        user: null,
-        loading: false,
-        login: vi.fn(),
-        register: vi.fn(),
-        logout: vi.fn(),
-        resetPassword: vi.fn()
-      });
-
-      render(
-        <MemoryRouter initialEntries={['/']}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-          </Routes>
-        </MemoryRouter>
-      );
-
-      expect(
-        screen.getByRole('heading', {
-          level: 1,
-          name: /Un Sistema Scout de Emisión y Control de Reconocimientos/i
-        })
-      ).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: /Genera lotes de reconocimientos/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: /Menos tiempo en planillas/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: /Tu próximo lote empieza hoy/i })).toBeInTheDocument();
     });
 
-    it('renders LandingPage at "/inicio" route', () => {
+    it('routes /inicio to LandingPage', () => {
       render(
         <MemoryRouter initialEntries={['/inicio']}>
           <Routes>
@@ -245,7 +241,7 @@ describe('Landing Page Feature', () => {
       expect(
         screen.getByRole('heading', {
           level: 1,
-          name: /Un Sistema Scout de Emisión y Control de Reconocimientos/i
+          name: /Valida registros\.\s*Reconoce rápido\./i
         })
       ).toBeInTheDocument();
     });

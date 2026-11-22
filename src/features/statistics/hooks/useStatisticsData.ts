@@ -8,7 +8,7 @@ import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { Batch, ScoutMember, Region, District, ScoutGroup } from '../../../types';
 import { StatisticsFilterState } from '../types';
 import { buildStatisticsDataset, calculateYoYComparison, resolveMemberHierarchy } from '../utils/statsCalculators';
-import { isNoAplicaDistrict } from '../../../utils/memberHierarchy';
+import { getAvailableDistricts, isNoAplicaDistrict } from '../../../utils/memberHierarchy';
 import { FilterSummaryLabels } from '../utils/statsPdfExport';
 import { useAuth } from '../../auth';
 
@@ -72,10 +72,8 @@ function matchesDateRange(createdAt: string, period: string, startDate?: string,
 }
 
 export function buildAvailableDistricts(districts: District[], regionId?: string): District[] {
-  const validDistricts = districts.filter(d => d.id !== 0 && !isNoAplicaDistrict(d));
-  if (!regionId) return validDistricts;
-  if (regionId === 'nacional' || regionId === '0') return [];
-  return validDistricts.filter(d => String(d.region_id) === regionId);
+  if (!regionId) return districts.filter(d => d.id !== 0 && !isNoAplicaDistrict(d));
+  return getAvailableDistricts(districts, regionId);
 }
 
 export function filterBatchesByCriteria(

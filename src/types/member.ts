@@ -1,5 +1,3 @@
-import type { ScraperMemberDetails } from '../features/batches/api/scraperApi';
-
 export type ScoutUnit = 'manada' | 'tropa' | 'caminantes' | 'clan' | 'institucional' | 'no_scout';
 
 export const SCOUT_UNITS: Record<ScoutUnit, { label: string; badgeClass: string }> = {
@@ -87,16 +85,4 @@ export interface ScoutMember {
   user_id?: string;
   exceptional_reason?: string;
   verified_in_registry?: boolean;
-}
-
-export interface MemberVerificationResult {
-  cedula: string;
-  name?: string;
-  status: 'Consultando...' | 'Registro válido' | 'No registrado' | 'Error de red';
-  type: 'young' | 'adult';
-  unit?: ScoutUnit;
-  region_id?: number;
-  district_id?: number;
-  group_id?: number;
-  details?: ScraperMemberDetails;
 }

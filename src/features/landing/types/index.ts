@@ -1,25 +1,26 @@
-import { ReactNode } from 'react';
+import { FC } from 'react';
 
-export interface FeatureCardItem {
+export interface ShowcaseVisualProps {
+  /** When true the visual plays (or holds) its final animated state. */
+  active: boolean;
+}
+
+export interface LandingChapter {
   id: string;
-  icon: ReactNode;
+  number: string;
+  verb: string;
   title: string;
-  badge?: string;
-  description: string;
-  highlights: string[];
+  body: string;
+  Visual: FC<ShowcaseVisualProps>;
 }
 
-export interface WorkflowStepItem {
-  stepNumber: number;
-  title: string;
-  description: string;
-  icon: ReactNode;
-  tagline: string;
+export interface ManifestoLine {
+  text: string;
+  accent: boolean;
 }
 
-export interface ScoutValueItem {
+export interface ProductFactItem {
+  figure: string;
   title: string;
-  description: string;
-  badge: string;
-  icon: ReactNode;
+  body: string;
 }

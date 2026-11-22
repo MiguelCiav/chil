@@ -8,9 +8,14 @@ import {
   Trash2,
   Move
 } from 'lucide-react';
-import { Card, CardHeader, CardBody } from '../../../../../components/Card';
+import { Card, CardHeader, CardBody, Button } from '../../../../../components';
 import { RecognitionFieldConfig } from '../../../types';
-import { FIELD_ICONS, PRESET_COLORS } from '../designerUtils';
+import {
+  FIELD_ICONS,
+  PRESET_COLORS,
+  isScoutsPlanarFont,
+  roundPercentCoordinate
+} from '../designerUtils';
 
 export interface FieldPropertiesTabProps {
   selectedField: RecognitionFieldConfig | null;
@@ -26,7 +31,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
   onRemoveField
 }) => {
   return (
-    <Card className="border-gray-200">
+    <Card>
       <CardHeader className="py-3 px-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Type className="w-4 h-4 text-primary" />
@@ -36,7 +41,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-neutral/40 hover:text-neutral rounded transition-colors"
+            className="p-1 text-neutral/75 hover:text-neutral rounded transition-colors"
             aria-label="Cerrar propiedades"
           >
             <X className="w-3.5 h-3.5" />
@@ -56,7 +61,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                   {selectedField.label}
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-neutral/50">
+              <span className="text-xs font-mono text-neutral/75">
                 {selectedField.x}%, {selectedField.y}%
               </span>
             </div>
@@ -71,11 +76,8 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                   { key: 'scouts-gt-planar-bold', label: 'Scouts GT Planar' },
                   { key: 'noto-sans', label: 'Noto Sans' }
                 ].map((item) => {
-                  const isSelected =
-                    item.key === 'scouts-gt-planar-bold'
-                      ? selectedField.font_family === 'scouts-gt-planar-bold' || selectedField.font_family === 'Scouts GT Planar'
-                      : selectedField.font_family === 'noto-sans' ||
-                        !['scouts-gt-planar-bold', 'Scouts GT Planar'].includes(selectedField.font_family);
+                  const isPlanar = isScoutsPlanarFont(selectedField.font_family);
+                  const isSelected = item.key === 'scouts-gt-planar-bold' ? isPlanar : !isPlanar;
 
                   return (
                     <button
@@ -89,7 +91,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                       className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-colors ${
                         isSelected
                           ? 'bg-primary text-white border-primary font-bold'
-                          : 'bg-white text-neutral/80 border-gray-200 hover:bg-gray-50'
+                          : 'bg-white text-neutral/80 border-primary/20 hover:bg-gray-50'
                       }`}
                     >
                       {item.label}
@@ -143,7 +145,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                     className={`py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition-colors ${
                       selectedField.font_weight === style.key
                         ? 'bg-primary text-white border-primary font-bold'
-                        : 'bg-white text-neutral/80 border-gray-200 hover:bg-gray-50'
+                        : 'bg-white text-neutral/80 border-primary/20 hover:bg-gray-50'
                     }`}
                   >
                     {style.label}
@@ -158,7 +160,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                 <label htmlFor="field-color-picker" className="font-semibold text-neutral">
                   Color de Texto
                 </label>
-                <span className="font-mono text-xs text-neutral/60">
+                <span className="font-mono text-xs text-neutral/75">
                   {selectedField.color}
                 </span>
               </div>
@@ -212,7 +214,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                     className={`py-1.5 px-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-1 transition-colors ${
                       selectedField.align === align.key
                         ? 'bg-primary text-white border-primary font-bold'
-                        : 'bg-white text-neutral/80 border-gray-200 hover:bg-gray-50'
+                        : 'bg-white text-neutral/80 border-primary/20 hover:bg-gray-50'
                     }`}
                     aria-label={`Alineación ${align.label}`}
                   >
@@ -227,8 +229,8 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
             <div className="space-y-2 pt-2 border-t border-gray-100">
               <span className="text-xs font-semibold text-neutral block">Posición (%)</span>
               <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
-                  <label htmlFor="field-pos-x" className="text-[11px] font-bold text-neutral/60 pl-1 cursor-pointer">
+                <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border border-primary/20">
+                  <label htmlFor="field-pos-x" className="text-xs font-bold text-neutral/75 pl-1 cursor-pointer">
                     X:
                   </label>
                   <input
@@ -242,16 +244,16 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                       const parsed = Number(e.target.value);
                       if (!Number.isFinite(parsed)) return;
                       onUpdateField({
-                        x: Math.max(0, Math.min(100, Math.round(parsed * 10) / 10))
+                        x: roundPercentCoordinate(parsed)
                       });
                     }}
                     className="w-full bg-transparent text-xs font-mono text-neutral focus:outline-none"
                     aria-label="Coordenada X"
                   />
-                  <span className="text-[10px] text-neutral/40 pr-1">%</span>
+                  <span className="text-xs text-neutral/75 pr-1">%</span>
                 </div>
-                <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
-                  <label htmlFor="field-pos-y" className="text-[11px] font-bold text-neutral/60 pl-1 cursor-pointer">
+                <div className="flex items-center gap-1 bg-gray-50 p-1.5 rounded-lg border border-primary/20">
+                  <label htmlFor="field-pos-y" className="text-xs font-bold text-neutral/75 pl-1 cursor-pointer">
                     Y:
                   </label>
                   <input
@@ -265,20 +267,20 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                       const parsed = Number(e.target.value);
                       if (!Number.isFinite(parsed)) return;
                       onUpdateField({
-                        y: Math.max(0, Math.min(100, Math.round(parsed * 10) / 10))
+                        y: roundPercentCoordinate(parsed)
                       });
                     }}
                     className="w-full bg-transparent text-xs font-mono text-neutral focus:outline-none"
                     aria-label="Coordenada Y"
                   />
-                  <span className="text-[10px] text-neutral/40 pr-1">%</span>
+                  <span className="text-xs text-neutral/75 pr-1">%</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => onUpdateField({ x: 50 })}
-                  className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-white text-neutral/80 border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="py-1.5 px-2 rounded-lg text-xs font-semibold bg-white text-neutral/80 border border-primary/20 hover:bg-gray-50 transition-colors"
                   aria-label="Centrar horizontalmente"
                 >
                   Centrar H (50%)
@@ -286,7 +288,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
                 <button
                   type="button"
                   onClick={() => onUpdateField({ y: 50 })}
-                  className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-white text-neutral/80 border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="py-1.5 px-2 rounded-lg text-xs font-semibold bg-white text-neutral/80 border border-primary/20 hover:bg-gray-50 transition-colors"
                   aria-label="Centrar verticalmente"
                 >
                   Centrar V (50%)
@@ -296,15 +298,17 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
 
             {/* Delete Field Button */}
             <div className="pt-2">
-              <button
+              <Button
                 type="button"
+                variant="destructive"
+                size="sm"
+                fullWidth
                 onClick={() => onRemoveField(selectedField.id)}
-                className="w-full py-2 px-3 text-xs text-red-600 hover:bg-red-50 border border-red-200 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                icon={<Trash2 className="w-3.5 h-3.5" />}
                 aria-label="Eliminar campo del certificado"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Eliminar del Certificado</span>
-              </button>
+                Eliminar del Certificado
+              </Button>
             </div>
           </div>
         ) : (
@@ -315,7 +319,7 @@ export const FieldPropertiesTab: React.FC<FieldPropertiesTabProps> = ({
             <p className="text-xs font-bold text-neutral">
               Haz clic en un campo del certificado para editar su estilo
             </p>
-            <p className="text-xs text-neutral/60">
+            <p className="text-xs text-neutral/75">
               Seleccione un campo en el certificado o en la paleta para editar sus propiedades
               tipográficas y posición.
             </p>

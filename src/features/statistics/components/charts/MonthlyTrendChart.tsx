@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
+import { Card, CardBody } from '../../../../components';
 import { MonthlyTrendData, YoYComparisonData, YoYMonthlyItem } from '../../types';
 import { YoYVariationBadge } from '../YoYVariationBadge';
 
@@ -105,81 +106,66 @@ const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
   hasYoY,
   totalPeriodDiplomas
 }) => {
-  if (hasYoY && yoy) {
-    return (
-      <table className="w-full text-left border-collapse font-sans text-xs">
-        <thead>
-          <tr className="border-b border-gray-200 bg-[#faf8f5]">
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
-              Total ({yoy.currentYear})
-            </th>
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
-              Año Anterior ({yoy.previousYear})
-            </th>
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
-              Variación
-            </th>
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
-              % del Total
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {yoy.monthly.map((m) => {
-            const totalCurr = yoy.totalDiplomas.current || 1;
-            const pct = yoy.totalDiplomas.current > 0 ? Number(((m.currentCount / totalCurr) * 100).toFixed(1)) : 0;
-            return (
-              <tr key={m.label} className="hover:bg-gray-50/80 transition-colors">
-                <td className="px-3 py-1.5 font-semibold text-neutral">
-                  {m.label}
-                </td>
-                <td className="px-3 py-1.5 font-bold text-neutral text-right">
-                  {m.currentCount}
-                </td>
-                <td className="px-3 py-1.5 font-medium text-neutral/60 text-right">
-                  {m.previousCount}
-                </td>
-                <td className="px-3 py-1.5 text-right">
-                  <YoYVariationBadge diff={m.diff} percentChange={m.percentChange} />
-                </td>
-                <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
-                  {pct}%
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    );
-  }
+  const rows = hasYoY && yoy
+    ? yoy.monthly.map((m) => {
+        const totalCurr = yoy.totalDiplomas.current || 1;
+        return {
+          key: m.label,
+          label: m.label,
+          currentCount: m.currentCount,
+          previousCount: m.previousCount,
+          diff: m.diff,
+          percentChange: m.percentChange,
+          pct: yoy.totalDiplomas.current > 0 ? Number(((m.currentCount / totalCurr) * 100).toFixed(1)) : 0
+        };
+      })
+    : data.map((m) => ({
+        key: m.monthKey,
+        label: m.label,
+        currentCount: m.totalCount,
+        previousCount: undefined as number | undefined,
+        diff: undefined as number | undefined,
+        percentChange: undefined as number | null | undefined,
+        pct: totalPeriodDiplomas > 0 ? Number(((m.totalCount / totalPeriodDiplomas) * 100).toFixed(1)) : 0
+      }));
 
   return (
     <table className="w-full text-left border-collapse font-sans text-xs">
       <thead>
-        <tr className="border-b border-gray-200 bg-[#faf8f5]">
-          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
-          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">Reconocimientos Emitidos</th>
-          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+        <tr className="border-b border-primary/20 bg-primary/10">
+          <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider">Mes</th>
+          <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">
+            {hasYoY && yoy ? `Total (${yoy.currentYear})` : 'Reconocimientos Emitidos'}
+          </th>
+          {hasYoY && yoy && (
+            <>
+              <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">
+                Año Anterior ({yoy.previousYear})
+              </th>
+              <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">
+                Variación
+              </th>
+            </>
+          )}
+          <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">% del Total</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
-        {data.map((m) => {
-          const pct = totalPeriodDiplomas > 0 ? Number(((m.totalCount / totalPeriodDiplomas) * 100).toFixed(1)) : 0;
-          return (
-            <tr key={m.monthKey} className="hover:bg-gray-50/80 transition-colors">
-              <td className="px-3 py-1.5 font-semibold text-neutral">
-                {m.label}
-              </td>
-              <td className="px-3 py-1.5 font-bold text-neutral text-right">
-                {m.totalCount}
-              </td>
-              <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
-                {pct}%
-              </td>
-            </tr>
-          );
-        })}
+        {rows.map((row) => (
+          <tr key={row.key} className="hover:bg-primary/5 transition-colors">
+            <td className="px-3 py-1.5 font-semibold text-neutral">{row.label}</td>
+            <td className="px-3 py-1.5 font-bold text-neutral text-right">{row.currentCount}</td>
+            {hasYoY && row.previousCount !== undefined && row.diff !== undefined && (
+              <>
+                <td className="px-3 py-1.5 font-medium text-neutral/75 text-right">{row.previousCount}</td>
+                <td className="px-3 py-1.5 text-right">
+                  <YoYVariationBadge diff={row.diff} percentChange={row.percentChange ?? null} />
+                </td>
+              </>
+            )}
+            <td className="px-3 py-1.5 text-right font-medium text-neutral/75">{row.pct}%</td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );
@@ -220,6 +206,8 @@ const MonthlyTrendDualBar: React.FC<MonthlyTrendDualBarProps> = ({
     <g
       onMouseEnter={() => onHover(idx)}
       onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(idx)}
+      onBlur={() => onHover(null)}
       className="cursor-pointer transition-all"
       tabIndex={0}
       role="graphics-symbol"
@@ -285,6 +273,8 @@ const MonthlyTrendDualBar: React.FC<MonthlyTrendDualBarProps> = ({
           width={metrics.dualBarWidth}
           height={metrics.prevBarH}
           fill={prevFill}
+          stroke="#64748b"
+          strokeWidth="0.75"
           rx={3}
           className="transition-all duration-200"
         />
@@ -366,6 +356,8 @@ const MonthlyTrendSingleBar: React.FC<MonthlyTrendSingleBarProps> = ({
     <g
       onMouseEnter={() => onHover(idx)}
       onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(idx)}
+      onBlur={() => onHover(null)}
       className="cursor-pointer transition-all"
       tabIndex={0}
       role="graphics-symbol"
@@ -467,7 +459,7 @@ const MonthlyTrendTooltip: React.FC<MonthlyTrendTooltipProps> = ({
         <p className="font-bold text-sky-400 border-b border-slate-700 pb-1 mb-1">
           {item.label} • Comparativa
         </p>
-        <div className="space-y-0.5 text-[11px]">
+        <div className="space-y-0.5 text-xs">
           <p className="flex justify-between gap-2">
             <span className="text-sky-300">Año {displayYear}:</span>
             <span className="font-bold">{item.currentCount}</span>
@@ -498,7 +490,7 @@ const MonthlyTrendTooltip: React.FC<MonthlyTrendTooltipProps> = ({
       <p className="font-bold text-sky-400 border-b border-slate-700 pb-1 mb-1">
         {singleItem.label} {displayYear}
       </p>
-      <div className="space-y-0.5 text-[11px]">
+      <div className="space-y-0.5 text-xs">
         <p className="flex justify-between gap-2">
           <span className="text-slate-300">Total:</span>
           <span className="font-bold">{singleItem.totalCount}</span>
@@ -554,18 +546,19 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
     : `Gráfico de tendencia mensual para el año ${displayYear}`;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between h-full font-sans">
+    <Card className="h-full">
+      <CardBody className="p-5 flex flex-col justify-between h-full font-sans">
       {/* Card Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 text-primary rounded-xl">
+          <div className="p-2 bg-primary/10 text-primary rounded-xl" aria-hidden="true">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-neutral text-base tracking-tight">
               Resumen Mensual de Reconocimientos
             </h3>
-            <p className="text-xs text-neutral/60">
+            <p className="text-xs text-neutral/75">
               Distribución de reconocimientos otorgados a lo largo del año {displayYear}
               {hasYoY && yoy && ` • Comparativa vs ${prevYear}`}
             </p>
@@ -576,21 +569,21 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
           {hasYoY && yoy ? (
             <>
               <div>
-                <span className="text-[11px] font-semibold text-neutral/50">Año {displayYear}</span>
+                <span className="text-xs font-semibold text-neutral/75">Año {displayYear}</span>
                 <p className="text-lg font-extrabold text-primary leading-none">
                   {yoy.totalDiplomas.current}
                 </p>
               </div>
-              <div className="border-l border-gray-200 pl-4">
-                <span className="text-[11px] font-semibold text-neutral/50">Año {prevYear}</span>
-                <p className="text-lg font-bold text-neutral/60 leading-none">
+              <div className="border-l border-primary/20 pl-4">
+                <span className="text-xs font-semibold text-neutral/75">Año {prevYear}</span>
+                <p className="text-lg font-bold text-neutral/75 leading-none">
                   {yoy.totalDiplomas.previous}
                 </p>
               </div>
             </>
           ) : (
             <div>
-              <span className="text-xs font-semibold text-neutral/50">Total año</span>
+              <span className="text-xs font-semibold text-neutral/75">Total año</span>
               <p className="text-lg font-extrabold text-primary leading-none">
                 {totalPeriodDiplomas}
               </p>
@@ -729,7 +722,8 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
           />
         )}
       </div>
-    </div>
+      </CardBody>
+    </Card>
   );
 };
 

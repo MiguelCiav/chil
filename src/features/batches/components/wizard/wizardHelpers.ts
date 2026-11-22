@@ -1,18 +1,11 @@
 import {
   createMember,
-  updateMember,
-  deleteMember,
-  getMembersByBatchId,
-  assignBatchRecognitionCodes,
   ScraperMemberDetails
 } from '../../api';
 import {
   ScoutMember,
-  MemberVerificationResult,
-  BatchUnitScope,
   ScoutUnit
 } from '../../types';
-import { inferBatchMemberUnits } from '../../utils/unitInference';
 import { splitFullName } from '../../utils/nameHelper';
 import { matchHierarchy, classifyScoutUnitAndType } from '../../utils/hierarchyMatcher';
 
@@ -37,95 +30,10 @@ export function getStepCircleClasses(currentStep: number, itemStep: number): str
   return 'bg-white border-gray-300 text-gray-400 hover:border-primary/50';
 }
 
-export function handleScrapeErrorResult(
-  err: unknown
-): { name: string; status: 'No registrado' | 'Error de red'; isUnregistered: boolean } {
-  const errStr = err instanceof Error ? err.message : String(err);
-  const isUnregistered = errStr.includes('No registrado');
-  return {
-    name: isUnregistered ? 'Usuario No Registrado' : 'Error de conexión',
-    status: isUnregistered ? 'No registrado' : 'Error de red',
-    isUnregistered
-  };
-}
-
-export function getInitialMemberUnit(
-  explicitUnit: ScoutUnit | undefined,
-  batchUnitScope: BatchUnitScope,
-  type: 'young' | 'adult'
-): ScoutUnit {
-  if (explicitUnit) return explicitUnit;
-  if (batchUnitScope !== 'mixed') return batchUnitScope as ScoutUnit;
-  return type === 'young' ? 'tropa' : 'institucional';
-}
-
-export function upsertVerificationItem(
-  list: MemberVerificationResult[],
-  item: MemberVerificationResult
-): MemberVerificationResult[] {
-  const idx = list.findIndex((existing) => existing.cedula === item.cedula);
-  if (idx > -1) {
-    const copy = [...list];
-    copy[idx] = item;
-    return copy;
-  }
-  return [...list, item];
-}
-
-export function parseCedulaEntries(youngsText: string, adultsText: string) {
-  const youngs = youngsText
-    .split('\n')
-    .map((c) => c.trim().replace(/[^0-9]/g, ''))
-    .filter(Boolean);
-  const adults = adultsText
-    .split('\n')
-    .map((c) => c.trim().replace(/[^0-9]/g, ''))
-    .filter(Boolean);
-  const allCedulas = [
-    ...youngs.map((c) => ({ cedula: c, type: 'young' as const })),
-    ...adults.map((c) => ({ cedula: c, type: 'adult' as const }))
-  ];
-  const cedulaSet = new Set([...youngs, ...adults]);
-  return { youngs, adults, allCedulas, cedulaSet };
-}
-
 export interface InitialMemberHierarchy {
   region_id?: number;
   district_id?: number;
   group_id?: number;
-}
-
-export async function saveNoScoutMemberToDb(
-  cedula: string,
-  type: 'young' | 'adult' = 'adult',
-  batchId: number | null = null,
-  userId?: string,
-  hierarchy?: InitialMemberHierarchy
-): Promise<ScoutMember | null> {
-  if (!batchId) return null;
-  try {
-    return await createMember(
-      {
-        identity: cedula,
-        first_names: 'Colaborador',
-        last_names: 'No Scout',
-        birth_date: '1990-01-01',
-        member_type: type,
-        unit: 'no_scout',
-        status: 'active',
-        verified_in_registry: false,
-        batch_id: batchId,
-        user_id: userId,
-        region_id: hierarchy?.region_id ?? 0,
-        district_id: hierarchy?.district_id ?? 0,
-        group_id: hierarchy?.group_id ?? 0
-      },
-      userId
-    );
-  } catch (dbErr) {
-    console.error('Database save failed for no_scout member:', dbErr);
-    return null;
-  }
 }
 
 export async function saveUnregisteredMemberToDb(
@@ -226,24 +134,4 @@ export async function saveScrapedMemberToDb(
     console.error('Database save failed for active/inactive member:', dbErr);
     return null;
   }
-}
-
-export async function syncAndFinalizeStep2Members(
-  batchId: number,
-  youngCedulas: string,
-  adultCedulas: string,
-  batchUnitScope: BatchUnitScope
-): Promise<ScoutMember[]> {
-  const { cedulaSet } = parseCedulaEntries(youngCedulas, adultCedulas);
-  const dbMembers = await getMembersByBatchId(batchId);
-
-  const deletePromises = dbMembers
-    .filter((m) => !cedulaSet.has(m.identity))
-    .map((m) => deleteMember(m.recognition_code || m.identity, m.identity, batchId));
-  await Promise.all(deletePromises);
-
-  const members = await getMembersByBatchId(batchId);
-  const normalizedMembers = inferBatchMemberUnits(members, batchUnitScope);
-  await Promise.all(normalizedMembers.map((m) => updateMember(m)));
-  return assignBatchRecognitionCodes(normalizedMembers, 'auto');
 }

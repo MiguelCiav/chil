@@ -8,7 +8,9 @@ Provides the core visual canvas, header toolbar, draggable field nodes, alignmen
 - `designerUtils.tsx:FIELD_ICONS`: `Record<RecognitionFieldKey, React.ReactNode>` mapping field keys to Lucide icons.
 - `designerUtils.tsx:PRESET_COLORS`: Array of 6 preset color `{ label, value }` objects.
 - `designerUtils.tsx:getFormatBadgeText`: Formats canvas dimensions and aspect-ratio label into a badge string.
-- `designerUtils.tsx:getFontFamilyStyle`: Maps `font_family` to CSS `font-family` string.
+- `designerUtils.tsx:isScoutsPlanarFont`: Returns `true` when `family` is `'scouts-gt-planar-bold'` or `'Scouts GT Planar'`.
+- `designerUtils.tsx:roundPercentCoordinate`: Clamps a coordinate to `[min, max]` (default `[0, 100]`) rounded to 1 decimal place.
+- `designerUtils.tsx:getFontFamilyStyle`: Maps `font_family` to CSS `font-family` string using `isScoutsPlanarFont`.
 - `designerUtils.tsx:getAlignTransform`: Maps `align` (`'left' | 'right' | 'center'`) to CSS `translate` transform string.
 - `designerUtils.tsx:getFieldDisplayText`: Returns preview text (`recognitionName` or `MOCK_CERTIFICATE_DATA`) or bracketed field label.
 - `CanvasFormatBar.tsx:CanvasFormatBarProps`: Props interface for `CanvasFormatBar`.

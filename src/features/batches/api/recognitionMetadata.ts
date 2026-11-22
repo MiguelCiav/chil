@@ -34,7 +34,7 @@ export const BADGE_STYLE_RULES: { keywords: string[]; style: BadgeStyle }[] = [
   },
   {
     keywords: ['campeones', 'naturaleza', 'champions'],
-    style: { bg: 'bg-[#fee2d8]', text: 'text-[#c2410c]', border: 'border-[#fdba74]', pillClass: 'bg-[#fee2d8] text-[#c2410c] border border-[#fdba74]' }
+    style: { bg: 'bg-[#fee2d8]', text: 'text-[#9a3412]', border: 'border-[#fdba74]', pillClass: 'bg-[#fee2d8] text-[#9a3412] border border-[#fdba74]' }
   },
   {
     keywords: ['solar'],

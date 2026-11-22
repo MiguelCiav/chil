@@ -1,183 +1,258 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogIn, ArrowRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2, LogIn } from 'lucide-react';
 import logo from '../../../assets/CHIL_LOGO.png';
 import worldScoutLogo from '../../../assets/WSCT_LOGO_EN_RGB_NEG.svg';
-import { Button } from '../../../components/Button';
+import recognitionFront from '../../../assets/recognitions/reconocimiento-1.webp';
+import recognitionLeft from '../../../assets/recognitions/reconocimiento-2.webp';
+import recognitionRight from '../../../assets/recognitions/reconocimiento-3.webp';
+import { useScrollProgress } from '../hooks/useScrollProgress';
+import { TopoBackdrop } from './TopoBackdrop';
+
+interface SideRecognitionCard {
+  id: string;
+  src: string;
+  position: string;
+  rotate: number;
+  drift: string;
+  delayMs: number;
+  zClass: string;
+}
+
+/* Official Venezuelan Scout recognition templates supplied by the product owner (1113x1440, Carta). */
+const SIDE_CARDS: SideRecognitionCard[] = [
+  {
+    id: 'campeones-naturaleza',
+    src: recognitionLeft,
+    position: 'left-[3%] top-[8%]',
+    rotate: -8,
+    drift: 'translate3d(calc(var(--scroll-progress, 0) * -32px), calc(var(--scroll-progress, 0) * -10px), 0)',
+    delayMs: 240,
+    zClass: 'z-0'
+  },
+  {
+    id: 'robots-letales',
+    src: recognitionRight,
+    position: 'right-[3%] top-[8%]',
+    rotate: 8,
+    drift: 'translate3d(calc(var(--scroll-progress, 0) * 32px), calc(var(--scroll-progress, 0) * -10px), 0)',
+    delayMs: 340,
+    zClass: 'z-10'
+  }
+];
+
+/**
+ * Decorative editorial fan of three real Scout recognition templates produced in Chil.
+ * Portrait Carta geometry (216 x 279 mm) with live template field marker and verified seal.
+ */
+const RecognitionStack: React.FC = () => (
+  <div
+    aria-hidden="true"
+    className="relative w-full max-w-[22.5rem] sm:max-w-[29rem] lg:max-w-[33.5rem] mx-auto aspect-[11/9] select-none"
+  >
+    {SIDE_CARDS.map((card) => (
+      <div
+        key={card.id}
+        className={`absolute ${card.zClass} w-[52%] aspect-[1113/1440] will-change-transform ${card.position}`}
+        style={{ transform: card.drift }}
+      >
+        <div
+          className="animate-card-deal h-full w-full"
+          style={{ transform: `rotate(${card.rotate}deg)`, animationDelay: `${card.delayMs}ms` }}
+        >
+          <div className="h-full w-full rounded-lg overflow-hidden bg-white ring-1 ring-[#643425]/18 shadow-[0_18px_36px_-18px_rgba(46,18,8,0.48)]">
+            <img
+              src={card.src}
+              alt=""
+              width={1113}
+              height={1440}
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+    ))}
+
+    {/* Center front real recognition with designer field preview, verified seal and 216 mm ruler */}
+    <div
+      className="absolute z-20 left-[21%] top-[2%] w-[58%] aspect-[1113/1440] will-change-transform"
+      style={{ transform: 'translate3d(0, calc(var(--scroll-progress, 0) * -10px), 0)' }}
+    >
+      <div
+        className="animate-card-deal relative h-full w-full"
+        style={{ transform: 'rotate(-1deg)', animationDelay: '440ms' }}
+      >
+        <div className="@container relative h-full w-full rounded-lg overflow-hidden bg-white ring-1 ring-[#643425]/22 shadow-[0_28px_54px_-20px_rgba(46,18,8,0.55)]">
+          <img
+            src={recognitionFront}
+            alt=""
+            width={1113}
+            height={1440}
+            fetchPriority="high"
+            className="w-full h-full object-cover"
+          />
+
+          {/* Dynamic field box mapped over the recipient line of the real template */}
+          <div className="absolute top-[45.8%] left-[12%] right-[12%] rounded border border-dashed border-sky-700/85 bg-sky-50/90 px-[2.5cqw] py-[0.8cqw] text-center">
+            <p className="font-display font-bold text-neutral text-[clamp(0.75rem,4.6cqw,1rem)] leading-tight truncate">
+              Nombre y Apellido
+            </p>
+          </div>
+
+          {/* Soft privacy blur over the handwritten signatures on the front template */}
+          <div className="absolute top-[73.5%] h-[12%] left-[9%] w-[29%] rounded-md backdrop-blur-[5px] bg-white/35" />
+          <div className="absolute top-[73.5%] h-[12%] right-[9%] w-[28%] rounded-md backdrop-blur-[5px] bg-white/35" />
+        </div>
+
+        {/* Verified seal positioned in open top margin without obscuring emblems or text */}
+        <span
+          className="animate-card-deal absolute -top-3.5 right-[22%] inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs sm:text-sm font-bold text-emerald-800 shadow-[0_8px_18px_-10px_rgba(46,18,8,0.5)] whitespace-nowrap"
+          style={{ transform: 'rotate(1deg)', animationDelay: '680ms' }}
+        >
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          Registro vigente
+        </span>
+
+        {/* Real US Letter portrait width ruler (216 x 279 mm) */}
+        <div className="absolute -bottom-6 inset-x-0 flex items-center gap-2 text-primary">
+          <span className="h-2.5 w-px bg-primary" />
+          <span className="h-px flex-1 bg-primary/60" />
+          <span className="font-mono text-xs font-bold">216 mm</span>
+          <span className="h-px flex-1 bg-primary/60" />
+          <span className="h-2.5 w-px bg-primary" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 export const HeroSection: React.FC = () => {
+  const heroRef = useScrollProgress<HTMLElement>({
+    start: 0,
+    end: -0.85,
+    reducedValue: 0
+  });
+
   return (
-    <section className="relative overflow-hidden pt-14 pb-14 sm:pt-18 sm:pb-20 lg:pt-24 lg:pb-28 w-full">
-      {/* Top atmospheric angled corner gradient providing backdrop for the white World Scouting logo */}
+    <section ref={heroRef} className="relative overflow-hidden bg-secondary text-neutral w-full">
+      {/* Terracotta cartography on parchment, dissolving gently toward the white canvas below */}
       <div
         data-testid="hero-top-gradient"
-        className="absolute top-0 left-0 right-0 h-[400px] sm:h-[480px] pointer-events-none -z-10 overflow-hidden"
+        className="absolute inset-0 pointer-events-none will-change-transform"
+        style={{
+          transform: 'translateY(calc(var(--scroll-progress, 0) * 44px))',
+          maskImage: 'linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%)'
+        }}
+        aria-hidden="true"
       >
-        {/* Deep warm corner anchor for logo contrast and readability */}
-        <div className="absolute top-0 left-0 w-full sm:w-[85%] md:w-[70%] lg:w-[58%] h-full hero-scout-gradient" />
-
-        {/* Soft atmospheric gradient on top-right to balance the entire banner */}
-        <div className="absolute top-0 right-0 w-full sm:w-[75%] md:w-[55%] lg:w-[45%] h-full hero-right-gradient" />
-
-        {/* Soft top-edge ambient mist blending seamlessly with page header */}
-        <div className="absolute top-0 inset-x-0 h-16 hero-top-mist" />
-      </div>
-
-      {/* Topographic Contour Texture (Scout Cartography & Trail Map spanning entire banner) */}
-      <div className="absolute inset-0 h-[460px] sm:h-[540px] pointer-events-none -z-10 overflow-hidden">
-        <svg
-          className="w-full h-full object-cover"
-          viewBox="0 0 1440 520"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <defs>
-            {/* Dynamic stroke gradient transitioning from white (over dark corner) to primary scout brown (over light center/right) */}
-            <linearGradient id="topo-stroke-flow" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.7" />
-              <stop offset="28%" stopColor="#FFFFFF" stopOpacity="0.6" />
-              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.18" />
-              <stop offset="68%" stopColor="#8C4E37" stopOpacity="0.14" />
-              <stop offset="85%" stopColor="#8C4E37" stopOpacity="0.24" />
-              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.32" />
-            </linearGradient>
-
-            <linearGradient id="topo-stroke-accent" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
-              <stop offset="28%" stopColor="#FFFFFF" stopOpacity="0.75" />
-              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.22" />
-              <stop offset="68%" stopColor="#8C4E37" stopOpacity="0.18" />
-              <stop offset="85%" stopColor="#8C4E37" stopOpacity="0.32" />
-              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.42" />
-            </linearGradient>
-
-            {/* Ultra-subtle whisper gradient for lower contour lines crossing directly behind the title */}
-            <linearGradient id="topo-stroke-whisper" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45" />
-              <stop offset="28%" stopColor="#FFFFFF" stopOpacity="0.35" />
-              <stop offset="42%" stopColor="#8C4E37" stopOpacity="0.08" />
-              <stop offset="68%" stopColor="#8C4E37" stopOpacity="0.06" />
-              <stop offset="85%" stopColor="#8C4E37" stopOpacity="0.14" />
-              <stop offset="100%" stopColor="#8C4E37" stopOpacity="0.2" />
-            </linearGradient>
-          </defs>
-
-          {/* Concentric elevation loops around top-left crest (radiating behind the World Scouting logo) */}
-          <ellipse cx="80" cy="50" rx="140" ry="95" stroke="rgba(255,255,255,0.48)" strokeWidth="1.2" strokeDasharray="3 4" />
-          <ellipse cx="80" cy="50" rx="210" ry="145" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
-          <ellipse cx="80" cy="50" rx="290" ry="200" stroke="rgba(255,255,255,0.52)" strokeWidth="1.2" />
-          <ellipse cx="80" cy="50" rx="380" ry="260" stroke="rgba(255,255,255,0.75)" strokeWidth="1.8" />
-          <ellipse cx="80" cy="50" rx="490" ry="335" stroke="url(#topo-stroke-flow)" strokeWidth="1.3" strokeDasharray="6 4" />
-          <ellipse cx="80" cy="50" rx="610" ry="415" stroke="url(#topo-stroke-flow)" strokeWidth="1.5" />
-
-          {/* Continuous undulating topographic contour paths flowing across the entire banner */}
-          <path
-            d="M -40 130 C 180 190, 420 100, 720 160 C 980 220, 1180 120, 1480 180"
-            stroke="url(#topo-stroke-flow)"
-            strokeWidth="1.2"
-          />
-          <path
-            d="M -40 200 C 200 260, 450 170, 760 230 C 1020 290, 1220 180, 1480 250"
-            stroke="url(#topo-stroke-accent)"
-            strokeWidth="1.4"
-          />
-          {/* Lower lines crossing the title: rendered with ultra-subtle whisper opacity to preserve title prominence */}
-          <path
-            d="M -40 280 C 220 340, 490 240, 800 310 C 1060 370, 1260 250, 1480 320"
-            stroke="url(#topo-stroke-whisper)"
-            strokeWidth="1"
-          />
-          <path
-            d="M -40 360 C 240 420, 530 310, 840 380 C 1100 440, 1300 320, 1480 390"
-            stroke="url(#topo-stroke-whisper)"
-            strokeWidth="1.1"
-          />
-          <path
-            d="M -40 440 C 260 500, 570 380, 880 450 C 1140 510, 1340 390, 1480 460"
-            stroke="url(#topo-stroke-whisper)"
-            strokeWidth="0.8"
-            strokeDasharray="4 6"
-          />
-
-          {/* Elevation Labels on index contours */}
-          <text x="360" y="246" fill="rgba(255,255,255,0.7)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
-          <text x="1080" y="302" fill="rgba(140,78,55,0.2)" fontSize="9" fontFamily="monospace" letterSpacing="1">1250m</text>
-
-          {/* Complementary concentric elevation loops on the top-right to balance the banner */}
-          <ellipse cx="1360" cy="70" rx="150" ry="105" stroke="rgba(140,78,55,0.22)" strokeWidth="1.2" strokeDasharray="3 4" />
-          <ellipse cx="1360" cy="70" rx="230" ry="160" stroke="rgba(140,78,55,0.3)" strokeWidth="1.5" />
-          <ellipse cx="1360" cy="70" rx="330" ry="230" stroke="rgba(140,78,55,0.22)" strokeWidth="1.2" />
-          <ellipse cx="1360" cy="70" rx="440" ry="305" stroke="rgba(140,78,55,0.26)" strokeWidth="1.5" strokeDasharray="6 4" />
-        </svg>
-      </div>
-
-      {/* Top Left World Scouting Logo */}
-      <div className="absolute top-4 left-4 sm:top-6 sm:left-8 lg:top-7 lg:left-10 z-20">
-        <img
-          src={worldScoutLogo}
-          alt="World Scouting"
-          className="h-7 sm:h-9 lg:h-10 w-auto select-none drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-200"
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(ellipse 55% 60% at 78% 58%, rgba(233, 162, 127, 0.34) 0%, transparent 70%)'
+          }}
         />
+        <TopoBackdrop animated stroke="#8C4E37" />
       </div>
 
-      {/* Warm Ambient Lighting Spots (Sunrise & Campfire Glow) */}
-      <div className="absolute -top-10 left-[18%] sm:left-[26%] w-72 h-72 sm:w-96 sm:h-96 bg-amber-500/15 rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 w-full max-w-5xl h-96 bg-gradient-to-b from-primary/10 via-amber-100/25 to-transparent blur-3xl -z-10 pointer-events-none rounded-full" />
-      <div className="absolute top-1/4 right-[8%] sm:right-[15%] w-72 h-72 sm:w-80 sm:h-80 bg-amber-100/30 rounded-full blur-3xl -z-10 pointer-events-none" />
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Brand row: World Scouting rounded badge sits left of Chil on tablet/desktop */}
+        <div className="animate-hero-rise flex items-center justify-between sm:justify-start gap-4 sm:gap-5 pt-4 sm:pt-5">
+          <div className="order-2 sm:order-1 shrink-0 inline-flex items-center justify-center rounded-xl bg-[#643425] px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-[0_6px_16px_-10px_rgba(46,18,8,0.5)]">
+            <img
+              src={worldScoutLogo}
+              alt="World Scouting"
+              width={126}
+              height={48}
+              fetchPriority="high"
+              className="h-7 sm:h-10 lg:h-11 w-auto select-none"
+            />
+          </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-
-        {/* Logo and Brand */}
-        <div className="flex flex-col items-center justify-center gap-3 mb-6">
-          <img
-            src={logo}
-            alt="Chil Logo"
-            className="h-28 sm:h-32 lg:h-36 w-auto drop-shadow-md hover:scale-105 transition-transform duration-300 select-none"
+          <span
+            aria-hidden="true"
+            className="hidden sm:block sm:order-2 h-9 w-px bg-[#643425]/25 shrink-0"
           />
-          <span className="text-4xl sm:text-5xl font-black text-primary tracking-tight">
-            Chil
-          </span>
+
+          <div className="order-1 sm:order-3 flex items-center gap-3 sm:gap-3.5">
+            <img
+              src={logo}
+              alt="Chil Logo"
+              width={64}
+              height={62}
+              fetchPriority="high"
+              className="h-11 sm:h-13 lg:h-14 w-auto select-none"
+            />
+            <span className="font-display text-3xl sm:text-4xl font-black text-[#643425] tracking-tight">
+              Chil
+            </span>
+          </div>
         </div>
 
-        {/* Title */}
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral tracking-tight leading-tight mb-4">
-          Un Sistema Scout de Emisión y Control de Reconocimientos
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-base sm:text-lg text-neutral/80 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10">
-          La plataforma moderna, ágil y usable para gestionar lotes de reconocimientos, hacer diseños visuales interactivos y generar analítica en el Movimiento.
-        </p>
-
-        {/* CTA Buttons & Fast Action */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 max-w-md mx-auto">
-          <Link to="/registro" className="w-full sm:w-auto flex-1">
-            <Button
-              size="lg"
-              variant="primary"
-              fullWidth
-              icon={<ArrowRight className="w-4 h-4" />}
-              iconPosition="right"
-              className="hover:-translate-y-0.5 transition-all text-sm sm:text-base font-bold"
+        {/* Split composition: centered vertically between brand row and bottom dissolve */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] items-center gap-9 sm:gap-10 lg:gap-10 pt-10 sm:pt-12 lg:pt-14 pb-10 sm:pb-12 lg:pb-10">
+          <div
+            className="will-change-transform"
+            style={{ transform: 'translateY(calc(var(--scroll-progress, 0) * -20px))' }}
+          >
+            <h1
+              className="animate-hero-rise font-display font-black tracking-tight leading-[0.94] text-[clamp(2.35rem,5vw,4.5rem)] mb-4 sm:mb-5"
+              style={{ animationDelay: '70ms' }}
             >
-              Comenzar Ahora
-            </Button>
-          </Link>
+              <span className="block text-[#643425]">Valida registros.</span>{' '}
+              <span className="block text-primary">Reconoce rápido.</span>
+            </h1>
 
-          <Link to="/login" className="w-full sm:w-auto flex-1">
-            <Button
-              size="lg"
-              variant="outline"
-              fullWidth
-              className="border-gray-300 hover:bg-gray-50/80 hover:border-gray-400 hover:-translate-y-0.5 transition-all text-sm sm:text-base font-semibold"
-              icon={<LogIn className="w-4 h-4 text-neutral/70" />}
+            <p
+              className="animate-hero-rise text-base sm:text-lg lg:text-xl text-neutral max-w-xl leading-relaxed mb-7 sm:mb-8"
+              style={{ animationDelay: '140ms' }}
             >
-              Iniciar Sesión
-            </Button>
-          </Link>
+              Sistema Scout de Emisión y Control de Reconocimientos. Valida registros en Impeesa,
+              diseña cada reconocimiento en milímetros reales y descarga paquetes por grupo.
+            </p>
+
+            <div
+              className="animate-hero-rise flex flex-col sm:flex-row gap-3.5 sm:gap-4"
+              style={{ animationDelay: '210ms' }}
+            >
+              <Link
+                to="/registro"
+                className="group inline-flex items-center justify-center gap-2.5 min-h-[54px] px-8 py-3 rounded-2xl bg-primary text-white text-base sm:text-lg font-bold hover:bg-[#743F2C] active:bg-[#5F3323] hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary focus-visible:ring-primary"
+              >
+                Comenzar Ahora
+                <ArrowRight
+                  className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
+              </Link>
+
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-2.5 min-h-[54px] px-8 py-3 rounded-2xl border-2 border-neutral text-neutral text-base sm:text-lg font-semibold hover:bg-neutral/5 active:bg-neutral/10 hover:-translate-y-0.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-secondary focus-visible:ring-primary"
+              >
+                <LogIn className="w-5 h-5 shrink-0" aria-hidden="true" />
+                Iniciar Sesión
+              </Link>
+            </div>
+          </div>
+
+          <div className="lg:-mt-4">
+            <RecognitionStack />
+          </div>
         </div>
       </div>
+
+      {/* Soft multi-stop parchment-to-white atmospheric dissolve into the storytelling canvas */}
+      <div
+        className="relative z-10 w-full h-16 sm:h-20 lg:h-24 -mb-px pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to bottom, rgba(241, 234, 216, 0) 0%, rgba(247, 243, 234, 0.45) 38%, rgba(252, 250, 247, 0.85) 74%, #FFFFFF 100%)'
+        }}
+        aria-hidden="true"
+      />
     </section>
   );
 };

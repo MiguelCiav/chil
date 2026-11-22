@@ -188,8 +188,8 @@ describe('StatisticsDashboard Component', () => {
     render(<StatisticsDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText('Error al cargar estadísticas')).toBeInTheDocument();
-      expect(screen.getByText('Network connectivity lost')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Error al cargar estadísticas');
+      expect(screen.getByRole('alert')).toHaveTextContent('Network connectivity lost');
     });
 
     vi.mocked(batchApi.getAllBatches).mockResolvedValue(mockBatches);
@@ -257,6 +257,18 @@ describe('StatisticsDashboard Component', () => {
     expect(screen.getAllByText('Total (2026)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Año Anterior (2025)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Variación').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders 4 KPI skeleton cards matching StatKpiGrid column count while loading', () => {
+    vi.mocked(batchApi.getAllBatches).mockReturnValue(new Promise(() => {}));
+
+    render(<StatisticsDashboard />);
+
+    const status = screen.getByRole('status', { name: 'Cargando estadísticas' });
+    expect(status).toBeInTheDocument();
+    const kpiSkeletonGrid = screen.getByTestId('kpi-skeleton-grid');
+    expect(kpiSkeletonGrid).toHaveClass('lg:grid-cols-4');
+    expect(kpiSkeletonGrid.children).toHaveLength(4);
   });
 });
 

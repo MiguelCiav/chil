@@ -27,6 +27,68 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
   }
+
+  a[href],
+  button,
+  summary,
+  select,
+  label[for],
+  label:has(> input[type="checkbox"], > input[type="radio"]),
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  input[type="range"],
+  input[type="color"] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible,
+  [role="button"]:focus-visible,
+  [role="tab"]:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -10rem;
+  z-index: 100;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 0.75rem;
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
 }
 
 @keyframes modalBackdropFadeIn {
@@ -85,12 +147,107 @@
   animation: modalContentPopOut 150ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes topoDrift {
+  to {
+    stroke-dashoffset: -120;
+  }
+}
+
+.animate-topo-drift {
+  animation: topoDrift 18s linear infinite;
+}
+
+@keyframes heroRiseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-hero-rise {
+  animation: heroRiseIn 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Implicit `to` keyframe: each card settles into its own inline rotation */
+@keyframes cardDeal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 48px, 0) rotate(0deg) scale(0.96);
+  }
+}
+
+.animate-card-deal {
+  animation: cardDeal 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes marqueeLeft {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes marqueeRight {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-marquee-left {
+  animation: marqueeLeft 46s linear infinite;
+}
+
+.animate-marquee-right {
+  animation: marqueeRight 50s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-modal-backdrop,
   .animate-modal-backdrop-out,
   .animate-modal-pop,
-  .animate-modal-pop-out {
-    animation: none;
+  .animate-modal-pop-out,
+  .animate-pulse,
+  .animate-bounce,
+  .animate-ping,
+  .animate-fade-in,
+  .animate-topo-drift,
+  .animate-hero-rise,
+  .animate-card-deal,
+  .animate-marquee-left,
+  .animate-marquee-right {
+    animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { MainLayout } from '../MainLayout';
 import * as authFeature from '../../features/auth';
 
-vi.mock('../../components/navigation', () => ({
+vi.mock('../../domain/components/navigation', () => ({
   Sidebar: ({ isMobileOpen, onMobileClose }: { isMobileOpen?: boolean; onMobileClose?: () => void }) => (
     <div data-testid="mock-sidebar">
       <span>Mock Sidebar</span>
@@ -125,5 +125,31 @@ describe('MainLayout', () => {
 
     fireEvent.click(screen.getByTestId('close-mobile-sidebar'));
     expect(screen.queryByTestId('close-mobile-sidebar')).not.toBeInTheDocument();
+  });
+
+  it('renders an accessible skip link targeting #main-content in both public and app shells', () => {
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <MainLayout>
+          <div>Public Content</div>
+        </MainLayout>
+      </MemoryRouter>
+    );
+
+    const publicSkipLink = screen.getByRole('link', { name: /Saltar al contenido principal/i });
+    expect(publicSkipLink).toHaveAttribute('href', '#main-content');
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
+
+    rerender(
+      <MemoryRouter initialEntries={['/lotes']}>
+        <MainLayout>
+          <div>App Content</div>
+        </MainLayout>
+      </MemoryRouter>
+    );
+
+    const appSkipLink = screen.getByRole('link', { name: /Saltar al contenido principal/i });
+    expect(appSkipLink).toHaveAttribute('href', '#main-content');
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
   });
 });

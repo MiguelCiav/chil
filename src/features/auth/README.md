@@ -5,13 +5,13 @@ The `auth` feature subsystem manages Firebase Authentication and session state f
 
 ## Local Interface & Invariants
 - **Public Barrel (`index.ts`)**:
-  - `index.ts:*` re-exports `./types`, `./api`, `./context/AuthContext`, `./hooks/useAuth`, `./components/LoginPage`, `./components/RegisterPage`, `./components/ForgotPasswordModal`, `./components/ProtectedRoute`, and `./components/UserProfileMenu`.
+  - `index.ts:*` re-exports `./types`, `./api`, `./context/AuthContext`, `./hooks/useAuth`, `./components/LoginPage`, `./components/RegisterPage`, `./components/ForgotPasswordModal`, `./components/ProtectedRoute`, `./components/UserProfileMenu`, `./components/AuthLayout`, `./components/PasswordField`, and `./components/SessionLoadingState`.
   - **Invariants**: None (pure barrel re-export module).
   - **Side Effects**: None.
 
 ## Subdirectories & System Boundaries
 - **API**: [`./api/README.md`](./api/README.md) — Firebase Auth SDK wrappers (`loginWithEmail`, `registerWithEmail`, `logoutUser`, `resetPasswordEmail`, `getCurrentUser`, `onAuthStateChangedListener`), `AuthUser` mapping, and Spanish error code mapping.
-- **Components**: [`./components/README.md`](./components/README.md) — `LoginPage`, `RegisterPage`, `ForgotPasswordModal`, `ProtectedRoute`, and `UserProfileMenu`.
+- **Components**: [`./components/README.md`](./components/README.md) — `LoginPage`, `RegisterPage`, `ForgotPasswordModal`, `ProtectedRoute`, `UserProfileMenu`, `AuthLayout`, `PasswordField`, and `SessionLoadingState`.
 - **Context**: [`./context/README.md`](./context/README.md) — `AuthContext` and `AuthProvider` subscribing to Firebase auth state and exposing memoized auth actions.
 - **Hooks**: [`./hooks/README.md`](./hooks/README.md) — `useAuth` consumer hook enforcing `AuthProvider` boundary.
 - **Types**: [`./types/README.md`](./types/README.md) — `EMAIL_REGEX`, Zod schemas (`loginSchema`, `registerSchema`, `forgotPasswordSchema`), and `AuthUser` / `AuthContextType` interfaces.

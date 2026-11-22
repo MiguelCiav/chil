@@ -5,9 +5,8 @@ import {
   getPaginationRowModel,
   useReactTable
 } from '@tanstack/react-table';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
-
-import { Button } from '../../../components/Button';
+import { ErrorAlert } from '../../../components/ErrorAlert';
+import { Toast } from '../../../components/Toast';
 import {
   useWalkthrough,
   WalkthroughOverlay
@@ -46,12 +45,14 @@ import {
   BatchMembersTable,
   BatchSummaryCards,
   BatchTerritorialCard,
-  DeleteBatchModal,
-  EditMemberModal,
   MemberQuickViewModal,
   BatchDetailTotals
 } from './detail';
-import { CertificateZipProgressModal } from './shared';
+import {
+  CertificateZipProgressModal,
+  DeleteBatchModal,
+  EditMemberModal
+} from './shared';
 import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
 import { calculateBatchTerritorialBreakdown } from '../utils/batchTerritorial';
 
@@ -81,6 +82,7 @@ export const BatchDetail: React.FC = () => {
   const [batch, setBatch] = useState<Batch | null>(null);
   const [members, setMembers] = useState<ScoutMember[]>([]);
   const [loading, setLoading] = useState(!Number.isNaN(Number(id)));
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const zipDownload = useCertificateZipDownload();
   const [downloadingReport, setDownloadingReport] = useState(false);
@@ -129,11 +131,13 @@ export const BatchDetail: React.FC = () => {
   const [districts, setDistricts] = useState<District[]>([]);
   const [groups, setGroups] = useState<ScoutGroup[]>([]);
 
-  useEffect(() => {
+  const loadBatchDetails = useCallback(() => {
     if (Number.isNaN(batchId)) {
       return;
     }
 
+    setLoading(true);
+    setLoadError(null);
     Promise.all([
       getBatchById(batchId),
       getMembersByBatchId(batchId),
@@ -157,11 +161,16 @@ export const BatchDetail: React.FC = () => {
       })
       .catch((err) => {
         console.error('Error loading batch details:', err);
+        setLoadError('No se pudo cargar la información del lote.');
       })
       .finally(() => {
         setLoading(false);
       });
   }, [batchId, user?.uid]);
+
+  useEffect(() => {
+    loadBatchDetails();
+  }, [loadBatchDetails]);
 
   const handleDownloadPDF = (bucketKey?: ReportBucketKey) => {
     if (!batch) return;
@@ -347,21 +356,37 @@ export const BatchDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] font-sans text-neutral/50">
+      <div
+        role="status"
+        aria-busy="true"
+        className="flex items-center justify-center min-h-[400px] font-sans text-neutral/75"
+      >
         Cargando detalles de lote...
       </div>
     );
   }
 
+  if (loadError) {
+    return (
+      <ErrorAlert
+        variant="centered"
+        title="Error al cargar el lote"
+        message={loadError}
+        retryLabel="Reintentar"
+        onRetry={loadBatchDetails}
+      />
+    );
+  }
+
   if (!batch) {
     return (
-      <div className="max-w-md mx-auto text-center space-y-4 py-12 font-sans">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-        <h2 className="text-xl font-bold text-neutral">Lote no encontrado</h2>
-        <Button variant="primary" onClick={() => navigate('/lotes')}>
-          Volver al listado
-        </Button>
-      </div>
+      <ErrorAlert
+        variant="centered"
+        title="Lote no encontrado"
+        message="El lote solicitado no existe o fue eliminado."
+        retryLabel="Volver al listado"
+        onRetry={() => navigate('/lotes')}
+      />
     );
   }
 
@@ -373,10 +398,11 @@ export const BatchDetail: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2 relative">
       {/* Toast Notification */}
       {showToast && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
-          <CheckCircle2 className="w-5 h-5 text-green-400" />
-          <span className="text-sm font-semibold">{toastMessage}</span>
-        </div>
+        <Toast
+          message={toastMessage}
+          variant="success"
+          onDismiss={() => setShowToast(false)}
+        />
       )}
 
       {/* Header with Title and Action Buttons */}

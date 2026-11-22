@@ -5,7 +5,7 @@ The `statistics` feature subsystem aggregates recognition batch and member recor
 
 ## Local Interface & Invariants
 - **Public Barrel (`index.ts`)**:
-  - `index.ts:*` re-exports `./types`, `./utils/statsCalculators`, `./utils/statsPdfExport`, `./hooks/useStatisticsData`, `./components/StatisticsDashboard`, `./components/StatKpiGrid`, `./components/FilterBar`, `./components/charts/MonthlyTrendChart`, `./components/charts/RecognitionRankingChart`, `./components/charts/DemographicsDonut`, `./components/charts/GeographicBarChart`, `./components/charts/StatusBreakdownCard`, `./components/charts/RegionSummaryTable`, `./components/charts/DistrictSummaryTable`, `./components/charts/UnitDistributionCard`, and `./components/YoYVariationBadge`.
+  - `index.ts:*` re-exports `./types`, `./utils/statsCalculators`, `./utils/statsPdfExport`, `./hooks/useStatisticsData`, `./components/StatisticsDashboard`, `./components/StatKpiGrid`, `./components/FilterBar`, `./components/charts/MonthlyTrendChart`, `./components/charts/DemographicsDonut`, `./components/charts/RegionSummaryTable`, `./components/charts/DistrictSummaryTable`, `./components/charts/GroupSummaryTable`, `./components/charts/UnitDistributionCard`, and `./components/YoYVariationBadge`.
   - **Invariants**: None (pure barrel re-export module).
   - **Side Effects**: None.
 
@@ -22,7 +22,7 @@ The `statistics` feature subsystem aggregates recognition batch and member recor
 - **Chart & PDF Presentation Guards**: Chart/table components do not memoize or re-sort input arrays, truncate list views at `5` items behind a `showAll` toggle, and floor `maxCount` at `1` (monthly chart `maxVal` at `5`); `statsPdfExport.ts` truncates long labels to fixed lengths and paginates at `currentY + requiredSpace > 279` mm.
 
 ## Global Side Effects
-- **Firestore / Cross-Feature Reads**: `useStatisticsData` fetches `getAllBatches`, `getAllMembers`, `getHierarchyData` (from `../../batches/api`), and `getAllRecognitionTypes` (from `../../recognitions/api`) via `Promise.all` on mount, user change, or `refresh()`.
+- **Firestore / Cross-Feature Reads**: `useStatisticsData` fetches `getAllBatches`, `getAllMembers`, `getHierarchyData` (from `../../batches/api`), and `getAllRecognitionTypes` (from `../../recognitions`) via `Promise.all` on mount, user change, or `refresh()`.
 - **PDF Export & Logging**: `exportStatisticsPdf` instantiates `jsPDF` (A4 portrait) and triggers a file download via `doc.save(fileName)`; `useStatisticsData` logs fetch failures via `console.error`.
 
 ## System Verification

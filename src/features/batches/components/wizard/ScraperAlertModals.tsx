@@ -1,7 +1,13 @@
 import React from 'react';
 import { AlertCircle, AlertTriangle } from 'lucide-react';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
-import { Button } from '../../../../components/Button';
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  ErrorAlert
+} from '../../../../components';
 import { useScraperSettings } from '../../../../context/ScraperSettingsContext';
 
 export interface ScraperAlertModalsProps {
@@ -33,7 +39,7 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
           <p className="text-sm">
             Para realizar la consulta automatizada en el Registro Nacional de Scouts, primero debe conectar su sesión de Impeesa en los Ajustes del sistema.
           </p>
-          <p className="text-xs text-neutral/70 bg-amber-50 border border-amber-100 p-3 rounded-xl font-medium">
+          <p className="text-xs text-neutral/75 bg-amber-50 border border-amber-100 p-3 rounded-xl font-medium">
             Chil no almacena tu contraseña; solo guarda las cookies de sesión cifradas en el servidor para tus consultas.
           </p>
         </ModalBody>
@@ -56,7 +62,7 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
       {/* Scraper Connection Auth Error Modal */}
       <Modal isOpen={authError !== null} onClose={onCloseAuthError} className="max-w-md">
         <ModalHeader onClose={onCloseAuthError}>
-          <span className="flex items-center gap-2 text-red-600 font-bold">
+          <span className="flex items-center gap-2 text-red-700 font-bold">
             <AlertCircle className="w-5 h-5" />
             Error de Autenticación
           </span>
@@ -65,9 +71,11 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
           <p className="text-sm">
             La sesión con el Sistema de Registro de la ASV expiró o no es válida. Vuelva a conectar su sesión de Impeesa en Ajustes para continuar.
           </p>
-          <div className="bg-red-50 text-red-800 text-xs border border-red-100 p-3 rounded-xl max-h-32 overflow-y-auto font-mono">
-            {authError}
-          </div>
+          <ErrorAlert
+            variant="compact"
+            message={authError ?? ''}
+            className="max-h-32 overflow-y-auto font-mono"
+          />
         </ModalBody>
         <ModalFooter>
           <Button variant="outline" onClick={onCloseAuthError}>

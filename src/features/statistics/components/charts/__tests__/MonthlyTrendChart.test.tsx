@@ -75,12 +75,21 @@ describe('MonthlyTrendChart component', () => {
     expect(chartSvg.getAttribute('viewBox')).toBe('0 0 760 232');
   });
 
-  it('shows previous year bar value on hover alongside tooltip overlay', () => {
+  it('shows previous year bar value on hover and keyboard focus alongside tooltip overlay', () => {
     render(<MonthlyTrendChart data={mockMonthly} year={2026} yoy={mockYoY} />);
 
     const eneGroup = screen.getByRole('graphics-symbol', { name: /Ene: 12 \(2026\) vs 6 \(2025\)/i });
     fireEvent.mouseEnter(eneGroup);
 
     expect(screen.getByText('Ene • Comparativa')).toBeInTheDocument();
+
+    fireEvent.mouseLeave(eneGroup);
+    expect(screen.queryByText('Ene • Comparativa')).not.toBeInTheDocument();
+
+    fireEvent.focus(eneGroup);
+    expect(screen.getByText('Ene • Comparativa')).toBeInTheDocument();
+
+    fireEvent.blur(eneGroup);
+    expect(screen.queryByText('Ene • Comparativa')).not.toBeInTheDocument();
   });
 });

@@ -95,6 +95,8 @@ describe('Step2ReviewConfirm component', () => {
 
     expect(screen.getAllByText('DON BOSCO 21').length).toBeGreaterThan(0);
     expect(screen.getByText('Solvente hasta 2026-12-31')).toBeInTheDocument();
+    expect(screen.getByText('Registro Válido')).toBeInTheDocument();
+    expect(screen.getByText('Registro Inválido')).toBeInTheDocument();
   });
 
   it('toggles code strategy and regenerates codes', () => {

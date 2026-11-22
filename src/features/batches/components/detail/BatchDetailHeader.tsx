@@ -49,17 +49,16 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
             {`LT-${new Date(batch.created_at).getFullYear()}-${String(batch.id).padStart(3, '0')}`}
           </span>
         </div>
-        <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+        <p className="text-xs sm:text-sm text-neutral/75 mt-1">
           Revisión y gestión de reconocimientos del lote actual.
         </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-3 w-full xl:w-auto xl:ml-auto">
         <Button
-          variant="outline"
+          variant="destructive"
           onClick={onDeleteClick}
           icon={<Trash2 size={16} />}
-          className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
         >
           Eliminar Lote
         </Button>
@@ -83,8 +82,6 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
           chevronAriaLabel="Opciones de certificados por grupo"
           menuAriaLabel="Exportar certificados por grupo"
           variant="primary"
-          primaryClassName="bg-[#5c371d] hover:bg-[#4b2c17] text-white"
-          chevronClassName="bg-[#5c371d] hover:bg-[#4b2c17] text-white border-l border-white/25"
           icon={<FileText size={16} />}
         />
       </div>

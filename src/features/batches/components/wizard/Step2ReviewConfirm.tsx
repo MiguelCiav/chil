@@ -3,7 +3,6 @@ import {
   Users,
   GraduationCap,
   User,
-  Search,
   Edit2,
   Trash2,
   ArrowLeft,
@@ -11,14 +10,19 @@ import {
   Eraser,
   UserPlus,
   CheckCircle2,
-  RefreshCw,
-  ShieldCheck,
-  AlertTriangle
+  RefreshCw
 } from 'lucide-react';
-import { Card, CardHeader, CardBody, CardFooter } from '../../../../components/Card';
-import { Button } from '../../../../components/Button';
-import { Table } from '../../../../components/Table';
-import { ColumnDef } from '@tanstack/react-table';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter,
+  Button,
+  SearchInput,
+  DataTable
+} from '../../../../components';
+import { MemberStatusBadge } from '../../../../domain/components';
+import { ColumnDef, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { ScoutGroup, ScoutMember, Region, District, getUnitBadge } from '../../types';
 import {
   updateMember,
@@ -42,29 +46,15 @@ export interface Step2ReviewConfirmProps {
 }
 
 function getMemberStatusBadge(member: ScoutMember) {
-  if (member.status === 'exceptional') {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 rounded-full">
-        Excepcional
-      </span>
-    );
-  }
-  if (member.status === 'active' || member.is_solvent) {
-    const text = member.solvent_until
-      ? `Solvente hasta ${member.solvent_until}`
-      : 'Registro válido';
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 rounded-full">
-        <ShieldCheck className="w-3 h-3 text-green-600" />
-        <span className="truncate max-w-[150px]">{text}</span>
-      </span>
-    );
-  }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold bg-red-50 text-red-600 border border-red-200 rounded-full">
-      <AlertTriangle className="w-3 h-3 text-red-500" />
-      <span>Pendiente</span>
-    </span>
+    <MemberStatusBadge
+      status={member.status}
+      solventUntil={
+        member.is_solvent || member.status === 'active'
+          ? member.solvent_until
+          : undefined
+      }
+    />
   );
 }
 
@@ -251,7 +241,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
                 <div className="font-semibold text-neutral text-sm truncate">
                   {m.first_names} {m.last_names}
                 </div>
-                <div className="text-xs text-neutral/50 font-mono">
+                <div className="text-xs text-neutral/75 font-mono">
                   C.I. {m.identity}
                 </div>
               </div>
@@ -269,7 +259,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
           const regionLabel = m.region_name || (m.region_id ? `Región ${m.region_id}` : null);
 
           if (!groupLabel && !districtLabel && !regionLabel) {
-            return <span className="text-xs text-neutral/40 italic">Sin estructura asignada</span>;
+            return <span className="text-xs text-neutral/75 italic">Sin estructura asignada</span>;
           }
 
           return (
@@ -277,7 +267,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
               <span className="font-semibold text-neutral block truncate">
                 {groupLabel || districtLabel || regionLabel}
               </span>
-              <span className="text-neutral/50 text-[11px] block truncate">
+              <span className="text-neutral/75 text-xs block truncate">
                 {[regionLabel, districtLabel].filter(Boolean).join(' › ')}
               </span>
             </div>
@@ -297,7 +287,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
               >
                 {unitBadge.label}
               </span>
-              <span className="text-[11px] text-neutral/60 font-medium">
+              <span className="text-xs text-neutral/75 font-medium">
                 {m.member_type === 'young' ? 'Joven' : 'Adulto'}
               </span>
             </div>
@@ -321,12 +311,12 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
                 value={m.recognition_code || ''}
                 onChange={(e) => handleInlineCodeChange(m.identity, e.target.value)}
                 placeholder="REC-XXXXXX"
-                className="w-28 font-mono text-xs font-bold uppercase px-2.5 py-1 rounded-lg border border-primary/20 bg-white text-neutral focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-28 font-mono text-xs font-bold uppercase px-2.5 py-1 rounded-lg border border-primary/70 bg-white text-neutral focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                 aria-label={`Código de reconocimiento de ${m.first_names} ${m.last_names}`}
               />
             );
           }
-          return <span className="text-xs font-mono text-neutral/40 italic">Sin código</span>;
+          return <span className="text-xs font-mono text-neutral/75 italic">Sin código</span>;
         }
       },
       {
@@ -339,7 +329,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
               <button
                 type="button"
                 onClick={() => handleEditMemberClick(m)}
-                className="p-1.5 hover:bg-primary/10 rounded-lg text-neutral/70 hover:text-primary transition-colors"
+                className="p-1.5 hover:bg-primary/10 rounded-lg text-neutral/75 hover:text-primary transition-colors"
                 title="Editar datos"
                 aria-label={`Editar ${m.first_names} ${m.last_names}`}
               >
@@ -348,7 +338,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
               <button
                 type="button"
                 onClick={() => handleDeleteMember(m)}
-                className="p-1.5 hover:bg-red-50 rounded-lg text-neutral/70 hover:text-red-600 transition-colors"
+                className="p-1.5 hover:bg-red-50 rounded-lg text-neutral/75 hover:text-red-700 transition-colors"
                 title="Quitar del lote"
                 aria-label={`Quitar a ${m.first_names} ${m.last_names}`}
               >
@@ -361,9 +351,15 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
     ];
   }, [handleDeleteMember, handleInlineCodeChange]);
 
+  const table = useReactTable({
+    data: displayedMembers,
+    columns,
+    getCoreRowModel: getCoreRowModel()
+  });
+
   return (
     <div data-walkthrough="wizard-step-container" className="space-y-6">
-      <Card className="border-primary/10 shadow-sm">
+      <Card>
         {/* Header de Métricas */}
         <CardHeader className="bg-primary/5 border-b border-primary/10 flex flex-wrap justify-between items-center gap-4">
           <div>
@@ -391,7 +387,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
           <div className="bg-[#faf8f5] border border-primary/15 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h3 className="text-sm font-bold text-neutral">Estrategia de Códigos de Reconocimiento</h3>
-              <p className="text-xs text-neutral/50">
+              <p className="text-xs text-neutral/75">
                 {codeMode === 'auto'
                   ? 'Códigos asignados automáticamente de acuerdo al tipo y orden.'
                   : 'Modo manual activo: puedes editar los códigos directamente en la tabla.'}
@@ -455,7 +451,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
                 className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   activeTab === 'all'
                     ? 'bg-white text-primary shadow-xs'
-                    : 'text-neutral/60 hover:text-primary'
+                    : 'text-neutral/75 hover:text-primary'
                 }`}
               >
                 Todos ({membersList.length})
@@ -466,7 +462,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
                 className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   activeTab === 'valid'
                     ? 'bg-white text-primary shadow-xs'
-                    : 'text-neutral/60 hover:text-primary'
+                    : 'text-neutral/75 hover:text-primary'
                 }`}
               >
                 Válidos ({validMembers.length})
@@ -477,36 +473,38 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
                 className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   activeTab === 'pending'
                     ? 'bg-white text-primary shadow-xs'
-                    : 'text-neutral/60 hover:text-primary'
+                    : 'text-neutral/75 hover:text-primary'
                 }`}
               >
                 Pendientes ({pendingMembers.length})
               </button>
             </div>
 
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
-              <input
-                type="text"
+            <div className="w-full sm:w-72">
+              <SearchInput
+                size="sm"
                 placeholder="Buscar por nombre, cédula o grupo..."
                 aria-label="Buscar por nombre, cédula o grupo"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 rounded-xl border border-primary/20 bg-primary/5 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs transition-all"
+                onClear={() => setSearchQuery('')}
               />
             </div>
           </div>
 
           {/* Tabla de Miembros Auto-Descubiertos */}
-          <div className="border border-primary/20 rounded-2xl overflow-hidden bg-white shadow-xs">
-            <Table columns={columns} data={displayedMembers} className="!border-0 !rounded-none" />
+          <div className="border border-primary/20 rounded-2xl overflow-hidden bg-white">
+            <DataTable
+              table={table}
+              columnCount={columns.length}
+              bordered={false}
+              emptyState={
+                <span className="text-sm text-neutral/75">
+                  No se encontraron miembros en esta selección.
+                </span>
+              }
+            />
           </div>
-
-          {displayedMembers.length === 0 && (
-            <div className="p-8 text-center border border-dashed border-primary/20 rounded-2xl text-neutral/40 text-sm">
-              No se encontraron miembros en esta selección.
-            </div>
-          )}
         </CardBody>
 
         <CardFooter

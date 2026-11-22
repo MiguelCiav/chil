@@ -3,8 +3,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, RefreshCw, AlertTriangle, UploadCloud } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Card, CardHeader, CardBody } from '../../../../components/Card';
-import { Button } from '../../../../components/Button';
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  Button,
+  Field,
+  Select
+} from '../../../../components';
 import { RecognitionType } from '../../../recognitions';
 import { step1DataLoadSchema, Step1DataLoadFormData } from './wizardSchema';
 import { parseCedulasFromText } from './wizardHelpers';
@@ -88,11 +94,11 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
         </div>
       )}
 
-      <Card className="border-primary/10 shadow-sm">
+      <Card>
         <CardHeader className="bg-primary/5 border-b border-primary/10">
           <div>
             <h2 className="text-lg font-bold text-neutral">Carga de Datos del Lote</h2>
-            <p className="text-xs text-neutral/60">
+            <p className="text-xs text-neutral/75">
               Ingresa el tipo de reconocimiento y la lista de cédulas. La estructura geográfica y las unidades se auto-detectarán.
             </p>
           </div>
@@ -105,50 +111,31 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
           <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-6">
             {/* Metadatos Generales */}
             <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label
-                  htmlFor="field-recognition-type"
-                  className="block text-xs font-bold uppercase tracking-wider text-neutral mb-2"
-                >
-                  Tipo de Reconocimiento *
-                </label>
-                <select
-                  id="field-recognition-type"
-                  {...register('recognitionType')}
-                  aria-label="Tipo de Reconocimiento"
-                  className="w-full rounded-field px-4 h-[46px] bg-primary/5 border border-primary/20 text-neutral text-sm focus:ring-2 focus:ring-primary"
-                  disabled={isVerifying || loadingHierarchy}
-                >
-                  <option value="">Seleccione un reconocimiento...</option>
-                  {recognitionTypes.map((rt) => (
-                    <option key={rt.id} value={rt.id}>
-                      {rt.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.recognitionType && (
-                  <p className="text-xs text-red-500 mt-1 font-medium">
-                    {errors.recognitionType.message}
-                  </p>
-                )}
-              </div>
+              <Select
+                id="field-recognition-type"
+                label="Tipo de Reconocimiento *"
+                aria-label="Tipo de Reconocimiento"
+                disabled={isVerifying || loadingHierarchy}
+                variant={errors.recognitionType ? 'error' : 'default'}
+                errorText={errors.recognitionType?.message}
+                {...register('recognitionType')}
+              >
+                <option value="">Seleccione un reconocimiento...</option>
+                {recognitionTypes.map((rt) => (
+                  <option key={rt.id} value={rt.id}>
+                    {rt.name}
+                  </option>
+                ))}
+              </Select>
 
-              <div>
-                <label
-                  htmlFor="field-batch-comment"
-                  className="block text-xs font-bold uppercase tracking-wider text-neutral mb-2"
-                >
-                  Título / Comentario del Lote (Opcional)
-                </label>
-                <input
-                  id="field-batch-comment"
-                  {...register('comment')}
-                  aria-label="Título o Comentario del Lote"
-                  placeholder="Ej. Reconocimientos de ENJ 2026"
-                  className="w-full rounded-field px-4 h-[46px] bg-primary/5 border border-primary/20 text-neutral text-sm focus:ring-2 focus:ring-primary"
-                  disabled={isVerifying}
-                />
-              </div>
+              <Field
+                id="field-batch-comment"
+                label="Título / Comentario del Lote (Opcional)"
+                aria-label="Título o Comentario del Lote"
+                placeholder="Ej. Reconocimientos de ENJ 2026"
+                disabled={isVerifying}
+                {...register('comment')}
+              />
             </div>
 
             {/* Caja Única de Cédulas */}
@@ -156,12 +143,12 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="field-batch-cedulas"
-                  className="block text-xs font-bold uppercase tracking-wider text-neutral"
+                  className="block text-sm font-semibold text-neutral"
                 >
                   Cédulas de Identidad *
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-neutral/10 text-neutral/70">
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-neutral/10 text-neutral/75">
                     {parsedCount} {parsedCount === 1 ? 'cédula detectada' : 'cédulas detectadas'}
                   </span>
                   <label
@@ -188,11 +175,13 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
                 aria-label="Cédulas de Identidad"
                 rows={6}
                 placeholder={`Pega aquí las cédulas una por línea o separadas por comas.\nEjemplos:\n12345678\n23456789\n34567890`}
-                className="w-full rounded-field p-4 bg-primary/5 border border-primary/20 text-neutral text-sm font-mono focus:ring-2 focus:ring-primary"
+                className="w-full rounded-field p-4 bg-primary/5 border border-primary/70 text-neutral text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 disabled={isVerifying}
               />
               {errors.cedulas && (
-                <p className="text-xs text-red-500 font-medium">{errors.cedulas.message}</p>
+                <p role="alert" className="text-xs text-red-700 font-medium">
+                  {errors.cedulas.message}
+                </p>
               )}
             </div>
 

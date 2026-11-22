@@ -1,8 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
-import { Button } from '../../../../components/Button';
-import { Field } from '../../../../components/Field';
-import { isNoAplicaDistrict } from '../../../../utils/memberHierarchy';
+import React, { useState } from 'react';
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Field,
+  Select
+} from '../../../../components';
+import { MemberHierarchySelects } from '../../../../domain/components';
 import { ScoutGroup, ScoutMember, ScoutUnit, Region, District } from '../../types';
 
 export interface ManualMemberModalProps {
@@ -36,18 +42,6 @@ export const ManualMemberModal: React.FC<ManualMemberModalProps> = ({
   const [districtId, setDistrictId] = useState<number | undefined>(undefined);
   const [groupId, setGroupId] = useState<number | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const availableDistricts = useMemo(() => {
-    if (!regionId || regionId === 0) {
-      return districts.filter((d) => d.id !== 0 && !isNoAplicaDistrict(d));
-    }
-    return districts.filter((d) => d.id !== 0 && !isNoAplicaDistrict(d) && d.region_id === regionId);
-  }, [districts, regionId]);
-
-  const availableGroups = useMemo(() => {
-    if (!districtId || districtId === 0) return groups.filter((g) => g.id !== 0);
-    return groups.filter((g) => g.id !== 0 && g.district_id === districtId);
-  }, [groups, districtId]);
 
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -92,7 +86,7 @@ export const ManualMemberModal: React.FC<ManualMemberModalProps> = ({
       <ModalHeader onClose={onClose}>Agregar Miembro Manual / No Scout</ModalHeader>
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
         <ModalBody className="space-y-4">
-          <p className="text-xs text-neutral/60">
+          <p className="text-xs text-neutral/75">
             Agrega colaboradores, autoridades o personas que no figuren en el registro de scouts.
           </p>
 
@@ -122,45 +116,29 @@ export const ManualMemberModal: React.FC<ManualMemberModalProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="manual-member-type"
-                className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-              >
-                Tipo de Miembro *
-              </label>
-              <select
-                id="manual-member-type"
-                value={memberType}
-                onChange={(e) => setMemberType(e.target.value as 'young' | 'adult')}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              >
-                <option value="adult">Adulto</option>
-                <option value="young">Joven</option>
-              </select>
-            </div>
+            <Select
+              id="manual-member-type"
+              label="Tipo de Miembro *"
+              value={memberType}
+              onChange={(e) => setMemberType(e.target.value as 'young' | 'adult')}
+            >
+              <option value="adult">Adulto</option>
+              <option value="young">Joven</option>
+            </Select>
 
-            <div>
-              <label
-                htmlFor="manual-member-unit"
-                className="block uppercase text-xs font-bold mb-2 tracking-wide text-neutral"
-              >
-                Rama / Unidad *
-              </label>
-              <select
-                id="manual-member-unit"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value as ScoutUnit)}
-                className="w-full rounded-field px-4 py-2.5 bg-primary/5 border border-primary/20 text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              >
-                <option value="no_scout">No scout / Invitado</option>
-                <option value="institucional">Institucional</option>
-                <option value="manada">Manada</option>
-                <option value="tropa">Tropa</option>
-                <option value="caminantes">Caminantes</option>
-                <option value="clan">Clan</option>
-              </select>
-            </div>
+            <Select
+              id="manual-member-unit"
+              label="Rama / Unidad *"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value as ScoutUnit)}
+            >
+              <option value="no_scout">No scout / Invitado</option>
+              <option value="institucional">Institucional</option>
+              <option value="manada">Manada</option>
+              <option value="tropa">Tropa</option>
+              <option value="caminantes">Caminantes</option>
+              <option value="clan">Clan</option>
+            </Select>
           </div>
 
           <Field
@@ -172,55 +150,25 @@ export const ManualMemberModal: React.FC<ManualMemberModalProps> = ({
 
           {(regions.length > 0 || districts.length > 0 || groups.length > 0) && (
             <div className="space-y-3 pt-2 border-t border-gray-100">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-neutral/70">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-neutral/75">
                 Estructura Scout (Opcional)
               </h4>
-              <div className="grid grid-cols-3 gap-2">
-                <select
-                  value={regionId ?? 0}
-                  onChange={(e) => {
-                    const id = Number(e.target.value);
-                    setRegionId(id === 0 ? undefined : id);
-                    setDistrictId(undefined);
-                    setGroupId(undefined);
-                  }}
-                  className="rounded-field px-2.5 py-2 bg-primary/5 border border-primary/20 text-neutral text-xs"
-                >
-                  <option value={0}>Región...</option>
-                  {regions.filter((r) => r.id !== 0).map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={districtId ?? 0}
-                  onChange={(e) => {
-                    const id = Number(e.target.value);
-                    setDistrictId(id === 0 ? undefined : id);
-                    setGroupId(undefined);
-                  }}
-                  className="rounded-field px-2.5 py-2 bg-primary/5 border border-primary/20 text-neutral text-xs"
-                >
-                  <option value={0}>Distrito...</option>
-                  {availableDistricts.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={groupId ?? 0}
-                  onChange={(e) => {
-                    const id = Number(e.target.value);
-                    setGroupId(id === 0 ? undefined : id);
-                  }}
-                  className="rounded-field px-2.5 py-2 bg-primary/5 border border-primary/20 text-neutral text-xs"
-                >
-                  <option value={0}>Grupo...</option>
-                  {availableGroups.map((g) => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
-                </select>
-              </div>
+              <MemberHierarchySelects
+                hideWhenEmpty
+                size="sm"
+                layout="grid"
+                regions={regions}
+                districts={districts}
+                groups={groups}
+                regionId={regionId ?? 0}
+                districtId={districtId ?? 0}
+                groupId={groupId ?? 0}
+                onChange={(next) => {
+                  setRegionId(next.region_id === 0 ? undefined : next.region_id);
+                  setDistrictId(next.district_id === 0 ? undefined : next.district_id);
+                  setGroupId(next.group_id === 0 ? undefined : next.group_id);
+                }}
+              />
             </div>
           )}
         </ModalBody>

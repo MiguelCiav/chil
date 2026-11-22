@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, AlertCircle, AlertTriangle, X } from 'lucide-react';
-import { Button } from '../../../components/Button';
+import { Toast, ErrorAlert } from '../../../components';
 import {
   WalkthroughOverlay,
   useWalkthrough,
@@ -484,30 +483,25 @@ export const CertificateDesigner: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto py-12 flex flex-col items-center justify-center gap-3">
+      <div
+        role="status"
+        className="max-w-7xl mx-auto py-12 flex flex-col items-center justify-center gap-3"
+      >
         <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-semibold text-neutral/70">Cargando diseñador de plantilla...</p>
+        <p className="text-sm font-semibold text-neutral/75">Cargando diseñador de plantilla...</p>
       </div>
     );
   }
 
   if (!recognition) {
     return (
-      <div className="max-w-3xl mx-auto py-12 text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-        <h2 className="text-xl font-bold text-neutral">Reconocimiento no encontrado</h2>
-        <p className="text-sm text-neutral/60">
-          El tipo de reconocimiento solicitado no existe o fue eliminado.
-        </p>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() => navigate('/reconocimientos')}
-          icon={<ArrowLeft size={16} />}
-        >
-          Volver al Catálogo
-        </Button>
-      </div>
+      <ErrorAlert
+        variant="centered"
+        title="Reconocimiento no encontrado"
+        message="El tipo de reconocimiento solicitado no existe o fue eliminado."
+        retryLabel="Volver al Catálogo"
+        onRetry={() => navigate('/reconocimientos')}
+      />
     );
   }
 
@@ -515,33 +509,11 @@ export const CertificateDesigner: React.FC = () => {
     <div className="max-w-[1600px] mx-auto space-y-5 font-sans py-2 pb-12 px-2 sm:px-4">
       {/* Toast Alert */}
       {toast && (
-        <div
-          role="alert"
-          className={`fixed top-6 right-6 z-50 max-w-md flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border animate-fade-in ${
-            toast.type === 'error'
-              ? 'bg-red-900 text-white border-red-700'
-              : toast.type === 'warning'
-                ? 'bg-amber-900 text-white border-amber-600'
-                : 'bg-neutral text-white border-primary/20'
-          }`}
-        >
-          {toast.type === 'error' ? (
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          ) : toast.type === 'warning' ? (
-            <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-          )}
-          <span className="text-sm font-semibold">{toast.message}</span>
-          <button
-            type="button"
-            onClick={dismissNotification}
-            aria-label="Cerrar notificación"
-            className="ml-1 p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <Toast
+          message={toast.message}
+          variant={toast.type}
+          onDismiss={dismissNotification}
+        />
       )}
 
       {/* Hidden File Input for Background Upload */}

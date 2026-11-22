@@ -200,7 +200,7 @@ describe('NewBatchWizard error cases & edge branches', () => {
     await waitFor(() => {
       expect(screen.getByText('Revisión y Confirmación del Lote')).toBeInTheDocument();
       expect(screen.getByText('Usuario No Registrado')).toBeInTheDocument();
-      expect(screen.getByText('Pendiente')).toBeInTheDocument();
+      expect(screen.getByText('Registro Inválido')).toBeInTheDocument();
     });
   });
 

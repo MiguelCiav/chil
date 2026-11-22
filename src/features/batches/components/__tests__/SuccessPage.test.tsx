@@ -34,8 +34,8 @@ describe('SuccessPage component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('No se encontró información del lote')).toBeInTheDocument();
-      expect(screen.getByText('Volver a la lista')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('No se encontró información del lote');
+      expect(screen.getByRole('button', { name: 'Volver a la lista' })).toBeInTheDocument();
     });
   });
 
