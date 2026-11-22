@@ -130,18 +130,186 @@ export function createInitialDesignerState(
   };
 }
 
+function handleAddField(
+  state: DesignerHistoryState,
+  field: RecognitionFieldConfig
+): DesignerHistoryState {
+  const exists = state.present.fields.some(
+    (f) => f.id === field.id || f.field_key === field.field_key
+  );
+  if (exists) {
+    return state;
+  }
+  return pushHistory(state, {
+    ...state.present,
+    fields: [...state.present.fields, field]
+  });
+}
+
+function handleAddFields(
+  state: DesignerHistoryState,
+  fieldsToAdd: RecognitionFieldConfig[]
+): DesignerHistoryState {
+  if (fieldsToAdd.length === 0) {
+    return state;
+  }
+  const existingKeys = new Set(state.present.fields.map((f) => f.field_key));
+  const newFields = fieldsToAdd.filter((f) => !existingKeys.has(f.field_key));
+  if (newFields.length === 0) {
+    return state;
+  }
+  return pushHistory(state, {
+    ...state.present,
+    fields: [...state.present.fields, ...newFields]
+  });
+}
+
+function handleRemoveField(
+  state: DesignerHistoryState,
+  payload: string | { fieldId: string }
+): DesignerHistoryState {
+  const fieldId = typeof payload === 'string' ? payload : payload.fieldId;
+  const nextFields = state.present.fields.filter((f) => f.id !== fieldId);
+  if (nextFields.length === state.present.fields.length) {
+    return state;
+  }
+  return pushHistory(state, {
+    ...state.present,
+    fields: nextFields
+  });
+}
+
+function handleToggleField(
+  state: DesignerHistoryState,
+  fieldKey: RecognitionFieldKey
+): DesignerHistoryState {
+  const exists = state.present.fields.some((f) => f.field_key === fieldKey);
+  if (exists) {
+    return pushHistory(state, {
+      ...state.present,
+      fields: state.present.fields.filter((f) => f.field_key !== fieldKey)
+    });
+  }
+  const def = AVAILABLE_TEMPLATE_FIELDS.find((d) => d.field_key === fieldKey);
+  if (!def) {
+    return state;
+  }
+  return pushHistory(state, {
+    ...state.present,
+    fields: [...state.present.fields, buildDefaultField(def)]
+  });
+}
+
+function handleUpdateFieldProps(
+  state: DesignerHistoryState,
+  payload: { fieldId: string; patch: Partial<RecognitionFieldConfig> }
+): DesignerHistoryState {
+  const { fieldId, patch } = payload;
+  let changed = false;
+  const nextFields = state.present.fields.map((f) => {
+    if (f.id !== fieldId) return f;
+    changed = true;
+    return { ...f, ...patch };
+  });
+  if (!changed) {
+    return state;
+  }
+  return pushHistory(state, {
+    ...state.present,
+    fields: nextFields
+  });
+}
+
+function handleMoveFieldCoordinates(
+  state: DesignerHistoryState,
+  payload: { fieldId: string; x: number; y: number; recordHistory?: boolean }
+): DesignerHistoryState {
+  const { fieldId, x, y, recordHistory = true } = payload;
+  let changed = false;
+  const nextFields = state.present.fields.map((f) => {
+    if (f.id !== fieldId || (f.x === x && f.y === y)) return f;
+    changed = true;
+    return { ...f, x, y };
+  });
+  if (!changed) {
+    return state;
+  }
+  const nextPresent: CertificateTemplate = {
+    ...state.present,
+    fields: nextFields
+  };
+  if (!recordHistory) {
+    return {
+      ...state,
+      present: nextPresent
+    };
+  }
+  return pushHistory(state, nextPresent);
+}
+
+function handleCommitFieldMove(
+  state: DesignerHistoryState,
+  payload: { fieldId: string; initialX: number; initialY: number; x: number; y: number }
+): DesignerHistoryState {
+  const { fieldId, initialX, initialY, x, y } = payload;
+  if (initialX === x && initialY === y) {
+    return state;
+  }
+  const targetExists = state.present.fields.some((f) => f.id === fieldId);
+  if (!targetExists) {
+    return state;
+  }
+  const previousPresent: CertificateTemplate = {
+    ...state.present,
+    fields: state.present.fields.map((f) =>
+      f.id === fieldId ? { ...f, x: initialX, y: initialY } : f
+    )
+  };
+  const nextPresent: CertificateTemplate = {
+    ...state.present,
+    fields: state.present.fields.map((f) => (f.id === fieldId ? { ...f, x, y } : f))
+  };
+  const nextPast = [...state.past, previousPresent].slice(-MAX_DESIGNER_HISTORY);
+  return {
+    past: nextPast,
+    present: nextPresent,
+    future: []
+  };
+}
+
+function handleUndo(state: DesignerHistoryState): DesignerHistoryState {
+  const previous = state.past.at(-1);
+  if (!previous) {
+    return state;
+  }
+  const nextPast = state.past.slice(0, -1);
+  return {
+    past: nextPast,
+    present: previous,
+    future: [state.present, ...state.future]
+  };
+}
+
+function handleRedo(state: DesignerHistoryState): DesignerHistoryState {
+  if (state.future.length === 0) {
+    return state;
+  }
+  const next = state.future[0];
+  const nextFuture = state.future.slice(1);
+  return {
+    past: [...state.past, state.present].slice(-MAX_DESIGNER_HISTORY),
+    present: next,
+    future: nextFuture
+  };
+}
+
 export function designerReducer(
   state: DesignerHistoryState,
   action: DesignerAction
 ): DesignerHistoryState {
   switch (action.type) {
-    case 'LOAD_TEMPLATE': {
-      return {
-        past: [],
-        present: action.payload,
-        future: []
-      };
-    }
+    case 'LOAD_TEMPLATE':
+      return { past: [], present: action.payload, future: [] };
 
     case 'SET_TEMPLATE': {
       const nextPresent =
@@ -149,151 +317,40 @@ export function designerReducer(
       return pushHistory(state, nextPresent);
     }
 
-    case 'ADD_FIELD': {
-      const exists = state.present.fields.some(
-        (f) => f.id === action.payload.id || f.field_key === action.payload.field_key
-      );
-      if (exists) {
-        return state;
-      }
+    case 'ADD_FIELD':
+      return handleAddField(state, action.payload);
+
+    case 'ADD_FIELDS':
+      return handleAddFields(state, action.payload);
+
+    case 'REMOVE_FIELD':
+      return handleRemoveField(state, action.payload);
+
+    case 'TOGGLE_FIELD':
+      return handleToggleField(state, action.payload);
+
+    case 'UPDATE_FIELD_PROPS':
+      return handleUpdateFieldProps(state, action.payload);
+
+    case 'MOVE_FIELD_COORDINATES':
+      return handleMoveFieldCoordinates(state, action.payload);
+
+    case 'COMMIT_FIELD_MOVE':
+      return handleCommitFieldMove(state, action.payload);
+
+    case 'RESET_FIELDS':
       return pushHistory(state, {
         ...state.present,
-        fields: [...state.present.fields, action.payload]
+        fields: action.payload ?? buildDefaultTemplateFields()
       });
-    }
 
-    case 'ADD_FIELDS': {
-      if (action.payload.length === 0) {
-        return state;
-      }
-      const existingKeys = new Set(state.present.fields.map((f) => f.field_key));
-      const newFields = action.payload.filter((f) => !existingKeys.has(f.field_key));
-      if (newFields.length === 0) {
-        return state;
-      }
-      return pushHistory(state, {
-        ...state.present,
-        fields: [...state.present.fields, ...newFields]
-      });
-    }
-
-    case 'REMOVE_FIELD': {
-      const fieldId =
-        typeof action.payload === 'string' ? action.payload : action.payload.fieldId;
-      const nextFields = state.present.fields.filter((f) => f.id !== fieldId);
-      if (nextFields.length === state.present.fields.length) {
-        return state;
-      }
-      return pushHistory(state, {
-        ...state.present,
-        fields: nextFields
-      });
-    }
-
-    case 'TOGGLE_FIELD': {
-      const fieldKey = action.payload;
-      const existing = state.present.fields.find((f) => f.field_key === fieldKey);
-      if (existing) {
-        return pushHistory(state, {
-          ...state.present,
-          fields: state.present.fields.filter((f) => f.field_key !== fieldKey)
-        });
-      }
-      const def = AVAILABLE_TEMPLATE_FIELDS.find((d) => d.field_key === fieldKey);
-      if (!def) {
-        return state;
-      }
-      return pushHistory(state, {
-        ...state.present,
-        fields: [...state.present.fields, buildDefaultField(def)]
-      });
-    }
-
-    case 'UPDATE_FIELD_PROPS': {
-      const { fieldId, patch } = action.payload;
-      let changed = false;
-      const nextFields = state.present.fields.map((f) => {
-        if (f.id !== fieldId) return f;
-        changed = true;
-        return { ...f, ...patch };
-      });
-      if (!changed) {
-        return state;
-      }
-      return pushHistory(state, {
-        ...state.present,
-        fields: nextFields
-      });
-    }
-
-    case 'MOVE_FIELD_COORDINATES': {
-      const { fieldId, x, y, recordHistory = true } = action.payload;
-      let changed = false;
-      const nextFields = state.present.fields.map((f) => {
-        if (f.id !== fieldId) return f;
-        if (f.x === x && f.y === y) return f;
-        changed = true;
-        return { ...f, x, y };
-      });
-      if (!changed) {
-        return state;
-      }
-      const nextPresent: CertificateTemplate = {
-        ...state.present,
-        fields: nextFields
-      };
-      if (!recordHistory) {
-        return {
-          ...state,
-          present: nextPresent
-        };
-      }
-      return pushHistory(state, nextPresent);
-    }
-
-    case 'COMMIT_FIELD_MOVE': {
-      const { fieldId, initialX, initialY, x, y } = action.payload;
-      if (initialX === x && initialY === y) {
-        return state;
-      }
-      const targetExists = state.present.fields.some((f) => f.id === fieldId);
-      if (!targetExists) {
-        return state;
-      }
-      const previousPresent: CertificateTemplate = {
-        ...state.present,
-        fields: state.present.fields.map((f) =>
-          f.id === fieldId ? { ...f, x: initialX, y: initialY } : f
-        )
-      };
-      const nextPresent: CertificateTemplate = {
-        ...state.present,
-        fields: state.present.fields.map((f) => (f.id === fieldId ? { ...f, x, y } : f))
-      };
-      const nextPast = [...state.past, previousPresent].slice(-MAX_DESIGNER_HISTORY);
-      return {
-        past: nextPast,
-        present: nextPresent,
-        future: []
-      };
-    }
-
-    case 'RESET_FIELDS': {
-      const nextFields = action.payload ?? buildDefaultTemplateFields();
-      return pushHistory(state, {
-        ...state.present,
-        fields: nextFields
-      });
-    }
-
-    case 'SET_BACKGROUND': {
+    case 'SET_BACKGROUND':
       return pushHistory(state, {
         ...state.present,
         ...action.payload
       });
-    }
 
-    case 'CLEAR_BACKGROUND': {
+    case 'CLEAR_BACKGROUND':
       return pushHistory(state, {
         ...state.present,
         background_url: '',
@@ -302,33 +359,12 @@ export function designerReducer(
         aspect_ratio: 297 / 210,
         orientation: 'landscape'
       });
-    }
 
-    case 'UNDO': {
-      if (state.past.length === 0) {
-        return state;
-      }
-      const previous = state.past[state.past.length - 1];
-      const nextPast = state.past.slice(0, -1);
-      return {
-        past: nextPast,
-        present: previous,
-        future: [state.present, ...state.future]
-      };
-    }
+    case 'UNDO':
+      return handleUndo(state);
 
-    case 'REDO': {
-      if (state.future.length === 0) {
-        return state;
-      }
-      const next = state.future[0];
-      const nextFuture = state.future.slice(1);
-      return {
-        past: [...state.past, state.present].slice(-MAX_DESIGNER_HISTORY),
-        present: next,
-        future: nextFuture
-      };
-    }
+    case 'REDO':
+      return handleRedo(state);
 
     default:
       return state;

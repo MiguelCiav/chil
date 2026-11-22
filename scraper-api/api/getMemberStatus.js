@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: "Error al leer la sesión del scraper" });
   }
 
-  if (!sessionRecord || !sessionRecord.encrypted) {
+  if (!sessionRecord?.encrypted) {
     return res.status(412).json({
       error: "No hay una sesión de Impeesa configurada",
       reason: "SCRAPER_NOT_CONFIGURED",
@@ -74,10 +74,7 @@ module.exports = async function handler(req, res) {
     if (error.message === "No registrado") {
       return res.status(404).json({ error: "No registrado" });
     }
-    if (
-      error.message &&
-      error.message.includes("Sesión de scraper no autenticada")
-    ) {
+    if (error.message?.includes("Sesión de scraper no autenticada")) {
       await sessionStore.markSessionExpired(uid).catch(() => {});
       return res.status(412).json({
         error: "Tu sesión de Impeesa expiró. Reconéctate en Ajustes del Scraper.",

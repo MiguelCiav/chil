@@ -69,7 +69,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ isCollapsed = 
     setIsOpen(false);
     try {
       await logout();
-      navigate('/login');
+      void navigate('/login');
     } catch (err) {
       console.error('Logout error:', err);
     }

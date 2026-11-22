@@ -239,7 +239,7 @@ export const RecognitionCatalog: React.FC = () => {
   }, [user?.uid]);
 
   useEffect(() => {
-    fetchRecognitions();
+    void fetchRecognitions();
   }, [fetchRecognitions]);
 
   const handleOpenCreateModal = () => {
@@ -303,7 +303,9 @@ export const RecognitionCatalog: React.FC = () => {
         cell: ({ row }) =>
           renderRecognitionActionsCell({
             item: row.original,
-            onNavigateTemplate: (id) => navigate(`/reconocimientos/${id}/plantilla`),
+            onNavigateTemplate: (id) => {
+              void navigate(`/reconocimientos/${id}/plantilla`);
+            },
             onEdit: handleOpenEditModal,
             onDelete: handleOpenDeleteModal
           })

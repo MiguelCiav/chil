@@ -69,7 +69,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const chunkSize = 0x8000;
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode(...chunk);
+    binary += String.fromCodePoint(...chunk);
   }
   if (typeof btoa === 'function') {
     return btoa(binary);
@@ -206,7 +206,8 @@ export function slugify(text: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9_]/g, '_')
     .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '');
+    .replace(/^_/, '')
+    .replace(/_$/, '');
 }
 
 /**
@@ -542,6 +543,36 @@ async function yieldToMainThread(): Promise<void> {
   await new Promise<void>(resolve => setTimeout(resolve, 0));
 }
 
+async function processItemsInChunks<T>(
+  items: readonly T[],
+  chunkSize: number,
+  signal: AbortSignal | undefined,
+  onProgress: ((progress: BatchGenerationProgress) => void) | undefined,
+  processItem: (item: T, index: number) => void
+): Promise<void> {
+  const total = items.length;
+
+  async function processChunk(startIndex: number): Promise<void> {
+    const endIndex = Math.min(startIndex + chunkSize, total);
+    for (let index = startIndex; index < endIndex; index++) {
+      throwIfAborted(signal);
+      processItem(items[index], index);
+      const current = index + 1;
+      const percentage = Math.round((current / total) * 100);
+      onProgress?.({ current, total, percentage });
+      throwIfAborted(signal);
+    }
+
+    if (endIndex < total) {
+      await yieldToMainThread();
+      throwIfAborted(signal);
+      await processChunk(endIndex);
+    }
+  }
+
+  await processChunk(0);
+}
+
 /**
  * Generates a single certificate jsPDF instance for a member.
  */
@@ -627,36 +658,27 @@ export async function generateBatchCertificatesPdf(
   await ensureCustomFontsRegistered(doc);
   throwIfAborted(signal);
 
-  const total = eligibleMembers.length;
+  await processItemsInChunks(
+    eligibleMembers,
+    chunkSize,
+    signal,
+    onProgress,
+    (member, index) => {
+      if (index > 0) {
+        doc.addPage([width, height], orientation);
+      }
 
-  for (let index = 0; index < total; index++) {
-    throwIfAborted(signal);
-    const member = eligibleMembers[index];
-
-    if (index > 0) {
-      doc.addPage([width, height], orientation);
+      renderCertificatePage(doc, {
+        member,
+        batch,
+        recognition: resolvedRecognition,
+        hierarchy: resolvedHierarchy,
+        template,
+        width,
+        height
+      });
     }
-
-    renderCertificatePage(doc, {
-      member,
-      batch,
-      recognition: resolvedRecognition,
-      hierarchy: resolvedHierarchy,
-      template,
-      width,
-      height
-    });
-
-    const current = index + 1;
-    const percentage = Math.round((current / total) * 100);
-    onProgress?.({ current, total, percentage });
-    throwIfAborted(signal);
-
-    if (current % chunkSize === 0 && current < total) {
-      await yieldToMainThread();
-      throwIfAborted(signal);
-    }
-  }
+  );
 
   const slug = slugify(resolvedRecognition?.name ?? batch.recognition_type ?? 'Reconocimientos');
   const fileName = `Reconocimientos_Lote_${batch.id}_${slug}.pdf`;
@@ -673,7 +695,7 @@ function triggerBlobDownload(blob: Blob, filename: string): void {
   a.download = filename;
   window.document.body.appendChild(a);
   a.click();
-  window.document.body.removeChild(a);
+  a.remove();
   window.URL.revokeObjectURL(url);
 }
 
@@ -705,47 +727,44 @@ export async function generateBatchCertificatesZip(
   const template = resolvedRecognition?.template;
   const { width, height, orientation } = getNormalizedPageDimensions(template);
 
+  if (!cachedScoutsPlanarFontBase64) {
+    await loadScoutsPlanarFontBase64();
+    throwIfAborted(signal);
+  }
+
   const zip = new JSZip();
   const slug = slugify(resolvedRecognition?.name ?? batch.recognition_type ?? 'Reconocimiento');
-  const total = eligibleMembers.length;
 
-  for (let index = 0; index < total; index++) {
-    throwIfAborted(signal);
-    const member = eligibleMembers[index];
+  await processItemsInChunks(
+    eligibleMembers,
+    chunkSize,
+    signal,
+    onProgress,
+    (member) => {
+      const doc = new jsPDF({
+        orientation,
+        unit: 'mm',
+        format: [width, height]
+      });
 
-    const doc = new jsPDF({
-      orientation,
-      unit: 'mm',
-      format: [width, height]
-    });
+      registerCustomFonts(doc, cachedScoutsPlanarFontBase64);
 
-    await ensureCustomFontsRegistered(doc);
+      renderCertificatePage(doc, {
+        member,
+        batch,
+        recognition: resolvedRecognition,
+        hierarchy: resolvedHierarchy,
+        template,
+        width,
+        height
+      });
 
-    renderCertificatePage(doc, {
-      member,
-      batch,
-      recognition: resolvedRecognition,
-      hierarchy: resolvedHierarchy,
-      template,
-      width,
-      height
-    });
-
-    const pdfBuffer = doc.output('arraybuffer');
-    const sanitizedIdentity = member.identity.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const memberFileName = `Reconocimiento_${sanitizedIdentity}_Lote_${batch.id}_${slug}.pdf`;
-    zip.file(memberFileName, pdfBuffer);
-
-    const current = index + 1;
-    const percentage = Math.round((current / total) * 100);
-    onProgress?.({ current, total, percentage });
-    throwIfAborted(signal);
-
-    if (current % chunkSize === 0 && current < total) {
-      await yieldToMainThread();
-      throwIfAborted(signal);
+      const pdfBuffer = doc.output('arraybuffer');
+      const sanitizedIdentity = member.identity.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const memberFileName = `Reconocimiento_${sanitizedIdentity}_Lote_${batch.id}_${slug}.pdf`;
+      zip.file(memberFileName, pdfBuffer);
     }
-  }
+  );
 
   throwIfAborted(signal);
 

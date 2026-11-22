@@ -575,6 +575,28 @@ function drawGroupTableStandard(doc: jsPDF, stats: StatisticsDataset, startY: nu
   return y;
 }
 
+function getGeographicFooterOptions(
+  totalLabel: string,
+  standardCount: number,
+  yoyItems: ReadonlyArray<{ currentCount: number; previousCount: number }> | undefined,
+  yoy: StatisticsDataset['yoyComparison'],
+  hasYoY: boolean
+) {
+  if (hasYoY && yoy && yoyItems) {
+    return {
+      totalLabel,
+      currentTotal: yoyItems.filter(item => item.currentCount > 0).length,
+      previousTotal: yoyItems.filter(item => item.previousCount > 0).length,
+      currentYear: yoy.currentYear,
+      previousYear: yoy.previousYear
+    };
+  }
+  return {
+    totalLabel,
+    currentTotal: standardCount
+  };
+}
+
 /**
  * Draws geographic summary tables (Region, District, and Scout Group) matching web cards.
  */
@@ -590,71 +612,39 @@ export function drawGeographicTables(
 
   // Region Table
   y = onBreak(doc, y, 35);
-  const regTotalCurr =
-    hasYoY && yoy
-      ? yoy.regions.filter(r => r.currentCount > 0).length
-      : stats.geographic.regions.length;
-  const regTotalPrev =
-    hasYoY && yoy ? yoy.regions.filter(r => r.previousCount > 0).length : undefined;
-
   y = drawSectionHeader(doc, 'Reconocimientos Entregados por Región', y);
-
   y = hasYoY
     ? drawRegionTableYoY(doc, stats, y, onBreak)
     : drawRegionTableStandard(doc, stats, y, onBreak);
-
   y = drawSectionTotalFooter(
     doc,
     y,
-    {
-      totalLabel: 'Total de regiones',
-      currentTotal: regTotalCurr,
-      previousTotal: regTotalPrev,
-      currentYear: hasYoY && yoy ? yoy.currentYear : undefined,
-      previousYear: hasYoY && yoy ? yoy.previousYear : undefined
-    },
+    getGeographicFooterOptions('Total de regiones', stats.geographic.regions.length, yoy?.regions, yoy, hasYoY),
     onBreak
   );
 
   // District Table
   y = beginNextSection(doc, y, 35, onBreak);
-  const distTotalCurr =
-    hasYoY && yoy
-      ? yoy.districts.filter(d => d.currentCount > 0).length
-      : stats.geographic.districts.length;
-  const distTotalPrev =
-    hasYoY && yoy ? yoy.districts.filter(d => d.previousCount > 0).length : undefined;
-
   y = drawSectionHeader(doc, 'Reconocimientos Entregados por Distrito', y);
-
   y = hasYoY
     ? drawDistrictTableYoY(doc, stats, y, onBreak)
     : drawDistrictTableStandard(doc, stats, y, onBreak);
-
   y = drawSectionTotalFooter(
     doc,
     y,
-    {
-      totalLabel: 'Total de distritos',
-      currentTotal: distTotalCurr,
-      previousTotal: distTotalPrev,
-      currentYear: hasYoY && yoy ? yoy.currentYear : undefined,
-      previousYear: hasYoY && yoy ? yoy.previousYear : undefined
-    },
+    getGeographicFooterOptions('Total de distritos', stats.geographic.districts.length, yoy?.districts, yoy, hasYoY),
     onBreak
   );
 
   // Scout Group Table (matching GroupSummaryTable)
   if (stats.geographic.groups) {
     y = beginNextSection(doc, y, 35, onBreak);
-    const groupTotal = stats.geographic.groups.length;
     y = drawSectionHeader(doc, 'Reconocimientos Entregados por Grupo Scout', y);
-
     y = drawGroupTableStandard(doc, stats, y, onBreak);
     y = drawSectionTotalFooter(
       doc,
       y,
-      { totalLabel: 'Total de grupos', currentTotal: groupTotal },
+      { totalLabel: 'Total de grupos', currentTotal: stats.geographic.groups.length },
       onBreak
     );
   }
@@ -770,16 +760,21 @@ function drawUnitTableStandard(doc: jsPDF, stats: StatisticsDataset, startY: num
   return y;
 }
 
+interface AnnularSectorParams {
+  cx: number;
+  cy: number;
+  outerR: number;
+  innerR: number;
+  startDeg: number;
+  endDeg: number;
+  fillRgb: RgbTuple;
+}
+
 function drawAnnularSector(
   doc: jsPDF,
-  cx: number,
-  cy: number,
-  outerR: number,
-  innerR: number,
-  startDeg: number,
-  endDeg: number,
-  fillRgb: RgbTuple
+  params: AnnularSectorParams
 ): void {
+  const { cx, cy, outerR, innerR, startDeg, endDeg, fillRgb } = params;
   if (typeof doc.lines !== 'function') return;
   const sweepDeg = endDeg - startDeg;
   if (sweepDeg <= 0) return;
@@ -825,29 +820,27 @@ function drawDemographicsDonutGraphic(
   const startAngle = -90;
 
   if (stats.demographics.youngCount > 0 && youngSweep > 0) {
-    drawAnnularSector(
-      doc,
+    drawAnnularSector(doc, {
       cx,
       cy,
       outerR,
       innerR,
-      startAngle,
-      startAngle + Math.min(youngSweep, 359.9),
-      COLORS.sky
-    );
+      startDeg: startAngle,
+      endDeg: startAngle + Math.min(youngSweep, 359.9),
+      fillRgb: COLORS.sky
+    });
   }
 
   if (stats.demographics.adultCount > 0 && adultSweep > 0) {
-    drawAnnularSector(
-      doc,
+    drawAnnularSector(doc, {
       cx,
       cy,
       outerR,
       innerR,
-      startAngle + youngSweep,
-      startAngle + Math.min(youngSweep + adultSweep, 359.9),
-      COLORS.amber
-    );
+      startDeg: startAngle + youngSweep,
+      endDeg: startAngle + Math.min(youngSweep + adultSweep, 359.9),
+      fillRgb: COLORS.amber
+    });
   }
 
   if (typeof doc.circle === 'function') {

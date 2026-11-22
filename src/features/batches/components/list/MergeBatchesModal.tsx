@@ -63,7 +63,7 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
     ? (selectedBatches[0]?.recognitionName || '-')
     : `${selectedBatches[0]?.recognitionName || '-'} (combinado)`;
 
-  const handleMerge = async (e: React.FormEvent) => {
+  const handleMerge = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (selectedBatches.length < 2) return;
 

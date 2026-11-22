@@ -32,12 +32,19 @@ export async function commitChunkedBatches(
     return;
   }
   const safeChunkSize = chunkSize > 0 ? chunkSize : 450;
-  for (let i = 0; i < operations.length; i += safeChunkSize) {
+
+  async function commitNextChunk(startIndex: number): Promise<void> {
+    if (startIndex >= operations.length) {
+      return;
+    }
     const batch = writeBatch(db);
-    const chunk = operations.slice(i, i + safeChunkSize);
+    const chunk = operations.slice(startIndex, startIndex + safeChunkSize);
     chunk.forEach((op) => op(batch));
     await batch.commit();
+    await commitNextChunk(startIndex + safeChunkSize);
   }
+
+  await commitNextChunk(0);
 }
 
 export function buildBatchQueryForUser(userId: string) {
@@ -145,8 +152,62 @@ export interface MergeBatchesParams {
   user_id?: string;
 }
 
+function computeLatestBatchTimestamp(existingBatches: Batch[]): string {
+  const timestamps = existingBatches.map(b => new Date(b.created_at).getTime());
+  const validTimestamps = timestamps.filter(t => !Number.isNaN(t));
+  if (validTimestamps.length === 0) {
+    return new Date().toISOString();
+  }
+  return new Date(Math.max(...validTimestamps)).toISOString();
+}
+
+function buildMergedBatchRecord(
+  existingBatches: Batch[],
+  params: MergeBatchesParams,
+  userId?: string
+): { mergedBatch: Batch; targetUserId: string } {
+  const first = existingBatches[0];
+  const allSameRegion = existingBatches.every(b => b.region_id === first.region_id);
+  const allSameDistrict = existingBatches.every(b => b.district_id === first.district_id);
+  const allSameGroup = existingBatches.every(b => b.group_id === first.group_id);
+  const allSameType = existingBatches.every(b => b.recognition_type === first.recognition_type);
+  const allSameUnit = existingBatches.every(b => b.unit_scope === first.unit_scope);
+  const allSameDuration = existingBatches.every(
+    b => b.recognition_duration === first.recognition_duration
+  );
+
+  const targetUserId =
+    params.user_id ?? userId ?? first.user_id ?? auth.currentUser?.uid ?? '';
+  const newNumericId = generateSecureBatchId();
+
+  const mergedBatch: Batch = {
+    id: newNumericId,
+    comment: params.newComment ?? '',
+    region_id: allSameRegion ? first.region_id : 0,
+    district_id: allSameRegion && allSameDistrict ? first.district_id : 0,
+    group_id: allSameGroup ? first.group_id : 0,
+    unit_scope: allSameUnit && first.unit_scope ? first.unit_scope : 'mixed',
+    recognition_type: allSameType ? first.recognition_type : (first.recognition_type ?? ''),
+    recognition_duration: allSameDuration ? first.recognition_duration : '',
+    created_at: computeLatestBatchTimestamp(existingBatches),
+    ...(targetUserId ? { user_id: targetUserId } : {})
+  };
+
+  return { mergedBatch, targetUserId };
+}
+
+function resolveMergedMemberGroupId(member: ScoutMember, sourceBatch: Batch): number {
+  if (member.group_id !== undefined && !Number.isNaN(member.group_id)) {
+    return member.group_id;
+  }
+  if (sourceBatch.group_id !== undefined && !Number.isNaN(sourceBatch.group_id)) {
+    return sourceBatch.group_id;
+  }
+  return 0;
+}
+
 export async function mergeBatches(params: MergeBatchesParams, userId?: string): Promise<Batch> {
-  const { batchIds, newComment } = params;
+  const { batchIds } = params;
   if (!batchIds || batchIds.length < 2) {
     throw new Error('Se requieren al menos 2 lotes para fusionar');
   }
@@ -159,53 +220,8 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
     throw new Error('No se encontraron suficientes lotes válidos para fusionar');
   }
 
-  // Compute latestCreatedAt: find the most recent created_at timestamp among the batches
-  const timestamps = existingBatches.map(b => new Date(b.created_at).getTime());
-  const maxTimestamp = Math.max(...timestamps.filter(t => !Number.isNaN(t)));
-  const latestCreatedAt = Number.isNaN(maxTimestamp) || maxTimestamp === -Infinity
-    ? new Date().toISOString()
-    : new Date(maxTimestamp).toISOString();
-
-  // Determine primary batch properties:
-  const firstRegion = existingBatches[0].region_id;
-  const allSameRegion = existingBatches.every(b => b.region_id === firstRegion);
-  const region_id = allSameRegion ? firstRegion : 0;
-
-  const firstDistrict = existingBatches[0].district_id;
-  const allSameDistrict = existingBatches.every(b => b.district_id === firstDistrict);
-  const district_id = (allSameRegion && allSameDistrict) ? firstDistrict : 0;
-
-  const firstGroup = existingBatches[0].group_id;
-  const allSameGroup = existingBatches.every(b => b.group_id === firstGroup);
-  const group_id = allSameGroup ? firstGroup : 0;
-
-  const firstType = existingBatches[0].recognition_type;
-  const allSameType = existingBatches.every(b => b.recognition_type === firstType);
-  const recognition_type = allSameType ? firstType : (firstType ?? '');
-
-  const firstUnit = existingBatches[0].unit_scope;
-  const allSameUnit = existingBatches.every(b => b.unit_scope === firstUnit);
-  const unit_scope = allSameUnit && firstUnit ? firstUnit : 'mixed';
-
-  const firstDuration = existingBatches[0].recognition_duration;
-  const allSameDuration = existingBatches.every(b => b.recognition_duration === firstDuration);
-  const recognition_duration = allSameDuration ? firstDuration : '';
-
-  const targetUserId = params.user_id ?? userId ?? existingBatches[0].user_id ?? auth.currentUser?.uid ?? '';
-
-  const newNumericId = generateSecureBatchId();
-  const mergedBatch: Batch = {
-    id: newNumericId,
-    comment: newComment !== undefined ? newComment : '',
-    region_id,
-    district_id,
-    group_id,
-    unit_scope,
-    recognition_type,
-    recognition_duration,
-    created_at: latestCreatedAt,
-    ...(targetUserId ? { user_id: targetUserId } : {})
-  };
+  const { mergedBatch, targetUserId } = buildMergedBatchRecord(existingBatches, params, userId);
+  const newNumericId = mergedBatch.id;
 
   const membersByBatch = await Promise.all(
     existingBatches.map(async b => {
@@ -223,9 +239,7 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
   // 2. Member reassignment
   for (const { batch: sourceBatch, members } of membersByBatch) {
     for (const member of members) {
-      const memberGroupId = member.group_id !== undefined && !Number.isNaN(member.group_id)
-        ? member.group_id
-        : (sourceBatch.group_id !== undefined && !Number.isNaN(sourceBatch.group_id) ? sourceBatch.group_id : 0);
+      const memberGroupId = resolveMergedMemberGroupId(member, sourceBatch);
 
       const updatedMember: ScoutMember = {
         ...member,

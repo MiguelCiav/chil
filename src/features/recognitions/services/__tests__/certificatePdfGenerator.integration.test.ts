@@ -256,7 +256,7 @@ describe('certificatePdfGenerator — Real Binary jsPDF & JSZip Integration Suit
     // (1 RGB stream + 1 SMask stream = 2 total, rather than 40 across 20 pages), and only defines /I0 (never /I1..I19)
     const singlePageImageXObjects = rawSinglePagePdf.match(/\/Subtype\s*\/Image/g) ?? [];
     const twentyPageImageXObjects = rawTwentyPagePdf.match(/\/Subtype\s*\/Image/g) ?? [];
-    expect(twentyPageImageXObjects.length).toBe(singlePageImageXObjects.length);
+    expect(twentyPageImageXObjects).toHaveLength(singlePageImageXObjects.length);
     expect(rawTwentyPagePdf).toContain('/I0');
     expect(rawTwentyPagePdf).not.toContain('/I1');
 

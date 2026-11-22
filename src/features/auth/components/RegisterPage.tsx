@@ -45,7 +45,7 @@ export const RegisterPage: React.FC = () => {
     setServerError(null);
     try {
       await registerUser(data);
-      navigate('/lotes', { replace: true });
+      void navigate('/lotes', { replace: true });
     } catch (err) {
       setServerError(getRegistrationErrorMessage(err));
     }

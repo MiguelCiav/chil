@@ -73,6 +73,35 @@ export function buildMembersQueryForUser(userId: string) {
   return query(collection(db, "scout_members"), where("user_id", "==", userId));
 }
 
+const OPTIONAL_MEMBER_STRING_FIELDS = [
+  'unit',
+  'region_name',
+  'district_name',
+  'group_name',
+  'position_in_group',
+  'institutional_position',
+  'member_category',
+  'scout_progression',
+  'solvent_until',
+  'avatar_url',
+  'impeesa_uuid',
+  'admission_date',
+  'entry_date',
+  'promise_date',
+  'email',
+  'phone',
+  'recognition_code',
+  'exceptional_reason'
+] as const;
+
+const OPTIONAL_MEMBER_NUMBER_FIELDS = [
+  'region_id',
+  'district_id',
+  'group_id',
+  'unit_id',
+  'batch_id'
+] as const;
+
 function sanitizeMemberForSave(member: ScoutMember, userId?: string): ScoutMember {
   const targetUserId = member.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const sanitized: ScoutMember = {
@@ -82,32 +111,29 @@ function sanitizeMemberForSave(member: ScoutMember, userId?: string): ScoutMembe
     birth_date: member.birth_date,
     member_type: member.member_type,
     status: member.status,
-    verified_in_registry: Boolean(member.verified_in_registry),
-    ...(member.unit ? { unit: member.unit } : {}),
-    ...(member.region_id !== undefined && !Number.isNaN(member.region_id) ? { region_id: member.region_id } : {}),
-    ...(member.region_name ? { region_name: member.region_name } : {}),
-    ...(member.district_id !== undefined && !Number.isNaN(member.district_id) ? { district_id: member.district_id } : {}),
-    ...(member.district_name ? { district_name: member.district_name } : {}),
-    ...(member.group_id !== undefined && !Number.isNaN(member.group_id) ? { group_id: member.group_id } : {}),
-    ...(member.group_name ? { group_name: member.group_name } : {}),
-    ...(member.position_in_group ? { position_in_group: member.position_in_group } : {}),
-    ...(member.institutional_position ? { institutional_position: member.institutional_position } : {}),
-    ...(member.member_category ? { member_category: member.member_category } : {}),
-    ...(member.scout_progression ? { scout_progression: member.scout_progression } : {}),
-    ...(member.is_solvent !== undefined ? { is_solvent: member.is_solvent } : {}),
-    ...(member.solvent_until ? { solvent_until: member.solvent_until } : {}),
-    ...(member.avatar_url ? { avatar_url: member.avatar_url } : {}),
-    ...(member.impeesa_uuid ? { impeesa_uuid: member.impeesa_uuid } : {}),
-    ...(member.admission_date ? { admission_date: member.admission_date } : {}),
-    ...(member.entry_date ? { entry_date: member.entry_date } : {}),
-    ...(member.promise_date ? { promise_date: member.promise_date } : {}),
-    ...(member.unit_id !== undefined && !Number.isNaN(member.unit_id) ? { unit_id: member.unit_id } : {}),
-    ...(member.batch_id !== undefined && !Number.isNaN(member.batch_id) ? { batch_id: member.batch_id } : {}),
-    ...(member.email ? { email: member.email } : {}),
-    ...(member.phone ? { phone: member.phone } : {}),
-    ...(member.recognition_code ? { recognition_code: member.recognition_code } : {}),
-    ...(member.exceptional_reason ? { exceptional_reason: member.exceptional_reason } : {})
+    verified_in_registry: Boolean(member.verified_in_registry)
   };
+
+  const targetRecord = sanitized as unknown as Record<string, unknown>;
+  const sourceRecord = member as unknown as Record<string, unknown>;
+
+  for (const key of OPTIONAL_MEMBER_STRING_FIELDS) {
+    const val = sourceRecord[key];
+    if (val) {
+      targetRecord[key] = val;
+    }
+  }
+
+  for (const key of OPTIONAL_MEMBER_NUMBER_FIELDS) {
+    const val = sourceRecord[key];
+    if (typeof val === 'number' && !Number.isNaN(val)) {
+      targetRecord[key] = val;
+    }
+  }
+
+  if (member.is_solvent !== undefined) {
+    sanitized.is_solvent = member.is_solvent;
+  }
 
   if (targetUserId) {
     sanitized.user_id = targetUserId;
@@ -174,59 +200,52 @@ export async function deleteMember(
   }
 }
 
-function deduplicateBatchMembers(batchMembers: ScoutMember[]): ScoutMember[] {
-  const withCode = batchMembers.filter((m) => Boolean(m.recognition_code && m.recognition_code.trim() !== ''));
-  const withoutCode = batchMembers.filter((m) => !m.recognition_code || m.recognition_code.trim() === '');
-
-  if (withCode.length > 0) {
-    const seenCodes = new Set<string>();
-    const finalized: ScoutMember[] = [];
-    const finalizedIdentities = new Set<string>();
-
-    for (const m of withCode) {
-      const code = m.recognition_code?.trim();
-      if (code && !seenCodes.has(code)) {
-        seenCodes.add(code);
-        finalized.push(m);
-      }
-      const id = m.identity?.trim().toUpperCase();
-      if (id && !isGenericIdentity(id)) {
-        finalizedIdentities.add(id);
-      }
-    }
-
-    const remainingDrafts: ScoutMember[] = [];
-    const seenDraftIdentities = new Set<string>();
-    for (const m of withoutCode) {
-      const id = m.identity?.trim().toUpperCase();
-      if (id && !isGenericIdentity(id)) {
-        if (!finalizedIdentities.has(id) && !seenDraftIdentities.has(id)) {
-          seenDraftIdentities.add(id);
-          remainingDrafts.push(m);
-        }
-      } else {
-        remainingDrafts.push(m);
-      }
-    }
-
-    return [...finalized, ...remainingDrafts];
-  }
-
+function filterUniqueDraftMembers(
+  withoutCode: ScoutMember[],
+  excludedIdentities: Set<string>
+): ScoutMember[] {
   const seenDraftIdentities = new Set<string>();
   const drafts: ScoutMember[] = [];
+
   for (const m of withoutCode) {
     const id = m.identity?.trim().toUpperCase();
-    if (id && !isGenericIdentity(id)) {
-      if (!seenDraftIdentities.has(id)) {
-        seenDraftIdentities.add(id);
-        drafts.push(m);
-      }
-    } else {
+    if (!id || isGenericIdentity(id)) {
+      drafts.push(m);
+    } else if (!excludedIdentities.has(id) && !seenDraftIdentities.has(id)) {
+      seenDraftIdentities.add(id);
       drafts.push(m);
     }
   }
 
   return drafts;
+}
+
+function deduplicateBatchMembers(batchMembers: ScoutMember[]): ScoutMember[] {
+  const withCode = batchMembers.filter((m) => Boolean(m.recognition_code?.trim()));
+  const withoutCode = batchMembers.filter((m) => !m.recognition_code?.trim());
+
+  if (withCode.length === 0) {
+    return filterUniqueDraftMembers(withoutCode, new Set<string>());
+  }
+
+  const seenCodes = new Set<string>();
+  const finalized: ScoutMember[] = [];
+  const finalizedIdentities = new Set<string>();
+
+  for (const m of withCode) {
+    const code = m.recognition_code?.trim();
+    if (code && !seenCodes.has(code)) {
+      seenCodes.add(code);
+      finalized.push(m);
+    }
+    const id = m.identity?.trim().toUpperCase();
+    if (id && !isGenericIdentity(id)) {
+      finalizedIdentities.add(id);
+    }
+  }
+
+  const remainingDrafts = filterUniqueDraftMembers(withoutCode, finalizedIdentities);
+  return [...finalized, ...remainingDrafts];
 }
 
 export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[]> {

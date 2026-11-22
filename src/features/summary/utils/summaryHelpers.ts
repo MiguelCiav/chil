@@ -124,33 +124,28 @@ function matchesRecognitionFilter(row: SummaryRowData, selectedRecognition: stri
   );
 }
 
+function matchesSelectedRegion(row: SummaryRowData, selectedRegion: string): boolean {
+  if (!selectedRegion) return true;
+  if (selectedRegion === 'nacional') return row.isNationalInstitutional;
+  if (selectedRegion === '0') return row.regionId === 0 && !row.isNationalInstitutional;
+  return String(row.regionId) === selectedRegion;
+}
+
+function matchesSelectedHierarchyId(actualId: number, selectedValue: string): boolean {
+  if (!selectedValue) return true;
+  if (selectedValue === '0') return actualId === 0;
+  return String(actualId) === selectedValue;
+}
+
 function matchesHierarchyFilters(
   row: SummaryRowData,
   filters: Pick<SummaryFilterOptions, 'selectedRegion' | 'selectedDistrict' | 'selectedGroup'>
 ): boolean {
-  const { selectedRegion, selectedDistrict, selectedGroup } = filters;
-
-  if (selectedRegion === 'nacional') {
-    if (!row.isNationalInstitutional) return false;
-  } else if (selectedRegion === '0') {
-    if (row.regionId !== 0 || row.isNationalInstitutional) return false;
-  } else if (selectedRegion) {
-    if (String(row.regionId) !== selectedRegion) return false;
-  }
-
-  if (selectedDistrict === '0') {
-    if (row.districtId !== 0) return false;
-  } else if (selectedDistrict) {
-    if (String(row.districtId) !== selectedDistrict) return false;
-  }
-
-  if (selectedGroup === '0') {
-    if (row.groupId !== 0) return false;
-  } else if (selectedGroup) {
-    if (String(row.groupId) !== selectedGroup) return false;
-  }
-
-  return true;
+  return (
+    matchesSelectedRegion(row, filters.selectedRegion) &&
+    matchesSelectedHierarchyId(row.districtId, filters.selectedDistrict) &&
+    matchesSelectedHierarchyId(row.groupId, filters.selectedGroup)
+  );
 }
 
 export function matchesSummaryFilters(

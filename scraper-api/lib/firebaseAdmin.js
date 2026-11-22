@@ -9,7 +9,7 @@ function parseServiceAccountFromEnv() {
       : Buffer.from(trimmed, "base64").toString("utf8");
     const parsed = JSON.parse(decoded);
     if (parsed.private_key && typeof parsed.private_key === "string") {
-      parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+      parsed.private_key = parsed.private_key.replaceAll(String.raw`\n`, "\n");
     }
     return parsed;
   }
@@ -21,7 +21,7 @@ function parseServiceAccountFromEnv() {
     return {
       project_id: projectId,
       client_email: clientEmail,
-      private_key: privateKey.replace(/\\n/g, "\n"),
+      private_key: privateKey.replaceAll(String.raw`\n`, "\n"),
     };
   }
 
@@ -71,15 +71,12 @@ async function verifyBearerToken(req) {
 
   try {
     const decoded = await getAdmin().auth().verifyIdToken(idToken);
-    if (!decoded || !decoded.uid) {
+    if (!decoded?.uid) {
       throw new Error("Token sin UID");
     }
     return decoded.uid;
   } catch (error) {
-    if (
-      error?.message &&
-      error.message.includes("FIREBASE_SERVICE_ACCOUNT_JSON")
-    ) {
+    if (error?.message?.includes("FIREBASE_SERVICE_ACCOUNT_JSON")) {
       throw error;
     }
     const err = new Error("Sesión de Chil inválida o expirada");

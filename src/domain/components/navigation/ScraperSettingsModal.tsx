@@ -21,6 +21,103 @@ import {
   clearScraperSession,
 } from '../../../features/batches/api';
 
+function getSubmitButtonLabel(isSaving: boolean, hasStoredSession: boolean): string {
+  if (isSaving) {
+    return 'Verificando...';
+  }
+  if (hasStoredSession) {
+    return 'Actualizar Sesión';
+  }
+  return 'Conectar Sesión';
+}
+
+interface SessionStatusBannerProps {
+  readonly isLoadingStatus: boolean;
+  readonly status: string;
+  readonly impeesaEmail?: string | null;
+  readonly isBusy: boolean;
+  readonly isDisconnecting: boolean;
+  readonly onDisconnect: () => void;
+}
+
+function renderSessionStatusBanner({
+  isLoadingStatus,
+  status,
+  impeesaEmail,
+  isBusy,
+  isDisconnecting,
+  onDisconnect,
+}: SessionStatusBannerProps): React.ReactNode {
+  if (isLoadingStatus) {
+    return (
+      <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-neutral/75">
+        Verificando estado de sesión...
+      </div>
+    );
+  }
+
+  if (status === 'active') {
+    return (
+      <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className="text-xs text-emerald-900 truncate">
+            <span className="font-semibold">Sesión activa</span>
+            {impeesaEmail && (
+              <span className="block text-emerald-700 truncate">
+                {impeesaEmail}
+              </span>
+            )}
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onDisconnect}
+          disabled={isBusy}
+          icon={<LogOut className="w-3.5 h-3.5" />}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0"
+        >
+          {isDisconnecting ? 'Desconectando...' : 'Desconectar'}
+        </Button>
+      </div>
+    );
+  }
+
+  if (status === 'expired') {
+    return (
+      <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+          <div className="text-xs text-amber-900">
+            <span className="font-semibold">Sesión expirada</span>
+            <span className="block text-amber-800">
+              Ingresa tus credenciales nuevamente para renovarla.
+            </span>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onDisconnect}
+          disabled={isBusy}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0"
+        >
+          Desconectar
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-neutral/75">
+      No hay ninguna sesión de Impeesa conectada actualmente.
+    </div>
+  );
+}
+
 export const ScraperSettingsModal: React.FC = () => {
   const {
     isOpen,
@@ -66,7 +163,7 @@ export const ScraperSettingsModal: React.FC = () => {
     closeModal();
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -161,62 +258,14 @@ export const ScraperSettingsModal: React.FC = () => {
           </div>
 
           {/* Current Session Status */}
-          {isLoadingStatus ? (
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-neutral/75">
-              Verificando estado de sesión...
-            </div>
-          ) : status === 'active' ? (
-            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <div className="text-xs text-emerald-900 truncate">
-                  <span className="font-semibold">Sesión activa</span>
-                  {sessionStatus?.impeesaEmail && (
-                    <span className="block text-emerald-700 truncate">
-                      {sessionStatus.impeesaEmail}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleDisconnect}
-                disabled={isBusy}
-                icon={<LogOut className="w-3.5 h-3.5" />}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0"
-              >
-                {isDisconnecting ? 'Desconectando...' : 'Desconectar'}
-              </Button>
-            </div>
-          ) : status === 'expired' ? (
-            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <div className="text-xs text-amber-900">
-                  <span className="font-semibold">Sesión expirada</span>
-                  <span className="block text-amber-800">
-                    Ingresa tus credenciales nuevamente para renovarla.
-                  </span>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleDisconnect}
-                disabled={isBusy}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0"
-              >
-                Desconectar
-              </Button>
-            </div>
-          ) : (
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-neutral/75">
-              No hay ninguna sesión de Impeesa conectada actualmente.
-            </div>
-          )}
+          {renderSessionStatusBanner({
+            isLoadingStatus,
+            status,
+            impeesaEmail: sessionStatus?.impeesaEmail,
+            isBusy,
+            isDisconnecting,
+            onDisconnect: handleDisconnect,
+          })}
 
           <Field
             label="Correo de Impeesa"
@@ -265,11 +314,7 @@ export const ScraperSettingsModal: React.FC = () => {
             variant="primary"
             disabled={isBusy}
           >
-            {isSaving
-              ? 'Verificando...'
-              : hasStoredSession
-                ? 'Actualizar Sesión'
-                : 'Conectar Sesión'}
+            {getSubmitButtonLabel(isSaving, hasStoredSession)}
           </Button>
         </ModalFooter>
       </form>

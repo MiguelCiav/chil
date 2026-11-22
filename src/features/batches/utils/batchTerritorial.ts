@@ -76,6 +76,44 @@ function finalizeColumnTokens(
   return [createNoneToken(fallbackCount)];
 }
 
+function resolveCompletenessSummary(
+  memberCount: number,
+  pendingCount: number
+): { completenessStatus: CompletenessStatus; completenessLabel: string } {
+  if (memberCount === 0) {
+    return { completenessStatus: 'empty', completenessLabel: 'Sin miembros' };
+  }
+  if (pendingCount > 0) {
+    return {
+      completenessStatus: 'pending',
+      completenessLabel: `Registros pendientes (${pendingCount})`
+    };
+  }
+  return { completenessStatus: 'complete', completenessLabel: 'Todos registrados' };
+}
+
+function incrementTerritorialIdToken(
+  idMap: Map<number, TerritorialToken>,
+  id: number,
+  items: ReadonlyArray<{ id: number; name: string }>,
+  fallbackPrefix: string
+): void {
+  if (id <= 0) return;
+  const existing = idMap.get(id);
+  if (existing) {
+    existing.count += 1;
+    return;
+  }
+  const label = items.find((item) => item.id === id)?.name ?? `${fallbackPrefix} ${id}`;
+  idMap.set(id, {
+    kind: 'id',
+    key: `id:${id}`,
+    id,
+    label,
+    count: 1
+  });
+}
+
 export function deriveBatchTerritorialProjection(
   batchMembers: ScoutMember[],
   batch: Batch | null | undefined,
@@ -86,17 +124,10 @@ export function deriveBatchTerritorialProjection(
   const eligibleCount = batchMembers.filter(
     (m) => m.status === 'active' || m.status === 'exceptional'
   ).length;
-
-  let completenessStatus: CompletenessStatus = 'complete';
-  let completenessLabel = 'Todos registrados';
-
-  if (memberCount === 0) {
-    completenessStatus = 'empty';
-    completenessLabel = 'Sin miembros';
-  } else if (pendingCount > 0) {
-    completenessStatus = 'pending';
-    completenessLabel = `Registros pendientes (${pendingCount})`;
-  }
+  const { completenessStatus, completenessLabel } = resolveCompletenessSummary(
+    memberCount,
+    pendingCount
+  );
 
   if (memberCount === 0) {
     return {
@@ -151,57 +182,9 @@ export function deriveBatchTerritorialProjection(
       continue;
     }
 
-    if (resolved.regionId > 0) {
-      const existing = regionIdMap.get(resolved.regionId);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        const regName =
-          regions.find((r) => r.id === resolved.regionId)?.name ?? `Región ${resolved.regionId}`;
-        regionIdMap.set(resolved.regionId, {
-          kind: 'id',
-          key: `id:${resolved.regionId}`,
-          id: resolved.regionId,
-          label: regName,
-          count: 1
-        });
-      }
-    }
-
-    if (resolved.districtId > 0) {
-      const existing = districtIdMap.get(resolved.districtId);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        const distName =
-          districts.find((d) => d.id === resolved.districtId)?.name ??
-          `Distrito ${resolved.districtId}`;
-        districtIdMap.set(resolved.districtId, {
-          kind: 'id',
-          key: `id:${resolved.districtId}`,
-          id: resolved.districtId,
-          label: distName,
-          count: 1
-        });
-      }
-    }
-
-    if (resolved.groupId > 0) {
-      const existing = groupIdMap.get(resolved.groupId);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        const grpName =
-          groups.find((g) => g.id === resolved.groupId)?.name ?? `Grupo ${resolved.groupId}`;
-        groupIdMap.set(resolved.groupId, {
-          kind: 'id',
-          key: `id:${resolved.groupId}`,
-          id: resolved.groupId,
-          label: grpName,
-          count: 1
-        });
-      }
-    }
+    incrementTerritorialIdToken(regionIdMap, resolved.regionId, regions, 'Región');
+    incrementTerritorialIdToken(districtIdMap, resolved.districtId, districts, 'Distrito');
+    incrementTerritorialIdToken(groupIdMap, resolved.groupId, groups, 'Grupo');
   }
 
   const regionSpecials: TerritorialToken[] =
@@ -231,8 +214,8 @@ export function deriveBatchTerritorialProjection(
 export function consolidateMergedGroupTokens(
   batchGroupTokenLists: TerritorialToken[][]
 ): string {
-  const nonEmptyLists = batchGroupTokenLists.filter((list) => list.length > 0);
-  if (nonEmptyLists.length === 0) {
+  const allTokens = batchGroupTokenLists.flat();
+  if (allTokens.length === 0) {
     return 'No aplica';
   }
 
@@ -240,20 +223,18 @@ export function consolidateMergedGroupTokens(
   let hasNoneToken = false;
   let hasNoScoutToken = false;
 
-  for (const list of nonEmptyLists) {
-    for (const token of list) {
-      if (token.kind === 'id') {
-        const existing = idTokenMap.get(token.key);
-        if (existing) {
-          existing.count += token.count;
-        } else {
-          idTokenMap.set(token.key, { ...token });
-        }
-      } else if (token.kind === 'no_scout') {
-        hasNoScoutToken = true;
-      } else if (token.kind === 'none') {
-        hasNoneToken = true;
+  for (const token of allTokens) {
+    if (token.kind === 'id') {
+      const existing = idTokenMap.get(token.key);
+      if (existing) {
+        existing.count += token.count;
+      } else {
+        idTokenMap.set(token.key, { ...token });
       }
+    } else if (token.kind === 'no_scout') {
+      hasNoScoutToken = true;
+    } else if (token.kind === 'none') {
+      hasNoneToken = true;
     }
   }
 
@@ -279,6 +260,23 @@ function sortBreakdownItems(items: TerritorialBreakdownItem[]): TerritorialBreak
   return items.sort((a, b) => {
     if (b.count !== a.count) return b.count - a.count;
     return a.name.localeCompare(b.name, 'es');
+  });
+}
+
+function incrementBreakdownCounter<K extends number | string>(
+  map: Map<K, { id: K; name: string; count: number }>,
+  id: K,
+  resolveName: () => string
+): void {
+  const existing = map.get(id);
+  if (existing) {
+    existing.count += 1;
+    return;
+  }
+  map.set(id, {
+    id,
+    name: resolveName(),
+    count: 1
   });
 }
 
@@ -310,60 +308,31 @@ export function calculateBatchTerritorialBreakdown(
     if (resolved.groupId === 0) {
       ungroupedScoutCount += 1;
     } else {
-      const existingGrp = groupMap.get(resolved.groupId);
-      if (existingGrp) {
-        existingGrp.count += 1;
-      } else {
-        const grpName =
-          groups.find((g) => g.id === resolved.groupId)?.name ?? `Grupo ${resolved.groupId}`;
-        groupMap.set(resolved.groupId, {
-          id: resolved.groupId,
-          name: grpName,
-          count: 1
-        });
-      }
+      incrementBreakdownCounter(
+        groupMap,
+        resolved.groupId,
+        () => groups.find((g) => g.id === resolved.groupId)?.name ?? `Grupo ${resolved.groupId}`
+      );
     }
 
     if (resolved.districtId > 0) {
-      const existingDist = districtMap.get(resolved.districtId);
-      if (existingDist) {
-        existingDist.count += 1;
-      } else {
-        const distName =
+      incrementBreakdownCounter(
+        districtMap,
+        resolved.districtId,
+        () =>
           districts.find((d) => d.id === resolved.districtId)?.name ??
-          `Distrito ${resolved.districtId}`;
-        districtMap.set(resolved.districtId, {
-          id: resolved.districtId,
-          name: distName,
-          count: 1
-        });
-      }
+          `Distrito ${resolved.districtId}`
+      );
     }
 
     if (resolved.isNationalInstitutional) {
-      const existingNat = regionMap.get('nacional');
-      if (existingNat) {
-        existingNat.count += 1;
-      } else {
-        regionMap.set('nacional', {
-          id: 'nacional',
-          name: 'Nacional',
-          count: 1
-        });
-      }
+      incrementBreakdownCounter(regionMap, 'nacional', () => 'Nacional');
     } else if (resolved.regionId > 0) {
-      const existingReg = regionMap.get(resolved.regionId);
-      if (existingReg) {
-        existingReg.count += 1;
-      } else {
-        const regName =
-          regions.find((r) => r.id === resolved.regionId)?.name ?? `Región ${resolved.regionId}`;
-        regionMap.set(resolved.regionId, {
-          id: resolved.regionId,
-          name: regName,
-          count: 1
-        });
-      }
+      incrementBreakdownCounter(
+        regionMap,
+        resolved.regionId,
+        () => regions.find((r) => r.id === resolved.regionId)?.name ?? `Región ${resolved.regionId}`
+      );
     }
   }
 

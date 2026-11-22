@@ -121,7 +121,7 @@ export const ScopedExportSplitButton: React.FC<ScopedExportSplitButtonProps> = (
 
             return (
               <React.Fragment key={bucket.key}>
-                {showDivider && <div className="my-1 border-t border-gray-100" role="separator" />}
+                {showDivider && <hr className="my-1 border-t border-gray-100" />}
                 <button
                   type="button"
                   role="menuitem"

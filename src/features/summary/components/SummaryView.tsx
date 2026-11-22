@@ -48,8 +48,6 @@ import { exportToExcel } from '../utils/excelExport';
 import {
   MemberTypeFilter,
   RegistryStatusFilter,
-  DatePeriodFilter,
-  SummaryFilterOptions,
   SummaryFilterValues,
   INITIAL_SUMMARY_FILTER_VALUES,
   hasActiveSummaryFilters,
@@ -68,7 +66,7 @@ export type {
   RegistryStatusFilter,
   DatePeriodFilter,
   SummaryFilterOptions
-};
+} from '../utils/summaryHelpers';
 
 function renderRecognitionBadge(name: string) {
   const style = getRecognitionBadgeStyle(name);

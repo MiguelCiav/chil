@@ -58,6 +58,121 @@ function getMemberStatusBadge(member: ScoutMember) {
   );
 }
 
+function renderMemberInfoCell({ row }: { row: { original: ScoutMember } }) {
+  const m = row.original;
+  const initials = `${m.first_names[0] || ''}${m.last_names[0] || ''}`.toUpperCase();
+  return (
+    <div className="flex items-center gap-3">
+      {m.avatar_url ? (
+        <img
+          src={m.avatar_url}
+          alt={`${m.first_names} ${m.last_names}`}
+          className="w-9 h-9 rounded-full object-cover border border-primary/20 shrink-0"
+        />
+      ) : (
+        <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+          {initials}
+        </div>
+      )}
+      <div className="min-w-0">
+        <div className="font-semibold text-neutral text-sm truncate">
+          {m.first_names} {m.last_names}
+        </div>
+        <div className="text-xs text-neutral/75 font-mono">
+          C.I. {m.identity}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function renderMemberHierarchyCell({ row }: { row: { original: ScoutMember } }) {
+  const m = row.original;
+  const groupLabel = m.group_name || (m.group_id ? `Grupo ${m.group_id}` : null);
+  const districtLabel = m.district_name || (m.district_id ? `Distrito ${m.district_id}` : null);
+  const regionLabel = m.region_name || (m.region_id ? `Región ${m.region_id}` : null);
+
+  if (!groupLabel && !districtLabel && !regionLabel) {
+    return <span className="text-xs text-neutral/75 italic">Sin estructura asignada</span>;
+  }
+
+  return (
+    <div className="text-xs space-y-0.5">
+      <span className="font-semibold text-neutral block truncate">
+        {groupLabel || districtLabel || regionLabel}
+      </span>
+      <span className="text-neutral/75 text-xs block truncate">
+        {[regionLabel, districtLabel].filter(Boolean).join(' › ')}
+      </span>
+    </div>
+  );
+}
+
+function renderMemberUnitTypeCell({ row }: { row: { original: ScoutMember } }) {
+  const m = row.original;
+  const unitBadge = getUnitBadge(m.unit);
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span
+        className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border ${unitBadge.badgeClass}`}
+      >
+        {unitBadge.label}
+      </span>
+      <span className="text-xs text-neutral/75 font-medium">
+        {m.member_type === 'young' ? 'Joven' : 'Adulto'}
+      </span>
+    </div>
+  );
+}
+
+function renderMemberCodeCell(
+  m: ScoutMember,
+  onInlineCodeChange: (identity: string, newCode: string) => void
+) {
+  if (m.status === 'active' || m.status === 'exceptional') {
+    return (
+      <input
+        type="text"
+        value={m.recognition_code || ''}
+        onChange={(e) => onInlineCodeChange(m.identity, e.target.value)}
+        placeholder="REC-XXXXXX"
+        className="w-28 font-mono text-xs font-bold uppercase px-2.5 py-1 rounded-lg border border-primary/70 bg-white text-neutral focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+        aria-label={`Código de reconocimiento de ${m.first_names} ${m.last_names}`}
+      />
+    );
+  }
+  return <span className="text-xs font-mono text-neutral/75 italic">Sin código</span>;
+}
+
+function renderMemberActionsCell(
+  m: ScoutMember,
+  onEditClick: (member: ScoutMember) => void,
+  onDeleteClick: (member: ScoutMember) => void
+) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <button
+        type="button"
+        onClick={() => onEditClick(m)}
+        className="p-1.5 hover:bg-primary/10 rounded-lg text-neutral/75 hover:text-primary transition-colors"
+        title="Editar datos"
+        aria-label={`Editar ${m.first_names} ${m.last_names}`}
+      >
+        <Edit2 className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onDeleteClick(m)}
+        className="p-1.5 hover:bg-red-50 rounded-lg text-neutral/75 hover:text-red-700 transition-colors"
+        title="Quitar del lote"
+        aria-label={`Quitar a ${m.first_names} ${m.last_names}`}
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
   batchId,
   membersList,
@@ -129,10 +244,10 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
     }
   }, [batchId, membersList, onMembersUpdated]);
 
-  const handleEditMemberClick = (member: ScoutMember) => {
+  const handleEditMemberClick = useCallback((member: ScoutMember) => {
     setEditingMember({ ...member });
     setIsEditModalOpen(true);
-  };
+  }, []);
 
   const handleSaveEditedMember = async (updatedMember: ScoutMember) => {
     try {
@@ -221,78 +336,17 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
       {
         id: 'member_info',
         header: 'Miembro',
-        cell: ({ row }) => {
-          const m = row.original;
-          const initials = `${m.first_names[0] || ''}${m.last_names[0] || ''}`.toUpperCase();
-          return (
-            <div className="flex items-center gap-3">
-              {m.avatar_url ? (
-                <img
-                  src={m.avatar_url}
-                  alt={`${m.first_names} ${m.last_names}`}
-                  className="w-9 h-9 rounded-full object-cover border border-primary/20 shrink-0"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                  {initials}
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="font-semibold text-neutral text-sm truncate">
-                  {m.first_names} {m.last_names}
-                </div>
-                <div className="text-xs text-neutral/75 font-mono">
-                  C.I. {m.identity}
-                </div>
-              </div>
-            </div>
-          );
-        }
+        cell: renderMemberInfoCell
       },
       {
         id: 'hierarchy',
         header: 'Estructura Scout',
-        cell: ({ row }) => {
-          const m = row.original;
-          const groupLabel = m.group_name || (m.group_id ? `Grupo ${m.group_id}` : null);
-          const districtLabel = m.district_name || (m.district_id ? `Distrito ${m.district_id}` : null);
-          const regionLabel = m.region_name || (m.region_id ? `Región ${m.region_id}` : null);
-
-          if (!groupLabel && !districtLabel && !regionLabel) {
-            return <span className="text-xs text-neutral/75 italic">Sin estructura asignada</span>;
-          }
-
-          return (
-            <div className="text-xs space-y-0.5">
-              <span className="font-semibold text-neutral block truncate">
-                {groupLabel || districtLabel || regionLabel}
-              </span>
-              <span className="text-neutral/75 text-xs block truncate">
-                {[regionLabel, districtLabel].filter(Boolean).join(' › ')}
-              </span>
-            </div>
-          );
-        }
+        cell: renderMemberHierarchyCell
       },
       {
         id: 'unit_type',
         header: 'Rama / Tipo',
-        cell: ({ row }) => {
-          const m = row.original;
-          const unitBadge = getUnitBadge(m.unit);
-          return (
-            <div className="flex flex-col items-start gap-1">
-              <span
-                className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full border ${unitBadge.badgeClass}`}
-              >
-                {unitBadge.label}
-              </span>
-              <span className="text-xs text-neutral/75 font-medium">
-                {m.member_type === 'young' ? 'Joven' : 'Adulto'}
-              </span>
-            </div>
-          );
-        }
+        cell: renderMemberUnitTypeCell
       },
       {
         id: 'status',
@@ -302,54 +356,22 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
       {
         id: 'code',
         header: 'Código',
-        cell: ({ row }) => {
-          const m = row.original;
-          if (m.status === 'active' || m.status === 'exceptional') {
-            return (
-              <input
-                type="text"
-                value={m.recognition_code || ''}
-                onChange={(e) => handleInlineCodeChange(m.identity, e.target.value)}
-                placeholder="REC-XXXXXX"
-                className="w-28 font-mono text-xs font-bold uppercase px-2.5 py-1 rounded-lg border border-primary/70 bg-white text-neutral focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                aria-label={`Código de reconocimiento de ${m.first_names} ${m.last_names}`}
-              />
-            );
-          }
-          return <span className="text-xs font-mono text-neutral/75 italic">Sin código</span>;
-        }
+        cell: ({ row }) => renderMemberCodeCell(row.original, handleInlineCodeChange)
       },
       {
         id: 'actions',
         header: '',
-        cell: ({ row }) => {
-          const m = row.original;
-          return (
-            <div className="flex items-center justify-end gap-1">
-              <button
-                type="button"
-                onClick={() => handleEditMemberClick(m)}
-                className="p-1.5 hover:bg-primary/10 rounded-lg text-neutral/75 hover:text-primary transition-colors"
-                title="Editar datos"
-                aria-label={`Editar ${m.first_names} ${m.last_names}`}
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteMember(m)}
-                className="p-1.5 hover:bg-red-50 rounded-lg text-neutral/75 hover:text-red-700 transition-colors"
-                title="Quitar del lote"
-                aria-label={`Quitar a ${m.first_names} ${m.last_names}`}
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          );
-        }
+        cell: ({ row }) =>
+          renderMemberActionsCell(
+            row.original,
+            handleEditMemberClick,
+            (member) => {
+              void handleDeleteMember(member);
+            }
+          )
       }
     ];
-  }, [handleDeleteMember, handleInlineCodeChange]);
+  }, [handleDeleteMember, handleEditMemberClick, handleInlineCodeChange]);
 
   const table = useReactTable({
     data: displayedMembers,

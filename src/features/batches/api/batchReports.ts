@@ -61,7 +61,8 @@ function sanitizeFilenameSlug(text: string): string {
       .toLowerCase()
       .replace(/[^a-z0-9_]/g, '_')
       .replace(/_+/g, '_')
-      .replace(/^_+|_+$/g, '') || 'grupo'
+      .replace(/^_/, '')
+      .replace(/_$/, '') || 'grupo'
   );
 }
 
@@ -73,87 +74,65 @@ function compareReportMembers(a: ScoutMember, b: ScoutMember): number {
   return (a.identity ?? '').localeCompare(b.identity ?? '', 'es', { sensitivity: 'base' });
 }
 
-/**
- * Groups batch members into deterministic PDF report buckets ordered alphabetically
- * by Scout group name, followed by non-empty special buckets.
- */
-export function resolveBatchReportBuckets(
+function buildPositiveIdMap<T extends { id: number }>(items: readonly T[]): Map<number, T> {
+  const map = new Map<number, T>();
+  for (const item of items) {
+    if (item.id !== 0) {
+      map.set(item.id, item);
+    }
+  }
+  return map;
+}
+
+function resolveMemberBucketDescriptor(
+  member: ScoutMember,
   batch: Batch,
-  members: ScoutMember[],
-  hierarchy: { regions: Region[]; districts: District[]; groups: ScoutGroup[] }
-): BatchReportBucket[] {
-  const regionMap = new Map<number, Region>();
-  for (const r of hierarchy.regions) {
-    if (r.id !== 0) regionMap.set(r.id, r);
-  }
-
-  const districtMap = new Map<number, District>();
-  for (const d of hierarchy.districts) {
-    if (d.id !== 0) districtMap.set(d.id, d);
-  }
-
-  const groupMap = new Map<number, ScoutGroup>();
-  for (const g of hierarchy.groups) {
-    if (g.id !== 0) groupMap.set(g.id, g);
-  }
-
-  const bucketMap = new Map<ReportBucketKey, BatchReportBucket>();
-
-  const getOrCreateBucket = (
-    key: ReportBucketKey,
-    factory: () => Omit<BatchReportBucket, 'members'>
-  ): BatchReportBucket => {
-    let existing = bucketMap.get(key);
-    if (!existing) {
-      existing = { ...factory(), members: [] };
-      bucketMap.set(key, existing);
-    }
-    return existing;
-  };
-
-  for (const member of members) {
-    if (member.unit === 'no_scout') {
-      getOrCreateBucket('special:no_scout', () => ({
-        key: 'special:no_scout',
-        kind: 'no_scout',
-        label: 'Miembros no scout',
-        districtName: null,
-        regionName: null
-      })).members.push(member);
-      continue;
-    }
-
-    const candidateGroupId = member.group_id ?? batch.group_id;
-    if (candidateGroupId && candidateGroupId !== 0) {
-      const group = groupMap.get(candidateGroupId);
-      if (group) {
-        const district = districtMap.get(group.district_id);
-        const region = district ? regionMap.get(district.region_id) : undefined;
-        const key: ReportBucketKey = `group:${group.id}`;
-        getOrCreateBucket(key, () => ({
-          key,
-          kind: 'group',
-          label: group.name,
-          districtName: district?.name ?? 'No aplica',
-          regionName: region?.name ?? 'No aplica'
-        })).members.push(member);
-        continue;
-      }
-
-      console.warn(
-        `[batchReports] Grupo con id ${candidateGroupId} no encontrado en la jerarquía; enviando miembro a "Sin grupo asignado".`
-      );
-    }
-
-    getOrCreateBucket('special:ungrouped', () => ({
-      key: 'special:ungrouped',
-      kind: 'ungrouped',
-      label: 'Sin grupo asignado',
+  regionMap: Map<number, Region>,
+  districtMap: Map<number, District>,
+  groupMap: Map<number, ScoutGroup>
+): Omit<BatchReportBucket, 'members'> {
+  if (member.unit === 'no_scout') {
+    return {
+      key: 'special:no_scout',
+      kind: 'no_scout',
+      label: 'Miembros no scout',
       districtName: null,
       regionName: null
-    })).members.push(member);
+    };
   }
 
+  const candidateGroupId = member.group_id ?? batch.group_id;
+  if (candidateGroupId && candidateGroupId !== 0) {
+    const group = groupMap.get(candidateGroupId);
+    if (group) {
+      const district = districtMap.get(group.district_id);
+      const region = district ? regionMap.get(district.region_id) : undefined;
+      return {
+        key: `group:${group.id}`,
+        kind: 'group',
+        label: group.name,
+        districtName: district?.name ?? 'No aplica',
+        regionName: region?.name ?? 'No aplica'
+      };
+    }
+
+    console.warn(
+      `[batchReports] Grupo con id ${candidateGroupId} no encontrado en la jerarquía; enviando miembro a "Sin grupo asignado".`
+    );
+  }
+
+  return {
+    key: 'special:ungrouped',
+    kind: 'ungrouped',
+    label: 'Sin grupo asignado',
+    districtName: null,
+    regionName: null
+  };
+}
+
+function assembleSortedReportBuckets(
+  bucketMap: Map<ReportBucketKey, BatchReportBucket>
+): BatchReportBucket[] {
   const groupBuckets: BatchReportBucket[] = [];
   let noScoutBucket: BatchReportBucket | null = null;
   let ungroupedBucket: BatchReportBucket | null = null;
@@ -178,6 +157,39 @@ export function resolveBatchReportBuckets(
   if (ungroupedBucket) groupBuckets.push(ungroupedBucket);
 
   return groupBuckets;
+}
+
+/**
+ * Groups batch members into deterministic PDF report buckets ordered alphabetically
+ * by Scout group name, followed by non-empty special buckets.
+ */
+export function resolveBatchReportBuckets(
+  batch: Batch,
+  members: ScoutMember[],
+  hierarchy: { regions: Region[]; districts: District[]; groups: ScoutGroup[] }
+): BatchReportBucket[] {
+  const regionMap = buildPositiveIdMap(hierarchy.regions);
+  const districtMap = buildPositiveIdMap(hierarchy.districts);
+  const groupMap = buildPositiveIdMap(hierarchy.groups);
+  const bucketMap = new Map<ReportBucketKey, BatchReportBucket>();
+
+  for (const member of members) {
+    const descriptor = resolveMemberBucketDescriptor(
+      member,
+      batch,
+      regionMap,
+      districtMap,
+      groupMap
+    );
+    let bucket = bucketMap.get(descriptor.key);
+    if (!bucket) {
+      bucket = { ...descriptor, members: [] };
+      bucketMap.set(descriptor.key, bucket);
+    }
+    bucket.members.push(member);
+  }
+
+  return assembleSortedReportBuckets(bucketMap);
 }
 
 /**
@@ -262,6 +274,61 @@ function drawSectionHeader(
   docPdf.setFont('helvetica', 'normal');
 
   return y + TABLE_HEADER_HEIGHT;
+}
+
+function drawBucketMembersSection(
+  docPdf: jsPDF,
+  activeBuckets: BatchReportBucket[],
+  initialY: number
+): void {
+  let y = initialY;
+
+  const ensureSpace = (requiredHeight: number): boolean => {
+    if (y + requiredHeight > PAGE_BOTTOM_Y) {
+      docPdf.addPage();
+      y = PAGE_TOP_Y;
+      return true;
+    }
+    return false;
+  };
+
+  for (const bucket of activeBuckets) {
+    const sectionHeaderHeight =
+      bucket.kind === 'group' ? SECTION_HEADER_HEIGHT_GROUP : SECTION_HEADER_HEIGHT_SPECIAL;
+    ensureSpace(sectionHeaderHeight + TABLE_HEADER_HEIGHT + MIN_ROW_HEIGHT);
+    y = drawSectionHeader(docPdf, bucket, y, false);
+
+    for (const m of bucket.members) {
+      const fullName = `${m.first_names ?? ''} ${m.last_names ?? ''}`.trim() || '-';
+      const nameLines = docPdf.splitTextToSize(fullName, 82);
+      const rowHeight = Math.max(MIN_ROW_HEIGHT, nameLines.length * LINE_HEIGHT + 3);
+
+      if (ensureSpace(rowHeight)) {
+        y = drawSectionHeader(docPdf, bucket, y, true);
+      }
+
+      const typeStr = m.member_type === 'young' ? 'Joven' : 'Adulto';
+      const statusStr = getReportMemberStatusText(m.status);
+      const [r, g, bColor] = getReportMemberStatusColor(m.status);
+
+      docPdf.setFontSize(10);
+      docPdf.setTextColor(...REPORT_COLORS.neutral);
+      docPdf.text(m.identity ?? '', 16, y);
+      docPdf.text(nameLines, 46, y);
+      docPdf.text(typeStr, 132, y);
+
+      docPdf.setTextColor(r, g, bColor);
+      docPdf.text(statusStr, 156, y);
+      docPdf.setTextColor(...REPORT_COLORS.neutral);
+
+      docPdf.setDrawColor(...REPORT_COLORS.rowDivider);
+      docPdf.line(CONTENT_LEFT_X, y + rowHeight - 5, CONTENT_RIGHT_X, y + rowHeight - 5);
+
+      y += rowHeight;
+    }
+
+    y += 4;
+  }
 }
 
 export async function generateBatchReport(
@@ -363,52 +430,7 @@ export async function generateBatchReport(
   docPdf.line(CONTENT_LEFT_X, y, CONTENT_RIGHT_X, y);
   y += 8;
 
-  const ensureSpace = (requiredHeight: number): boolean => {
-    if (y + requiredHeight > PAGE_BOTTOM_Y) {
-      docPdf.addPage();
-      y = PAGE_TOP_Y;
-      return true;
-    }
-    return false;
-  };
-
-  for (const bucket of activeBuckets) {
-    const sectionHeaderHeight =
-      bucket.kind === 'group' ? SECTION_HEADER_HEIGHT_GROUP : SECTION_HEADER_HEIGHT_SPECIAL;
-    ensureSpace(sectionHeaderHeight + TABLE_HEADER_HEIGHT + MIN_ROW_HEIGHT);
-    y = drawSectionHeader(docPdf, bucket, y, false);
-
-    for (const m of bucket.members) {
-      const fullName = `${m.first_names ?? ''} ${m.last_names ?? ''}`.trim() || '-';
-      const nameLines = docPdf.splitTextToSize(fullName, 82);
-      const rowHeight = Math.max(MIN_ROW_HEIGHT, nameLines.length * LINE_HEIGHT + 3);
-
-      if (ensureSpace(rowHeight)) {
-        y = drawSectionHeader(docPdf, bucket, y, true);
-      }
-
-      const typeStr = m.member_type === 'young' ? 'Joven' : 'Adulto';
-      const statusStr = getReportMemberStatusText(m.status);
-      const [r, g, bColor] = getReportMemberStatusColor(m.status);
-
-      docPdf.setFontSize(10);
-      docPdf.setTextColor(...REPORT_COLORS.neutral);
-      docPdf.text(m.identity ?? '', 16, y);
-      docPdf.text(nameLines, 46, y);
-      docPdf.text(typeStr, 132, y);
-
-      docPdf.setTextColor(r, g, bColor);
-      docPdf.text(statusStr, 156, y);
-      docPdf.setTextColor(...REPORT_COLORS.neutral);
-
-      docPdf.setDrawColor(...REPORT_COLORS.rowDivider);
-      docPdf.line(CONTENT_LEFT_X, y + rowHeight - 5, CONTENT_RIGHT_X, y + rowHeight - 5);
-
-      y += rowHeight;
-    }
-
-    y += 4;
-  }
+  drawBucketMembersSection(docPdf, activeBuckets, y);
 
   const fileName = selectedBucket
     ? `Reporte_Lote_${batch.id}_${sanitizeFilenameSlug(selectedBucket.label)}.pdf`

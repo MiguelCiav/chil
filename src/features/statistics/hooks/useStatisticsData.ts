@@ -210,16 +210,21 @@ export function determineTargetYears(
   return { currentYear, previousYear: currentYear - 1 };
 }
 
+export interface StatisticsLookupContext {
+  groups?: ScoutGroup[];
+  districts?: District[];
+  regions?: Region[];
+  recognitionTypes?: RecognitionType[];
+}
+
 export function extractYearBatches(
   allBatches: Batch[],
   year: number,
   filters?: StatisticsFilterState,
   members?: ScoutMember[],
-  groups?: ScoutGroup[],
-  districts?: District[],
-  regions?: Region[],
-  recognitionTypes: RecognitionType[] = []
+  context: StatisticsLookupContext = {}
 ): Batch[] {
+  const { groups, districts, regions, recognitionTypes = [] } = context;
   const batchMap = new Map<number, Batch>();
   allBatches.forEach(b => batchMap.set(b.id, b));
 
@@ -277,11 +282,9 @@ export function extractYearMembers(
   yearBatchIds: Set<number>,
   filters?: StatisticsFilterState | string,
   batchMap?: Map<number, Batch>,
-  groups?: ScoutGroup[],
-  districts?: District[],
-  regions?: Region[],
-  recognitionTypes: RecognitionType[] = []
+  context: StatisticsLookupContext = {}
 ): ScoutMember[] {
+  const { groups, districts, regions, recognitionTypes = [] } = context;
   const memberType = typeof filters === 'string' ? filters : filters?.memberType;
   const filterState = typeof filters === 'object' ? filters : undefined;
   const cleanSearch = filterState?.searchTerm?.trim().toLowerCase() ?? '';
@@ -400,25 +403,25 @@ export function computeFilteredStatisticsDataset(params: ComputeFilteredStatisti
   const { currentYear, previousYear } = determineTargetYears(batches, filters);
 
   // Filter current year and previous year batches applying active non-period filters
+  const lookupContext: StatisticsLookupContext = {
+    groups,
+    districts,
+    regions,
+    recognitionTypes
+  };
   const currentYearBatches = extractYearBatches(
     batches,
     currentYear,
     filters,
     members,
-    groups,
-    districts,
-    regions,
-    recognitionTypes
+    lookupContext
   );
   const previousYearBatches = extractYearBatches(
     batches,
     previousYear,
     filters,
     members,
-    groups,
-    districts,
-    regions,
-    recognitionTypes
+    lookupContext
   );
 
   const currentYearBatchIds = new Set<number>(currentYearBatches.map(b => b.id));
@@ -429,20 +432,14 @@ export function computeFilteredStatisticsDataset(params: ComputeFilteredStatisti
     currentYearBatchIds,
     filters,
     batchMap,
-    groups,
-    districts,
-    regions,
-    recognitionTypes
+    lookupContext
   );
   const previousYearMembers = extractYearMembers(
     members,
     previousYearBatchIds,
     filters,
     batchMap,
-    groups,
-    districts,
-    regions,
-    recognitionTypes
+    lookupContext
   );
 
   const yoyComparison = calculateYoYComparison({

@@ -17,10 +17,10 @@ export interface ResolvedMemberHierarchy {
   isNationalInstitutional: boolean;
 }
 
+export type HierarchyIdInput = string | number | undefined;
+
 export function isNoAplicaDistrict(district?: { name?: string } | null): boolean {
-  return Boolean(
-    district?.name && district.name.trim().toUpperCase() === NO_APLICA_DISTRICT_NAME
-  );
+  return district?.name?.trim().toUpperCase() === NO_APLICA_DISTRICT_NAME;
 }
 
 function resolveFiniteId(memberVal?: number, batchVal?: number): number {
@@ -35,6 +35,58 @@ function resolveFiniteId(memberVal?: number, batchVal?: number): number {
     batchVal >= 0
   ) {
     return batchVal;
+  }
+  return 0;
+}
+
+function resolveHierarchyFromMatchedGroup(
+  matchedGroup: ScoutGroup,
+  groupId: number,
+  member: ScoutMember,
+  batch: Batch | null | undefined,
+  districts: readonly District[]
+): ResolvedMemberHierarchy {
+  const rawDistrictId =
+    Number.isFinite(matchedGroup.district_id) && matchedGroup.district_id > 0
+      ? matchedGroup.district_id
+      : 0;
+  const matchedDistrict =
+    rawDistrictId > 0 ? districts.find((d) => d.id === rawDistrictId) : undefined;
+  const districtId =
+    rawDistrictId > 0 && !isNoAplicaDistrict(matchedDistrict) ? rawDistrictId : 0;
+
+  const hasValidDistrictRegion =
+    matchedDistrict !== undefined &&
+    Number.isFinite(matchedDistrict.region_id) &&
+    matchedDistrict.region_id > 0;
+  const regionId = hasValidDistrictRegion
+    ? matchedDistrict.region_id
+    : resolveFiniteId(member.region_id, batch?.region_id);
+
+  return {
+    regionId,
+    districtId,
+    groupId,
+    isNationalInstitutional: false
+  };
+}
+
+function resolveUngroupedRegionId(
+  districtId: number,
+  isNoAplicaDist: boolean,
+  matchedDistrict: District | undefined,
+  member: ScoutMember,
+  batch: Batch | null | undefined
+): number {
+  if (districtId > 0 && matchedDistrict && matchedDistrict.region_id > 0) {
+    return matchedDistrict.region_id;
+  }
+  const directRegionId = resolveFiniteId(member.region_id, batch?.region_id);
+  if (directRegionId > 0) {
+    return directRegionId;
+  }
+  if (isNoAplicaDist && matchedDistrict && matchedDistrict.region_id > 0) {
+    return matchedDistrict.region_id;
   }
   return 0;
 }
@@ -55,32 +107,12 @@ export function resolveMemberHierarchy(
 
   const districts = hierarchy.districts ?? [];
   const groups = hierarchy.groups ?? [];
-
   const groupId = resolveFiniteId(member.group_id, batch?.group_id);
 
   if (groupId > 0) {
     const matchedGroup = groups.find((g) => g.id === groupId);
     if (matchedGroup) {
-      const rawDistrictId =
-        Number.isFinite(matchedGroup.district_id) && matchedGroup.district_id > 0
-          ? matchedGroup.district_id
-          : 0;
-      const matchedDistrict =
-        rawDistrictId > 0 ? districts.find((d) => d.id === rawDistrictId) : undefined;
-      const districtId =
-        rawDistrictId > 0 && !isNoAplicaDistrict(matchedDistrict) ? rawDistrictId : 0;
-
-      const regionId =
-        matchedDistrict && Number.isFinite(matchedDistrict.region_id) && matchedDistrict.region_id > 0
-          ? matchedDistrict.region_id
-          : resolveFiniteId(member.region_id, batch?.region_id);
-
-      return {
-        regionId,
-        districtId,
-        groupId,
-        isNationalInstitutional: false
-      };
+      return resolveHierarchyFromMatchedGroup(matchedGroup, groupId, member, batch, districts);
     }
   }
 
@@ -89,18 +121,13 @@ export function resolveMemberHierarchy(
     rawDistrictId > 0 ? districts.find((d) => d.id === rawDistrictId) : undefined;
   const isNoAplicaDist = rawDistrictId > 0 && isNoAplicaDistrict(matchedDistrict);
   const districtId = isNoAplicaDist ? 0 : rawDistrictId;
-
-  let regionId = 0;
-  if (districtId > 0 && matchedDistrict && matchedDistrict.region_id > 0) {
-    regionId = matchedDistrict.region_id;
-  } else {
-    const directRegionId = resolveFiniteId(member.region_id, batch?.region_id);
-    if (directRegionId > 0) {
-      regionId = directRegionId;
-    } else if (isNoAplicaDist && matchedDistrict && matchedDistrict.region_id > 0) {
-      regionId = matchedDistrict.region_id;
-    }
-  }
+  const regionId = resolveUngroupedRegionId(
+    districtId,
+    isNoAplicaDist,
+    matchedDistrict,
+    member,
+    batch
+  );
 
   const isNationalInstitutional =
     member.unit === 'institucional' && regionId === 0 && districtId === 0 && groupId === 0;
@@ -119,7 +146,7 @@ export function resolveMemberHierarchy(
  */
 export function getAvailableDistricts(
   districts: readonly District[],
-  regionId: string | number | undefined,
+  regionId: HierarchyIdInput,
   options?: { includeNoAplicaDistrict?: boolean; allowAllWhenUnset?: boolean }
 ): District[] {
   if (regionId === 'nacional' || regionId === '0' || regionId === 0) {
@@ -154,8 +181,8 @@ export function getAvailableDistricts(
 export function getAvailableGroups(
   groups: readonly ScoutGroup[],
   districts: readonly District[],
-  regionId: string | number | undefined,
-  districtId: string | number | undefined,
+  regionId: HierarchyIdInput,
+  districtId: HierarchyIdInput,
   options?: { allowAllWhenUnset?: boolean }
 ): ScoutGroup[] {
   if (regionId === 'nacional' || regionId === '0' || districtId === '0') {
@@ -184,6 +211,22 @@ export function getAvailableGroups(
   return [];
 }
 
+function normalizeDistrictSelection(dist?: District): {
+  district_id: number;
+  district_name: string;
+  regionId: number;
+} {
+  if (!dist) {
+    return { district_id: 0, district_name: '', regionId: 0 };
+  }
+  const isNoAplica = isNoAplicaDistrict(dist);
+  return {
+    district_id: isNoAplica ? 0 : dist.id,
+    district_name: isNoAplica ? '' : dist.name,
+    regionId: dist.region_id
+  };
+}
+
 /**
  * Resolves parent region and normalized district fields when selecting a positive district or group.
  */
@@ -207,31 +250,27 @@ export function resolveParentHierarchyForSelection(
 
   if (level === 'district') {
     const dist = hierarchy.districts.find(d => d.id === selectedId);
-    const regionId = dist?.region_id ?? 0;
+    const { district_id, district_name, regionId } = normalizeDistrictSelection(dist);
     const reg = regionId > 0 ? hierarchy.regions.find(r => r.id === regionId) : undefined;
-    const isNoAplica = isNoAplicaDistrict(dist);
 
     return {
       region_id: reg?.id ?? regionId,
       region_name: reg?.name ?? '',
-      district_id: dist && !isNoAplica ? dist.id : 0,
-      district_name: dist && !isNoAplica ? dist.name : ''
+      district_id,
+      district_name
     };
   }
 
   const grp = hierarchy.groups.find(g => g.id === selectedId);
   const rawDist = grp ? hierarchy.districts.find(d => d.id === grp.district_id) : undefined;
-  const isNoAplica = isNoAplicaDistrict(rawDist);
-  const districtId = rawDist && !isNoAplica ? rawDist.id : 0;
-  const districtName = rawDist && !isNoAplica ? rawDist.name : '';
-  const regionId = rawDist?.region_id ?? 0;
+  const { district_id, district_name, regionId } = normalizeDistrictSelection(rawDist);
   const reg = regionId > 0 ? hierarchy.regions.find(r => r.id === regionId) : undefined;
 
   return {
     region_id: reg?.id ?? regionId,
     region_name: reg?.name ?? '',
-    district_id: districtId,
-    district_name: districtName,
+    district_id,
+    district_name,
     group_id: grp?.id ?? selectedId,
     group_name: grp?.name ?? ''
   };

@@ -44,7 +44,7 @@ export const LoginPage: React.FC = () => {
     try {
       await login(data);
       const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/lotes';
-      navigate(from, { replace: true });
+      void navigate(from, { replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al iniciar sesión';
       setServerError(msg);

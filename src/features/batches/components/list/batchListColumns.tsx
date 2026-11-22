@@ -154,7 +154,7 @@ export function renderBatchActionsCell(props: BatchActionsCellProps) {
             type="button"
             onClick={() => {
               setOpenActionMenuId(null);
-              navigate(`/lotes/${rowData.id}`);
+              void navigate(`/lotes/${rowData.id}`);
             }}
             className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
           >

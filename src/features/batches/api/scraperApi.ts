@@ -5,7 +5,14 @@ export const getScraperApiUrl = (): string => {
   const rawApiUrl = (
     import.meta.env.VITE_SCRAPER_API_URL as string | undefined
   )?.trim();
-  return rawApiUrl ? rawApiUrl.replace(/\/+$/, '') : '';
+  if (!rawApiUrl) {
+    return '';
+  }
+  let cleanUrl = rawApiUrl;
+  while (cleanUrl.endsWith('/')) {
+    cleanUrl = cleanUrl.slice(0, -1);
+  }
+  return cleanUrl;
 };
 
 export interface ScraperMemberDetails {
@@ -122,12 +129,26 @@ export function purgeLegacyScraperStorage(): void {
 interface CallableErrorLike {
   code?: string;
   message?: string;
-  details?: { reason?: string } | unknown;
+  details?: unknown;
 }
 
 interface HttpErrorPayload {
   error?: string;
   reason?: string;
+}
+
+function resolveCallableErrorMessage(
+  error: unknown,
+  errObj: CallableErrorLike,
+  fallbackMessage: string
+): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof errObj.message === 'string' && errObj.message) {
+    return errObj.message;
+  }
+  return fallbackMessage;
 }
 
 function mapCallableError(error: unknown, fallbackMessage: string): Error {
@@ -137,12 +158,7 @@ function mapCallableError(error: unknown, fallbackMessage: string): Error {
 
   const errObj = (error ?? {}) as CallableErrorLike;
   const code = typeof errObj.code === 'string' ? errObj.code : '';
-  const message =
-    error instanceof Error && error.message
-      ? error.message
-      : typeof errObj.message === 'string' && errObj.message
-        ? errObj.message
-        : fallbackMessage;
+  const message = resolveCallableErrorMessage(error, errObj, fallbackMessage);
 
   const detailsObj =
     typeof errObj.details === 'object' && errObj.details !== null

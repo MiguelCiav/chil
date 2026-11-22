@@ -250,7 +250,7 @@ export const CertificateDesigner: React.FC = () => {
   );
 
   const handleUndo = useCallback(() => {
-    const previousFields = past[past.length - 1]?.fields ?? [];
+    const previousFields = past.at(-1)?.fields ?? [];
     const restoredFields = previousFields.filter(
       (prevField) => !template.fields.some((curField) => curField.id === prevField.id)
     );
@@ -351,7 +351,7 @@ export const CertificateDesigner: React.FC = () => {
       }
     }
 
-    loadData();
+    void loadData();
 
     return () => {
       isMounted = false;
@@ -483,13 +483,12 @@ export const CertificateDesigner: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div
-        role="status"
+      <output
         className="max-w-7xl mx-auto py-12 flex flex-col items-center justify-center gap-3"
       >
         <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
         <p className="text-sm font-semibold text-neutral/75">Cargando diseñador de plantilla...</p>
-      </div>
+      </output>
     );
   }
 
@@ -500,7 +499,9 @@ export const CertificateDesigner: React.FC = () => {
         title="Reconocimiento no encontrado"
         message="El tipo de reconocimiento solicitado no existe o fue eliminado."
         retryLabel="Volver al Catálogo"
-        onRetry={() => navigate('/reconocimientos')}
+        onRetry={() => {
+          void navigate('/reconocimientos');
+        }}
       />
     );
   }
@@ -542,7 +543,9 @@ export const CertificateDesigner: React.FC = () => {
         onTogglePreview={setIsPreviewMode}
         onUploadClick={() => fileInputRef.current?.click()}
         onSave={handleSaveTemplate}
-        onBack={() => navigate('/reconocimientos')}
+        onBack={() => {
+          void navigate('/reconocimientos');
+        }}
         onStartTour={() => startTour()}
       />
 

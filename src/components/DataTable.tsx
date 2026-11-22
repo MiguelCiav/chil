@@ -36,13 +36,13 @@ export function DataTable<TData>({
     bodyContent = (
       <tr>
         <td colSpan={columnCount} className="px-6 py-10 text-center text-sm text-neutral/75">
-          <div role="status" aria-busy="true" className="inline-flex items-center gap-2">
+          <output aria-busy="true" className="inline-flex items-center gap-2">
             <div
               className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"
               aria-hidden="true"
             />
             <span>{loadingMessage}</span>
-          </div>
+          </output>
         </td>
       </tr>
     );

@@ -223,7 +223,7 @@ export const NewBatchWizard: React.FC = () => {
 
   const handleFinalizeBatch = () => {
     if (batchId === null) return;
-    navigate(`/lotes/${batchId}`);
+    void navigate(`/lotes/${batchId}`);
   };
 
   return (

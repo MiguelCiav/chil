@@ -58,6 +58,61 @@ function getProgressColor(
   return bars[2];
 }
 
+interface DisplayedTerritorialRow {
+  key: number | string;
+  parentName?: string;
+  name: string;
+  count: number;
+  previousCount?: number;
+  diff?: number;
+  percentChange?: number | null;
+  percentage: number;
+}
+
+function computeTerritorialMaxCount(
+  hasYoY: boolean,
+  items: readonly GeographicItem[],
+  yoyItems?: readonly YoYTerritorialSummaryItem[]
+): number {
+  if (hasYoY && yoyItems) {
+    return Math.max(...yoyItems.map(i => i.currentCount), 1);
+  }
+  if (items.length > 0) {
+    return Math.max(...items.map(i => i.count), 1);
+  }
+  return 1;
+}
+
+function buildDisplayedTerritorialRows(
+  hasYoY: boolean,
+  showAll: boolean,
+  items: readonly GeographicItem[],
+  yoyItems?: readonly YoYTerritorialSummaryItem[]
+): DisplayedTerritorialRow[] {
+  if (hasYoY && yoyItems) {
+    const visibleYoY = showAll ? yoyItems : yoyItems.slice(0, 5);
+    return visibleYoY.map(item => ({
+      key: item.id || item.name,
+      parentName: item.parentName,
+      name: item.name,
+      count: item.currentCount,
+      previousCount: item.previousCount,
+      diff: item.diff,
+      percentChange: item.percentChange,
+      percentage: item.currentPercentage ?? 0
+    }));
+  }
+
+  const visibleItems = showAll ? items : items.slice(0, 5);
+  return visibleItems.map(item => ({
+    key: item.id || item.name,
+    parentName: item.parentName,
+    name: item.name,
+    count: item.count,
+    percentage: item.percentage
+  }));
+}
+
 export const TerritorialSummaryTable: React.FC<TerritorialSummaryTableProps> = ({
   title,
   icon,
@@ -77,12 +132,7 @@ export const TerritorialSummaryTable: React.FC<TerritorialSummaryTableProps> = (
   const itemsCount = hasYoY && yoyItems ? yoyItems.length : items.length;
   const accent = ACCENT_STYLES[accentColor];
 
-  const maxCount =
-    hasYoY && yoyItems
-      ? Math.max(...yoyItems.map(i => i.currentCount), 1)
-      : items.length > 0
-        ? Math.max(...items.map(i => i.count), 1)
-        : 1;
+  const maxCount = computeTerritorialMaxCount(hasYoY, items, yoyItems);
 
   const totalCurrent =
     hasYoY && yoyItems
@@ -93,27 +143,7 @@ export const TerritorialSummaryTable: React.FC<TerritorialSummaryTableProps> = (
       ? yoyItems.filter(item => item.previousCount > 0).length
       : undefined;
 
-  const displayedRows = hasYoY && yoyItems
-    ? (showAll ? yoyItems : yoyItems.slice(0, 5)).map(item => ({
-        key: item.id || item.name,
-        parentName: item.parentName,
-        name: item.name,
-        count: item.currentCount,
-        previousCount: item.previousCount,
-        diff: item.diff,
-        percentChange: item.percentChange,
-        percentage: item.currentPercentage ?? 0
-      }))
-    : (showAll ? items : items.slice(0, 5)).map(item => ({
-        key: item.id || item.name,
-        parentName: item.parentName,
-        name: item.name,
-        count: item.count,
-        previousCount: undefined as number | undefined,
-        diff: undefined as number | undefined,
-        percentChange: undefined as number | null | undefined,
-        percentage: item.percentage
-      }));
+  const displayedRows = buildDisplayedTerritorialRows(hasYoY, showAll, items, yoyItems);
 
   return (
     <Card>

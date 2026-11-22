@@ -33,7 +33,7 @@ const getMemberStatusHandler = async (request) => {
   }
 
   const sessionRecord = await sessionStore.getSessionEnvelope(uid);
-  if (!sessionRecord || !sessionRecord.encrypted) {
+  if (!sessionRecord?.encrypted) {
     throw new HttpsError(
       "failed-precondition",
       "No hay una sesión de Impeesa configurada",
@@ -73,10 +73,7 @@ const getMemberStatusHandler = async (request) => {
     if (error.message === "No registrado") {
       throw new HttpsError("not-found", "No registrado");
     }
-    if (
-      error.message &&
-      error.message.includes("Sesión de scraper no autenticada")
-    ) {
+    if (error.message?.includes("Sesión de scraper no autenticada")) {
       await sessionStore.markSessionExpired(uid).catch(() => {});
       throw new HttpsError(
         "failed-precondition",

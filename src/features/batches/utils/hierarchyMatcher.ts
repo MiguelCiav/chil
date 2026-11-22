@@ -24,6 +24,37 @@ export function normalizeScoutName(str?: string): string {
     .trim();
 }
 
+interface CanonicalHierarchyEntity {
+  id: number;
+  name: string;
+  uuid?: string;
+}
+
+function findMatchingEntity<T extends CanonicalHierarchyEntity>(
+  items: readonly T[],
+  rawInput: string | undefined,
+  normInput: string,
+  scopePredicate?: (item: T) => boolean
+): T | undefined {
+  if (!rawInput) return undefined;
+  const isCandidate = (item: T) => item.id !== 0 && (!scopePredicate || scopePredicate(item));
+
+  const exactMatch = items.find(
+    (item) =>
+      isCandidate(item) &&
+      (item.uuid === rawInput || (Boolean(normInput) && normalizeScoutName(item.name) === normInput))
+  );
+  if (exactMatch || !normInput) {
+    return exactMatch;
+  }
+
+  return items.find((item) => {
+    if (!isCandidate(item)) return false;
+    const normItemName = normalizeScoutName(item.name);
+    return normItemName.includes(normInput) || normInput.includes(normItemName);
+  });
+}
+
 /**
  * Mapea nombres extraídos de Impeesa a IDs y nombres canónicos de hierarchy.json
  */
@@ -37,96 +68,40 @@ export function matchHierarchy(
   const normGroup = normalizeScoutName(groupStr);
 
   // 1. Coincidencia de Región (UUID o Nombre)
-  let matchedRegion = regionStr
-    ? hierarchyData.regions.find(
-        (r) => r.id !== 0 && (r.uuid === regionStr || (normRegion && normalizeScoutName(r.name) === normRegion))
+  let matchedRegion = findMatchingEntity(hierarchyData.regions, regionStr, normRegion);
+
+  // 2. Coincidencia de Distrito (prioriza la región encontrada, soporta UUID o Nombre)
+  let matchedDistrict = matchedRegion
+    ? findMatchingEntity(
+        hierarchyData.districts,
+        districtStr,
+        normDistrict,
+        (d) => d.region_id === matchedRegion!.id
       )
     : undefined;
 
-  if (!matchedRegion && normRegion) {
-    matchedRegion = hierarchyData.regions.find(
-      (r) =>
-        r.id !== 0 &&
-        (normalizeScoutName(r.name).includes(normRegion) ||
-          normRegion.includes(normalizeScoutName(r.name)))
-    );
-  }
-
-  // 2. Coincidencia de Distrito (prioriza la región encontrada, soporta UUID o Nombre)
-  let matchedDistrict = null;
-  if (matchedRegion && districtStr) {
-    matchedDistrict = hierarchyData.districts.find(
-      (d) =>
-        d.id !== 0 &&
-        d.region_id === matchedRegion!.id &&
-        (d.uuid === districtStr || (normDistrict && normalizeScoutName(d.name) === normDistrict))
-    );
-    if (!matchedDistrict && normDistrict) {
-      matchedDistrict = hierarchyData.districts.find(
-        (d) =>
-          d.id !== 0 &&
-          d.region_id === matchedRegion!.id &&
-          (normalizeScoutName(d.name).includes(normDistrict) ||
-            normDistrict.includes(normalizeScoutName(d.name)))
-      );
-    }
-  }
-  if (!matchedDistrict && districtStr) {
-    matchedDistrict = hierarchyData.districts.find(
-      (d) => d.id !== 0 && (d.uuid === districtStr || (normDistrict && normalizeScoutName(d.name) === normDistrict))
-    );
-    if (!matchedDistrict && normDistrict) {
-      matchedDistrict = hierarchyData.districts.find(
-        (d) =>
-          d.id !== 0 &&
-          (normalizeScoutName(d.name).includes(normDistrict) ||
-            normDistrict.includes(normalizeScoutName(d.name)))
-      );
-    }
-    if (matchedDistrict && !matchedRegion) {
-      matchedRegion = hierarchyData.regions.find((r) => r.id === matchedDistrict!.region_id);
+  if (!matchedDistrict) {
+    matchedDistrict = findMatchingEntity(hierarchyData.districts, districtStr, normDistrict);
+    if (matchedDistrict) {
+      matchedRegion ??= hierarchyData.regions.find((r) => r.id === matchedDistrict!.region_id);
     }
   }
 
   // 3. Coincidencia de Grupo Scout (UUID o Nombre)
-  let matchedGroup = null;
-  if (matchedDistrict && groupStr) {
-    // 3.1 Coincidencia exacta dentro del distrito (UUID o Nombre)
-    matchedGroup = hierarchyData.groups.find(
-      (g) =>
-        g.id !== 0 &&
-        g.district_id === matchedDistrict!.id &&
-        (g.uuid === groupStr || (normGroup && normalizeScoutName(g.name) === normGroup))
+  let matchedGroup: (typeof hierarchyData.groups)[number] | undefined;
+  if (matchedDistrict) {
+    matchedGroup = findMatchingEntity(
+      hierarchyData.groups,
+      groupStr,
+      normGroup,
+      (g) => g.district_id === matchedDistrict!.id
     );
-    // 3.2 Coincidencia parcial/subcadena
-    if (!matchedGroup && normGroup) {
-      matchedGroup = hierarchyData.groups.find(
-        (g) =>
-          g.id !== 0 &&
-          g.district_id === matchedDistrict!.id &&
-          (normalizeScoutName(g.name).includes(normGroup) ||
-            normGroup.includes(normalizeScoutName(g.name)))
-      );
-    }
   } else if (groupStr) {
-    // 3.3 Búsqueda global de grupo si no hubo distrito previo
-    matchedGroup = hierarchyData.groups.find(
-      (g) => g.id !== 0 && (g.uuid === groupStr || (normGroup && normalizeScoutName(g.name) === normGroup))
-    );
-    if (!matchedGroup && normGroup) {
-      matchedGroup = hierarchyData.groups.find(
-        (g) =>
-          g.id !== 0 &&
-          (normalizeScoutName(g.name).includes(normGroup) ||
-            normGroup.includes(normalizeScoutName(g.name)))
-      );
-    }
+    matchedGroup = findMatchingEntity(hierarchyData.groups, groupStr, normGroup);
     if (matchedGroup) {
-      if (!matchedDistrict) {
-        matchedDistrict = hierarchyData.districts.find((d) => d.id === matchedGroup!.district_id);
-      }
-      if (matchedDistrict && !matchedRegion) {
-        matchedRegion = hierarchyData.regions.find((r) => r.id === matchedDistrict!.region_id);
+      matchedDistrict ??= hierarchyData.districts.find((d) => d.id === matchedGroup!.district_id);
+      if (matchedDistrict) {
+        matchedRegion ??= hierarchyData.regions.find((r) => r.id === matchedDistrict!.region_id);
       }
     }
   }
@@ -141,42 +116,117 @@ export function matchHierarchy(
   };
 }
 
+function computeYearsSince(year: number, monthIndex: number, day: number): number | null {
+  const birthDate = new Date(year, monthIndex, day);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= 0 ? age : null;
+}
+
 /**
  * Calcula la edad en años a partir de una fecha en formato YYYY-MM-DD o DD/MM/YYYY
  */
 function calculateAgeFromBirthDate(birthDateStr?: string): number | null {
   if (!birthDateStr) return null;
-  const isoMatch = birthDateStr.match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+  const isoMatch = /(\d{4})[/-](\d{1,2})[/-](\d{1,2})/.exec(birthDateStr);
   if (isoMatch) {
-    const year = parseInt(isoMatch[1], 10);
-    const month = parseInt(isoMatch[2], 10) - 1;
-    const day = parseInt(isoMatch[3], 10);
-    const birthDate = new Date(year, month, day);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age >= 0 ? age : null;
+    const year = Number.parseInt(isoMatch[1], 10);
+    const month = Number.parseInt(isoMatch[2], 10) - 1;
+    const day = Number.parseInt(isoMatch[3], 10);
+    return computeYearsSince(year, month, day);
   }
 
-  const dmyMatch = birthDateStr.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  const dmyMatch = /(\d{1,2})[/-](\d{1,2})[/-](\d{4})/.exec(birthDateStr);
   if (dmyMatch) {
-    const day = parseInt(dmyMatch[1], 10);
-    const month = parseInt(dmyMatch[2], 10) - 1;
-    const year = parseInt(dmyMatch[3], 10);
-    const birthDate = new Date(year, month, day);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age >= 0 ? age : null;
+    const day = Number.parseInt(dmyMatch[1], 10);
+    const month = Number.parseInt(dmyMatch[2], 10) - 1;
+    const year = Number.parseInt(dmyMatch[3], 10);
+    return computeYearsSince(year, month, day);
   }
 
   return null;
+}
+
+const ADULT_CARGO_KEYWORDS = [
+  'adulto',
+  'dirigente',
+  'jefe',
+  'colaborador',
+  'cooperador',
+  'asistente',
+  'scouter'
+] as const;
+
+const ADULT_INSTITUTIONAL_KEYWORDS = [
+  'nacional',
+  'distrital',
+  'regional',
+  'comisionado'
+] as const;
+
+const ADULT_MEMBER_TYPE_KEYWORDS = [
+  'institucional',
+  'distrito',
+  'nacional',
+  'adulto'
+] as const;
+
+function hasAdultRoleKeyword(
+  normCargo: string,
+  normCargoInst: string,
+  normTipo: string
+): boolean {
+  return (
+    ADULT_CARGO_KEYWORDS.some((kw) => normCargo.includes(kw)) ||
+    ADULT_INSTITUTIONAL_KEYWORDS.some((kw) => normCargoInst.includes(kw)) ||
+    ADULT_MEMBER_TYPE_KEYWORDS.some((kw) => normTipo.includes(kw))
+  );
+}
+
+function isInYouthAgeBand(
+  isAdult: boolean,
+  edad: number | null,
+  minInclusive: number,
+  maxExclusive: number
+): boolean {
+  return !isAdult && edad !== null && edad >= minInclusive && edad < maxExclusive;
+}
+
+function resolveScoutBranchUnit(
+  normUnit: string,
+  isAdult: boolean,
+  edad: number | null
+): ScoutUnit {
+  if (
+    normUnit.includes('manada') ||
+    normUnit.includes('lobato') ||
+    normUnit.includes('lobezna') ||
+    isInYouthAgeBand(isAdult, edad, 7, 11)
+  ) {
+    return 'manada';
+  }
+  if (normUnit.includes('tropa') || isInYouthAgeBand(isAdult, edad, 11, 16)) {
+    return 'tropa';
+  }
+  if (
+    normUnit.includes('comunidad') ||
+    normUnit.includes('caminante') ||
+    isInYouthAgeBand(isAdult, edad, 16, 18)
+  ) {
+    return 'caminantes';
+  }
+  if (
+    normUnit.includes('clan') ||
+    normUnit.includes('rover') ||
+    isInYouthAgeBand(isAdult, edad, 18, 21)
+  ) {
+    return 'clan';
+  }
+  return 'institucional';
 }
 
 /**
@@ -190,10 +240,7 @@ export function classifyScoutUnitAndType(scraped: {
   edad?: number | null;
   fecha_nacimiento?: string;
 }): { unit: ScoutUnit; member_type: 'young' | 'adult' } {
-  let edad = scraped.edad ?? null;
-  if (edad === null && scraped.fecha_nacimiento) {
-    edad = calculateAgeFromBirthDate(scraped.fecha_nacimiento);
-  }
+  const edad = scraped.edad ?? calculateAgeFromBirthDate(scraped.fecha_nacimiento);
 
   const normUnit = (scraped.unidad || '').toLowerCase();
   const normCargo = (scraped.cargo_grupo || '').toLowerCase();
@@ -209,58 +256,12 @@ export function classifyScoutUnitAndType(scraped: {
   }
 
   // 1. Detección de Adulto
-  const isAdultRole =
-    normCargo.includes('adulto') ||
-    normCargo.includes('dirigente') ||
-    normCargo.includes('jefe') ||
-    normCargo.includes('colaborador') ||
-    normCargo.includes('cooperador') ||
-    normCargo.includes('asistente') ||
-    normCargo.includes('scouter') ||
-    normCargoInst.includes('nacional') ||
-    normCargoInst.includes('distrital') ||
-    normCargoInst.includes('regional') ||
-    normCargoInst.includes('comisionado') ||
-    normTipo.includes('institucional') ||
-    normTipo.includes('distrito') ||
-    normTipo.includes('nacional') ||
-    normTipo.includes('adulto');
-
+  const isAdultRole = hasAdultRoleKeyword(normCargo, normCargoInst, normTipo);
   const isAdultAge = edad !== null && edad >= 21;
   const isAdult = isAdultRole || isAdultAge;
 
   // 2. Mapeo de Unidad Scout
-  // Si la persona pertenece explícitamente a una rama juvenil (incluso como adulto dirigente de rama),
-  // se respeta esa unidad (Manada, Tropa, Caminantes/Comunidad, Clan).
-  let unit: ScoutUnit = 'institucional';
-
-  if (
-    normUnit.includes('manada') ||
-    normUnit.includes('lobato') ||
-    normUnit.includes('lobezna') ||
-    (!isAdult && edad !== null && edad >= 7 && edad < 11)
-  ) {
-    unit = 'manada';
-  } else if (
-    normUnit.includes('tropa') ||
-    (!isAdult && edad !== null && edad >= 11 && edad < 16)
-  ) {
-    unit = 'tropa';
-  } else if (
-    normUnit.includes('comunidad') ||
-    normUnit.includes('caminante') ||
-    (!isAdult && edad !== null && edad >= 16 && edad < 18)
-  ) {
-    unit = 'caminantes';
-  } else if (
-    normUnit.includes('clan') ||
-    normUnit.includes('rover') ||
-    (!isAdult && edad !== null && edad >= 18 && edad < 21)
-  ) {
-    unit = 'clan';
-  } else if (normUnit.includes('conductor') || isAdult) {
-    unit = 'institucional';
-  }
+  const unit = resolveScoutBranchUnit(normUnit, isAdult, edad);
 
   return {
     unit,

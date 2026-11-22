@@ -43,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   });
 
-  const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
+  const isCollapsed = controlledCollapsed ?? internalCollapsed;
   const mobileDrawerRef = useRef<HTMLDivElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       if (focusable.length === 0) return;
 
       const first = focusable[0];
-      const last = focusable[focusable.length - 1];
+      const last = focusable.at(-1)!;
       if (e.shiftKey && (document.activeElement === first || !drawer.contains(document.activeElement))) {
         e.preventDefault();
         last.focus();
@@ -144,6 +144,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const renderNavContent = (isMobile = false) => {
     const collapsed = isMobile ? false : isCollapsed;
 
+    let headerAction: React.ReactNode = null;
+    if (isMobile) {
+      headerAction = (
+        <button
+          type="button"
+          onClick={onMobileClose}
+          className="p-1.5 rounded-lg text-neutral/75 hover:text-neutral hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Cerrar menú"
+        >
+          <X className="w-5 h-5" aria-hidden="true" />
+        </button>
+      );
+    } else if (!collapsed) {
+      headerAction = (
+        <button
+          type="button"
+          onClick={toggleCollapse}
+          className="p-1.5 rounded-lg text-neutral/75 hover:text-neutral hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label="Colapsar barra lateral"
+          title="Colapsar barra lateral"
+        >
+          <ChevronLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
+        </button>
+      );
+    }
+
     return (
       <div className="flex flex-col h-full bg-white text-neutral select-none">
         {/* Header / Logo */}
@@ -172,26 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </Link>
           )}
 
-          {isMobile ? (
-            <button
-              type="button"
-              onClick={onMobileClose}
-              className="p-1.5 rounded-lg text-neutral/75 hover:text-neutral hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              aria-label="Cerrar menú"
-            >
-              <X className="w-5 h-5" aria-hidden="true" />
-            </button>
-          ) : !collapsed ? (
-            <button
-              type="button"
-              onClick={toggleCollapse}
-              className="p-1.5 rounded-lg text-neutral/75 hover:text-neutral hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              aria-label="Colapsar barra lateral"
-              title="Colapsar barra lateral"
-            >
-              <ChevronLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
-            </button>
-          ) : null}
+          {headerAction}
         </div>
 
         {/* Navigation Items */}
@@ -319,11 +326,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Mobile Drawer Backdrop & Sidebar */}
       {isMobileOpen && (
-        <div
-          className="fixed inset-0 z-50 md:hidden"
-          role="dialog"
+        <dialog
+          open
           aria-modal="true"
           aria-label="Menú lateral móvil"
+          className="fixed inset-0 z-50 md:hidden w-full h-full max-w-none max-h-none m-0 p-0 bg-transparent border-0"
         >
           {/* Dark Backdrop */}
           <div
@@ -341,7 +348,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             {renderNavContent(true)}
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );

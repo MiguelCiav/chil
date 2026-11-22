@@ -121,17 +121,34 @@ function calculateYoYCountMetric(current: number, previous: number): YoYCountMet
   };
 }
 
+export interface BuildYoYDistrictComparisonOptions {
+  currentMembers: ScoutMember[];
+  previousMembers: ScoutMember[];
+  currentBatchMap: Map<number, Batch>;
+  previousBatchMap: Map<number, Batch>;
+  regions: Region[];
+  districts: District[];
+  groups?: ScoutGroup[];
+  currentMembersCount: number;
+  previousMembersCount: number;
+}
+
+export type BuildYoYDistrictParams = BuildYoYDistrictComparisonOptions;
+
 function buildYoYRegionComparison(
-  currentMembers: ScoutMember[],
-  previousMembers: ScoutMember[],
-  currentBatchMap: Map<number, Batch>,
-  previousBatchMap: Map<number, Batch>,
-  regions: Region[],
-  currentMembersCount: number,
-  previousMembersCount: number,
-  groups?: ScoutGroup[],
-  districts?: District[]
+  options: BuildYoYDistrictComparisonOptions
 ): YoYRegionItem[] {
+  const {
+    currentMembers,
+    previousMembers,
+    currentBatchMap,
+    previousBatchMap,
+    regions,
+    districts,
+    groups,
+    currentMembersCount,
+    previousMembersCount
+  } = options;
   const hierarchy = { regions, districts, groups };
   const currentRegionCounts = new Map<number | string, number>();
   currentMembers.forEach(m => {
@@ -144,20 +161,20 @@ function buildYoYRegionComparison(
     }
   });
 
-  const previousRegionCounts = new Map<number | string, number>();
+  const previousRegionCountsMap = new Map<number | string, number>();
   previousMembers.forEach(m => {
     const b = m.batch_id ? previousBatchMap.get(m.batch_id) : undefined;
     const { regionId, isNationalInstitutional } = resolveMemberHierarchy(m, b, hierarchy);
     if (isNationalInstitutional) {
-      previousRegionCounts.set('nacional', (previousRegionCounts.get('nacional') ?? 0) + 1);
+      previousRegionCountsMap.set('nacional', (previousRegionCountsMap.get('nacional') ?? 0) + 1);
     } else if (regionId > 0) {
-      previousRegionCounts.set(regionId, (previousRegionCounts.get(regionId) ?? 0) + 1);
+      previousRegionCountsMap.set(regionId, (previousRegionCountsMap.get(regionId) ?? 0) + 1);
     }
   });
 
   const allRegionIds = new Set<number | string>([
     ...currentRegionCounts.keys(),
-    ...previousRegionCounts.keys()
+    ...previousRegionCountsMap.keys()
   ]);
 
   const yoyRegions: YoYRegionItem[] = Array.from(allRegionIds).map(regId => {
@@ -166,7 +183,7 @@ function buildYoYRegionComparison(
         ? 'Nacional'
         : (regions.find(r => r.id === regId)?.name ?? `Región ${regId}`);
     const currentCount = currentRegionCounts.get(regId) ?? 0;
-    const previousCount = previousRegionCounts.get(regId) ?? 0;
+    const previousCount = previousRegionCountsMap.get(regId) ?? 0;
     const diff = currentCount - previousCount;
     const percentChange = calculatePercentChange(currentCount, previousCount);
     const currentPercentage = currentMembersCount > 0 ? Number(((currentCount / currentMembersCount) * 100).toFixed(1)) : 0;
@@ -190,20 +207,6 @@ function buildYoYRegionComparison(
     return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
   });
 }
-
-export interface BuildYoYDistrictComparisonOptions {
-  currentMembers: ScoutMember[];
-  previousMembers: ScoutMember[];
-  currentBatchMap: Map<number, Batch>;
-  previousBatchMap: Map<number, Batch>;
-  regions: Region[];
-  districts: District[];
-  groups?: ScoutGroup[];
-  currentMembersCount: number;
-  previousMembersCount: number;
-}
-
-export type BuildYoYDistrictParams = BuildYoYDistrictComparisonOptions;
 
 function buildYoYDistrictComparison(
   options: BuildYoYDistrictComparisonOptions
@@ -456,17 +459,17 @@ export function calculateYoYComparison(options: CalculateYoYOptions): YoYCompari
   previousBatches.forEach(b => previousBatchMap.set(b.id, b));
 
   // 4. Region Comparison
-  const yoyRegions = buildYoYRegionComparison(
+  const yoyRegions = buildYoYRegionComparison({
     currentMembers,
     previousMembers,
     currentBatchMap,
     previousBatchMap,
     regions,
-    currentMembersCount,
-    previousMembersCount,
+    districts,
     groups,
-    districts
-  );
+    currentMembersCount,
+    previousMembersCount
+  });
 
   // 5. District Comparison
   const yoyDistricts = buildYoYDistrictComparison({

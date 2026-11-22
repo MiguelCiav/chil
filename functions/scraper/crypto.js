@@ -1,4 +1,4 @@
-const crypto = require("crypto");
+const crypto = require("node:crypto");
 const { defineSecret } = require("firebase-functions/params");
 
 const SCRAPER_ENCRYPTION_KEY = defineSecret("SCRAPER_ENCRYPTION_KEY");

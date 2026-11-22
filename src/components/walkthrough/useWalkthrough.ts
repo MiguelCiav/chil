@@ -65,7 +65,7 @@ export function useWalkthrough(config: TourConfig): UseWalkthroughReturn {
 
   // Start tour handler
   const startTour = useCallback(
-    (stepIndex: number | unknown = 0) => {
+    (stepIndex: unknown = 0) => {
       const safeIndex =
         typeof stepIndex === 'number' &&
         Number.isFinite(stepIndex) &&

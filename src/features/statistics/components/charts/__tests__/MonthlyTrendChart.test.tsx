@@ -67,8 +67,8 @@ describe('MonthlyTrendChart component', () => {
     expect(interMonthGap).toBeGreaterThan(intraMonthGap * 6);
 
     // Subtle vertical divider exists on months after index 0
-    expect(eneGroup.querySelectorAll('line').length).toBe(0);
-    expect(febGroup.querySelectorAll('line').length).toBe(1);
+    expect(eneGroup.querySelectorAll('line')).toHaveLength(0);
+    expect(febGroup.querySelectorAll('line')).toHaveLength(1);
 
     // SVG expanded viewBox accommodates clean month grouping
     const chartSvg = screen.getByRole('img', { name: /Gráfico de tendencia mensual/i });

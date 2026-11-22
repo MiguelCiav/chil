@@ -65,19 +65,15 @@ export const CertificateZipProgressModal: React.FC<CertificateZipProgressModalPr
           )}
         </div>
 
-        <div
-          role="progressbar"
+        <progress
+          value={clampedPercentage}
+          max={100}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={progress.percentage}
           aria-valuetext={valueText}
-          className="w-full h-3 bg-primary/10 rounded-full overflow-hidden"
-        >
-          <div
-            className="h-full bg-primary rounded-full transition-all duration-200"
-            style={{ width: `${clampedPercentage}%` }}
-          />
-        </div>
+          className="w-full h-3 bg-primary/10 rounded-full overflow-hidden appearance-none [&::-webkit-progress-bar]:bg-transparent [&::-webkit-progress-value]:bg-primary [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-primary [&::-moz-progress-bar]:rounded-full"
+        />
       </ModalBody>
 
       <ModalFooter className="!justify-end">

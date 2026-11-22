@@ -276,7 +276,7 @@ export const BatchDetail: React.FC = () => {
     setDeleting(true);
     try {
       await deleteBatch(batch.id);
-      navigate('/lotes');
+      void navigate('/lotes');
     } catch (err) {
       console.error('Error deleting batch:', err);
       alert('Error al eliminar el lote.');
@@ -356,13 +356,12 @@ export const BatchDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div
-        role="status"
+      <output
         aria-busy="true"
         className="flex items-center justify-center min-h-[400px] font-sans text-neutral/75"
       >
         Cargando detalles de lote...
-      </div>
+      </output>
     );
   }
 
@@ -385,7 +384,9 @@ export const BatchDetail: React.FC = () => {
         title="Lote no encontrado"
         message="El lote solicitado no existe o fue eliminado."
         retryLabel="Volver al listado"
-        onRetry={() => navigate('/lotes')}
+        onRetry={() => {
+          void navigate('/lotes');
+        }}
       />
     );
   }

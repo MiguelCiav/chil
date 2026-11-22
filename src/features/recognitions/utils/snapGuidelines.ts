@@ -67,6 +67,142 @@ export function getFieldHorizontalEdges(
   }
 }
 
+interface AxisSnapMatch {
+  snappedCoord: number;
+  guide: AlignmentGuide | null;
+}
+
+function matchOpticalFieldX(
+  currentX: number,
+  draggedEdges: FieldHorizontalEdges,
+  other: RecognitionFieldConfig,
+  otherWidth: number,
+  thresholdX: number,
+  bestDeltaX: number
+): { delta: number; snapX: number; guide: AlignmentGuide } | null {
+  const otherEdges = getFieldHorizontalEdges(other.x, other.align, otherWidth);
+  const draggedCandidates = [draggedEdges.center, draggedEdges.left, draggedEdges.right];
+  const targetCandidates = [otherEdges.center, otherEdges.left, otherEdges.right];
+
+  let match: { delta: number; snapX: number; guide: AlignmentGuide } | null = null;
+  let currentBest = bestDeltaX;
+
+  for (const dEdge of draggedCandidates) {
+    for (const tEdge of targetCandidates) {
+      const delta = Math.abs(dEdge - tEdge);
+      if (delta <= thresholdX && delta < currentBest) {
+        currentBest = delta;
+        match = {
+          delta,
+          snapX: Math.round((currentX + (tEdge - dEdge)) * 100) / 100,
+          guide: {
+            orientation: 'vertical',
+            position: Math.round(tEdge * 100) / 100,
+            type: 'field-align',
+            targetFieldId: other.id
+          }
+        };
+      }
+    }
+  }
+  return match;
+}
+
+function findHorizontalSnap(
+  currentX: number,
+  draggedWidth: number,
+  draggedEdges: FieldHorizontalEdges,
+  otherFields: readonly RecognitionFieldConfig[],
+  thresholdX: number,
+  fieldWidths?: Record<string, number>
+): AxisSnapMatch {
+  let bestDeltaX = thresholdX + 1;
+  let chosenGuideX: AlignmentGuide | null = null;
+  let chosenSnapX = currentX;
+
+  const deltaCanvasCenterX = Math.abs(draggedEdges.center - 50);
+  if (deltaCanvasCenterX <= thresholdX) {
+    bestDeltaX = deltaCanvasCenterX;
+    chosenSnapX = Math.round((currentX + (50 - draggedEdges.center)) * 100) / 100;
+    chosenGuideX = {
+      orientation: 'vertical',
+      position: 50,
+      type: 'canvas-center'
+    };
+  }
+
+  for (const other of otherFields) {
+    const otherWidth = fieldWidths?.[other.id] ?? 0;
+
+    if (draggedWidth === 0 && otherWidth === 0) {
+      const delta = Math.abs(currentX - other.x);
+      if (delta <= thresholdX && delta < bestDeltaX) {
+        bestDeltaX = delta;
+        chosenSnapX = other.x;
+        chosenGuideX = {
+          orientation: 'vertical',
+          position: other.x,
+          type: 'field-align',
+          targetFieldId: other.id
+        };
+      }
+    } else {
+      const opticalMatch = matchOpticalFieldX(
+        currentX,
+        draggedEdges,
+        other,
+        otherWidth,
+        thresholdX,
+        bestDeltaX
+      );
+      if (opticalMatch) {
+        bestDeltaX = opticalMatch.delta;
+        chosenSnapX = opticalMatch.snapX;
+        chosenGuideX = opticalMatch.guide;
+      }
+    }
+  }
+
+  return { snappedCoord: chosenSnapX, guide: chosenGuideX };
+}
+
+function findVerticalSnap(
+  currentY: number,
+  otherFields: readonly RecognitionFieldConfig[],
+  thresholdY: number
+): AxisSnapMatch {
+  let bestDeltaY = thresholdY + 1;
+  let chosenGuideY: AlignmentGuide | null = null;
+  let chosenSnapY = currentY;
+
+  const deltaCanvasCenterY = Math.abs(currentY - 50);
+  if (deltaCanvasCenterY <= thresholdY) {
+    bestDeltaY = deltaCanvasCenterY;
+    chosenSnapY = 50;
+    chosenGuideY = {
+      orientation: 'horizontal',
+      position: 50,
+      type: 'canvas-center'
+    };
+  }
+
+  for (const other of otherFields) {
+    const delta = Math.abs(currentY - other.y);
+    if (delta <= thresholdY && delta < bestDeltaY) {
+      bestDeltaY = delta;
+      chosenSnapY = other.y;
+      chosenGuideY = {
+        orientation: 'horizontal',
+        position: other.y,
+        type: 'field-align',
+        targetFieldId: other.id
+      };
+    }
+  }
+
+  return { snappedCoord: chosenSnapY, guide: chosenGuideY };
+}
+
 /**
  * Calculates snapped coordinates and active alignment guides for a field being dragged.
  * Snaps to:
@@ -85,117 +221,33 @@ export function calculateSnapGuidelines({
   thresholdY = threshold,
   fieldWidths
 }: CalculateSnapParams): SnapResult {
-  let snappedX = currentX;
-  let snappedY = currentY;
   const activeGuides: AlignmentGuide[] = [];
-
   const draggedField = fields.find((f) => f.id === fieldId);
   const draggedAlign = draggedField?.align ?? 'center';
   const draggedWidth = fieldWidths?.[fieldId] ?? 0;
   const draggedEdges = getFieldHorizontalEdges(currentX, draggedAlign, draggedWidth);
-
-  // Check X alignment (vertical guide line)
-  let bestDeltaX = thresholdX + 1;
-  let chosenGuideX: AlignmentGuide | null = null;
-  let chosenSnapX: number | null = null;
-
-  // 1. Check Canvas Center X = 50%
-  const deltaCanvasCenterX = Math.abs(draggedEdges.center - 50);
-  if (deltaCanvasCenterX <= thresholdX) {
-    bestDeltaX = deltaCanvasCenterX;
-    chosenSnapX = Math.round((currentX + (50 - draggedEdges.center)) * 100) / 100;
-    chosenGuideX = {
-      orientation: 'vertical',
-      position: 50,
-      type: 'canvas-center'
-    };
-  }
-
-  // 2. Check other fields for X alignment
   const otherFields = fields.filter((f) => f.id !== fieldId);
-  for (const other of otherFields) {
-    const otherWidth = fieldWidths?.[other.id] ?? 0;
 
-    if (draggedWidth === 0 && otherWidth === 0) {
-      const delta = Math.abs(currentX - other.x);
-      if (delta <= thresholdX && delta < bestDeltaX) {
-        bestDeltaX = delta;
-        chosenSnapX = other.x;
-        chosenGuideX = {
-          orientation: 'vertical',
-          position: other.x,
-          type: 'field-align',
-          targetFieldId: other.id
-        };
-      }
-    } else {
-      const otherEdges = getFieldHorizontalEdges(other.x, other.align, otherWidth);
-      const draggedCandidates = [draggedEdges.center, draggedEdges.left, draggedEdges.right];
-      const targetCandidates = [otherEdges.center, otherEdges.left, otherEdges.right];
-
-      for (const dEdge of draggedCandidates) {
-        for (const tEdge of targetCandidates) {
-          const delta = Math.abs(dEdge - tEdge);
-          if (delta <= thresholdX && delta < bestDeltaX) {
-            bestDeltaX = delta;
-            chosenSnapX = Math.round((currentX + (tEdge - dEdge)) * 100) / 100;
-            chosenGuideX = {
-              orientation: 'vertical',
-              position: Math.round(tEdge * 100) / 100,
-              type: 'field-align',
-              targetFieldId: other.id
-            };
-          }
-        }
-      }
-    }
+  const xSnap = findHorizontalSnap(
+    currentX,
+    draggedWidth,
+    draggedEdges,
+    otherFields,
+    thresholdX,
+    fieldWidths
+  );
+  if (xSnap.guide) {
+    activeGuides.push(xSnap.guide);
   }
 
-  if (chosenGuideX && chosenSnapX !== null) {
-    snappedX = chosenSnapX;
-    activeGuides.push(chosenGuideX);
-  }
-
-  // Check Y alignment (horizontal guide line)
-  let bestDeltaY = thresholdY + 1;
-  let chosenGuideY: AlignmentGuide | null = null;
-  let chosenSnapY: number | null = null;
-
-  // 1. Check Canvas Center Y = 50%
-  const deltaCanvasCenterY = Math.abs(currentY - 50);
-  if (deltaCanvasCenterY <= thresholdY) {
-    bestDeltaY = deltaCanvasCenterY;
-    chosenSnapY = 50;
-    chosenGuideY = {
-      orientation: 'horizontal',
-      position: 50,
-      type: 'canvas-center'
-    };
-  }
-
-  // 2. Check other fields for Y alignment
-  for (const other of otherFields) {
-    const delta = Math.abs(currentY - other.y);
-    if (delta <= thresholdY && delta < bestDeltaY) {
-      bestDeltaY = delta;
-      chosenSnapY = other.y;
-      chosenGuideY = {
-        orientation: 'horizontal',
-        position: other.y,
-        type: 'field-align',
-        targetFieldId: other.id
-      };
-    }
-  }
-
-  if (chosenGuideY && chosenSnapY !== null) {
-    snappedY = chosenSnapY;
-    activeGuides.push(chosenGuideY);
+  const ySnap = findVerticalSnap(currentY, otherFields, thresholdY);
+  if (ySnap.guide) {
+    activeGuides.push(ySnap.guide);
   }
 
   return {
-    snappedX,
-    snappedY,
+    snappedX: xSnap.snappedCoord,
+    snappedY: ySnap.snappedCoord,
     activeGuides
   };
 }

@@ -81,7 +81,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, classNa
       }
 
       const first = focusable[0];
-      const last = focusable[focusable.length - 1];
+      const last = focusable.at(-1)!;
       if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
         e.preventDefault();
         last.focus();

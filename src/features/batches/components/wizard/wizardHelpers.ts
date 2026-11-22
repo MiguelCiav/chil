@@ -14,8 +14,8 @@ export { splitFullName, matchHierarchy, classifyScoutUnitAndType };
 export function parseCedulasFromText(text?: string): string[] {
   if (!text) return [];
   return text
-    .split(/[\n\r,;\s]+/)
-    .map((token) => token.replace(/[^0-9]/g, ''))
+    .split(/[,;\s]+/)
+    .map((token) => token.replace(/\D/g, ''))
     .filter((digits) => digits.length > 0)
     .filter((digits, idx, arr) => arr.indexOf(digits) === idx);
 }

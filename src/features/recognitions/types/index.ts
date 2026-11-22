@@ -17,7 +17,7 @@ export interface RecognitionFieldConfig {
   label: string;
   x: number; // Position X in percentage (0-100) or mm (0-297)
   y: number; // Position Y in percentage (0-100) or mm (0-210)
-  font_family: 'noto-sans' | 'scouts-gt-planar-bold' | string;
+  font_family: string;
   font_size: number; // e.g. 10 - 48
   font_weight: 'normal' | 'bold' | 'italic';
   color: string; // e.g. "#1b7a37" or "#222222"
@@ -46,7 +46,7 @@ export interface TemplateFieldDefinition {
   label: string;
   default_font_size: number;
   default_font_weight: 'normal' | 'bold' | 'italic';
-  default_font_family: 'noto-sans' | 'scouts-gt-planar-bold' | string;
+  default_font_family: string;
   default_color: string;
   default_align: 'left' | 'center' | 'right';
   default_x: number;

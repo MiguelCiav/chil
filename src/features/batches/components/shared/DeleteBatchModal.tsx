@@ -13,6 +13,20 @@ export interface DeleteBatchModalProps {
   batchComment?: string;
 }
 
+function resolveBatchDeleteDetail(
+  batch: BatchRowData | null | undefined,
+  groupDetail: string | undefined,
+  batchComment: string | undefined
+): string | undefined {
+  if (!batch) {
+    return batchComment;
+  }
+  if (groupDetail && groupDetail !== 'No aplica' && groupDetail !== '-') {
+    return groupDetail;
+  }
+  return batch.batch.comment;
+}
+
 export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
   isOpen,
   onClose,
@@ -26,11 +40,7 @@ export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
   const groupDetail = batch
     ? consolidateMergedGroupTokens([batch.groupTokens])
     : undefined;
-  const resolvedDetail = batch
-    ? groupDetail && groupDetail !== 'No aplica' && groupDetail !== '-'
-      ? groupDetail
-      : batch.batch.comment
-    : batchComment;
+  const resolvedDetail = resolveBatchDeleteDetail(batch, groupDetail, batchComment);
 
   return (
     <Modal isOpen={isOpen} onClose={() => !deleting && onClose()} className="max-w-md">

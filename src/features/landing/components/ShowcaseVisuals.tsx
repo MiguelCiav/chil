@@ -298,7 +298,7 @@ export const AnalyticsVisual: React.FC<ShowcaseVisualProps> = ({ active }) => {
         </div>
 
         <div className="flex flex-col items-center gap-2">
-          <svg viewBox="0 0 100 100" className="w-20 h-20 sm:w-24 sm:h-24 -rotate-90">
+          <svg viewBox="0 0 100 100" aria-hidden="true" className="w-20 h-20 sm:w-24 sm:h-24 -rotate-90">
             <circle cx="50" cy="50" r={DONUT_RADIUS} fill="none" stroke="#F1EAD8" strokeWidth="14" />
             {DONUT_SEGMENTS.map((segment, i) => {
               const length = segment.share * DONUT_LENGTH;

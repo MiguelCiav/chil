@@ -30,11 +30,10 @@ export const StatisticsDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div
-        role="status"
+      <output
         aria-busy="true"
         aria-label="Cargando estadísticas"
-        className="max-w-7xl mx-auto space-y-6 font-sans py-2"
+        className="block max-w-7xl mx-auto space-y-6 font-sans py-2"
       >
         {/* Header Skeleton */}
         <div className="space-y-2">
@@ -50,7 +49,7 @@ export const StatisticsDashboard: React.FC = () => {
           <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
           <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
         </div>
-      </div>
+      </output>
     );
   }
 

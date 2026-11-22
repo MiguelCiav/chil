@@ -16,4 +16,3 @@ export type Step1DataLoadFormData = z.infer<typeof step1DataLoadSchema>;
 
 // Backwards compatibility alias
 export const step1Schema = step1DataLoadSchema;
-export type Step1FormData = Step1DataLoadFormData;

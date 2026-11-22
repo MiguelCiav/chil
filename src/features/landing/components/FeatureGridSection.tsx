@@ -148,15 +148,14 @@ export const FeatureGridSection: React.FC = () => {
               <div className="relative min-h-[380px]">
                 {CHAPTERS.map((chapter, index) => {
                   const isActive = index === activeIndex;
+                  const inactiveTranslate = index < activeIndex ? '-translate-y-10' : 'translate-y-10';
                   return (
                     <div
                       key={chapter.id}
                       className={`absolute inset-0 flex items-center transition-all duration-700 ease-out ${
                         isActive
                           ? 'opacity-100 translate-y-0 scale-100'
-                          : `opacity-0 scale-[0.96] pointer-events-none ${
-                              index < activeIndex ? '-translate-y-10' : 'translate-y-10'
-                            }`
+                          : `opacity-0 scale-[0.96] pointer-events-none ${inactiveTranslate}`
                       }`}
                     >
                       <chapter.Visual active={isActive} />

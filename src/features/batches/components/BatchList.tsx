@@ -446,8 +446,8 @@ export const BatchList: React.FC = () => {
     setIsMergeModalOpen(false);
 
     // 3. Update local state: remove merged batch IDs and add new batch
-    const mergedIds = selectedBatches.map(b => b.id);
-    setBatches(prev => [newBatch, ...prev.filter(b => !mergedIds.includes(b.id))]);
+    const mergedIds = new Set(selectedBatches.map(b => b.id));
+    setBatches(prev => [newBatch, ...prev.filter(b => !mergedIds.has(b.id))]);
 
     // 4. Refresh members to have updated batch_id
     try {
@@ -498,7 +498,9 @@ export const BatchList: React.FC = () => {
           <Button
             type="button"
             variant="primary"
-            onClick={() => navigate('/lotes/nuevo')}
+            onClick={() => {
+              void navigate('/lotes/nuevo');
+            }}
             icon={<Plus size={18} />}
             className="flex-shrink-0"
           >

@@ -192,6 +192,64 @@ function sweepJpegQualities(
   return null;
 }
 
+function tryEncodeAlphaPng(
+  sourceCanvas: HTMLCanvasElement,
+  sourceCtx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  mimeType: string,
+  allowAlphaPng: boolean
+): EncodedCanvasOutput | null {
+  const mightHaveAlpha = allowAlphaPng && (mimeType === 'image/png' || mimeType === 'image/webp');
+  if (!mightHaveAlpha || !hasAlphaTransparency(sourceCtx, width, height)) {
+    return null;
+  }
+  try {
+    const pngDataUrl = sourceCanvas.toDataURL('image/png');
+    if (
+      pngDataUrl?.startsWith('data:image/png') &&
+      pngDataUrl.length <= MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH
+    ) {
+      return { dataUrl: pngDataUrl, wasCompressedHeavily: false };
+    }
+  } catch {
+    // Fallback to JPEG encoding
+  }
+  return null;
+}
+
+function sweepDownscaledJpeg(
+  opaqueCanvas: HTMLCanvasElement,
+  width: number,
+  exactRatio: number
+): EncodedCanvasOutput | null {
+  const scaleFactors = [0.85, 0.72, 0.6, 0.48, 0.36];
+  const downscaleQualities = [0.6, 0.45, 0.35];
+
+  for (const scale of scaleFactors) {
+    const scaledWidth = Math.max(1, Math.round(width * scale));
+    const scaledHeight = Math.max(1, Math.round(scaledWidth / exactRatio));
+    const scaledCanvas = document.createElement('canvas');
+    scaledCanvas.width = scaledWidth;
+    scaledCanvas.height = scaledHeight;
+    const scaledCtx = scaledCanvas.getContext('2d');
+    if (!scaledCtx) {
+      throw new Error(CANVAS_2D_INIT_ERROR_MESSAGE);
+    }
+
+    try {
+      paintWhiteAndDraw(scaledCtx, opaqueCanvas, scaledWidth, scaledHeight);
+      const scaledResult = sweepJpegQualities(scaledCanvas, downscaleQualities, true);
+      if (scaledResult) {
+        return scaledResult;
+      }
+    } finally {
+      releaseCanvas(scaledCanvas);
+    }
+  }
+  return null;
+}
+
 /**
  * Encodes canvas into a jsPDF-compatible JPEG or PNG data URL while capping
  * the output size below Firestore's 1 MB document limit.
@@ -204,19 +262,16 @@ function encodeNormalizedCanvas(
   options: EncodeCanvasOptions
 ): EncodedCanvasOutput {
   const { mimeType, allowAlphaPng, alreadyOpaqueWhite, exactRatio } = options;
-  const mightHaveAlpha = allowAlphaPng && (mimeType === 'image/png' || mimeType === 'image/webp');
-  if (mightHaveAlpha && hasAlphaTransparency(sourceCtx, width, height)) {
-    try {
-      const pngDataUrl = sourceCanvas.toDataURL('image/png');
-      if (
-        pngDataUrl?.startsWith('data:image/png') &&
-        pngDataUrl.length <= MAX_FIRESTORE_BACKGROUND_BASE64_LENGTH
-      ) {
-        return { dataUrl: pngDataUrl, wasCompressedHeavily: false };
-      }
-    } catch {
-      // Fallback to JPEG encoding below
-    }
+  const alphaResult = tryEncodeAlphaPng(
+    sourceCanvas,
+    sourceCtx,
+    width,
+    height,
+    mimeType,
+    allowAlphaPng
+  );
+  if (alphaResult) {
+    return alphaResult;
   }
 
   let opaqueCanvas = sourceCanvas;
@@ -241,29 +296,9 @@ function encodeNormalizedCanvas(
       return primaryResult;
     }
 
-    const scaleFactors = [0.85, 0.72, 0.6, 0.48, 0.36];
-    const downscaleQualities = [0.6, 0.45, 0.35];
-
-    for (const scale of scaleFactors) {
-      const scaledWidth = Math.max(1, Math.round(width * scale));
-      const scaledHeight = Math.max(1, Math.round(scaledWidth / exactRatio));
-      const scaledCanvas = document.createElement('canvas');
-      scaledCanvas.width = scaledWidth;
-      scaledCanvas.height = scaledHeight;
-      const scaledCtx = scaledCanvas.getContext('2d');
-      if (!scaledCtx) {
-        throw new Error(CANVAS_2D_INIT_ERROR_MESSAGE);
-      }
-
-      try {
-        paintWhiteAndDraw(scaledCtx, opaqueCanvas, scaledWidth, scaledHeight);
-        const scaledResult = sweepJpegQualities(scaledCanvas, downscaleQualities, true);
-        if (scaledResult) {
-          return scaledResult;
-        }
-      } finally {
-        releaseCanvas(scaledCanvas);
-      }
+    const downscaledResult = sweepDownscaledJpeg(opaqueCanvas, width, exactRatio);
+    if (downscaledResult) {
+      return downscaledResult;
     }
 
     throw new Error(BACKGROUND_SIZE_LIMIT_EXCEEDED_MESSAGE);
@@ -278,7 +313,7 @@ async function renderPdfFirstPageWithPdfJs(
   maxHeight: number
 ): Promise<PdfPageRenderOutput> {
   if (typeof document === 'undefined') {
-    throw new Error(PDF_SSR_UNSUPPORTED_MESSAGE);
+    throw new TypeError(PDF_SSR_UNSUPPORTED_MESSAGE);
   }
 
   const [pdfjs, workerModule] = await Promise.all([
@@ -426,7 +461,7 @@ export async function processBackgroundImageFile(
   }
 
   return new Promise((resolve, reject) => {
-    if (!file.type || !file.type.startsWith('image/')) {
+    if (!file.type?.startsWith('image/')) {
       reject(new Error(INVALID_IMAGE_FORMAT_MESSAGE));
       return;
     }
