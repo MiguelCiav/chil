@@ -22,7 +22,7 @@ The `statistics` feature subsystem aggregates recognition batch and member recor
 - **Chart & PDF Presentation Guards**: Chart/table components do not memoize or re-sort input arrays, truncate list views at `5` items behind a `showAll` toggle, and floor `maxCount` at `1` (monthly chart `maxVal` at `5`); `statsPdfExport.ts` truncates long labels to fixed lengths and paginates at `currentY + requiredSpace > 279` mm.
 
 ## Global Side Effects
-- **Firestore / Cross-Feature Reads**: `useStatisticsData` fetches `getAllBatches`, `getAllMembers`, `getHierarchyData` (from `../../batches/api`), and `getAllRecognitionTypes` (from `../../recognitions/api`) via `Promise.all` on mount, user change, or `refresh()`.
+- **Firestore / Cross-Feature Reads**: `useStatisticsData` fetches `getAllBatches`, `getAllMembers`, `getHierarchyData` (from `../../batches/api`), and `getAllRecognitionTypes` (from `../../recognitions`) via `Promise.all` on mount, user change, or `refresh()`.
 - **PDF Export & Logging**: `exportStatisticsPdf` instantiates `jsPDF` (A4 portrait) and triggers a file download via `doc.save(fileName)`; `useStatisticsData` logs fetch failures via `console.error`.
 
 ## System Verification

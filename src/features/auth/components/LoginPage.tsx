@@ -58,24 +58,24 @@ export const LoginPage: React.FC = () => {
         <div className="text-center space-y-2">
           <div className="flex justify-center items-center gap-2">
             <img src={logo} alt="Chil Logo" className="h-12 w-auto" />
-            <span className="text-2xl font-black text-primary tracking-tight">Chil</span>
+            <span className="font-display text-2xl font-black text-primary tracking-tight">Chil</span>
           </div>
           <h2 className="text-xl font-bold text-neutral">
             Iniciar Sesión
           </h2>
-          <p className="text-xs text-neutral/70">
+          <p className="text-xs text-neutral/75">
             Sistema de Emisión y Control de Reconocimientos Scouts
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 space-y-6">
+        <div className="bg-white border border-primary/20 rounded-2xl p-6 sm:p-8 space-y-6">
           {serverError && (
             <div
               className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 font-medium"
               role="alert"
             >
-              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <span>{serverError}</span>
             </div>
           )}
@@ -86,7 +86,7 @@ export const LoginPage: React.FC = () => {
               <label
                 htmlFor="login-email"
                 className={`block uppercase text-xs font-bold mb-1.5 tracking-wider ${
-                  errors.email ? 'text-red-600' : 'text-neutral/70'
+                  errors.email ? 'text-red-700' : 'text-neutral/75'
                 }`}
               >
                 Correo Electrónico
@@ -99,13 +99,13 @@ export const LoginPage: React.FC = () => {
                 disabled={isSubmitting}
                 className={`w-full rounded-xl py-2.5 px-4 text-sm transition-all focus:outline-none focus:ring-2 focus:border-transparent ${
                   errors.email
-                    ? 'bg-red-50 border border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500'
-                    : 'bg-primary/5 border border-primary/20 text-neutral placeholder-primary/40 focus:ring-primary'
+                    ? 'bg-red-50 border border-red-300 text-red-900 placeholder:text-red-400 focus:ring-red-500'
+                    : 'bg-primary/5 border border-primary/70 text-neutral placeholder:text-neutral/75 focus:ring-primary'
                 }`}
                 {...register('email')}
               />
               {errors.email && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{errors.email.message}</p>
+                <p className="mt-1 text-xs text-red-700 font-medium">{errors.email.message}</p>
               )}
             </div>
 
@@ -115,7 +115,7 @@ export const LoginPage: React.FC = () => {
                 <label
                   htmlFor="login-password"
                   className={`block uppercase text-xs font-bold tracking-wider ${
-                    errors.password ? 'text-red-600' : 'text-neutral/70'
+                    errors.password ? 'text-red-700' : 'text-neutral/75'
                   }`}
                 >
                   Contraseña
@@ -137,26 +137,26 @@ export const LoginPage: React.FC = () => {
                   disabled={isSubmitting}
                   className={`w-full rounded-xl py-2.5 pl-4 pr-11 text-sm transition-all focus:outline-none focus:ring-2 focus:border-transparent ${
                     errors.password
-                      ? 'bg-red-50 border border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500'
-                      : 'bg-primary/5 border border-primary/20 text-neutral placeholder-primary/40 focus:ring-primary'
+                      ? 'bg-red-50 border border-red-300 text-red-900 placeholder:text-red-400 focus:ring-red-500'
+                      : 'bg-primary/5 border border-primary/70 text-neutral placeholder:text-neutral/75 focus:ring-primary'
                   }`}
                   {...register('password')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(prev => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral/50 hover:text-neutral transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral/75 hover:text-neutral transition-colors p-1"
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                 >
                   {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
+                    <EyeOff className="w-4 h-4" aria-hidden="true" />
                   ) : (
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4" aria-hidden="true" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{errors.password.message}</p>
+                <p className="mt-1 text-xs text-red-700 font-medium">{errors.password.message}</p>
               )}
             </div>
 
@@ -177,7 +177,7 @@ export const LoginPage: React.FC = () => {
 
           {/* Registration Footer Link */}
           <div className="text-center pt-2 border-t border-gray-100">
-            <p className="text-xs text-neutral/70">
+            <p className="text-xs text-neutral/75">
               ¿No tienes una cuenta aún?{' '}
               <Link
                 to="/registro"

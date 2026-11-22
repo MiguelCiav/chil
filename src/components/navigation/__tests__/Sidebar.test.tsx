@@ -188,4 +188,19 @@ describe('Sidebar component', () => {
     expect(nuevoLink).toHaveClass('bg-primary/10');
     expect(nuevoLink).toHaveClass('text-primary');
   });
+
+  it('closes mobile drawer when Escape key is pressed', () => {
+    const handleClose = vi.fn();
+
+    render(
+      <ScraperSettingsProvider>
+        <MemoryRouter>
+          <Sidebar isMobileOpen={true} onMobileClose={handleClose} />
+        </MemoryRouter>
+      </ScraperSettingsProvider>
+    );
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
 });

@@ -27,33 +27,33 @@ const DemographicsTableYoY: React.FC<DemographicsTableYoYProps> = ({
 }) => (
   <table className="w-full text-left border-collapse font-sans text-xs">
     <thead>
-      <tr className="border-b border-gray-200 bg-[#faf8f5]">
-        <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Categoría</th>
-        <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+      <tr className="border-b border-primary/20 bg-primary/10">
+        <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider">Categoría</th>
+        <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">
           Total ({currentYear})
         </th>
-        <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+        <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">
           Año Anterior ({previousYear})
         </th>
-        <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+        <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">
           Variación
         </th>
-        <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+        <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">
           % del Total
         </th>
       </tr>
     </thead>
     <tbody className="divide-y divide-gray-100">
-      <tr className="hover:bg-gray-50/80 transition-colors">
+      <tr className="hover:bg-primary/5 transition-colors">
         <td className="px-4 py-2.5 font-semibold text-sky-900 flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] inline-block" />
-          <User className="w-3.5 h-3.5 text-sky-600" />
+          <User className="w-3.5 h-3.5 text-sky-700" aria-hidden="true" />
           <span>Jóvenes</span>
         </td>
         <td className="px-4 py-2.5 font-bold text-neutral text-right">
           {young.current}
         </td>
-        <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
+        <td className="px-4 py-2.5 font-medium text-neutral/75 text-right">
           {young.previous}
         </td>
         <td className="px-4 py-2.5 text-right">
@@ -62,7 +62,7 @@ const DemographicsTableYoY: React.FC<DemographicsTableYoYProps> = ({
             percentChange={young.percentChange}
           />
         </td>
-        <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+        <td className="px-4 py-2.5 text-right font-medium text-neutral/75">
           <div className="flex items-center justify-end gap-2">
             <span className="font-bold text-sky-900">{young.currentPercentage}%</span>
             <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -84,7 +84,7 @@ const DemographicsTableYoY: React.FC<DemographicsTableYoYProps> = ({
         <td className="px-4 py-2.5 font-bold text-neutral text-right">
           {adult.current}
         </td>
-        <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
+        <td className="px-4 py-2.5 font-medium text-neutral/75 text-right">
           {adult.previous}
         </td>
         <td className="px-4 py-2.5 text-right">
@@ -93,7 +93,7 @@ const DemographicsTableYoY: React.FC<DemographicsTableYoYProps> = ({
             percentChange={adult.percentChange}
           />
         </td>
-        <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+        <td className="px-4 py-2.5 text-right font-medium text-neutral/75">
           <div className="flex items-center justify-end gap-2">
             <span className="font-bold text-amber-900">{adult.currentPercentage}%</span>
             <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -106,14 +106,14 @@ const DemographicsTableYoY: React.FC<DemographicsTableYoYProps> = ({
         </td>
       </tr>
 
-      <tr className="bg-[#faf8f5]/60 font-bold border-t border-gray-200">
+      <tr className="bg-primary/5 font-bold border-t border-primary/20">
         <td className="px-4 py-2.5 text-neutral">
           Total
         </td>
         <td className="px-4 py-2.5 text-neutral text-right">
           {total.current}
         </td>
-        <td className="px-4 py-2.5 text-neutral/60 text-right">
+        <td className="px-4 py-2.5 text-neutral/75 text-right">
           {total.previous}
         </td>
         <td className="px-4 py-2.5 text-right">
@@ -147,10 +147,10 @@ const DemographicsTableStandard: React.FC<DemographicsTableStandardProps> = ({
 }) => (
   <table className="w-full text-left border-collapse font-sans text-xs">
     <thead>
-      <tr className="border-b border-gray-200 bg-[#faf8f5]">
-        <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Categoría</th>
-        <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
-        <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+      <tr className="border-b border-primary/20 bg-primary/10">
+        <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider">Categoría</th>
+        <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">Total Reconocimientos</th>
+        <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">% del Total</th>
       </tr>
     </thead>
     <tbody className="divide-y divide-gray-100">
@@ -163,7 +163,7 @@ const DemographicsTableStandard: React.FC<DemographicsTableStandardProps> = ({
         <td className="px-4 py-2.5 font-bold text-neutral text-right">
           {youngCount}
         </td>
-        <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+        <td className="px-4 py-2.5 text-right font-medium text-neutral/75">
           <div className="flex items-center justify-end gap-2">
             <span className="font-bold text-sky-900">{youngPercentage}%</span>
             <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -185,7 +185,7 @@ const DemographicsTableStandard: React.FC<DemographicsTableStandardProps> = ({
         <td className="px-4 py-2.5 font-bold text-neutral text-right">
           {adultCount}
         </td>
-        <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+        <td className="px-4 py-2.5 text-right font-medium text-neutral/75">
           <div className="flex items-center justify-end gap-2">
             <span className="font-bold text-amber-900">{adultPercentage}%</span>
             <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -198,7 +198,7 @@ const DemographicsTableStandard: React.FC<DemographicsTableStandardProps> = ({
         </td>
       </tr>
 
-      <tr className="bg-[#faf8f5]/60 font-bold border-t border-gray-200">
+      <tr className="bg-primary/5 font-bold border-t border-primary/20">
         <td className="px-4 py-2.5 text-neutral">
           Total
         </td>
@@ -236,25 +236,25 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
   const adultArc = (adultPercentage / 100) * circumference;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 font-sans">
+    <div className="bg-white border border-primary/20 rounded-2xl p-5 space-y-4 font-sans">
       {/* Card Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-sky-500/10 text-sky-600 rounded-xl">
+          <div className="p-2 bg-sky-500/10 text-sky-700 rounded-xl" aria-hidden="true">
             <Users className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-neutral text-base tracking-tight">
               Resumen de reconocimientos entregados a Jóvenes y Adultos
             </h3>
-            <p className="text-xs text-neutral/60">
+            <p className="text-xs text-neutral/75">
               Distribución demográfica entre scouts jóvenes y dirigentes/adultos
               {hasYoY && yoy && ` • Comparativa ${yoy.previousYear} vs ${yoy.currentYear}`}
             </p>
           </div>
         </div>
 
-        <span className="text-xs font-semibold text-neutral/50 bg-gray-100 px-2.5 py-1 rounded-full">
+        <span className="text-xs font-semibold text-neutral/75 bg-gray-100 px-2.5 py-1 rounded-full">
           {totalCount} total
         </span>
       </div>
@@ -316,7 +316,7 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
               <span className="text-xl font-extrabold text-neutral leading-none">
                 {totalCount}
               </span>
-              <span className="text-[10px] font-semibold text-neutral/50 uppercase tracking-wider mt-0.5">
+              <span className="text-xs font-semibold text-neutral/75 uppercase tracking-wider mt-0.5">
                 Total
               </span>
             </div>

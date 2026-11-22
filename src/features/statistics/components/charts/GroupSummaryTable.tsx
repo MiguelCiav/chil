@@ -47,17 +47,17 @@ const GroupTableStandard: React.FC<GroupTableStandardProps> = ({
       <tbody className="divide-y divide-gray-100 bg-white">
         {groups.map((g, idx) => (
           <tr key={g.id || g.name} className="hover:bg-primary/5 transition-colors bg-white">
-            <td className="px-6 py-4 text-sm text-neutral/70 font-medium whitespace-nowrap">
+            <td className="px-6 py-4 text-sm text-neutral/75 font-medium whitespace-nowrap">
               {g.parentName ?? '-'}
             </td>
             <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
-              <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
+              <span className="text-neutral/75 font-bold w-4 text-right">{idx + 1}.</span>
               <span>{g.name}</span>
             </td>
             <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
               {g.count}
             </td>
-            <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
+            <td className="px-6 py-4 text-sm font-medium text-neutral/75 whitespace-nowrap text-right">
               <div className="flex items-center justify-end gap-2">
                 <span>{g.percentage}%</span>
                 <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -87,26 +87,26 @@ export const GroupSummaryTable: React.FC<GroupSummaryTableProps> = ({ groups = [
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-xl">
+          <div className="p-2 bg-indigo-500/10 text-indigo-700 rounded-xl" aria-hidden="true">
             <Flag className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-neutral text-base tracking-tight">
               Reconocimientos entregados por Grupo Scout
             </h3>
-            <p className="text-xs text-neutral/60">
+            <p className="text-xs text-neutral/75">
               Distribución territorial por grupo scout y distrito correspondiente
             </p>
           </div>
         </div>
-        <span className="text-xs font-semibold text-neutral/50 bg-gray-100 px-2.5 py-1 rounded-full">
+        <span className="text-xs font-semibold text-neutral/75 bg-gray-100 px-2.5 py-1 rounded-full">
           {itemsCount} {getGroupCountLabel(itemsCount)}
         </span>
       </div>
 
       {/* Table Content */}
       {itemsCount === 0 ? (
-        <div className="py-8 text-center text-neutral/50 text-xs">
+        <div className="py-8 text-center text-neutral/75 text-xs">
           No hay registros disponibles por grupo scout para los filtros seleccionados.
         </div>
       ) : (

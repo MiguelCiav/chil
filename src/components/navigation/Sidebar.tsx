@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
   Folder,
@@ -44,6 +44,53 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
+  const mobileDrawerRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isMobileOpen) return;
+
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    const drawer = mobileDrawerRef.current;
+    const focusSelector =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    if (drawer) {
+      const focusable = Array.from(drawer.querySelectorAll<HTMLElement>(focusSelector));
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        drawer.focus();
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onMobileClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !drawer) return;
+      const focusable = Array.from(drawer.querySelectorAll<HTMLElement>(focusSelector));
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !drawer.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus?.();
+    };
+  }, [isMobileOpen, onMobileClose]);
 
   const toggleCollapse = () => {
     if (onToggleCollapse) {
@@ -119,7 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               title="Chil"
             >
               <img src={logo} alt="Chil Logo" className="h-8 w-8 object-contain shrink-0" />
-              <span className="text-primary font-bold text-xl tracking-tight">
+              <span className="font-display text-primary font-bold text-xl tracking-tight">
                 Chil
               </span>
             </Link>
@@ -129,20 +176,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onMobileClose}
-              className="p-1.5 rounded-lg text-neutral/60 hover:text-neutral hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-neutral/75 hover:text-neutral hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Cerrar menú"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           ) : !collapsed ? (
             <button
               type="button"
               onClick={toggleCollapse}
-              className="p-1.5 rounded-lg text-neutral/60 hover:text-neutral hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-neutral/75 hover:text-neutral hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Colapsar barra lateral"
               title="Colapsar barra lateral"
             >
-              <ChevronLeft className="w-4 h-4 shrink-0" />
+              <ChevronLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
             </button>
           ) : null}
         </div>
@@ -168,16 +215,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     if (isActive) {
                       return `${baseClasses} bg-primary/10 text-primary font-bold border border-primary/20`;
                     }
-                    return `${baseClasses} text-neutral/70 hover:text-neutral hover:bg-gray-100 border border-transparent`;
+                    return `${baseClasses} text-neutral/75 hover:text-neutral hover:bg-gray-100 border border-transparent`;
                   }}
                 >
                   {({ isActive }) => (
                     <>
                       <Icon
+                        aria-hidden="true"
                         className={`w-5 h-5 shrink-0 transition-colors ${
                           isActive
                             ? 'text-primary'
-                            : 'text-neutral/50 group-hover:text-neutral/80'
+                            : 'text-neutral/70 group-hover:text-neutral'
                         }`}
                       />
                       {!collapsed && <span className="truncate">{item.label}</span>}
@@ -229,14 +277,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={openModal}
-                className={`w-full flex items-center gap-3 p-2 rounded-xl text-neutral/70 hover:text-neutral hover:bg-gray-100 transition-colors text-sm font-medium ${
+                className={`w-full flex items-center gap-3 p-2 rounded-xl text-neutral/75 hover:text-neutral hover:bg-gray-100 transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   collapsed ? 'justify-center' : ''
                 }`}
                 aria-label="Ajustes de Credenciales Scraper"
                 title="Ajustes de Credenciales Scraper"
               >
                 <span className="relative shrink-0">
-                  <Settings className="w-5 h-5" />
+                  <Settings className="w-5 h-5" aria-hidden="true" />
                   {sessionStatus?.status === 'active' && (
                     <span
                       className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500"
@@ -286,7 +334,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           {/* Drawer Panel */}
-          <div className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-white border-r border-gray-200 z-50 flex flex-col transform transition-transform duration-300 ease-in-out">
+          <div
+            ref={mobileDrawerRef}
+            tabIndex={-1}
+            className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-white border-r border-gray-200 z-50 flex flex-col transform transition-transform duration-300 ease-in-out focus:outline-none"
+          >
             {renderNavContent(true)}
           </div>
         </div>

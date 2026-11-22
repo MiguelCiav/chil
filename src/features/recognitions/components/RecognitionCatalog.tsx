@@ -18,12 +18,14 @@ import {
   Palette,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  X
+  X,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 
 import { Card, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
+import { Toast } from '../../../components/Toast';
 import { RecognitionType } from '../types';
 import { getAllRecognitionTypes } from '../api';
 import { RecognitionFormModal } from './RecognitionFormModal';
@@ -49,18 +51,18 @@ function renderRecognitionNameCell(item: RecognitionType) {
   return (
     <div className="flex items-center gap-3">
       <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-        <Award className="w-4 h-4" />
+        <Award className="w-4 h-4" aria-hidden="true" />
       </div>
       <div className="flex flex-col">
         <span className="font-bold text-neutral text-sm">{item.name}</span>
-        <span className="text-xs text-neutral/40 font-mono">{item.id}</span>
+        <span className="text-xs text-neutral/75 font-mono">{item.id}</span>
       </div>
     </div>
   );
 }
 
 function renderRecognitionDateCell(dateStr?: string) {
-  return <span className="text-xs text-neutral/60">{formatCreationDate(dateStr)}</span>;
+  return <span className="text-xs text-neutral/75">{formatCreationDate(dateStr)}</span>;
 }
 
 function renderRecognitionNameCellDef({ row }: { row: Row<RecognitionType> }) {
@@ -102,21 +104,21 @@ function renderRecognitionActionsCell({
       <button
         type="button"
         onClick={() => onEdit(item)}
-        className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/5 rounded-lg border border-gray-200 hover:border-primary/20 transition-colors"
+        className="p-1.5 text-neutral/75 hover:text-primary hover:bg-primary/5 rounded-lg border border-gray-200 hover:border-primary/20 transition-colors"
         title="Editar Reconocimiento"
         aria-label={`Editar ${item.name}`}
       >
-        <Pencil className="w-4 h-4" />
+        <Pencil className="w-4 h-4" aria-hidden="true" />
       </button>
 
       <button
         type="button"
         onClick={() => onDelete(item)}
-        className="p-1.5 text-neutral/60 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-colors"
+        className="p-1.5 text-neutral/75 hover:text-red-700 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-colors"
         title="Eliminar Reconocimiento"
         aria-label={`Eliminar ${item.name}`}
       >
-        <Trash2 className="w-4 h-4" />
+        <Trash2 className="w-4 h-4" aria-hidden="true" />
       </button>
     </div>
   );
@@ -148,8 +150,8 @@ function renderTableBodyContent({
   if (loading) {
     return (
       <tr>
-        <td colSpan={columnsLength} className="px-6 py-12 text-center text-neutral/60">
-          <div className="flex items-center justify-center gap-2">
+        <td colSpan={columnsLength} className="px-6 py-12 text-center text-neutral/75">
+          <div role="status" aria-busy="true" className="flex items-center justify-center gap-2">
             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             <span>Cargando tipos de reconocimiento...</span>
           </div>
@@ -173,16 +175,16 @@ function renderTableBodyContent({
   if (totalCount === 0) {
     return (
       <tr>
-        <td colSpan={columnsLength} className="px-6 py-16 text-center text-neutral/60">
+        <td colSpan={columnsLength} className="px-6 py-16 text-center text-neutral/75">
           <div className="flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-              <Award className="w-6 h-6" />
+              <Award className="w-6 h-6" aria-hidden="true" />
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-bold text-neutral">
                 No hay tipos de reconocimiento registrados
               </h3>
-              <p className="text-sm text-neutral/60">
+              <p className="text-sm text-neutral/75">
                 No hay tipos de reconocimiento registrados. Haga clic en &apos;Nuevo Reconocimiento&apos; para comenzar.
               </p>
             </div>
@@ -228,6 +230,7 @@ export const RecognitionCatalog: React.FC = () => {
   const { user } = useAuth();
   const [recognitions, setRecognitions] = useState<RecognitionType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [globalFilter, setGlobalFilter] = useState('');
 
   // Modals state
@@ -250,11 +253,13 @@ export const RecognitionCatalog: React.FC = () => {
 
   const fetchRecognitions = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await getAllRecognitionTypes(user?.uid);
       setRecognitions(data);
     } catch (err) {
       console.error('Error fetching recognitions:', err);
+      setLoadError('No se pudo cargar el catálogo de reconocimientos.');
     } finally {
       setLoading(false);
     }
@@ -357,15 +362,7 @@ export const RecognitionCatalog: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Toast Notification */}
-      {showToast && (
-        <div
-          role="alert"
-          className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in"
-        >
-          <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-          <span className="text-sm font-semibold">{toastMessage}</span>
-        </div>
-      )}
+      {showToast && <Toast message={toastMessage} variant="success" />}
 
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
@@ -373,7 +370,7 @@ export const RecognitionCatalog: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Tipos de Reconocimiento
           </h1>
-          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+          <p className="text-xs sm:text-sm text-neutral/75 mt-1">
             Administre las condecoraciones, insignias y certificaciones scouts disponibles en el sistema.
           </p>
         </div>
@@ -389,27 +386,49 @@ export const RecognitionCatalog: React.FC = () => {
         </Button>
       </div>
 
+      {loadError && (
+        <div
+          role="alert"
+          className="p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-2.5 text-sm text-red-700 font-medium">
+            <AlertCircle className="w-5 h-5 shrink-0" aria-hidden="true" />
+            <span>{loadError}</span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={fetchRecognitions}
+            className="inline-flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+            Reintentar
+          </Button>
+        </div>
+      )}
+
       {/* Filter and Search Bar */}
-      <Card className="border-gray-200">
+      <Card>
         <CardBody className="p-4">
           {/* Search input */}
           <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/40" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/75" aria-hidden="true" />
             <input
               type="text"
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(e.target.value)}
               placeholder="Buscar reconocimiento..."
-              className="w-full pl-9 pr-8 py-2 bg-primary/5 border border-primary/20 rounded-xl text-sm text-neutral placeholder-neutral/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-9 pr-8 py-2 bg-primary/5 border border-primary/70 rounded-xl text-sm text-neutral placeholder:text-neutral/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-transparent"
             />
             {globalFilter && (
               <button
                 type="button"
                 onClick={() => setGlobalFilter('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral/40 hover:text-neutral"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral/75 hover:text-neutral"
                 aria-label="Limpiar búsqueda"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -452,7 +471,7 @@ export const RecognitionCatalog: React.FC = () => {
 
         {/* Table Footer with Pagination */}
         {!loading && totalCount > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-between text-xs font-semibold text-neutral/60">
+          <div className="px-6 py-4 border-t border-primary/15 bg-white flex items-center justify-between text-xs font-semibold text-neutral/75">
             <div>
               Mostrando {currentPageRows.length} de {totalCount} reconocimientos
             </div>

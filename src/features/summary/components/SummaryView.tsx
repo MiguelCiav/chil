@@ -15,10 +15,11 @@ import {
   AlertCircle,
   X,
   RotateCcw,
-  CheckCircle2
+  RefreshCw
 } from 'lucide-react';
 
 import { Button } from '../../../components/Button';
+import { Toast } from '../../../components/Toast';
 import {
   getAllBatches,
   getAllMembers,
@@ -251,8 +252,10 @@ function renderSummaryTableRows(
   if (loading) {
     return (
       <tr>
-        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/50 font-medium">
-          Cargando listado general de reconocimientos...
+        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/75 font-medium">
+          <div role="status" aria-busy="true">
+            Cargando listado general de reconocimientos...
+          </div>
         </td>
       </tr>
     );
@@ -261,11 +264,11 @@ function renderSummaryTableRows(
   if (rows.length === 0) {
     return (
       <tr>
-        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/60">
+        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/75">
           <div className="space-y-2">
-            <AlertCircle className="w-8 h-8 text-neutral/30 mx-auto" />
+            <AlertCircle className="w-8 h-8 text-neutral/75 mx-auto" aria-hidden="true" />
             <p className="font-semibold text-neutral">No se encontraron registros de reconocimientos.</p>
-            <p className="text-xs text-neutral/50">Ajuste el término de búsqueda o modifique los filtros activos.</p>
+            <p className="text-xs text-neutral/75">Ajuste el término de búsqueda o modifique los filtros activos.</p>
           </div>
         </td>
       </tr>
@@ -503,8 +506,11 @@ export const SummaryView: React.FC = () => {
   // Toast feedback state
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadSummaryData = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
     Promise.all([
       getAllBatches(user?.uid),
       getAllMembers(user?.uid),
@@ -521,11 +527,16 @@ export const SummaryView: React.FC = () => {
       })
       .catch(err => {
         console.error('Error loading summary data:', err);
+        setLoadError('No se pudo cargar el resumen general de reconocimientos.');
       })
       .finally(() => {
         setLoading(false);
       });
   }, [user?.uid]);
+
+  useEffect(() => {
+    loadSummaryData();
+  }, [loadSummaryData]);
 
   const resolveRecognitionName = useCallback((recType?: string) => {
     if (!recType) return '-';
@@ -741,12 +752,7 @@ export const SummaryView: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2 relative">
       {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl animate-fade-in border border-primary/20">
-          <CheckCircle2 className="w-5 h-5 text-green-400" />
-          <span className="text-sm font-semibold">{toastMessage}</span>
-        </div>
-      )}
+      {showToast && <Toast message={toastMessage} variant="success" />}
 
       {/* Header with Title and Download Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
@@ -754,7 +760,7 @@ export const SummaryView: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Resumen General de Reconocimientos
           </h1>
-          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+          <p className="text-xs sm:text-sm text-neutral/75 mt-1">
             Consulta y exportación consolidada de todos los reconocimientos emitidos.
           </p>
         </div>
@@ -787,27 +793,49 @@ export const SummaryView: React.FC = () => {
         </div>
       </div>
 
+      {loadError && (
+        <div
+          role="alert"
+          className="p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-2.5 text-sm text-red-700 font-medium">
+            <AlertCircle className="w-5 h-5 shrink-0" aria-hidden="true" />
+            <span>{loadError}</span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={loadSummaryData}
+            className="inline-flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+            Reintentar
+          </Button>
+        </div>
+      )}
+
       {/* Filter Controls Bar */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-4">
+      <div className="bg-white border border-primary/20 rounded-2xl p-4 sm:p-5 space-y-4">
         {/* Global Search Bar */}
         <div className="relative">
-          <Search className="w-4 h-4 text-neutral/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-neutral/75 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
           <input
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="Buscar por nombre, cédula, lote, reconocimiento, código, región, distrito, grupo..."
-            className="w-full pl-10 pr-10 py-2.5 bg-[#faf8f5] border border-gray-200 rounded-xl text-sm text-neutral placeholder:text-neutral/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            className="w-full pl-10 pr-10 py-2.5 bg-[#faf8f5] border border-primary/70 rounded-xl text-sm text-neutral placeholder:text-neutral/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-transparent transition-all"
             aria-label="Búsqueda global"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              className="p-1 absolute right-3 top-1/2 -translate-y-1/2 text-neutral/40 hover:text-neutral transition-colors"
+              className="p-1 absolute right-3 top-1/2 -translate-y-1/2 text-neutral/70 hover:text-neutral transition-colors"
               aria-label="Limpiar búsqueda"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -816,7 +844,7 @@ export const SummaryView: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
           {/* Recognition Filter */}
           <div>
-            <label htmlFor="summary-filter-rec" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+            <label htmlFor="summary-filter-rec" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
               Reconocimiento
             </label>
             <select
@@ -824,7 +852,7 @@ export const SummaryView: React.FC = () => {
               aria-label="Filtrar por reconocimiento"
               value={selectedRecognition}
               onChange={e => setSelectedRecognition(e.target.value)}
-              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
             >
               <option value="">Todos los reconocimientos</option>
               {recognitionTypes.map(r => (
@@ -835,7 +863,7 @@ export const SummaryView: React.FC = () => {
 
           {/* Region Filter */}
           <div>
-            <label htmlFor="summary-filter-region" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+            <label htmlFor="summary-filter-region" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
               Región
             </label>
             <select
@@ -847,7 +875,7 @@ export const SummaryView: React.FC = () => {
                 setSelectedDistrict('');
                 setSelectedGroup('');
               }}
-              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
             >
               <option value="">Todas las regiones</option>
               <option value="nacional">Nacional</option>
@@ -862,7 +890,7 @@ export const SummaryView: React.FC = () => {
 
           {/* District Filter */}
           <div>
-            <label htmlFor="summary-filter-district" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+            <label htmlFor="summary-filter-district" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
               Distrito
             </label>
             <select
@@ -873,7 +901,7 @@ export const SummaryView: React.FC = () => {
                 setSelectedDistrict(e.target.value);
                 setSelectedGroup('');
               }}
-              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
             >
               <option value="">Todos los distritos</option>
               {availableDistricts.map(d => (
@@ -885,7 +913,7 @@ export const SummaryView: React.FC = () => {
 
           {/* Group Filter */}
           <div>
-            <label htmlFor="summary-filter-group" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+            <label htmlFor="summary-filter-group" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
               Grupo Scout
             </label>
             <select
@@ -893,7 +921,7 @@ export const SummaryView: React.FC = () => {
               aria-label="Filtrar por grupo"
               value={selectedGroup}
               onChange={e => setSelectedGroup(e.target.value)}
-              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
             >
               <option value="">Todos los grupos</option>
               {availableGroups.map(g => (
@@ -907,7 +935,7 @@ export const SummaryView: React.FC = () => {
 
           {/* Unit Filter */}
           <div>
-            <label htmlFor="summary-filter-unit" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+            <label htmlFor="summary-filter-unit" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
               Unidad Scout
             </label>
             <select
@@ -915,7 +943,7 @@ export const SummaryView: React.FC = () => {
               aria-label="Filtrar por unidad"
               value={selectedUnit}
               onChange={e => setSelectedUnit(e.target.value)}
-              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
             >
               <option value="">Todas las unidades</option>
               <option value="manada">Manada</option>
@@ -929,7 +957,7 @@ export const SummaryView: React.FC = () => {
 
           {/* Member Type Filter */}
           <div>
-            <label htmlFor="summary-filter-member-type" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+            <label htmlFor="summary-filter-member-type" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
               Tipo de Miembro
             </label>
             <select
@@ -937,7 +965,7 @@ export const SummaryView: React.FC = () => {
               aria-label="Filtrar por tipo de miembro"
               value={selectedMemberType}
               onChange={e => setSelectedMemberType(e.target.value as 'all' | 'young' | 'adult')}
-              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
             >
               <option value="all">Todos los tipos</option>
               <option value="young">Jóvenes</option>
@@ -947,7 +975,7 @@ export const SummaryView: React.FC = () => {
 
           {/* Status Filter */}
           <div>
-            <label htmlFor="summary-filter-status" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+            <label htmlFor="summary-filter-status" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
               Estatus
             </label>
             <select
@@ -955,7 +983,7 @@ export const SummaryView: React.FC = () => {
               aria-label="Filtrar por estatus"
               value={selectedStatus}
               onChange={e => setSelectedStatus(e.target.value as 'all' | 'active' | 'pending' | 'exceptional')}
-              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
             >
               <option value="all">Todos los estatus</option>
               <option value="active">Registro Válido</option>
@@ -966,7 +994,7 @@ export const SummaryView: React.FC = () => {
 
           {/* Date Range Period Filter */}
           <div>
-            <label htmlFor="summary-filter-period" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+            <label htmlFor="summary-filter-period" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
               Fecha / Período
             </label>
             <select
@@ -974,7 +1002,7 @@ export const SummaryView: React.FC = () => {
               aria-label="Filtrar por período"
               value={selectedDatePeriod}
               onChange={e => setSelectedDatePeriod(e.target.value as 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom')}
-              className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+              className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
             >
               <option value="all">Todo el histórico</option>
               <option value="this-year">Este Año</option>
@@ -991,10 +1019,10 @@ export const SummaryView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="w-full px-3 py-2 flex items-center justify-center gap-1.5 rounded-lg border border-red-200 text-red-600 bg-red-50/50 hover:bg-red-50 transition-colors font-semibold text-xs"
+                className="w-full px-3 py-2 flex items-center justify-center gap-1.5 rounded-lg border border-red-300 text-red-700 bg-red-50/50 hover:bg-red-50 transition-colors font-semibold text-xs"
                 aria-label="Limpiar todos los filtros"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
                 Limpiar filtros
               </button>
             )}
@@ -1005,7 +1033,7 @@ export const SummaryView: React.FC = () => {
         {selectedDatePeriod === 'custom' && (
           <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center gap-3 text-xs">
             <div className="flex items-center gap-2">
-              <label htmlFor="summary-custom-start" className="font-semibold text-neutral/70">
+              <label htmlFor="summary-custom-start" className="font-semibold text-neutral/75">
                 Desde:
               </label>
               <input
@@ -1013,12 +1041,12 @@ export const SummaryView: React.FC = () => {
                 type="date"
                 value={customStartDate}
                 onChange={e => setCustomStartDate(e.target.value)}
-                className="px-2.5 py-1.5 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-2.5 py-1.5 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Fecha inicio personalizado"
               />
             </div>
             <div className="flex items-center gap-2">
-              <label htmlFor="summary-custom-end" className="font-semibold text-neutral/70">
+              <label htmlFor="summary-custom-end" className="font-semibold text-neutral/75">
                 Hasta:
               </label>
               <input
@@ -1026,7 +1054,7 @@ export const SummaryView: React.FC = () => {
                 type="date"
                 value={customEndDate}
                 onChange={e => setCustomEndDate(e.target.value)}
-                className="px-2.5 py-1.5 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-2.5 py-1.5 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Fecha fin personalizado"
               />
             </div>
@@ -1059,13 +1087,13 @@ export const SummaryView: React.FC = () => {
         </div>
 
         {/* Table Footer with Summary Counter and Pagination Controls */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-semibold text-neutral/60">
+        <div className="px-6 py-4 border-t border-primary/15 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-semibold text-neutral/75">
           <div className="flex items-center gap-3">
             <span>
               Mostrando {currentPageRows.length} de {totalCount} registros totales
             </span>
             <div className="flex items-center gap-1.5">
-              <label htmlFor="summary-page-size-select" className="text-neutral/50">
+              <label htmlFor="summary-page-size-select" className="text-neutral/75">
                 Filas por pág:
               </label>
               <select
@@ -1073,7 +1101,7 @@ export const SummaryView: React.FC = () => {
                 aria-label="Selector de filas por página"
                 value={pageSize}
                 onChange={e => setPageSize(Number(e.target.value))}
-                className="px-2 py-1 border border-gray-200 rounded-md bg-[#faf8f5] text-neutral text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                className="px-2 py-1 border border-primary/70 rounded-md bg-[#faf8f5] text-neutral text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -1094,7 +1122,7 @@ export const SummaryView: React.FC = () => {
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <span className="px-2 text-neutral/70 font-medium">
+            <span className="px-2 text-neutral/75 font-medium">
               Página {totalPages === 0 ? 0 : currentPageIndex + 1} de {totalPages}
             </span>
 

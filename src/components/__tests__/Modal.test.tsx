@@ -172,4 +172,36 @@ describe('Modal component', () => {
     expect(footer).toHaveClass('border-gray-100');
     expect(footer).toHaveClass('z-10');
   });
+
+  it('closes on document Escape keydown and traps Tab focus inside the modal', () => {
+    const handleClose = vi.fn();
+
+    render(
+      <Modal isOpen={true} onClose={handleClose}>
+        <ModalHeader onClose={handleClose}>Accessible Modal</ModalHeader>
+        <ModalBody>
+          <button type="button">First</button>
+          <button type="button">Last</button>
+        </ModalBody>
+      </Modal>
+    );
+
+    const closeBtn = screen.getByRole('button', { name: 'Cerrar modal' });
+    const lastBtn = screen.getByRole('button', { name: 'Last' });
+
+    // Initial focus moves inside dialog
+    expect(document.activeElement).toBe(closeBtn);
+
+    // Shift+Tab from first wraps to last
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(lastBtn);
+
+    // Tab from last wraps to first
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(closeBtn);
+
+    // Document Escape closes modal
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
 });

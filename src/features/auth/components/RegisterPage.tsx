@@ -11,13 +11,13 @@ import { registerSchema, RegisterCredentials } from '../types';
 const getFieldClassName = (hasError = false, hasPaddingRight = false): string => {
   const base = `w-full rounded-xl py-2.5 ${hasPaddingRight ? 'pl-4 pr-11' : 'px-4'} text-sm transition-all focus:outline-none focus:ring-2 focus:border-transparent`;
   if (hasError) {
-    return `${base} bg-red-50 border border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500`;
+    return `${base} bg-red-50 border border-red-300 text-red-900 placeholder:text-red-400 focus:ring-red-500`;
   }
-  return `${base} bg-primary/5 border border-primary/20 text-neutral placeholder-primary/40 focus:ring-primary`;
+  return `${base} bg-primary/5 border border-primary/70 text-neutral placeholder:text-neutral/75 focus:ring-primary`;
 };
 
 const getLabelClassName = (hasError = false): string =>
-  `block uppercase text-xs font-bold mb-1.5 tracking-wider ${hasError ? 'text-red-600' : 'text-neutral/70'}`;
+  `block uppercase text-xs font-bold mb-1.5 tracking-wider ${hasError ? 'text-red-700' : 'text-neutral/75'}`;
 
 const getRegistrationErrorMessage = (err: unknown): string => {
   if (err instanceof Error) {
@@ -70,24 +70,24 @@ export const RegisterPage: React.FC = () => {
         <div className="text-center space-y-2">
           <div className="flex justify-center items-center gap-2">
             <img src={logo} alt="Chil Logo" className="h-12 w-auto" />
-            <span className="text-2xl font-black text-primary tracking-tight">Chil</span>
+            <span className="font-display text-2xl font-black text-primary tracking-tight">Chil</span>
           </div>
           <h2 className="text-xl font-bold text-neutral">
             Crear una Cuenta
           </h2>
-          <p className="text-xs text-neutral/70">
+          <p className="text-xs text-neutral/75">
             Regístrese para gestionar lotes y emitir certificados scouts
           </p>
         </div>
 
         {/* Register Card */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 space-y-6">
+        <div className="bg-white border border-primary/20 rounded-2xl p-6 sm:p-8 space-y-6">
           {serverError && (
             <div
               className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 font-medium"
               role="alert"
             >
-              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <span>{serverError}</span>
             </div>
           )}
@@ -111,7 +111,7 @@ export const RegisterPage: React.FC = () => {
                 {...register('full_name')}
               />
               {errors.full_name && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{errors.full_name.message}</p>
+                <p className="mt-1 text-xs text-red-700 font-medium">{errors.full_name.message}</p>
               )}
             </div>
 
@@ -133,7 +133,7 @@ export const RegisterPage: React.FC = () => {
                 {...register('email')}
               />
               {errors.email && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{errors.email.message}</p>
+                <p className="mt-1 text-xs text-red-700 font-medium">{errors.email.message}</p>
               )}
             </div>
 
@@ -158,18 +158,18 @@ export const RegisterPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(prev => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral/50 hover:text-neutral transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral/75 hover:text-neutral transition-colors p-1"
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                 >
                   {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
+                    <EyeOff className="w-4 h-4" aria-hidden="true" />
                   ) : (
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4" aria-hidden="true" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{errors.password.message}</p>
+                <p className="mt-1 text-xs text-red-700 font-medium">{errors.password.message}</p>
               )}
             </div>
 
@@ -194,18 +194,18 @@ export const RegisterPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(prev => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral/50 hover:text-neutral transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral/75 hover:text-neutral transition-colors p-1"
                   aria-label={showConfirmPassword ? 'Ocultar confirmar contraseña' : 'Ver confirmar contraseña'}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" />
+                    <EyeOff className="w-4 h-4" aria-hidden="true" />
                   ) : (
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4" aria-hidden="true" />
                   )}
                 </button>
               </div>
               {errors.confirm_password && (
-                <p className="mt-1 text-xs text-red-500 font-medium">{errors.confirm_password.message}</p>
+                <p className="mt-1 text-xs text-red-700 font-medium">{errors.confirm_password.message}</p>
               )}
             </div>
 
@@ -226,7 +226,7 @@ export const RegisterPage: React.FC = () => {
 
           {/* Login Footer Link */}
           <div className="text-center pt-2 border-t border-gray-100">
-            <p className="text-xs text-neutral/70">
+            <p className="text-xs text-neutral/75">
               ¿Ya tienes una cuenta registrada?{' '}
               <Link
                 to="/login"

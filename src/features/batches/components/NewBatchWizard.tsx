@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
+import { Toast } from '../../../components/Toast';
 
 import {
   getHierarchyData,
@@ -212,12 +212,7 @@ export const NewBatchWizard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
       {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
-          <AlertCircle className="w-5 h-5 text-yellow-400" />
-          <span className="text-sm font-semibold">{toastMessage}</span>
-        </div>
-      )}
+      {showToast && <Toast message={toastMessage} variant="warning" />}
 
       {/* Header */}
       <div

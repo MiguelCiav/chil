@@ -1,24 +1,18 @@
-# Landing Feature Blueprint
+# Landing Feature Module
 
-## System Overview
-The `landing` feature subsystem provides the public unauthenticated marketing and entry page for Chil, presenting platform capabilities, a 3-step recognition workflow overview, and navigation entry points to registration and sign-in routes.
+The public-facing landing page (`/` and `/inicio`) for **Chil** (Sistema de Emisión y Control de Reconocimientos Scouts). Pairs a Warm Parchment (`#F1EAD8` / `--color-secondary`) split hero banner featuring real recognition templates (`src/assets/recognitions/`) with scroll-driven product storytelling, using `--color-primary` (`#8C4E37`), `--color-secondary` (`#F1EAD8`), `--color-neutral` (`#383836`), dark espresso `#2E1208` stages, and `Scouts GT Planar` display typography per `docs/DESIGN.md`.
 
-## Local Interface & Invariants
-- **Public Barrel (`index.ts`)**:
-  - `index.ts:*` re-exports `./components/LandingPage`, `./components/HeroSection`, `./components/FeatureGridSection`, `./components/WorkflowSection`, `./components/LandingFooter`, and `./types`.
-  - **Invariants**: None (pure barrel re-export module).
-  - **Side Effects**: None.
+## Module Structure
 
-## Subdirectories & System Boundaries
-- **Components**: [`./components/README.md`](./components/README.md) — Public landing page composition (`LandingPage`, `HeroSection`, `FeatureGridSection`, `WorkflowSection`, `LandingFooter`).
-- **Types**: [`./types/README.md`](./types/README.md) — TypeScript interfaces (`FeatureCardItem`, `WorkflowStepItem`, `ScoutValueItem`).
+- **Components**: [`./components/README.md`](./components/README.md) — `LandingPage`, `HeroSection`, `FeatureGridSection`, `ShowcaseVisuals`, `WorkflowSection`, `LandingFooter`, `TopoBackdrop`, `RevealOnScroll`.
+- **Hooks**: [`./hooks/`](./hooks) — `useScrollProgress` (CSS variable scroll progress) and `useActiveChapter` (sticky storytelling chapter tracking).
+- **Types**: [`./types/README.md`](./types/README.md) — Shared landing TypeScript interfaces (`ShowcaseVisualProps`, `LandingChapter`, `ManifestoLine`, `ProductFactItem`).
 
-## Global Invariants
-- **Public Entry Routing**: `HeroSection` and `LandingFooter` link directly to `/registro` and `/login` via React Router `Link`; `LandingFooter` module links target `#exportacion-flexible`, `#lotes-masivos`, and `#disenador-plantillas` card IDs in `FeatureGridSection`.
-- **Static Presentational Content**: All capability cards, workflow steps, and SVG/logo assets are static client-side UI with no backend/Firestore queries or auth state dependencies.
+## Public Exports ([`index.ts`](./index.ts))
 
-## Global Side Effects
-- None (pure static React UI and React Router `Link` navigation targets; `LandingFooter` reads `new Date().getFullYear()` at render time).
+- `LandingPage`, `HeroSection`, `FeatureGridSection`, `WorkflowSection`, `LandingFooter`, `RevealOnScroll`, and `./types`.
 
-## System Verification
-- Run: `npm test -- --run`
+## Routing & Integration
+
+- Rendered in `src/App.tsx` via `RootRoute` on `/` (with `/inicio` alias) and wrapped by `MainLayout` with `p-0` public shell margins.
+- Calls to action route to `/registro` and `/login` through styled `<Link>` elements without nested `<button>` elements.

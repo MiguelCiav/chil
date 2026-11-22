@@ -1,12 +1,13 @@
 # Landing Types
 
 ## Overview
-Defines TypeScript interfaces for the landing page's feature cards, workflow steps, and Scout value items.
+Defines TypeScript interfaces for the landing page's showcase visuals, storytelling chapters, manifesto lines, and product facts.
 
 ## Interface
-- `index.ts:FeatureCardItem`: Interface `{ id: string; icon: ReactNode; title: string; badge?: string; description: string; highlights: string[] }`.
-- `index.ts:WorkflowStepItem`: Interface `{ stepNumber: number; title: string; description: string; icon: ReactNode; tagline: string }`.
-- `index.ts:ScoutValueItem`: Interface `{ title: string; description: string; badge: string; icon: ReactNode }`.
+- `index.ts:ShowcaseVisualProps`: Interface `{ active: boolean }`.
+- `index.ts:LandingChapter`: Interface `{ id: string; number: string; verb: string; title: string; body: string; Visual: FC<ShowcaseVisualProps> }`.
+- `index.ts:ManifestoLine`: Interface `{ text: string; accent: boolean }`.
+- `index.ts:ProductFactItem`: Interface `{ figure: string; title: string; body: string }`.
 
 ## Invariants
 - None.

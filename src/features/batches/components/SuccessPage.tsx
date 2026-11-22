@@ -16,6 +16,7 @@ import {
 import { Card, CardBody } from '../../../components/Card';
 import { Button } from '../../../components/Button';
 import { Table } from '../../../components/Table';
+import { Toast } from '../../../components/Toast';
 import { ColumnDef, CellContext } from '@tanstack/react-table';
 
 import {
@@ -310,12 +311,7 @@ export const SuccessPage: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
 
       {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl animate-fade-in border border-primary/20">
-          <CheckCircle2 className="w-5 h-5 text-green-400" />
-          <span className="text-sm font-semibold">{toastMessage}</span>
-        </div>
-      )}
+      {showToast && <Toast message={toastMessage} variant="success" />}
 
       {/* Success Hero Header */}
       <div className="text-center space-y-4 py-6 bg-white border border-primary/20 rounded-3xl p-8">

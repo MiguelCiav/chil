@@ -30,7 +30,12 @@ export const StatisticsDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label="Cargando estadísticas"
+        className="max-w-7xl mx-auto space-y-6 font-sans py-2"
+      >
         {/* Header Skeleton */}
         <div className="space-y-2">
           <div className="h-8 w-64 bg-gray-200 animate-pulse rounded-lg" />
@@ -38,19 +43,19 @@ export const StatisticsDashboard: React.FC = () => {
         </div>
 
         {/* Filter Bar Skeleton */}
-        <div className="h-32 bg-gray-100 animate-pulse rounded-2xl border border-gray-200" />
+        <div className="h-32 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
 
         {/* KPI Grid Skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-28 bg-gray-100 animate-pulse rounded-2xl border border-gray-200" />
+            <div key={i} className="h-28 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
           ))}
         </div>
 
         {/* Tables Skeleton */}
         <div className="space-y-6">
-          <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-gray-200" />
-          <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-gray-200" />
+          <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
+          <div className="h-64 bg-gray-100 animate-pulse rounded-2xl border border-primary/20" />
         </div>
       </div>
     );
@@ -58,12 +63,15 @@ export const StatisticsDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="max-w-xl mx-auto my-16 p-6 bg-white border border-red-200 rounded-2xl text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+      <div
+        role="alert"
+        className="max-w-xl mx-auto my-16 p-6 bg-red-50 border border-red-200 rounded-2xl text-center space-y-4"
+      >
+        <AlertCircle className="w-12 h-12 text-red-700 mx-auto" aria-hidden="true" />
         <h2 className="text-lg font-bold text-neutral">Error al cargar estadísticas</h2>
-        <p className="text-xs text-neutral/70">{error}</p>
+        <p className="text-xs text-red-700 font-medium">{error}</p>
         <Button variant="primary" onClick={refresh} className="mx-auto flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className="w-4 h-4" aria-hidden="true" />
           Reintentar
         </Button>
       </div>
@@ -78,7 +86,7 @@ export const StatisticsDashboard: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">
             Estadísticas y Análisis
           </h1>
-          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+          <p className="text-xs sm:text-sm text-neutral/75 mt-1">
             Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
           </p>
         </div>

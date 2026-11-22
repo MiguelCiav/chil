@@ -27,7 +27,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   if (isPublicPage) {
     return (
       <div className="min-h-screen bg-primary/5 flex flex-col font-sans">
-        <main className={`flex-1 ${isLandingPage ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
+        <a href="#main-content" className="skip-link">
+          Saltar al contenido principal
+        </a>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={`flex-1 focus:outline-none ${isLandingPage ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}
+        >
           {children}
         </main>
       </div>
@@ -36,20 +43,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-primary/5 flex flex-col md:flex-row font-sans">
+      <a href="#main-content" className="skip-link">
+        Saltar al contenido principal
+      </a>
       {/* Mobile Top Bar */}
       <header className="md:hidden h-14 bg-white border-b border-gray-200 px-4 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="p-1.5 rounded-lg text-neutral/70 hover:text-neutral hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+            className="p-1.5 rounded-lg text-neutral/80 hover:text-neutral hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="Abrir menú"
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-6 h-6" aria-hidden="true" />
           </button>
           <Link to={user ? "/lotes" : "/"} className="flex items-center gap-2 hover:opacity-90 transition-opacity">
             <img src={logo} alt="Chil Logo" className="h-7 w-7 object-contain" />
-            <span className="text-primary font-bold text-lg tracking-tight">Chil</span>
+            <span className="font-display text-primary font-bold text-lg tracking-tight">Chil</span>
           </Link>
         </div>
       </header>
@@ -61,7 +71,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <main id="main-content" tabIndex={-1} className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8 focus:outline-none">
         {children}
       </main>
     </div>

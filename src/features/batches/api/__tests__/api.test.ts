@@ -710,6 +710,7 @@ describe('Batches API Layer', () => {
 
       const styleNature = getRecognitionBadgeStyle('Campeones por la Naturaleza');
       expect(styleNature.bg).toBe('bg-[#fee2d8]');
+      expect(styleNature.text).toBe('text-[#9a3412]');
 
       const styleSolar = getRecognitionBadgeStyle('Go Solar');
       expect(styleSolar.bg).toBe('bg-amber-100');

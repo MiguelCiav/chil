@@ -26,7 +26,7 @@ Step views, stepper, Zod schema, tour steps, scraper alert modals, and member pe
 ## Side Effects
 - `Step1DataLoad.tsx:Step1DataLoad` reads uploaded `.csv`/`.txt` files via `FileReader`.
 - `ScraperAlertModals.tsx:ScraperAlertModals` invokes `openModal()` from `ScraperSettingsContext` to open the shared Impeesa session settings modal.
-- `wizardHelpers.ts` (`saveNoScoutMemberToDb`, `saveUnregisteredMemberToDb`, `saveScrapedMemberToDb`, `syncAndFinalizeStep2Members`), `Step2ReviewConfirm.tsx:Step2ReviewConfirm`, and `Step3Review.tsx:Step3Review` mutate and reload backend member records via `createMember`, `updateMember`, `batchUpdateMembers`, `deleteMember`, and `getMembersByBatchId` from `../../api`, and may invoke `window.confirm`, `window.alert`, `console.error`, or `console.warn`.
+- `wizardHelpers.ts` (`saveNoScoutMemberToDb`, `saveUnregisteredMemberToDb`, `saveScrapedMemberToDb`, `syncAndFinalizeStep2Members`), `Step2ReviewConfirm.tsx:Step2ReviewConfirm`, and `Step3Review.tsx:Step3Review` mutate and reload backend member records via `createMember`, `updateMember`, `batchUpdateMembers`, `deleteMember`, and `getMembersByBatchId` from `../../api`, and may invoke `window.confirm`, `window.alert`, or `console.error`.
 
 ## Verification
 - Run: `npm test`

@@ -109,18 +109,18 @@ const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
     return (
       <table className="w-full text-left border-collapse font-sans text-xs">
         <thead>
-          <tr className="border-b border-gray-200 bg-[#faf8f5]">
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
+          <tr className="border-b border-primary/20 bg-primary/10">
+            <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider">Mes</th>
+            <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">
               Total ({yoy.currentYear})
             </th>
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
+            <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">
               Año Anterior ({yoy.previousYear})
             </th>
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
+            <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">
               Variación
             </th>
-            <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">
+            <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">
               % del Total
             </th>
           </tr>
@@ -130,20 +130,20 @@ const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
             const totalCurr = yoy.totalDiplomas.current || 1;
             const pct = yoy.totalDiplomas.current > 0 ? Number(((m.currentCount / totalCurr) * 100).toFixed(1)) : 0;
             return (
-              <tr key={m.label} className="hover:bg-gray-50/80 transition-colors">
+              <tr key={m.label} className="hover:bg-primary/5 transition-colors">
                 <td className="px-3 py-1.5 font-semibold text-neutral">
                   {m.label}
                 </td>
                 <td className="px-3 py-1.5 font-bold text-neutral text-right">
                   {m.currentCount}
                 </td>
-                <td className="px-3 py-1.5 font-medium text-neutral/60 text-right">
+                <td className="px-3 py-1.5 font-medium text-neutral/75 text-right">
                   {m.previousCount}
                 </td>
                 <td className="px-3 py-1.5 text-right">
                   <YoYVariationBadge diff={m.diff} percentChange={m.percentChange} />
                 </td>
-                <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
+                <td className="px-3 py-1.5 text-right font-medium text-neutral/75">
                   {pct}%
                 </td>
               </tr>
@@ -157,24 +157,24 @@ const MonthlySummaryTable: React.FC<MonthlySummaryTableProps> = ({
   return (
     <table className="w-full text-left border-collapse font-sans text-xs">
       <thead>
-        <tr className="border-b border-gray-200 bg-[#faf8f5]">
-          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider">Mes</th>
-          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">Reconocimientos Emitidos</th>
-          <th className="px-3 py-2 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+        <tr className="border-b border-primary/20 bg-primary/10">
+          <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider">Mes</th>
+          <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">Reconocimientos Emitidos</th>
+          <th className="px-3 py-2 font-bold text-neutral uppercase tracking-wider text-right">% del Total</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
         {data.map((m) => {
           const pct = totalPeriodDiplomas > 0 ? Number(((m.totalCount / totalPeriodDiplomas) * 100).toFixed(1)) : 0;
           return (
-            <tr key={m.monthKey} className="hover:bg-gray-50/80 transition-colors">
+            <tr key={m.monthKey} className="hover:bg-primary/5 transition-colors">
               <td className="px-3 py-1.5 font-semibold text-neutral">
                 {m.label}
               </td>
               <td className="px-3 py-1.5 font-bold text-neutral text-right">
                 {m.totalCount}
               </td>
-              <td className="px-3 py-1.5 text-right font-medium text-neutral/70">
+              <td className="px-3 py-1.5 text-right font-medium text-neutral/75">
                 {pct}%
               </td>
             </tr>
@@ -220,6 +220,8 @@ const MonthlyTrendDualBar: React.FC<MonthlyTrendDualBarProps> = ({
     <g
       onMouseEnter={() => onHover(idx)}
       onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(idx)}
+      onBlur={() => onHover(null)}
       className="cursor-pointer transition-all"
       tabIndex={0}
       role="graphics-symbol"
@@ -285,6 +287,8 @@ const MonthlyTrendDualBar: React.FC<MonthlyTrendDualBarProps> = ({
           width={metrics.dualBarWidth}
           height={metrics.prevBarH}
           fill={prevFill}
+          stroke="#64748b"
+          strokeWidth="0.75"
           rx={3}
           className="transition-all duration-200"
         />
@@ -366,6 +370,8 @@ const MonthlyTrendSingleBar: React.FC<MonthlyTrendSingleBarProps> = ({
     <g
       onMouseEnter={() => onHover(idx)}
       onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(idx)}
+      onBlur={() => onHover(null)}
       className="cursor-pointer transition-all"
       tabIndex={0}
       role="graphics-symbol"
@@ -554,18 +560,18 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
     : `Gráfico de tendencia mensual para el año ${displayYear}`;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between h-full font-sans">
+    <div className="bg-white border border-primary/20 rounded-2xl p-5 flex flex-col justify-between h-full font-sans">
       {/* Card Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 text-primary rounded-xl">
+          <div className="p-2 bg-primary/10 text-primary rounded-xl" aria-hidden="true">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-neutral text-base tracking-tight">
               Resumen Mensual de Reconocimientos
             </h3>
-            <p className="text-xs text-neutral/60">
+            <p className="text-xs text-neutral/75">
               Distribución de reconocimientos otorgados a lo largo del año {displayYear}
               {hasYoY && yoy && ` • Comparativa vs ${prevYear}`}
             </p>
@@ -576,21 +582,21 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ data, year
           {hasYoY && yoy ? (
             <>
               <div>
-                <span className="text-[11px] font-semibold text-neutral/50">Año {displayYear}</span>
+                <span className="text-xs font-semibold text-neutral/75">Año {displayYear}</span>
                 <p className="text-lg font-extrabold text-primary leading-none">
                   {yoy.totalDiplomas.current}
                 </p>
               </div>
-              <div className="border-l border-gray-200 pl-4">
-                <span className="text-[11px] font-semibold text-neutral/50">Año {prevYear}</span>
-                <p className="text-lg font-bold text-neutral/60 leading-none">
+              <div className="border-l border-primary/20 pl-4">
+                <span className="text-xs font-semibold text-neutral/75">Año {prevYear}</span>
+                <p className="text-lg font-bold text-neutral/75 leading-none">
                   {yoy.totalDiplomas.previous}
                 </p>
               </div>
             </>
           ) : (
             <div>
-              <span className="text-xs font-semibold text-neutral/50">Total año</span>
+              <span className="text-xs font-semibold text-neutral/75">Total año</span>
               <p className="text-lg font-extrabold text-primary leading-none">
                 {totalPeriodDiplomas}
               </p>

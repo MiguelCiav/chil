@@ -3,6 +3,7 @@ export * from './Card';
 export * from './Field';
 export * from './Modal';
 export * from './Table';
+export * from './Toast';
 export * from './FloatingTableScrollbar';
 export * from './SearchSelectorModal';
 export * from './navigation';

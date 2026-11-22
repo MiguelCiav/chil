@@ -202,8 +202,10 @@ export function renderBatchTableRows(
   if (loading) {
     return (
       <tr>
-        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/50 font-medium">
-          Cargando listado de lotes...
+        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/75 font-medium">
+          <div role="status" aria-busy="true">
+            Cargando listado de lotes...
+          </div>
         </td>
       </tr>
     );
@@ -211,11 +213,11 @@ export function renderBatchTableRows(
   if (rows.length === 0) {
     return (
       <tr>
-        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/60">
+        <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/75">
           <div className="space-y-2">
-            <AlertCircle className="w-8 h-8 text-neutral/30 mx-auto" />
+            <AlertCircle className="w-8 h-8 text-neutral/75 mx-auto" aria-hidden="true" />
             <p className="font-semibold text-neutral">No se encontraron lotes registrados.</p>
-            <p className="text-xs text-neutral/50">Cree un nuevo lote o modifique los filtros activos.</p>
+            <p className="text-xs text-neutral/75">Cree un nuevo lote o modifique los filtros activos.</p>
           </div>
         </td>
       </tr>

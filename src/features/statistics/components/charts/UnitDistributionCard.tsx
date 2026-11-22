@@ -47,18 +47,18 @@ const UnitTableYoY: React.FC<UnitTableYoYProps> = ({
   <div className="overflow-x-auto">
     <table className="w-full text-left border-collapse font-sans text-xs">
       <thead>
-        <tr className="border-b border-gray-200 bg-[#faf8f5]">
-          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
-          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+        <tr className="border-b border-primary/20 bg-primary/10">
+          <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider">Unidad Scout</th>
+          <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">
             Total ({currentYear})
           </th>
-          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+          <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">
             Año Anterior ({previousYear})
           </th>
-          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+          <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">
             Variación
           </th>
-          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">
+          <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">
             % del Total
           </th>
         </tr>
@@ -67,22 +67,22 @@ const UnitTableYoY: React.FC<UnitTableYoYProps> = ({
         {units.map(item => {
           const barColor = UNIT_BAR_COLORS[item.unit] ?? 'bg-primary';
           return (
-            <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
+            <tr key={item.unit} className="hover:bg-primary/5 transition-colors">
               <td className="px-4 py-2.5 font-semibold text-neutral">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${item.badgeClass}`}>
                   {item.label}
                 </span>
               </td>
               <td className="px-4 py-2.5 font-bold text-neutral text-right">
                 {item.currentCount}
               </td>
-              <td className="px-4 py-2.5 font-medium text-neutral/60 text-right">
+              <td className="px-4 py-2.5 font-medium text-neutral/75 text-right">
                 {item.previousCount}
               </td>
               <td className="px-4 py-2.5 text-right">
                 <YoYVariationBadge diff={item.diff} percentChange={item.percentChange} />
               </td>
-              <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+              <td className="px-4 py-2.5 text-right font-medium text-neutral/75">
                 <div className="flex items-center justify-end gap-2">
                   <span>{item.currentPercentage}%</span>
                   <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -113,26 +113,26 @@ const UnitTableStandard: React.FC<UnitTableStandardProps> = ({
   <div className="overflow-x-auto">
     <table className="w-full text-left border-collapse font-sans text-xs">
       <thead>
-        <tr className="border-b border-gray-200 bg-[#faf8f5]">
-          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider">Unidad Scout</th>
-          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">Total Reconocimientos</th>
-          <th className="px-4 py-2.5 font-bold text-neutral/70 uppercase tracking-wider text-right">% del Total</th>
+        <tr className="border-b border-primary/20 bg-primary/10">
+          <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider">Unidad Scout</th>
+          <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">Total Reconocimientos</th>
+          <th className="px-4 py-2.5 font-bold text-neutral uppercase tracking-wider text-right">% del Total</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
         {items.map(item => {
           const barColor = UNIT_BAR_COLORS[item.unit] ?? 'bg-primary';
           return (
-            <tr key={item.unit} className="hover:bg-gray-50/80 transition-colors">
+            <tr key={item.unit} className="hover:bg-primary/5 transition-colors">
               <td className="px-4 py-2.5 font-semibold text-neutral">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${item.badgeClass}`}>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${item.badgeClass}`}>
                   {item.label}
                 </span>
               </td>
               <td className="px-4 py-2.5 font-bold text-neutral text-right">
                 {item.count}
               </td>
-              <td className="px-4 py-2.5 text-right font-medium text-neutral/70">
+              <td className="px-4 py-2.5 text-right font-medium text-neutral/75">
                 <div className="flex items-center justify-end gap-2">
                   <span>{item.percentage}%</span>
                   <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -157,18 +157,18 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
   const maxCount = computeUnitMaxCount(items, yoy, hasYoY);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4 font-sans">
+    <div className="bg-white border border-primary/20 rounded-2xl p-5 space-y-4 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 text-primary rounded-xl">
+          <div className="p-2 bg-primary/10 text-primary rounded-xl" aria-hidden="true">
             <Compass className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-neutral text-base tracking-tight">
               Reconocimientos entregados por Unidad
             </h3>
-            <p className="text-xs text-neutral/60">
+            <p className="text-xs text-neutral/75">
               Distribución de reconocimientos según la unidad scout o emisión directa
               {hasYoY && yoy && ` • Comparativa ${yoy.previousYear} vs ${yoy.currentYear}`}
             </p>
@@ -176,7 +176,7 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
         </div>
 
         <div className="flex items-center gap-2 text-xs font-semibold">
-          <span className="text-neutral/50">Total Reconocimientos:</span>
+          <span className="text-neutral/75">Total Reconocimientos:</span>
           <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-extrabold">
             {totalCount}
           </span>

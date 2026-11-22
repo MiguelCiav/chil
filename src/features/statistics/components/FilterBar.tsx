@@ -36,11 +36,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-4 font-sans">
+    <div className="bg-white border border-primary/20 rounded-2xl p-4 sm:p-5 space-y-4 font-sans">
       {/* Top row: Section title & PDF Export button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-primary/10">
         <div className="flex items-center gap-2 text-neutral">
-          <Filter className="w-4 h-4 text-primary" />
+          <Filter className="w-4 h-4 text-primary" aria-hidden="true" />
           <span className="text-sm font-bold tracking-tight">
             Filtros y Segmentación de Datos
           </span>
@@ -53,7 +53,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           className="flex items-center gap-2 text-xs font-bold whitespace-nowrap self-start sm:self-auto"
           aria-label="Exportar Reporte Ejecutivo PDF"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-4 h-4" aria-hidden="true" />
           <span>Exportar Reporte Ejecutivo (PDF)</span>
         </Button>
       </div>
@@ -62,7 +62,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
         {/* Period Selector */}
         <div>
-          <label htmlFor="stats-filter-period" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+          <label htmlFor="stats-filter-period" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
             Período
           </label>
           <select
@@ -70,7 +70,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             aria-label="Filtrar por período"
             value={filters.period}
             onChange={e => setFilter('period', e.target.value as StatisticsFilterState['period'])}
-            className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+            className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
           >
             <option value="all">Todo el histórico</option>
             <option value="this-year">Este Año</option>
@@ -83,7 +83,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* Recognition Selector */}
         <div>
-          <label htmlFor="stats-filter-rec" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+          <label htmlFor="stats-filter-rec" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
             Reconocimiento
           </label>
           <select
@@ -91,7 +91,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             aria-label="Filtrar por tipo de reconocimiento"
             value={filters.recognitionId ?? ''}
             onChange={e => setFilter('recognitionId', e.target.value)}
-            className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+            className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
           >
             <option value="">Todos los reconocimientos</option>
             {recognitionTypes.map(r => (
@@ -104,7 +104,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* Region Selector */}
         <div>
-          <label htmlFor="stats-filter-region" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+          <label htmlFor="stats-filter-region" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
             Región
           </label>
           <select
@@ -115,7 +115,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               setFilter('regionId', e.target.value);
               setFilter('districtId', '');
             }}
-            className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+            className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
           >
             <option value="">Todas las regiones</option>
             {regions
@@ -132,7 +132,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* District Selector */}
         <div>
-          <label htmlFor="stats-filter-district" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+          <label htmlFor="stats-filter-district" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
             Distrito
           </label>
           <select
@@ -140,7 +140,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             aria-label="Filtrar por distrito"
             value={filters.districtId ?? ''}
             onChange={e => setFilter('districtId', e.target.value)}
-            className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+            className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
           >
             <option value="">Todos los distritos</option>
             {availableDistricts
@@ -156,7 +156,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* Member Type Selector */}
         <div>
-          <label htmlFor="stats-filter-member-type" className="block font-bold text-neutral/70 uppercase tracking-wider mb-1">
+          <label htmlFor="stats-filter-member-type" className="block font-bold text-neutral/75 uppercase tracking-wider mb-1">
             Demografía
           </label>
           <select
@@ -164,7 +164,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             aria-label="Filtrar por tipo demográfico"
             value={filters.memberType ?? 'all'}
             onChange={e => setFilter('memberType', e.target.value as 'all' | 'young' | 'adult')}
-            className="w-full px-3 py-2 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+            className="w-full px-3 py-2 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary text-xs"
           >
             <option value="all">Todos los scouts</option>
             <option value="young">Solo Jóvenes</option>
@@ -178,7 +178,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {filters.period === 'custom' && (
           <div className="flex flex-wrap items-center gap-3 text-xs">
             <div className="flex items-center gap-2">
-              <label htmlFor="stats-custom-start" className="font-semibold text-neutral/70">
+              <label htmlFor="stats-custom-start" className="font-semibold text-neutral/75">
                 Desde:
               </label>
               <input
@@ -186,12 +186,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 type="date"
                 value={filters.startDate ?? ''}
                 onChange={e => setFilter('startDate', e.target.value)}
-                className="px-2.5 py-1.5 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-2.5 py-1.5 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Fecha inicio personalizado"
               />
             </div>
             <div className="flex items-center gap-2">
-              <label htmlFor="stats-custom-end" className="font-semibold text-neutral/70">
+              <label htmlFor="stats-custom-end" className="font-semibold text-neutral/75">
                 Hasta:
               </label>
               <input
@@ -199,7 +199,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 type="date"
                 value={filters.endDate ?? ''}
                 onChange={e => setFilter('endDate', e.target.value)}
-                className="px-2.5 py-1.5 bg-[#faf8f5] border border-gray-200 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-2.5 py-1.5 bg-[#faf8f5] border border-primary/70 rounded-lg text-neutral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Fecha fin personalizado"
               />
             </div>

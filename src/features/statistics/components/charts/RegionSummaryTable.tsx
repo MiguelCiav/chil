@@ -70,19 +70,19 @@ const RegionTableYoY: React.FC<RegionTableYoYProps> = ({
         {regions.map((r, idx) => (
           <tr key={r.id || r.name} className="hover:bg-primary/5 transition-colors bg-white">
             <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
-              <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
+              <span className="text-neutral/75 font-bold w-4 text-right">{idx + 1}.</span>
               <span>{r.name}</span>
             </td>
             <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
               {r.currentCount}
             </td>
-            <td className="px-6 py-4 text-sm font-medium text-neutral/60 whitespace-nowrap text-right">
+            <td className="px-6 py-4 text-sm font-medium text-neutral/75 whitespace-nowrap text-right">
               {r.previousCount}
             </td>
             <td className="px-6 py-4 text-sm whitespace-nowrap text-right">
               <YoYVariationBadge diff={r.diff} percentChange={r.percentChange} />
             </td>
-            <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
+            <td className="px-6 py-4 text-sm font-medium text-neutral/75 whitespace-nowrap text-right">
               <div className="flex items-center justify-end gap-2">
                 <span>{r.currentPercentage}%</span>
                 <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -122,13 +122,13 @@ const RegionTableStandard: React.FC<RegionTableStandardProps> = ({
         {regions.map((r, idx) => (
           <tr key={r.id || r.name} className="hover:bg-primary/5 transition-colors bg-white">
             <td className="px-6 py-4 text-sm font-semibold text-neutral whitespace-nowrap flex items-center gap-2">
-              <span className="text-neutral/40 font-bold w-4 text-right">{idx + 1}.</span>
+              <span className="text-neutral/75 font-bold w-4 text-right">{idx + 1}.</span>
               <span>{r.name}</span>
             </td>
             <td className="px-6 py-4 text-sm font-bold text-neutral whitespace-nowrap text-right">
               {r.count}
             </td>
-            <td className="px-6 py-4 text-sm font-medium text-neutral/70 whitespace-nowrap text-right">
+            <td className="px-6 py-4 text-sm font-medium text-neutral/75 whitespace-nowrap text-right">
               <div className="flex items-center justify-end gap-2">
                 <span>{r.percentage}%</span>
                 <div className="w-16 bg-gray-100 h-1.5 rounded-full overflow-hidden hidden sm:block">
@@ -166,7 +166,7 @@ function renderRegionTableBody(
 ) {
   if (itemsCount === 0) {
     return (
-      <div className="py-8 text-center text-neutral/50 text-xs">
+      <div className="py-8 text-center text-neutral/75 text-xs">
         No hay registros disponibles por región para los filtros seleccionados.
       </div>
     );
@@ -204,20 +204,20 @@ export const RegionSummaryTable: React.FC<RegionSummaryTableProps> = ({ regions,
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl">
+          <div className="p-2 bg-emerald-500/10 text-emerald-700 rounded-xl" aria-hidden="true">
             <MapPin className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-neutral text-base tracking-tight">
               Reconocimientos entregados por Región
             </h3>
-            <p className="text-xs text-neutral/60">
+            <p className="text-xs text-neutral/75">
               Distribución territorial consolidada por región scout
               {hasYoY && yoy && ` • Comparativa ${yoy.previousYear} vs ${yoy.currentYear}`}
             </p>
           </div>
         </div>
-        <span className="text-xs font-semibold text-neutral/50 bg-gray-100 px-2.5 py-1 rounded-full">
+        <span className="text-xs font-semibold text-neutral/75 bg-gray-100 px-2.5 py-1 rounded-full">
           {itemsCount} {getRegionCountLabel(itemsCount)}
         </span>
       </div>

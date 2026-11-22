@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, AlertCircle, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { Button } from '../../../components/Button';
+import { Toast } from '../../../components/Toast';
 import {
   WalkthroughOverlay,
   useWalkthrough,
@@ -515,33 +516,11 @@ export const CertificateDesigner: React.FC = () => {
     <div className="max-w-[1600px] mx-auto space-y-5 font-sans py-2 pb-12 px-2 sm:px-4">
       {/* Toast Alert */}
       {toast && (
-        <div
-          role="alert"
-          className={`fixed top-6 right-6 z-50 max-w-md flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border animate-fade-in ${
-            toast.type === 'error'
-              ? 'bg-red-900 text-white border-red-700'
-              : toast.type === 'warning'
-                ? 'bg-amber-900 text-white border-amber-600'
-                : 'bg-neutral text-white border-primary/20'
-          }`}
-        >
-          {toast.type === 'error' ? (
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          ) : toast.type === 'warning' ? (
-            <AlertTriangle className="w-5 h-5 text-amber-300 flex-shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-          )}
-          <span className="text-sm font-semibold">{toast.message}</span>
-          <button
-            type="button"
-            onClick={dismissNotification}
-            aria-label="Cerrar notificación"
-            className="ml-1 p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <Toast
+          message={toast.message}
+          variant={toast.type}
+          onDismiss={dismissNotification}
+        />
       )}
 
       {/* Hidden File Input for Background Upload */}

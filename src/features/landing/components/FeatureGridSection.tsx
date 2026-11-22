@@ -1,170 +1,193 @@
 import React from 'react';
+import { useActiveChapter } from '../hooks/useActiveChapter';
+import { useScrollProgress } from '../hooks/useScrollProgress';
+import { RevealOnScroll } from './RevealOnScroll';
+import { TopoBackdrop } from './TopoBackdrop';
 import {
-  FileArchive,
-  Package,
-  Palette,
-  ShieldCheck,
-  BarChart3,
-  Lock,
-  Check
-} from 'lucide-react';
-import { FeatureCardItem } from '../types';
+  AnalyticsVisual,
+  DesignVisual,
+  ExportVisual,
+  VerifyVisual
+} from './ShowcaseVisuals';
+import type { LandingChapter } from '../types';
 
-interface ExtendedFeatureItem extends FeatureCardItem {
-  iconContainerClass: string;
-  badgeClass: string;
-}
+const CHAPTERS: LandingChapter[] = [
+  {
+    id: 'lotes-masivos',
+    number: '01',
+    verb: 'Verifica',
+    title: 'Pega las cédulas. Chil te dice quién está al día.',
+    body: 'Cada registro se consulta en Impeesa y queda ubicado en su rama, grupo, distrito y región. Sin copiar una sola columna.',
+    Visual: VerifyVisual
+  },
+  {
+    id: 'disenador-plantillas',
+    number: '02',
+    verb: 'Diseña',
+    title: 'Tu reconocimiento oficial, con cada nombre en su sitio.',
+    body: 'Sube el PDF o la imagen, arrastra los campos y ajústalos en milímetros reales. Lo que ves es lo que se imprime.',
+    Visual: DesignVisual
+  },
+  {
+    id: 'exportacion-flexible',
+    number: '03',
+    verb: 'Exporta',
+    title: 'Un ZIP por grupo. Listo para entregar.',
+    body: 'Descarga los reconocimientos separados por grupo scout junto a su nómina en PDF. Los registros inválidos se quedan fuera.',
+    Visual: ExportVisual
+  },
+  {
+    id: 'analitica-territorial',
+    number: '04',
+    verb: 'Analiza',
+    title: 'Tu año completo, de un vistazo.',
+    body: 'Compara emisiones por región, distrito, rama y edad contra el año anterior. Llévate el reporte en PDF o Excel.',
+    Visual: AnalyticsVisual
+  }
+];
+
+const Stage: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`relative overflow-hidden rounded-[2rem] bg-[#2E1208] p-5 sm:p-8 ${className}`}>
+    <TopoBackdrop />
+    <div className="relative">{children}</div>
+  </div>
+);
 
 export const FeatureGridSection: React.FC = () => {
-  const features: ExtendedFeatureItem[] = [
-    {
-      id: 'exportacion-flexible',
-      icon: <FileArchive className="w-6 h-6 text-amber-600" />,
-      iconContainerClass: 'bg-amber-100/80 text-amber-700 border-amber-200/80',
-      badge: 'PDF & ZIP por Grupo',
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-200/80',
-      title: 'Exportación Flexible en PDF y ZIP',
-      description:
-        'Descarga diplomas individuales en PDF, archivos ZIP completos o por grupo y nóminas detalladas con progreso en tiempo real y cancelación.',
-      highlights: [
-        'ZIP completo o segmentado por grupo',
-        'Reportes de lista y resumen en PDF',
-        'Progreso en vivo con cancelación segura'
-      ]
-    },
-    {
-      id: 'lotes-masivos',
-      icon: <Package className="w-6 h-6 text-primary" />,
-      iconContainerClass: 'bg-primary/10 text-primary border-primary/20',
-      badge: 'Escalable & Eficiente',
-      badgeClass: 'bg-primary/10 text-primary border-primary/20',
-      title: 'Lotes Masivos',
-      description:
-        'Carga de cédulas, verificación automática en el sistema de registro scout y generación por lotes con códigos únicos.',
-      highlights: [
-        'Carga masiva de cédulas',
-        'Validación en el registro nacional',
-        'Descarga consolidada o individual'
-      ]
-    },
-    {
-      id: 'disenador-plantillas',
-      icon: <Palette className="w-6 h-6 text-blue-600" />,
-      iconContainerClass: 'bg-blue-100/80 text-blue-700 border-blue-200/80',
-      badge: 'Visual Drag & Drop',
-      badgeClass: 'bg-blue-100 text-blue-800 border-blue-200/80',
-      title: 'Diseñador de Plantillas',
-      description:
-        'Editor visual interactivo adaptado a cualquier dimensión de diploma (horizontal, vertical, A4, carta) con posicionamiento preciso de campos.',
-      highlights: [
-        'Campos dinámicos de nombres y cédulas',
-        'Ajuste milimétrico y tipografías',
-        'Exportación con alta fidelidad gráfica'
-      ]
-    },
-    {
-      id: 'unidades-scouts',
-      icon: <ShieldCheck className="w-6 h-6 text-emerald-600" />,
-      iconContainerClass: 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80',
-      badge: 'Estructura Scout Completa',
-      badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200/80',
-      title: 'Unidades Scouts & No Scout',
-      description:
-        'Soporte completo para Manada, Tropa, Caminantes, Clan, Adultos Institucionales y Agradecimientos a No Scouts.',
-      highlights: [
-        'Ramas menores y mayores',
-        'Agradecimientos a instituciones y aliados'
-      ]
-    },
-    {
-      id: 'analitica-territorial',
-      icon: <BarChart3 className="w-6 h-6 text-indigo-600" />,
-      iconContainerClass: 'bg-indigo-100/80 text-indigo-700 border-indigo-200/80',
-      badge: 'Reportes & Métricas',
-      badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-200/80',
-      title: 'Analítica Territorial',
-      description:
-        'Métricas interanuales (Year-over-Year), distribución geográfica por región y distrito, y exportación ejecutiva en PDF y Excel.',
-      highlights: [
-        'Comparativas de crecimiento interanual',
-        'Desglose por región, distrito y grupo',
-        'Reporte estadístico descargable'
-      ]
-    },
-    {
-      id: 'seguridad-multi-tenant',
-      icon: <Lock className="w-6 h-6 text-neutral" />,
-      iconContainerClass: 'bg-slate-100 text-neutral border-slate-200/80',
-      badge: 'Privacidad Garantizada',
-      badgeClass: 'bg-slate-100 text-neutral border-slate-200/80',
-      title: 'Aislamiento y Seguridad',
-      description:
-        'Privacidad, seguridad y control total sobre los lotes y datos de cada usuario.',
-      highlights: [
-        'Aislamiento estricto por usuario y grupo',
-        'Reglas de seguridad en base de datos',
-        'Trazabilidad y auditoría de emisiones'
-      ]
-    }
-  ];
+  const { activeIndex, seen, registerChapter } = useActiveChapter(CHAPTERS.length);
+  const headingRef = useScrollProgress<HTMLDivElement>({ start: 0.98, end: 0.62 });
 
   return (
-    <section id="capacidades" className="py-12 sm:py-16 lg:py-20 bg-white/70 backdrop-blur-xs rounded-3xl my-8 sm:my-12 border border-gray-200/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-12 sm:mb-16">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-neutral tracking-tight">
-            Todo lo necesario para la gestión de reconocimientos
-          </h2>
+    <section id="capacidades" aria-labelledby="capacidades-title" className="relative bg-white">
+      {/* Oversized statement header flowing directly out of the hero transition */}
+      <div
+        ref={headingRef}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 lg:pt-16 pb-6 lg:pb-10"
+      >
+        <h2
+          id="capacidades-title"
+          className="font-display font-black tracking-tight text-neutral text-[clamp(2.2rem,6vw,5.25rem)] leading-[0.96] max-w-5xl"
+        >
+          <span
+            className="block will-change-transform"
+            style={{
+              transform: 'translateY(calc((1 - var(--scroll-progress, 1)) * 14px))',
+              opacity: 'calc(0.85 + var(--scroll-progress, 1) * 0.15)'
+            }}
+          >
+            Genera lotes de reconocimientos
+          </span>{' '}
+          <span
+            className="block text-primary will-change-transform"
+            style={{
+              transform: 'translateY(calc((1 - var(--scroll-progress, 1)) * 24px))',
+              opacity: 'calc(0.8 + var(--scroll-progress, 1) * 0.2)'
+            }}
+          >
+            En una sola herramienta
+          </span>
+        </h2>
+        <RevealOnScroll delayMs={150}>
+          <p className="mt-6 sm:mt-8 text-lg sm:text-2xl text-neutral/80 leading-snug max-w-2xl">
+            De la lista de cédulas al reconocimiento impreso, sin pasar por una hoja de cálculo.
+          </p>
+        </RevealOnScroll>
+      </div>
+
+      {/* Sticky storytelling: chapters scroll on the left, the product stage stays pinned on the right */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 lg:grid lg:grid-cols-2 lg:gap-16 pb-16 lg:pb-24">
+        <div>
+          {CHAPTERS.map((chapter, index) => {
+            const isActive = index === activeIndex;
+            return (
+              <article
+                key={chapter.id}
+                id={chapter.id}
+                ref={registerChapter(index)}
+                aria-labelledby={`${chapter.id}-title`}
+                className="scroll-mt-16 py-10 sm:py-14 lg:py-8 lg:min-h-[min(70vh,620px)] flex flex-col justify-center"
+              >
+                <div className="flex items-end gap-4">
+                  <span
+                    aria-hidden="true"
+                    className={`font-display font-black leading-[0.8] text-[clamp(4.5rem,11vw,8.5rem)] text-transparent [-webkit-text-stroke:2px_#8C4E37] transition-opacity duration-500 ${
+                      isActive ? 'lg:opacity-100' : 'lg:opacity-30'
+                    }`}
+                  >
+                    {chapter.number}
+                  </span>
+                  <span className="pb-2 font-display text-xl sm:text-2xl font-bold text-primary">
+                    {chapter.verb}
+                  </span>
+                </div>
+                <h3
+                  id={`${chapter.id}-title`}
+                  className="mt-5 font-display font-black tracking-tight text-neutral text-[clamp(2rem,4.4vw,3.6rem)] leading-[1.02]"
+                >
+                  {chapter.title}
+                </h3>
+                <p className="mt-5 text-lg sm:text-xl text-neutral/80 leading-relaxed max-w-xl">
+                  {chapter.body}
+                </p>
+
+                {/* Inline stage on phones and tablets */}
+                <div className="mt-8 lg:hidden" aria-hidden="true">
+                  <Stage>
+                    <chapter.Visual active={seen.has(index)} />
+                  </Stage>
+                </div>
+              </article>
+            );
+          })}
         </div>
 
-        {/* 6 Capability Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {features.map((feature) => (
-            <div
-              key={feature.id}
-              id={feature.id}
-              className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-7 border border-gray-200/80 hover:border-primary/40 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group"
-            >
-              <div className="space-y-4">
-                {/* Header Icon + Badge */}
-                <div className="flex items-center justify-between">
-                  <div
-                    className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-transform group-hover:scale-105 duration-300 ${feature.iconContainerClass}`}
-                  >
-                    {feature.icon}
-                  </div>
-                  {feature.badge && (
-                    <span
-                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-colors ${feature.badgeClass}`}
+        {/* Pinned stage on desktop */}
+        <div className="hidden lg:block" aria-hidden="true">
+          <div className="sticky top-[min(14vh,112px)] h-[min(76vh,600px)] flex flex-col justify-center gap-6">
+            <Stage className="min-h-[440px]">
+              <div className="relative min-h-[380px]">
+                {CHAPTERS.map((chapter, index) => {
+                  const isActive = index === activeIndex;
+                  return (
+                    <div
+                      key={chapter.id}
+                      className={`absolute inset-0 flex items-center transition-all duration-700 ease-out ${
+                        isActive
+                          ? 'opacity-100 translate-y-0 scale-100'
+                          : `opacity-0 scale-[0.96] pointer-events-none ${
+                              index < activeIndex ? '-translate-y-10' : 'translate-y-10'
+                            }`
+                      }`}
                     >
-                      {feature.badge}
-                    </span>
-                  )}
-                </div>
+                      <chapter.Visual active={isActive} />
+                    </div>
+                  );
+                })}
+              </div>
+            </Stage>
 
-                {/* Title & Description */}
-                <div>
-                  <h3 className="text-lg font-bold text-neutral group-hover:text-primary transition-colors tracking-tight">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-neutral/70 mt-2 leading-relaxed">
-                    {feature.description}
+            {/* Chapter progress rail */}
+            <div className="flex items-center gap-3">
+              {CHAPTERS.map((chapter, index) => (
+                <div key={chapter.id} className="flex-1 space-y-2">
+                  <div className="h-1.5 rounded-full bg-primary/15 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bg-primary transition-[width] duration-500 ease-out ${
+                        index <= activeIndex ? 'w-full' : 'w-0'
+                      }`}
+                    />
+                  </div>
+                  <p
+                    className={`text-sm font-bold transition-colors ${
+                      index === activeIndex ? 'text-primary' : 'text-neutral/75'
+                    }`}
+                  >
+                    {chapter.verb}
                   </p>
                 </div>
-              </div>
-
-              {/* Highlights List */}
-              <div className="mt-6 pt-4 border-t border-gray-100/90 space-y-2">
-                {feature.highlights.map((highlight) => (
-                  <div key={highlight} className="flex items-center gap-2.5 text-xs text-neutral/80">
-                    <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                    <span>{highlight}</span>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </section>

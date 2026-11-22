@@ -3,4 +3,5 @@ export * from './components/HeroSection';
 export * from './components/FeatureGridSection';
 export * from './components/WorkflowSection';
 export * from './components/LandingFooter';
+export * from './components/RevealOnScroll';
 export * from './types';

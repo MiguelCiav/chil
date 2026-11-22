@@ -4,6 +4,9 @@
 *   **Status:** Implemented
 *   **Date:** 2026-11-13
 
+> [!NOTE]
+> **Historical Evolution:** The inactive `QuickRecognition` module (`executeQuickEmission`) referenced in `Non-Goals` and the Technical Plan was subsequently removed from `src/`.
+
 --------------------------------------------------------------------------------
 
 ## Overview

@@ -4,9 +4,11 @@
 Authentication UI components implementing login, registration, password reset modal, route protection, and the authenticated user profile dropdown menu, integrated with `useAuth`, `react-hook-form` + Zod schemas, and `react-router-dom`.
 
 ## Interface
-- `ForgotPasswordModal.tsx:ForgotPasswordModal`: `React.FC` rendering the password recovery modal.
+- `ForgotPasswordModal.tsx:ForgotPasswordModalProps`: Props interface `{ isOpen: boolean; onClose: () => void; defaultEmail?: string }` for `ForgotPasswordModal`.
+- `ForgotPasswordModal.tsx:ForgotPasswordModal`: `React.FC<ForgotPasswordModalProps>` rendering the password recovery modal.
 - `LoginPage.tsx:LoginPage`: `React.FC` rendering the sign-in page.
-- `ProtectedRoute.tsx:ProtectedRoute`: `React.FC` guarding authenticated routes.
+- `ProtectedRoute.tsx:ProtectedRouteProps`: Props interface `{ children?: ReactNode }` for `ProtectedRoute`.
+- `ProtectedRoute.tsx:ProtectedRoute`: `React.FC<ProtectedRouteProps>` guarding authenticated routes.
 - `RegisterPage.tsx:RegisterPage`: `React.FC` rendering the account registration page.
 - `UserProfileMenu.tsx:UserProfileMenuProps`: Props interface `{ isCollapsed?: boolean }` for `UserProfileMenu`.
 - `UserProfileMenu.tsx:UserProfileMenu`: `React.FC<UserProfileMenuProps>` rendering the user avatar/initials trigger and logout dropdown.

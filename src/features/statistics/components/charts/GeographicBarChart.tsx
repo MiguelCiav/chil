@@ -15,19 +15,19 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
   const maxCount = currentList.length > 0 ? Math.max(...currentList.map(item => item.count), 1) : 1;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between h-full">
+    <div className="bg-white border border-primary/20 rounded-2xl p-5 flex flex-col justify-between h-full">
       {/* Card Header */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl">
+            <div className="p-2 bg-emerald-500/10 text-emerald-700 rounded-xl" aria-hidden="true">
               <MapPin className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-neutral text-base tracking-tight">
                 Distribución Geográfica
               </h3>
-              <p className="text-xs text-neutral/60">
+              <p className="text-xs text-neutral/75">
                 Reconocimientos por región y distrito scout
               </p>
             </div>
@@ -44,7 +44,7 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
               className={`px-2.5 py-1 rounded-md transition-all ${
                 activeTab === 'regions'
                   ? 'bg-white text-primary font-bold'
-                  : 'text-neutral/60 hover:text-neutral'
+                  : 'text-neutral/75 hover:text-neutral'
               }`}
             >
               Regiones ({data.regions.length})
@@ -58,7 +58,7 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
               className={`px-2.5 py-1 rounded-md transition-all ${
                 activeTab === 'districts'
                   ? 'bg-white text-primary font-bold'
-                  : 'text-neutral/60 hover:text-neutral'
+                  : 'text-neutral/75 hover:text-neutral'
               }`}
             >
               Distritos ({data.districts.length})
@@ -68,7 +68,7 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
 
         {/* Empty State */}
         {currentList.length === 0 ? (
-          <div className="py-8 text-center text-neutral/50 text-xs">
+          <div className="py-8 text-center text-neutral/75 text-xs">
             No hay registros geográficos disponibles para los filtros seleccionados.
           </div>
         ) : (
@@ -80,14 +80,14 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
                 <div key={item.id || item.name} className="group">
                   <div className="flex items-center justify-between gap-2 mb-1 text-xs">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-bold text-neutral/40 text-[11px] w-4 text-right">
+                      <span className="font-bold text-neutral/75 text-xs w-4 text-right">
                         {index + 1}.
                       </span>
                       <span className="font-semibold text-neutral truncate" title={item.name}>
                         {item.name}
                       </span>
                       {item.parentName && (
-                        <span className="text-[10px] text-neutral/40 truncate">
+                        <span className="text-xs text-neutral/75 truncate">
                           ({item.parentName})
                         </span>
                       )}
@@ -97,7 +97,7 @@ export const GeographicBarChart: React.FC<GeographicBarChartProps> = ({ data }) 
                       <span className="font-bold text-neutral">
                         {item.count}
                       </span>
-                      <span className="text-[11px] text-neutral/50 font-medium">
+                      <span className="text-xs text-neutral/75 font-medium">
                         ({item.percentage}%)
                       </span>
                     </div>

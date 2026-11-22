@@ -13,7 +13,7 @@ Chil is a web application built with React, TypeScript, and Firebase. It is desi
 To develop and run Chil locally, ensure you have the following installed:
 
 ### Required Software
-- **[Node.js](https://nodejs.org/)**: v18 or higher (v20+ recommended).
+- **[Node.js](https://nodejs.org/)**: v22 (aligned with `functions/package.json` and `.github/workflows/ci.yml`).
 - **[Firebase CLI](https://firebase.google.com/docs/cli)**: Install globally via `npm install -g firebase-tools`.
 
 ---
@@ -34,6 +34,13 @@ To develop and run Chil locally, ensure you have the following installed:
 3. **Install Firebase Functions Dependencies:**
    ```bash
    cd functions
+   npm install
+   cd ..
+   ```
+
+4. **Install Temporary Vercel Scraper Dependencies (optional for local `scraper-api` work):**
+   ```bash
+   cd scraper-api
    npm install
    cd ..
    ```
@@ -59,11 +66,12 @@ firebase emulators:start
 
 Chil is built with a rigorous testing and linting suite to ensure stability.
 
-### 1. Frontend Testing (Vitest)
-Runs unit and component tests for the React application using Vitest and React Testing Library.
+### 1. Unified Test Suite (Vitest)
+Runs unit and component tests across both the React frontend (`src/`) and the scraper backends (`functions/__tests__/`, `scraper-api/__tests__/`) via `vite.config.ts`:
 ```bash
-npm run test
+npm test -- --run
 ```
+*(Running `npm run test` without `-- --run` starts Vitest in interactive watch mode.)*
 
 ### 2. Linting
 Maintains code quality and consistency.
@@ -71,7 +79,7 @@ Maintains code quality and consistency.
 
 ### 3. Code Coverage Reports
 You can run automated test coverage reports:
-- **Frontend Coverage (Vitest):** Run `npx vitest run --coverage`. Reports are generated under `coverage/`.
+- **Unified Coverage (Vitest):** Run `npx vitest run --coverage` (configured for `src/**/*.{ts,tsx}` and `functions/**/*.js`). Reports are generated under `coverage/`.
 
 ---
 
@@ -85,7 +93,11 @@ npm run build
 The compiled files will be located in the `dist/` directory.
 
 ### Deploying to Firebase
-To deploy the application to Firebase (Hosting, Firestore rules/indexes, and Cloud Functions):
+To deploy Hosting and Firestore rules/indexes (matching `.github/workflows/ci.yml` while `scraper-api/` runs on Vercel):
+```bash
+firebase deploy --only hosting,firestore
+```
+Once GCP Blaze billing is active and `scraper-api/` is retired per `docs/ROLLBACK_FIREBASE_FUNCTIONS.md`, deploy the full Firebase stack with:
 ```bash
 firebase deploy
 ```

@@ -24,7 +24,7 @@ Pure utility functions for the `batches` feature that handle recognition code ge
 - [unitInference.ts:inferBatchMemberUnits] Normalizes and infers units across a `ScoutMember[]` batch according to `unitScope` and batch mode rules.
 - [batchTerritorial.ts:TerritorialTokenKind], [batchTerritorial.ts:TerritorialToken], [batchTerritorial.ts:CompletenessStatus], [batchTerritorial.ts:BatchTerritorialProjection], [batchTerritorial.ts:TerritorialBreakdownItem], [batchTerritorial.ts:BatchTerritorialBreakdown] Types for read-time batch territorial pills, completeness state, and `BatchDetail` breakdown.
 - [batchTerritorial.ts:deriveBatchTerritorialProjection] Derives sorted `regionTokens`, `districtTokens`, `groupTokens`, `completenessStatus`, `completenessLabel`, `pendingCount`, `eligibleCount`, and `memberCount` for a batch from its `ScoutMember[]` slice and `HierarchyLookup`.
-- [batchTerritorial.ts:consolidateMergedGroupTokens] Consolidates `TerritorialToken[][]` across one or more batches into a comma-joined label (suppressing `'No aplica'` when positive or `'No scout'` tokens exist).
+- [batchTerritorial.ts:consolidateMergedGroupTokens] Consolidates `TerritorialToken[][]` across one or more batches into a comma-joined label (returning joined `'id'` token labels when `idTokenMap.size > 0`, `'No scout'` only when `hasNoScoutToken && !hasNoneToken`, and `'No aplica'` otherwise).
 - [batchTerritorial.ts:calculateBatchTerritorialBreakdown] Computes count-sorted `regions`, `districts`, `groups`, `noScoutCount`/`noScoutPercentage`, `ungroupedScoutCount`/`ungroupedScoutPercentage`, and `totalMembers` for `BatchTerritorialCard`.
 
 ## Invariants

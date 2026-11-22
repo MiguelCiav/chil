@@ -5,9 +5,10 @@ import {
   getPaginationRowModel,
   useReactTable
 } from '@tanstack/react-table';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 import { Button } from '../../../components/Button';
+import { Toast } from '../../../components/Toast';
 import {
   useWalkthrough,
   WalkthroughOverlay
@@ -81,6 +82,7 @@ export const BatchDetail: React.FC = () => {
   const [batch, setBatch] = useState<Batch | null>(null);
   const [members, setMembers] = useState<ScoutMember[]>([]);
   const [loading, setLoading] = useState(!Number.isNaN(Number(id)));
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const zipDownload = useCertificateZipDownload();
   const [downloadingReport, setDownloadingReport] = useState(false);
@@ -129,11 +131,13 @@ export const BatchDetail: React.FC = () => {
   const [districts, setDistricts] = useState<District[]>([]);
   const [groups, setGroups] = useState<ScoutGroup[]>([]);
 
-  useEffect(() => {
+  const loadBatchDetails = useCallback(() => {
     if (Number.isNaN(batchId)) {
       return;
     }
 
+    setLoading(true);
+    setLoadError(null);
     Promise.all([
       getBatchById(batchId),
       getMembersByBatchId(batchId),
@@ -157,11 +161,16 @@ export const BatchDetail: React.FC = () => {
       })
       .catch((err) => {
         console.error('Error loading batch details:', err);
+        setLoadError('No se pudo cargar la información del lote.');
       })
       .finally(() => {
         setLoading(false);
       });
   }, [batchId, user?.uid]);
+
+  useEffect(() => {
+    loadBatchDetails();
+  }, [loadBatchDetails]);
 
   const handleDownloadPDF = (bucketKey?: ReportBucketKey) => {
     if (!batch) return;
@@ -347,16 +356,42 @@ export const BatchDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] font-sans text-neutral/50">
+      <div
+        role="status"
+        aria-busy="true"
+        className="flex items-center justify-center min-h-[400px] font-sans text-neutral/75"
+      >
         Cargando detalles de lote...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div
+        role="alert"
+        className="max-w-md mx-auto my-12 p-6 bg-red-50 border border-red-200 rounded-2xl text-center space-y-4 font-sans"
+      >
+        <AlertCircle className="w-12 h-12 text-red-700 mx-auto" aria-hidden="true" />
+        <h2 className="text-xl font-bold text-neutral">Error al cargar el lote</h2>
+        <p className="text-xs text-red-700 font-medium">{loadError}</p>
+        <div className="flex items-center justify-center gap-3">
+          <Button variant="outline" onClick={() => navigate('/lotes')}>
+            Volver al listado
+          </Button>
+          <Button variant="primary" onClick={loadBatchDetails} className="inline-flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
+            Reintentar
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (!batch) {
     return (
-      <div className="max-w-md mx-auto text-center space-y-4 py-12 font-sans">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+      <div role="alert" className="max-w-md mx-auto text-center space-y-4 py-12 font-sans">
+        <AlertCircle className="w-12 h-12 text-red-700 mx-auto" aria-hidden="true" />
         <h2 className="text-xl font-bold text-neutral">Lote no encontrado</h2>
         <Button variant="primary" onClick={() => navigate('/lotes')}>
           Volver al listado
@@ -372,12 +407,7 @@ export const BatchDetail: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2 relative">
       {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-neutral text-white px-5 py-3 rounded-2xl shadow-xl border border-primary/20 animate-fade-in">
-          <CheckCircle2 className="w-5 h-5 text-green-400" />
-          <span className="text-sm font-semibold">{toastMessage}</span>
-        </div>
-      )}
+      {showToast && <Toast message={toastMessage} variant="success" />}
 
       {/* Header with Title and Action Buttons */}
       <BatchDetailHeader

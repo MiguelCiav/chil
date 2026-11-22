@@ -7,8 +7,8 @@ Este documento describe los pasos para revertir la arquitectura temporal de Verc
 ## Resumen del Estado Temporal Actual
 
 Durante este PR:
-* **Microservicio temporal:** El scraper (`loginScraper` y `getMemberStatus`) está alojado en Vercel (`https://chil-scraper-api.vercel.app/api`).
-* **Frontend:** Consume la API de Vercel a través de la variable `VITE_SCRAPER_API_URL` en `.env.production`.
+* **Microservicio temporal:** Los endpoints del scraper (`saveScraperSession`, `getScraperSessionStatus`, `clearScraperSession` y `getMemberStatus`) están alojados en Vercel (`https://chil-scraper-api.vercel.app/api`).
+* **Frontend:** Consume la API de Vercel a través de la variable `VITE_SCRAPER_API_URL` en `.env` y `.env.production`.
 * **CI/CD:** El flujo `.github/workflows/ci.yml` despliega a Firebase únicamente Hosting y Firestore (`--only hosting,firestore`) para evitar el error 403 de Cloud Functions.
 
 ---
@@ -21,17 +21,23 @@ Durante este PR:
 3. Actualiza el medio de pago o procesa el pago del saldo pendiente.
 4. Confirma que el estado de la cuenta cambie a **Activa** (verde) y que el proyecto `chil-2d600` figure asociado.
 
-### Paso 2: Desplegar y Probar las Funciones en Firebase
-En tu terminal local autenticada en Firebase:
+### Paso 2: Configurar Secreto y Desplegar las Funciones en Firebase
+Antes de desplegar, asegúrate de que el secreto `SCRAPER_ENCRYPTION_KEY` requerido por `functions/scraper/crypto.js` (`saveScraperSession` y `getMemberStatus`) esté configurado en Firebase Secret Manager:
+```bash
+firebase functions:secrets:set SCRAPER_ENCRYPTION_KEY
+```
+Luego, en tu terminal local autenticada en Firebase:
 ```bash
 firebase deploy --only functions
 ```
 Verifica que el despliegue finalice exitosamente sin errores 403 y que en Firebase Console > Functions aparezcan:
-* `loginScraper` (us-central1, Callable v2)
+* `saveScraperSession` (us-central1, Callable v2)
+* `getScraperSessionStatus` (us-central1, Callable v2)
+* `clearScraperSession` (us-central1, Callable v2)
 * `getMemberStatus` (us-central1, Callable v2)
 
 ### Paso 3: Retirar la Variable de Vercel en el Frontend
-En el archivo `.env.production`:
+En `.env` y `.env.production`:
 * Elimina o comenta la línea de `VITE_SCRAPER_API_URL`:
 ```ini
 # VITE_SCRAPER_API_URL=https://chil-scraper-api.vercel.app/api
@@ -48,5 +54,5 @@ En [.github/workflows/ci.yml](file:///home/miguel-ciavato/Documents/github-repos
 ```
 
 ### Paso 5: (Opcional) Eliminar el Microservicio de Vercel
-1. Puedes eliminar la carpeta temporal `scraper-api/` y el archivo de tests `src/features/batches/api/__tests__/scraperApiVercel.test.ts`.
+1. Puedes eliminar la carpeta temporal `scraper-api/` y retirar las pruebas del transporte HTTP de Vercel en `src/features/batches/api/__tests__/scraperApi.test.ts` (y `scraper-api/__tests__/`).
 2. En [Vercel Dashboard](https://vercel.com/), accede al proyecto `chil-scraper-api` > **Settings** > **Advanced** > **Delete Project**.

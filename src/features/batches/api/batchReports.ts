@@ -32,6 +32,15 @@ const SECTION_HEADER_HEIGHT_SPECIAL = 8;
 const TABLE_HEADER_HEIGHT = 8;
 const MIN_ROW_HEIGHT = 8;
 
+const REPORT_COLORS = {
+  primary: [140, 78, 55] as const,
+  neutral: [56, 56, 54] as const,
+  muted: [115, 115, 112] as const,
+  headerBg: [244, 237, 234] as const,
+  headerBorder: [229, 216, 211] as const,
+  rowDivider: [241, 245, 249] as const
+};
+
 function getReportMemberStatusColor(status: string): [number, number, number] {
   if (status === 'active') return [40, 167, 69]; // Green
   if (status === 'exceptional') return [126, 34, 206]; // Purple
@@ -218,7 +227,7 @@ function drawSectionHeader(
 ): number {
   let y = startY;
   docPdf.setFontSize(12);
-  docPdf.setTextColor(0, 0, 0);
+  docPdf.setTextColor(...REPORT_COLORS.primary);
   docPdf.setFont('helvetica', 'bold');
   const title = isContinuation
     ? `${bucket.label} (Continuación)`
@@ -228,7 +237,7 @@ function drawSectionHeader(
   if (bucket.kind === 'group') {
     docPdf.setFontSize(9);
     docPdf.setFont('helvetica', 'normal');
-    docPdf.setTextColor(90, 90, 90);
+    docPdf.setTextColor(...REPORT_COLORS.muted);
     docPdf.text(
       `Distrito: ${bucket.districtName}  |  Región: ${bucket.regionName}`,
       CONTENT_LEFT_X,
@@ -239,11 +248,13 @@ function drawSectionHeader(
     y += SECTION_HEADER_HEIGHT_SPECIAL;
   }
 
-  docPdf.setFillColor(240, 240, 240);
+  docPdf.setFillColor(...REPORT_COLORS.headerBg);
   docPdf.rect(CONTENT_LEFT_X, y - 5, CONTENT_WIDTH, TABLE_HEADER_HEIGHT, 'F');
+  docPdf.setDrawColor(...REPORT_COLORS.headerBorder);
+  docPdf.line(CONTENT_LEFT_X, y - 5 + TABLE_HEADER_HEIGHT, CONTENT_RIGHT_X, y - 5 + TABLE_HEADER_HEIGHT);
   docPdf.setFontSize(10);
   docPdf.setFont('helvetica', 'bold');
-  docPdf.setTextColor(0, 0, 0);
+  docPdf.setTextColor(...REPORT_COLORS.neutral);
   docPdf.text('Cédula', 16, y);
   docPdf.text('Nombre Completo', 46, y);
   docPdf.text('Tipo', 132, y);
@@ -283,27 +294,31 @@ export async function generateBatchReport(
 
   const docPdf = new jsPDF();
 
-  // Title / Header
+  // Title / Header with brand terracotta accent bar
+  docPdf.setFillColor(...REPORT_COLORS.primary);
+  docPdf.rect(CONTENT_LEFT_X, 13, 2, 16, 'F');
+
   docPdf.setFontSize(22);
-  docPdf.setTextColor(33, 33, 33);
-  docPdf.text('Reporte de Registro de Lote', CONTENT_LEFT_X, 20);
+  docPdf.setTextColor(...REPORT_COLORS.neutral);
+  docPdf.text('Reporte de Registro de Lote', CONTENT_LEFT_X + 4.5, 21);
 
   docPdf.setFontSize(12);
-  docPdf.setTextColor(100, 100, 100);
-  docPdf.text(`Generado el: ${new Date().toLocaleDateString()}`, CONTENT_LEFT_X, 28);
+  docPdf.setTextColor(...REPORT_COLORS.muted);
+  docPdf.text(`Generado el: ${new Date().toLocaleDateString()}`, CONTENT_LEFT_X + 4.5, 28);
 
   // Horizontal separator line
-  docPdf.setDrawColor(200, 200, 200);
+  docPdf.setDrawColor(...REPORT_COLORS.headerBorder);
   docPdf.line(CONTENT_LEFT_X, 32, CONTENT_RIGHT_X, 32);
 
   // Batch details section
   docPdf.setFontSize(14);
-  docPdf.setTextColor(0, 0, 0);
+  docPdf.setTextColor(...REPORT_COLORS.primary);
   docPdf.setFont('helvetica', 'bold');
   docPdf.text('Información del Lote', CONTENT_LEFT_X, 42);
 
   docPdf.setFont('helvetica', 'normal');
   docPdf.setFontSize(11);
+  docPdf.setTextColor(...REPORT_COLORS.neutral);
   docPdf.text(`ID del Lote: ${batch.id}`, CONTENT_LEFT_X, 50);
   docPdf.text(`Fecha de Creación: ${new Date(batch.created_at).toLocaleString()}`, CONTENT_LEFT_X, 56);
 
@@ -332,11 +347,13 @@ export async function generateBatchReport(
   y += 8;
   docPdf.setFontSize(14);
   docPdf.setFont('helvetica', 'bold');
+  docPdf.setTextColor(...REPORT_COLORS.primary);
   docPdf.text('Resumen de Miembros', CONTENT_LEFT_X, y);
 
   y += 8;
   docPdf.setFont('helvetica', 'normal');
   docPdf.setFontSize(10);
+  docPdf.setTextColor(...REPORT_COLORS.neutral);
   docPdf.text(`Total: ${exportedMembers.length}`, 14, y);
   docPdf.text(`Activos (Válidos): ${activeCount}`, 56, y);
   docPdf.text(`Excepcionales: ${exceptionalCount}`, 110, y);
@@ -375,16 +392,16 @@ export async function generateBatchReport(
       const [r, g, bColor] = getReportMemberStatusColor(m.status);
 
       docPdf.setFontSize(10);
-      docPdf.setTextColor(0, 0, 0);
+      docPdf.setTextColor(...REPORT_COLORS.neutral);
       docPdf.text(m.identity ?? '', 16, y);
       docPdf.text(nameLines, 46, y);
       docPdf.text(typeStr, 132, y);
 
       docPdf.setTextColor(r, g, bColor);
       docPdf.text(statusStr, 156, y);
-      docPdf.setTextColor(0, 0, 0);
+      docPdf.setTextColor(...REPORT_COLORS.neutral);
 
-      docPdf.setDrawColor(245, 245, 245);
+      docPdf.setDrawColor(...REPORT_COLORS.rowDivider);
       docPdf.line(CONTENT_LEFT_X, y + rowHeight - 5, CONTENT_RIGHT_X, y + rowHeight - 5);
 
       y += rowHeight;

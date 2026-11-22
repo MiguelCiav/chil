@@ -12,13 +12,13 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Total Reconocimientos Emitidos */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
+      <div className="bg-white border border-primary/20 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">
+            <span className="text-xs font-bold text-neutral/75 uppercase tracking-wider">
               Total Reconocimientos
             </span>
-            <div className="p-2 bg-primary/10 text-primary rounded-xl">
+            <div className="p-2 bg-primary/10 text-primary rounded-xl" aria-hidden="true">
               <Award className="w-4 h-4" />
             </div>
           </div>
@@ -26,27 +26,27 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
             <p className="text-2xl font-black text-neutral tracking-tight">
               {metrics.totalDiplomas}
             </p>
-            <p className="text-[11px] text-neutral/50 mt-1 font-medium">
+            <p className="text-xs text-neutral/75 mt-1 font-medium">
               de {metrics.totalMembers} miembros procesados
             </p>
           </div>
         </div>
         {yoy?.hasPreviousYearData && (
           <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-[10px] font-medium text-neutral/50">vs {yoy.previousYear}:</span>
+            <span className="text-xs font-medium text-neutral/75">vs {yoy.previousYear}:</span>
             <YoYVariationBadge diff={yoy.totalDiplomas.diff} percentChange={yoy.totalDiplomas.percentChange} />
           </div>
         )}
       </div>
 
       {/* 2. Reconocimiento Más Entregado */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
+      <div className="bg-white border border-primary/20 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">
+            <span className="text-xs font-bold text-neutral/75 uppercase tracking-wider">
               Más Entregado
             </span>
-            <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-xl">
+            <div className="p-2 bg-emerald-500/10 text-emerald-700 rounded-xl" aria-hidden="true">
               <Trophy className="w-4 h-4" />
             </div>
           </div>
@@ -57,7 +57,7 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
             >
               {metrics.topRecognitionName ?? '-'}
             </p>
-            <p className="text-[11px] text-neutral/50 mt-1 font-medium">
+            <p className="text-xs text-neutral/75 mt-1 font-medium">
               {metrics.topRecognitionCount ?? 0} reconocimientos emitidos
             </p>
           </div>
@@ -65,21 +65,21 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
       </div>
 
       {/* 4. Regiones / Distritos Atendidos */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
+      <div className="bg-white border border-primary/20 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">
+            <span className="text-xs font-bold text-neutral/75 uppercase tracking-wider">
               Regiones y Distritos
             </span>
-            <div className="p-2 bg-purple-500/10 text-purple-600 rounded-xl">
+            <div className="p-2 bg-purple-500/10 text-purple-700 rounded-xl" aria-hidden="true">
               <MapPin className="w-4 h-4" />
             </div>
           </div>
           <div>
             <p className="text-2xl font-black text-purple-700 tracking-tight">
-              {metrics.activeRegionsCount} <span className="text-sm font-semibold text-neutral/60">Regiones</span>
+              {metrics.activeRegionsCount} <span className="text-sm font-semibold text-neutral/75">Regiones</span>
             </p>
-            <p className="text-[11px] text-neutral/50 mt-1 font-medium">
+            <p className="text-xs text-neutral/75 mt-1 font-medium">
               en {metrics.activeDistrictsCount} distritos y {metrics.activeGroupsCount} grupos
             </p>
           </div>
@@ -87,28 +87,28 @@ export const StatKpiGrid: React.FC<StatKpiGridProps> = ({ metrics, yoy }) => {
       </div>
 
       {/* 5. Jóvenes vs Adultos */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
+      <div className="bg-white border border-primary/20 rounded-2xl p-4 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-neutral/60 uppercase tracking-wider">
+            <span className="text-xs font-bold text-neutral/75 uppercase tracking-wider">
               Demografía
             </span>
-            <div className="p-2 bg-sky-500/10 text-sky-600 rounded-xl">
+            <div className="p-2 bg-sky-500/10 text-sky-700 rounded-xl" aria-hidden="true">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div>
             <p className="text-2xl font-black text-sky-700 tracking-tight">
-              {metrics.youngPercentage}% <span className="text-sm font-semibold text-neutral/60">Jóvenes</span>
+              {metrics.youngPercentage}% <span className="text-sm font-semibold text-neutral/75">Jóvenes</span>
             </p>
-            <p className="text-[11px] text-neutral/50 mt-1 font-medium">
+            <p className="text-xs text-neutral/75 mt-1 font-medium">
               {metrics.youngCount} jóvenes / {metrics.adultCount} adultos ({metrics.adultPercentage}%)
             </p>
           </div>
         </div>
         {yoy?.hasPreviousYearData && (
-          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[10px]">
-            <span className="text-neutral/50">vs {yoy.previousYear}:</span>
+          <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-xs">
+            <span className="text-neutral/75">vs {yoy.previousYear}:</span>
             <div className="flex items-center gap-1.5 font-bold">
               <span className={yoy.demographics.young.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}>
                 Jóv: {yoy.demographics.young.diff >= 0 ? '+' : ''}{yoy.demographics.young.diff}

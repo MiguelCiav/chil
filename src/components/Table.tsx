@@ -65,7 +65,7 @@ export function Table<TData, TValue>({
             })}
             {table.getRowModel().rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} className="px-6 py-8 text-center text-neutral/60">
+                <td colSpan={columns.length} className="px-6 py-8 text-center text-neutral/75">
                   No hay datos disponibles.
                 </td>
               </tr>

@@ -16,7 +16,7 @@ export const Navbar: React.FC = () => {
         {/* Logo */}
         <Link to={user ? "/lotes" : "/"} className="flex items-center mr-8 hover:opacity-95 transition-opacity">
           <img src={logo} alt="Chil Logo" className="h-8 w-auto mr-2" />
-          <div className="text-primary font-bold text-xl">
+          <div className="font-display text-primary font-bold text-xl">
             Chil
           </div>
         </Link>

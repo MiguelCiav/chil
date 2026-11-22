@@ -18,7 +18,7 @@ Implements `SummaryView`, the consolidated recognition summary table with multi-
 - `SummaryView.tsx:SummaryView`: Uses `@tanstack/react-table` with default `pageSize = 25` (`10 | 25 | 50 | 100` selector synced via `useEffect`); disables `"Exportar todo"` when `flatData.length === 0`, and switches `"Exportar todo"` from `variant="primary"` to `variant="outline"` when `hasActiveFilters` is `true` while rendering `"Exportar filtrados"` (`variant="primary"`, disabled when `filteredData.length === 0`).
 
 ## Side Effects
-- `SummaryView.tsx:SummaryView`: On `[user?.uid]` change, fetches via `Promise.all([getAllBatches(user?.uid), getAllMembers(user?.uid), getHierarchyData(), getAllRecognitionTypes(user?.uid)])` and logs failures with `console.error('Error loading summary data:', err)`.
+- `SummaryView.tsx:SummaryView`: On `[user?.uid]` change (or `Reintentar` action on load error), fetches via `Promise.all([getAllBatches(user?.uid), getAllMembers(user?.uid), getHierarchyData(), getAllRecognitionTypes(user?.uid)])`, renders a `role="alert"` retry banner on failure, and logs failures with `console.error('Error loading summary data:', err)`.
 - `SummaryView.tsx:SummaryView`: Triggers CSV downloads via `exportToExcel(flatData)` / `exportToExcel(filteredData)` and schedules uncleaned `4000ms` `setTimeout` timers for toast dismissal.
 
 ## Verification

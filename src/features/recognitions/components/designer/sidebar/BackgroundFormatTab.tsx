@@ -24,41 +24,41 @@ export const BackgroundFormatTab: React.FC<BackgroundFormatTabProps> = ({
   onRemoveBg
 }) => {
   return (
-    <Card className="border-gray-200">
+    <Card>
       <CardHeader className="py-3 px-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FileImage className="w-4 h-4 text-primary" />
+          <FileImage className="w-4 h-4 text-primary" aria-hidden="true" />
           <h2 className="text-sm font-bold text-neutral">Información de Formato y Fondo</h2>
         </div>
       </CardHeader>
       <CardBody className="p-3 space-y-3 text-xs">
         {/* Format Specifications Summary */}
-        <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl space-y-1.5">
-          <div className="flex justify-between items-center text-neutral/70">
+        <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-xl space-y-1.5">
+          <div className="flex justify-between items-center text-neutral/75">
             <span className="font-medium">Dimensiones:</span>
             <span className="font-mono font-semibold text-neutral">
               {template.page_width} × {template.page_height}
             </span>
           </div>
-          <div className="flex justify-between items-center text-neutral/70">
+          <div className="flex justify-between items-center text-neutral/75">
             <span className="font-medium">Dimensiones de Impresión:</span>
             <span className="font-mono font-semibold text-primary">
               {normalizedDimensions.width} × {normalizedDimensions.height} mm
             </span>
           </div>
-          <div className="flex justify-between items-center text-neutral/70">
+          <div className="flex justify-between items-center text-neutral/75">
             <span className="font-medium">Relación de Aspecto:</span>
             <span className="font-mono font-semibold text-neutral">
               {(template.aspect_ratio || (template.page_width / template.page_height)).toFixed(3)}
             </span>
           </div>
-          <div className="flex justify-between items-center text-neutral/70">
+          <div className="flex justify-between items-center text-neutral/75">
             <span className="font-medium">Orientación:</span>
             <span className="font-semibold text-neutral capitalize">
               {normalizedDimensions.orientation === 'portrait' ? 'Vertical' : 'Horizontal'}
             </span>
           </div>
-          <div className="flex justify-between items-center text-neutral/70">
+          <div className="flex justify-between items-center text-neutral/75">
             <span className="font-medium">Campos Configurados:</span>
             <span className="font-semibold text-primary font-mono">
               {template.fields.length} / {AVAILABLE_TEMPLATE_FIELDS.length}
@@ -99,8 +99,8 @@ export const BackgroundFormatTab: React.FC<BackgroundFormatTabProps> = ({
             </div>
           </div>
         ) : (
-          <div className="space-y-2 text-neutral/60">
-            <p className="text-[11px]">
+          <div className="space-y-2 text-neutral/75">
+            <p className="text-xs">
               Actualmente se usa el diseño predeterminado. Puede subir una plantilla gráfica personalizada
               en PNG, JPG, WebP o PDF (página 1) para adaptar automáticamente el tamaño y las proporciones.
             </p>

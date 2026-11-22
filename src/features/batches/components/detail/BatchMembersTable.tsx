@@ -32,13 +32,14 @@ export const BatchMembersTable: React.FC<BatchMembersTableProps> = ({
         <h2 className="text-base sm:text-lg font-bold text-neutral">Miembros del Lote</h2>
 
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/40 w-4 h-4" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/75 w-4 h-4" aria-hidden="true" />
           <input
             type="text"
             placeholder="Buscar miembro..."
+            aria-label="Buscar miembro"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 bg-[#faf8f5] text-neutral text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-neutral/40"
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-primary/70 bg-[#faf8f5] text-neutral text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-neutral/75"
           />
         </div>
       </div>
@@ -79,7 +80,7 @@ export const BatchMembersTable: React.FC<BatchMembersTableProps> = ({
               ))
             ) : (
               <tr>
-                <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/50">
+                <td colSpan={columnsCount} className="px-6 py-12 text-center text-neutral/75">
                   No se encontraron miembros para el criterio de búsqueda.
                 </td>
               </tr>
@@ -89,7 +90,7 @@ export const BatchMembersTable: React.FC<BatchMembersTableProps> = ({
       </div>
 
       {/* Footer with Numbered Pagination Controls */}
-      <div className="px-6 py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-neutral/60">
+      <div className="px-6 py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-neutral/75">
         <div>
           Mostrando{' '}
           {currentPageRows.length > 0
@@ -121,15 +122,15 @@ export const BatchMembersTable: React.FC<BatchMembersTableProps> = ({
                 onClick={() => table.setPageIndex(idx)}
                 className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
                   pageIndex === idx
-                    ? 'bg-[#743e1d] text-white'
-                    : 'text-neutral/70 hover:bg-gray-100'
+                    ? 'bg-primary text-white'
+                    : 'text-neutral/75 hover:bg-gray-100'
                 }`}
               >
                 {idx + 1}
               </button>
             ))}
 
-          {pageCount > 5 && <span className="px-1 text-neutral/40">...</span>}
+          {pageCount > 5 && <span className="px-1 text-neutral/75">...</span>}
 
           <button
             type="button"
