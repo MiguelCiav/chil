@@ -18,14 +18,15 @@ export default defineConfig(async () => ({
     exclude: ["**/node_modules/**", "dist", "test/**/*", "functions/node_modules/**"],
     coverage: {
       reporter: ["text", "lcov"],
-      include: ["src/**/*.{ts,tsx}", "functions/**/*.js"],
+      include: ["src/**/*.{ts,tsx}", "functions/**/*.js", "scraper-api/**/*.js"],
       exclude: [
         "**/node_modules/**",
         "dist",
         "src/test/**",
         "**/*.d.ts",
         "src/assets/**",
-        "functions/node_modules/**"
+        "functions/node_modules/**",
+        "scraper-api/node_modules/**"
       ]
     },
   },
