@@ -1,4 +1,5 @@
 import React from 'react';
+import { Download } from 'lucide-react';
 import { useStatisticsData } from '../hooks/useStatisticsData';
 import { FilterBar } from './FilterBar';
 import { RegionSummaryTable } from './charts/RegionSummaryTable';
@@ -7,7 +8,8 @@ import { GroupSummaryTable } from './charts/GroupSummaryTable';
 import { UnitDistributionCard } from './charts/UnitDistributionCard';
 import { DemographicsDonut } from './charts/DemographicsDonut';
 import { MonthlyTrendChart } from './charts/MonthlyTrendChart';
-import { ErrorAlert } from '../../../components';
+import { Button, ErrorAlert } from '../../../components';
+import { exportStatisticsPdf } from '../utils/statsPdfExport';
 
 export const StatisticsDashboard: React.FC = () => {
   const {
@@ -63,6 +65,11 @@ export const StatisticsDashboard: React.FC = () => {
     );
   }
 
+  const handleExportPdf = () => {
+    const summary = getFilterSummaryLabels();
+    exportStatisticsPdf(stats, summary);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Page Header */}
@@ -75,6 +82,19 @@ export const StatisticsDashboard: React.FC = () => {
             Métricas consolidadas, tendencias temporales y cobertura de reconocimientos emitidos.
           </p>
         </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleExportPdf}
+            icon={<Download className="w-4 h-4" />}
+            className="whitespace-nowrap"
+            aria-label="Exportar todo"
+          >
+            Exportar todo
+          </Button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -86,8 +106,6 @@ export const StatisticsDashboard: React.FC = () => {
         regions={regions}
         availableDistricts={availableDistricts}
         recognitionTypes={recognitionTypes}
-        stats={stats}
-        getFilterSummaryLabels={getFilterSummaryLabels}
       />
 
       {/* Section 1: Tabla de reconocimientos entregados por Región */}

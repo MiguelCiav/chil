@@ -7,16 +7,6 @@ import type {
   TerritorialToken
 } from '../../utils/batchTerritorial';
 
-export type FilterType =
-  | 'date'
-  | 'region'
-  | 'district'
-  | 'group'
-  | 'recognition'
-  | 'completeness';
-export type DateFilterMode = 'predefined' | 'range' | 'specific';
-export type PredefinedPeriod = 'this-year' | 'this-month' | 'last-30' | 'last-90';
-
 export interface BatchRowData {
   id: number;
   batch: Batch;

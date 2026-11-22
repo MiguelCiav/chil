@@ -1,7 +1,9 @@
 import { ScoutUnit, ScoutMember, Batch, Region, District, ScoutGroup } from '../../../types';
+import { DatePeriodFilter } from '../../../utils/datePeriod';
 
 export interface StatisticsFilterState {
-  period: 'all' | 'this-year' | 'this-month' | 'last-30' | 'last-90' | 'custom';
+  searchTerm?: string;
+  period: DatePeriodFilter;
   startDate?: string;
   endDate?: string;
   recognitionId?: string;

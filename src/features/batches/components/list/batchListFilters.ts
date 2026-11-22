@@ -1,11 +1,46 @@
-import { ActiveFilterChip, Region, District, ScoutGroup } from '../../types';
-import { RecognitionType } from '../../../recognitions';
-import { getRecognitionName } from '../../api';
-import type {
-  CompletenessStatus,
-  TerritorialToken
-} from '../../utils/batchTerritorial';
-import { FilterType, DateFilterMode, BatchRowData } from './types';
+import type { CompletenessStatus, TerritorialToken } from '../../utils/batchTerritorial';
+import { DatePeriodFilter, matchesDateRange } from '../../../../utils/datePeriod';
+import { BatchRowData } from './types';
+
+export type { DatePeriodFilter };
+
+export interface BatchListFilterValues {
+  searchTerm: string;
+  selectedRecognition: string;
+  selectedRegion: string;
+  selectedDistrict: string;
+  selectedGroup: string;
+  selectedCompleteness: '' | CompletenessStatus;
+  selectedDatePeriod: DatePeriodFilter;
+  customStartDate: string;
+  customEndDate: string;
+}
+
+export const INITIAL_BATCH_LIST_FILTER_VALUES: BatchListFilterValues = {
+  searchTerm: '',
+  selectedRecognition: '',
+  selectedRegion: '',
+  selectedDistrict: '',
+  selectedGroup: '',
+  selectedCompleteness: '',
+  selectedDatePeriod: 'all',
+  customStartDate: '',
+  customEndDate: ''
+};
+
+export function hasActiveBatchListFilters(filters: BatchListFilterValues): boolean {
+  return (
+    filters.searchTerm.trim() !== '' ||
+    filters.selectedRecognition !== '' ||
+    filters.selectedRegion !== '' ||
+    filters.selectedDistrict !== '' ||
+    filters.selectedGroup !== '' ||
+    filters.selectedCompleteness !== '' ||
+    filters.selectedDatePeriod !== 'all' ||
+    filters.customStartDate !== '' ||
+    filters.customEndDate !== ''
+  );
+}
 
 export function formatBatchDate(dateStr: string): string {
   const dateObj = new Date(dateStr);
@@ -15,100 +50,34 @@ export function formatBatchDate(dateStr: string): string {
   return dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export function formatDateToDisplay(isoDate: string): string {
-  if (!isoDate) return '';
-  const parts = isoDate.split('-');
-  if (parts.length === 3) {
-    const [year, month, day] = parts;
-    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+function toTerritorialTokenKey(filterValue: string): string {
+  if (!filterValue) return '';
+  if (
+    filterValue === 'nacional' ||
+    filterValue === '0' ||
+    filterValue === 'no_scout' ||
+    filterValue.startsWith('id:')
+  ) {
+    return filterValue;
   }
-  return isoDate;
+  return `id:${filterValue}`;
 }
 
-export function matchesPredefinedPeriod(batchDate: Date, now: Date, filterValue: string): boolean {
-  if (filterValue === 'Este Año') {
-    return batchDate.getFullYear() === now.getFullYear();
-  }
-  if (filterValue === 'Este Mes') {
-    return (
-      batchDate.getFullYear() === now.getFullYear() &&
-      batchDate.getMonth() === now.getMonth()
-    );
-  }
-  if (filterValue === 'Últimos 30 días') {
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    thirtyDaysAgo.setHours(0, 0, 0, 0);
-    return batchDate >= thirtyDaysAgo && batchDate <= now;
-  }
-  if (filterValue === 'Últimos 90 días') {
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    ninetyDaysAgo.setHours(0, 0, 0, 0);
-    return batchDate >= ninetyDaysAgo && batchDate <= now;
-  }
-  return filterValue === 'Todo el histórico';
+function matchesTerritorialTokens(tokens: TerritorialToken[], filterValue: string): boolean {
+  if (!filterValue) return true;
+  const targetKey = toTerritorialTokenKey(filterValue);
+  return tokens.some(token => token.key === targetKey);
 }
 
-export function matchesDateRange(batchDate: Date, filterValue: string): boolean {
-  if (!filterValue.includes(' - ')) return false;
-  const [startStr, endStr] = filterValue.split(' - ');
-  const [sDay, sMonth, sYear] = startStr.split('/').map(Number);
-  const [eDay, eMonth, eYear] = endStr.split('/').map(Number);
-  if (sDay && sMonth && sYear && eDay && eMonth && eYear) {
-    const startDate = new Date(sYear, sMonth - 1, sDay, 0, 0, 0, 0);
-    const endDate = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
-    return batchDate >= startDate && batchDate <= endDate;
-  }
-  return false;
-}
-
-export function matchesSpecificDate(batchDate: Date, filterValue: string): boolean {
-  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(filterValue)) return false;
-  const [day, month, year] = filterValue.split('/').map(Number);
-  if (day && month && year) {
-    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
-    return batchDate >= startOfDay && batchDate <= endOfDay;
-  }
-  return false;
-}
-
-export function matchesDateFilter(createdAt: string, filterValue: string): boolean {
-  const batchDate = new Date(createdAt);
-  if (Number.isNaN(batchDate.getTime())) return false;
-
-  const now = new Date();
-  if (matchesPredefinedPeriod(batchDate, now, filterValue)) return true;
-  if (filterValue.includes(' - ')) return matchesDateRange(batchDate, filterValue);
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(filterValue)) return matchesSpecificDate(batchDate, filterValue);
-
-  return true;
-}
-
-function matchesTerritorialTokens(
-  tokens: TerritorialToken[],
-  filterValue: string
-): boolean {
-  return tokens.some(token => token.key === filterValue);
-}
-
-export function matchesRegionFilter(
-  tokens: TerritorialToken[],
-  filterValue: string
-): boolean {
+export function matchesRegionFilter(tokens: TerritorialToken[], filterValue: string): boolean {
   return matchesTerritorialTokens(tokens, filterValue);
 }
 
-export function matchesDistrictFilter(
-  tokens: TerritorialToken[],
-  filterValue: string
-): boolean {
+export function matchesDistrictFilter(tokens: TerritorialToken[], filterValue: string): boolean {
   return matchesTerritorialTokens(tokens, filterValue);
 }
 
-export function matchesGroupFilter(
-  tokens: TerritorialToken[],
-  filterValue: string
-): boolean {
+export function matchesGroupFilter(tokens: TerritorialToken[], filterValue: string): boolean {
   return matchesTerritorialTokens(tokens, filterValue);
 }
 
@@ -116,6 +85,7 @@ export function matchesCompletenessFilter(
   status: CompletenessStatus,
   filterValue: string
 ): boolean {
+  if (!filterValue) return true;
   return status === filterValue;
 }
 
@@ -124,105 +94,65 @@ export function matchesRecognitionFilter(
   rowRecognitionType: string,
   filterValue: string
 ): boolean {
-  return rowRecognitionName === filterValue || rowRecognitionType === filterValue;
+  if (!filterValue) return true;
+  return (
+    rowRecognitionType === filterValue ||
+    rowRecognitionName === filterValue ||
+    rowRecognitionName.toLowerCase() === filterValue.toLowerCase()
+  );
 }
 
-export function matchesSingleFilter(row: BatchRowData, filter: ActiveFilterChip): boolean {
-  const rawValue = filter.filterValue ?? filter.value;
+export function matchesBatchSearchTerm(row: BatchRowData, term: string): boolean {
+  const cleanTerm = term.trim().toLowerCase();
+  if (!cleanTerm) return true;
 
-  switch (filter.type) {
-    case 'date':
-      return matchesDateFilter(row.created_at, rawValue);
-    case 'region':
-      return matchesRegionFilter(row.regionTokens, rawValue);
-    case 'district':
-      return matchesDistrictFilter(row.districtTokens, rawValue);
-    case 'group':
-      return matchesGroupFilter(row.groupTokens, rawValue);
-    case 'completeness':
-      return matchesCompletenessFilter(row.completenessStatus, rawValue);
-    case 'recognition':
-      return matchesRecognitionFilter(row.recognitionName, row.recognitionType, rawValue);
-    default:
-      return true;
-  }
+  return [
+    String(row.id),
+    `#${row.id}`,
+    row.batch.comment ?? '',
+    row.formattedDate,
+    row.recognitionName,
+    row.recognitionType,
+    row.completenessLabel,
+    ...row.regionTokens.map(t => t.label),
+    ...row.districtTokens.map(t => t.label),
+    ...row.groupTokens.map(t => t.label)
+  ].some(val => val.toLowerCase().includes(cleanTerm));
 }
 
-export function matchesActiveFilters(row: BatchRowData, activeFilters: ActiveFilterChip[]): boolean {
-  return activeFilters.every(filter => matchesSingleFilter(row, filter));
-}
-
-function resolveTerritorialDisplayLabel(
-  rawValue: string,
-  items: Array<{ id: number; name: string }>
-): string {
-  if (rawValue === 'nacional') return 'Nacional';
-  if (rawValue === '0') return 'No aplica';
-  if (rawValue === 'no_scout') return 'No scout';
-  const numericKey = rawValue.startsWith('id:') ? rawValue.slice(3) : rawValue;
-  return items.find(item => String(item.id) === numericKey)?.name || rawValue;
-}
-
-export function getFilterLabelAndValue(
-  filterType: FilterType,
-  filterValue: string,
-  hierarchy: { regions: Region[]; districts: District[]; groups: ScoutGroup[] },
-  recognitionTypes: RecognitionType[]
-): { label: string; displayValue: string } {
-  switch (filterType) {
-    case 'date':
-      return { label: 'Fecha', displayValue: filterValue };
-    case 'region':
-      return {
-        label: 'Región',
-        displayValue: resolveTerritorialDisplayLabel(filterValue, hierarchy.regions)
-      };
-    case 'district':
-      return {
-        label: 'Distrito',
-        displayValue: resolveTerritorialDisplayLabel(filterValue, hierarchy.districts)
-      };
-    case 'group':
-      return {
-        label: 'Grupo',
-        displayValue: resolveTerritorialDisplayLabel(filterValue, hierarchy.groups)
-      };
-    case 'completeness': {
-      const completenessLabels: Record<string, string> = {
-        complete: 'Todos registrados',
-        pending: 'Registros pendientes',
-        empty: 'Sin miembros'
-      };
-      return {
-        label: 'Completitud',
-        displayValue: completenessLabels[filterValue] || filterValue
-      };
-    }
-    case 'recognition': {
-      const rec = recognitionTypes.find(
-        r => r.id === filterValue || r.name.toLowerCase() === filterValue.toLowerCase()
-      );
-      return {
-        label: 'Reconocimiento',
-        displayValue: rec ? rec.name : getRecognitionName(filterValue)
-      };
-    }
-  }
-}
-
-export function isApplyFilterDisabled(
-  newFilterType: FilterType,
-  dateFilterMode: DateFilterMode,
-  datePredefinedValue: string,
-  dateRangeStart: string,
-  dateRangeEnd: string,
-  dateSpecificValue: string,
-  newFilterValue: string
+export function matchesBatchListFilters(
+  row: BatchRowData,
+  filters: BatchListFilterValues
 ): boolean {
-  if (newFilterType === 'date') {
-    if (dateFilterMode === 'predefined') return !datePredefinedValue;
-    if (dateFilterMode === 'range') return !dateRangeStart || !dateRangeEnd;
-    return !dateSpecificValue;
+  if (!matchesBatchSearchTerm(row, filters.searchTerm)) {
+    return false;
   }
-  return !newFilterValue;
+  if (!matchesRecognitionFilter(row.recognitionName, row.recognitionType, filters.selectedRecognition)) {
+    return false;
+  }
+  if (!matchesRegionFilter(row.regionTokens, filters.selectedRegion)) {
+    return false;
+  }
+  if (!matchesDistrictFilter(row.districtTokens, filters.selectedDistrict)) {
+    return false;
+  }
+  if (!matchesGroupFilter(row.groupTokens, filters.selectedGroup)) {
+    return false;
+  }
+  if (!matchesCompletenessFilter(row.completenessStatus, filters.selectedCompleteness)) {
+    return false;
+  }
+  if (filters.selectedDatePeriod !== 'all') {
+    if (!matchesDateRange(row.created_at, filters.selectedDatePeriod, filters.customStartDate, filters.customEndDate)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function getFilteredBatchRows(
+  rows: BatchRowData[],
+  filters: BatchListFilterValues
+): BatchRowData[] {
+  return rows.filter(row => matchesBatchListFilters(row, filters));
 }

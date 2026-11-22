@@ -12,6 +12,7 @@ export interface HierarchyFilterSelectsProps {
   readonly groupId?: string;
   readonly showGroup?: boolean;
   readonly includeNoAplicaAlways?: boolean;
+  readonly includeNoScoutInGroup?: boolean;
   readonly onRegionChange: (regionId: string) => void;
   readonly onDistrictChange: (districtId: string) => void;
   readonly onGroupChange?: (groupId: string) => void;
@@ -29,22 +30,26 @@ export const HierarchyFilterSelects: React.FC<HierarchyFilterSelectsProps> = ({
   groupId = '',
   showGroup = false,
   includeNoAplicaAlways = false,
+  includeNoScoutInGroup = false,
   onRegionChange,
   onDistrictChange,
   onGroupChange
 }) => {
   const validRegions = useMemo(() => regions.filter(r => r.id !== 0), [regions]);
   const availableDistricts = useMemo(
-    () => getAvailableDistricts(districts, regionId),
+    () => getAvailableDistricts(districts, regionId, { allowAllWhenUnset: true }),
     [districts, regionId]
   );
   const availableGroups = useMemo(
-    () => (showGroup ? getAvailableGroups(groups, districts, regionId, districtId) : []),
+    () =>
+      showGroup
+        ? getAvailableGroups(groups, districts, regionId, districtId, { allowAllWhenUnset: true })
+        : [],
     [showGroup, groups, districts, regionId, districtId]
   );
 
   const showNoAplicaInDistricts = includeNoAplicaAlways || regionId !== '';
-  const showNoAplicaInGroups = districtId !== '' || regionId !== '';
+  const showNoAplicaInGroups = includeNoAplicaAlways || districtId !== '' || regionId !== '';
 
   const handleRegionChange = (value: string) => {
     onRegionChange(value);
@@ -106,10 +111,14 @@ export const HierarchyFilterSelects: React.FC<HierarchyFilterSelectsProps> = ({
           aria-label="Filtrar por grupo"
           value={groupId}
           onChange={e => onGroupChange(e.target.value)}
-          disabled={regionId === 'nacional' || regionId === '0' || districtId === '0'}
+          disabled={
+            regionId === 'nacional' ||
+            (!includeNoScoutInGroup && (regionId === '0' || districtId === '0'))
+          }
         >
           <option value="">Todos los grupos</option>
           {showNoAplicaInGroups && <option value="0">No aplica</option>}
+          {includeNoScoutInGroup && <option value="no_scout">No scout</option>}
           {availableGroups.map(g => (
             <option key={g.id} value={String(g.id)}>
               {g.name}

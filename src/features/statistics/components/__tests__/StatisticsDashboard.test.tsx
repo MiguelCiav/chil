@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StatisticsDashboard } from '../StatisticsDashboard';
 import * as batchApi from '../../../batches/api';
@@ -129,6 +129,10 @@ describe('StatisticsDashboard Component', () => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
+    // Filter card renders search input and inline controls without a card title
+    expect(screen.queryByText('Filtros y Segmentación de Datos')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Buscar en estadísticas')).toBeInTheDocument();
+
     // Top KPI summary cards removed
     expect(screen.queryByText('Total Lotes')).not.toBeInTheDocument();
     expect(screen.queryByText('Más Entregado')).not.toBeInTheDocument();
@@ -159,15 +163,37 @@ describe('StatisticsDashboard Component', () => {
     expect(screen.queryByText('Calidad y Estatus de Validación')).not.toBeInTheDocument();
   });
 
-  it('filters data when changing region and allows resetting filters', async () => {
+  it('filters data when using search input or changing region and allows resetting filters', async () => {
     render(<StatisticsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
+    const searchInput = screen.getByLabelText('Buscar en estadísticas');
+    fireEvent.change(searchInput, { target: { value: 'Zulia' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Limpiar filtros')).toBeInTheDocument();
+      const regionTable = screen.getAllByRole('table')[0];
+      expect(within(regionTable).queryByText('Región Capital')).not.toBeInTheDocument();
+      expect(within(regionTable).getByText('Región Zulia')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Limpiar filtros'));
+    expect(within(screen.getAllByRole('table')[0]).getByText('Región Capital')).toBeInTheDocument();
+
+    // Open collapsible filters panel
+    const toggleBtn = screen.getByRole('button', { name: /Filtros/i });
+    fireEvent.click(toggleBtn);
+
     const regionSelect = screen.getByLabelText('Filtrar por región');
     fireEvent.change(regionSelect, { target: { value: '1' } });
+
+    // Collapse filters panel and verify active filter chip summary appears
+    fireEvent.click(toggleBtn);
+    expect(screen.getByText('Filtros activos:')).toBeInTheDocument();
+    expect(screen.getByLabelText('Quitar filtro Región')).toBeInTheDocument();
 
     // "Limpiar filtros" button appears
     await waitFor(() => {
@@ -180,14 +206,15 @@ describe('StatisticsDashboard Component', () => {
     expect(screen.queryByText('Limpiar filtros')).not.toBeInTheDocument();
   });
 
-  it('triggers PDF export when clicking export button', async () => {
+  it('triggers PDF export when clicking Exportar todo button in module header', async () => {
     render(<StatisticsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    const exportBtn = screen.getByRole('button', { name: /Exportar Reporte Ejecutivo PDF/i });
+    const exportBtn = screen.getByRole('button', { name: 'Exportar todo' });
+    expect(exportBtn).toHaveTextContent('Exportar todo');
     fireEvent.click(exportBtn);
 
     expect(statsPdfExport.exportStatisticsPdf).toHaveBeenCalledTimes(1);

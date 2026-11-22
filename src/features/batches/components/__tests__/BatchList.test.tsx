@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { BatchList } from '../BatchList';
@@ -138,11 +138,12 @@ describe('BatchList component', () => {
     expect(screen.getByText('RECONOCIMIENTO')).toBeInTheDocument();
     expect(screen.getByText('CANTIDAD')).toBeInTheDocument();
 
-    expect(screen.getByText('Región Capital')).toBeInTheDocument();
-    expect(screen.getByText('Distrito Sucre')).toBeInTheDocument();
-    expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
-    expect(screen.getByText('2 Miembros')).toBeInTheDocument();
-    expect(screen.getByText('1 Miembros')).toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Región Capital')).toBeInTheDocument();
+    expect(within(table).getByText('Distrito Sucre')).toBeInTheDocument();
+    expect(within(table).getByText('Grupo San Luis')).toBeInTheDocument();
+    expect(within(table).getByText('2 Miembros')).toBeInTheDocument();
+    expect(within(table).getByText('1 Miembros')).toBeInTheDocument();
   });
 
   it('renders only single 3-dots actions button per row and no loose action icon buttons', async () => {
@@ -157,7 +158,7 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
     // Verify single 3-dots action button exists
@@ -191,7 +192,7 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
     // Open 3-dots dropdown menu for batch 101
@@ -215,9 +216,10 @@ describe('BatchList component', () => {
     });
 
     // Batch 101 should now be removed from table
-    expect(screen.queryByText('Grupo San Luis')).not.toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(within(table).queryByText('Grupo San Luis')).not.toBeInTheDocument();
     // Batch 102 should still be present
-    expect(screen.getByText('Grupo Scouts 45')).toBeInTheDocument();
+    expect(within(table).getByText('Grupo Scouts 45')).toBeInTheDocument();
   });
 
   it('opens delete confirmation modal via 3-dots dropdown and can be cancelled', async () => {
@@ -232,7 +234,7 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
     // Open dropdown for first row
@@ -251,7 +253,7 @@ describe('BatchList component', () => {
     fireEvent.click(cancelBtn);
 
     expect(api.deleteBatch).not.toHaveBeenCalled();
-    expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
   });
 
   it('triggers PDF download and detail navigation from 3-dots dropdown menu', async () => {
@@ -292,7 +294,7 @@ describe('BatchList component', () => {
     });
   });
 
-  it('loads dynamic recognition types and populates options in the filter modal', async () => {
+  it('loads dynamic recognition types in inline filter card and filters rows accordingly', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -304,34 +306,28 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
-    // Click Añadir Filtro
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-
-    await waitFor(() => {
-      expect(screen.getByText('Añadir Filtro al Listado')).toBeInTheDocument();
-    });
-
-    // Change filter type to recognition
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'recognition' } });
-
-    // Verify dynamic recognition options are present
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
+    const recSelect = screen.getByLabelText('Filtrar por reconocimiento');
     expect(screen.getByRole('option', { name: 'Reconocimiento Personalizado' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Go Solar' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Insignia de Madera' })).toBeInTheDocument();
 
-    // Select custom recognition and apply
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'sct-custom' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
+    fireEvent.change(recSelect, { target: { value: 'sct-wood-badge' } });
 
     await waitFor(() => {
-      expect(screen.getByText(/Reconocimiento: Reconocimiento Personalizado/i)).toBeInTheDocument();
+      const table = screen.getByRole('table');
+      expect(within(table).queryByText('Grupo San Luis')).not.toBeInTheDocument();
+      expect(within(table).getByText('Grupo Scouts 45')).toBeInTheDocument();
     });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+    expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
   });
 
-  it('filters by date range mode with chip format Fecha: DD/MM/YYYY - DD/MM/YYYY', async () => {
+  it('filters by custom date range inline without modal', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -343,41 +339,25 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
-    // Remove existing default date filter
-    fireEvent.click(screen.getByLabelText(/Eliminar filtro Fecha/i));
-
-    // Open add filter modal
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-
-    await waitFor(() => {
-      expect(screen.getByText('Añadir Filtro al Listado')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
+    fireEvent.change(screen.getByLabelText('Filtrar por período'), { target: { value: 'custom' } });
+    fireEvent.change(screen.getByLabelText('Fecha inicio personalizado'), {
+      target: { value: '2026-08-01' }
     });
-
-    // Change filter type to date
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'date' } });
-
-    // Select mode "Rango de fechas"
-    fireEvent.change(screen.getByLabelText(/Modalidad/i), { target: { value: 'range' } });
-
-    // Enter start and end dates
-    fireEvent.change(screen.getByLabelText(/Fecha Inicio/i), { target: { value: '2026-08-01' } });
-    fireEvent.change(screen.getByLabelText(/Fecha Fin/i), { target: { value: '2026-08-20' } });
-
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Fecha: 01\/08\/2026 - 20\/08\/2026/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Fecha fin personalizado'), {
+      target: { value: '2026-08-20' }
     });
 
     // Batch 101 (2026-08-20) should be included, batch 102 (2026-08-21) should be excluded
-    expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
-    expect(screen.queryByText('Grupo Scouts 45')).not.toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Grupo San Luis')).toBeInTheDocument();
+    expect(within(table).queryByText('Grupo Scouts 45')).not.toBeInTheDocument();
   });
 
-  it('filters by specific date mode with chip format Fecha: DD/MM/YYYY', async () => {
+  it('filters by single custom day range inline without modal', async () => {
     vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
     vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
@@ -389,43 +369,28 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
-    // Remove existing default date filter
-    fireEvent.click(screen.getByLabelText(/Eliminar filtro Fecha/i));
-
-    // Open add filter modal
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-
-    await waitFor(() => {
-      expect(screen.getByText('Añadir Filtro al Listado')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
+    fireEvent.change(screen.getByLabelText('Filtrar por período'), { target: { value: 'custom' } });
+    fireEvent.change(screen.getByLabelText('Fecha inicio personalizado'), {
+      target: { value: '2026-08-21' }
     });
-
-    // Change filter type to date
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'date' } });
-
-    // Select mode "Fecha específica"
-    fireEvent.change(screen.getByLabelText(/Modalidad/i), { target: { value: 'specific' } });
-
-    // Enter specific date
-    fireEvent.change(screen.getByLabelText(/^Fecha$/i), { target: { value: '2026-08-21' } });
-
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Fecha: 21\/08\/2026/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Fecha fin personalizado'), {
+      target: { value: '2026-08-21' }
     });
 
     // Batch 102 (2026-08-21) should be included, batch 101 (2026-08-20) excluded
-    expect(screen.getByText('Grupo Scouts 45')).toBeInTheDocument();
-    expect(screen.queryByText('Grupo San Luis')).not.toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Grupo Scouts 45')).toBeInTheDocument();
+    expect(within(table).queryByText('Grupo San Luis')).not.toBeInTheDocument();
   });
 
-  it('handles filtering by district, group and predefined date periods', async () => {
-    vi.mocked(api.getAllBatches).mockResolvedValue(mockBatches);
-    vi.mocked(api.getAllMembers).mockResolvedValue(mockMembers);
-    vi.mocked(api.getHierarchyData).mockResolvedValue(mockHierarchy);
+  it('handles inline filtering by search term, district, group, and predefined date period', async () => {
+    vi.mocked(api.getAllBatches).mockResolvedValueOnce(mockBatches);
+    vi.mocked(api.getAllMembers).mockResolvedValueOnce(mockMembers);
+    vi.mocked(api.getHierarchyData).mockResolvedValueOnce(mockHierarchy);
 
     render(
       <MemoryRouter>
@@ -434,40 +399,30 @@ describe('BatchList component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Grupo San Luis')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Grupo San Luis')).toBeInTheDocument();
     });
 
-    // 1. Add District filter
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'district' } });
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'id:10' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
+    const table = screen.getByRole('table');
 
-    await waitFor(() => {
-      expect(screen.getByText(/Distrito: Distrito Sucre/i)).toBeInTheDocument();
-    });
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // 1. Search by group / comment
+    fireEvent.change(screen.getByLabelText('Búsqueda de lotes'), { target: { value: 'Scouts 45' } });
+    expect(within(table).queryByText('Grupo San Luis')).not.toBeInTheDocument();
+    expect(within(table).getByText('Grupo Scouts 45')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Limpiar búsqueda'));
+    expect(within(table).getByText('Grupo San Luis')).toBeInTheDocument();
 
-    // 2. Add Group filter
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'group' } });
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'id:100' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
+    // 2. District & Group filters
+    fireEvent.click(screen.getByRole('button', { name: /Filtros/i }));
+    fireEvent.change(screen.getByLabelText('Filtrar por distrito'), { target: { value: '10' } });
+    expect(within(table).getByText('Grupo San Luis')).toBeInTheDocument();
+    expect(within(table).queryByText('Grupo Scouts 45')).not.toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Grupo: Grupo San Luis/i)).toBeInTheDocument();
-    });
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Filtrar por grupo'), { target: { value: '100' } });
+    expect(within(table).getByText('Grupo San Luis')).toBeInTheDocument();
 
-    // 3. Add Predefined Date filter (Últimos 30 días)
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'date' } });
-    fireEvent.change(screen.getByLabelText(/Período/i), { target: { value: 'Últimos 30 días' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Fecha: Últimos 30 días/i)).toBeInTheDocument();
-    });
+    // 3. Predefined Date period
+    fireEvent.change(screen.getByLabelText('Filtrar por período'), { target: { value: 'this-year' } });
+    expect(within(table).getByText('Grupo San Luis')).toBeInTheDocument();
   });
 
   it('handles pagination next and previous buttons correctly', async () => {
@@ -812,16 +767,17 @@ describe('BatchList component', () => {
     });
 
     // 4 positive groups -> 3 pills + "+1" overflow badge ("No aplica" suppressed when positive groups exist)
-    expect(screen.getByText('Grupo 1')).toBeInTheDocument();
-    expect(screen.getByText('Grupo 2')).toBeInTheDocument();
-    expect(screen.getByText('Grupo 3')).toBeInTheDocument();
-    const overflowBadge = screen.getByText('+1');
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Grupo 1')).toBeInTheDocument();
+    expect(within(table).getByText('Grupo 2')).toBeInTheDocument();
+    expect(within(table).getByText('Grupo 3')).toBeInTheDocument();
+    const overflowBadge = within(table).getByText('+1');
     expect(overflowBadge).toBeInTheDocument();
     expect(overflowBadge).toHaveAttribute('title', 'Grupo 10');
 
     // Completeness statuses
-    expect(screen.getByText('Registros pendientes (1)')).toBeInTheDocument();
-    expect(screen.getByText('Sin miembros')).toBeInTheDocument();
+    expect(within(table).getByText('Registros pendientes (1)')).toBeInTheDocument();
+    expect(within(table).getByText('Sin miembros')).toBeInTheDocument();
   });
 
   it('filters accurately by exact group token (id:1 vs id:10), Nacional, No scout, No aplica, and Completitud', async () => {
@@ -882,67 +838,61 @@ describe('BatchList component', () => {
       </MemoryRouter>
     );
 
+    const table = screen.getByRole('table');
     await waitFor(() => {
-      expect(screen.getByText('Grupo 1')).toBeInTheDocument();
-      expect(screen.getByText('Grupo 10')).toBeInTheDocument();
+      expect(within(table).getByText('Grupo 1')).toBeInTheDocument();
+      expect(within(table).getByText('Grupo 10')).toBeInTheDocument();
     });
 
-    // 1. Filter by Grupo 1 (id:1) — should NOT match Grupo 10 (id:10)
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'group' } });
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'id:1' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
-
+    // 1. Filter by Grupo 1 (value "1") — should NOT match Grupo 10 ("10")
+    const filtersToggle = screen.getByRole('button', { name: /Filtros/i });
+    fireEvent.click(filtersToggle);
+    fireEvent.change(screen.getByLabelText('Filtrar por grupo'), { target: { value: '1' } });
     await waitFor(() => {
-      expect(screen.getByText('Grupo 1')).toBeInTheDocument();
-      expect(screen.queryByText('Grupo 10')).not.toBeInTheDocument();
+      expect(within(table).getByText('Grupo 1')).toBeInTheDocument();
+      expect(within(table).queryByText('Grupo 10')).not.toBeInTheDocument();
     });
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    // Remove Grupo 1 filter
-    fireEvent.click(screen.getByLabelText(/Eliminar filtro Grupo/i));
+    // Collapse panel and remove Grupo 1 chip directly
+    fireEvent.click(filtersToggle);
+    expect(screen.getByText('Filtros activos:')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Quitar filtro Grupo Scout'));
+    expect(within(table).getByText('Grupo 10')).toBeInTheDocument();
+
+    // Re-open panel for remaining filter assertions
+    fireEvent.click(filtersToggle);
 
     // 2. Filter by Region = Nacional
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'region' } });
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'nacional' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
-
+    fireEvent.change(screen.getByLabelText('Filtrar por región'), { target: { value: 'nacional' } });
     await waitFor(() => {
-      expect(screen.getByText(/Región: Nacional/i)).toBeInTheDocument();
-      expect(screen.getByText('Grupo 10')).toBeInTheDocument();
-      expect(screen.queryByText('Grupo 1')).not.toBeInTheDocument();
+      expect(within(table).getByText('Grupo 10')).toBeInTheDocument();
+      expect(within(table).queryByText('Grupo 1')).not.toBeInTheDocument();
     });
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    fireEvent.click(screen.getByLabelText(/Eliminar filtro Región/i));
+    // Clear region filter
+    fireEvent.change(screen.getByLabelText('Filtrar por región'), { target: { value: '' } });
 
     // 3. Filter by Grupo = No scout
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'group' } });
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'no_scout' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
-
+    fireEvent.change(screen.getByLabelText('Filtrar por grupo'), { target: { value: 'no_scout' } });
     await waitFor(() => {
-      expect(screen.getByText(/Grupo: No scout/i)).toBeInTheDocument();
-      expect(screen.getByText('No scout')).toBeInTheDocument();
-      expect(screen.queryByText('Grupo 1')).not.toBeInTheDocument();
+      expect(within(table).getByText('No scout')).toBeInTheDocument();
+      expect(within(table).queryByText('Grupo 1')).not.toBeInTheDocument();
     });
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    fireEvent.click(screen.getByLabelText(/Eliminar filtro Grupo/i));
+    fireEvent.change(screen.getByLabelText('Filtrar por grupo'), { target: { value: '' } });
 
-    // 4. Filter by Completitud = Todos registrados
-    fireEvent.click(screen.getByText(/Añadir Filtro/i));
-    fireEvent.change(screen.getByLabelText(/Tipo de Filtro/i), { target: { value: 'completeness' } });
-    fireEvent.change(screen.getByLabelText(/Valor del Filtro/i), { target: { value: 'complete' } });
-    fireEvent.click(screen.getByText('Aplicar Filtro'));
-
+    // 4. Filter by Completitud = Todos registrados (all 3 fixture batches are active -> complete)
+    fireEvent.change(screen.getByLabelText('Filtrar por completitud'), { target: { value: 'complete' } });
     await waitFor(() => {
-      expect(screen.getByText(/Completitud: Todos registrados/i)).toBeInTheDocument();
-      expect(screen.getByText('Grupo 1')).toBeInTheDocument();
+      expect(within(table).getByText('Grupo 1')).toBeInTheDocument();
+      expect(within(table).getByText('No scout')).toBeInTheDocument();
     });
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    // Filtering by 'empty' hides complete batches
+    fireEvent.change(screen.getByLabelText('Filtrar por completitud'), { target: { value: 'empty' } });
+    await waitFor(() => {
+      expect(within(table).queryByText('Grupo 1')).not.toBeInTheDocument();
+    });
   });
 
   it('disables row ZIP download when batch has 0 eligible members, and supports modal pre-fetch cancellation', async () => {

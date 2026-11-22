@@ -8,7 +8,7 @@ Provides CSV/Excel-compatible export utilities (`excelExport.ts`) for formatting
 - `excelExport.ts:formatSummaryRowForExport`: `(row: SummaryRowData) => string[]` extracting the 14 column values for a row.
 - `excelExport.ts:generateSummaryCsv`: `(data: SummaryRowData[]) => string` serializing headers and rows with CRLF line endings and UTF-8 BOM (`\uFEFF`).
 - `excelExport.ts:exportToExcel`: `(data: SummaryRowData[], filename?: string) => void` generating the CSV and triggering a browser download when `document` is defined.
-- `summaryHelpers.ts`: Exports `MemberTypeFilter`, `RegistryStatusFilter`, `DatePeriodFilter`, `SummaryFilterValues`, `SummaryFilterOptions`, `INITIAL_SUMMARY_FILTER_VALUES`, `DEFAULT_SUMMARY_FILTERS`, `hasActiveSummaryFilters`, `formatBatchDate`, `formatBatchCode`, `getMemberStatusLabel`, `getMemberTypeLabel`, `resolveHierarchyName`, `matchesDateRange`, `matchesSummarySearchTerm`, `matchesSummaryFilters`, `getFilteredSummaryRows`.
+- `summaryHelpers.ts`: Exports `MemberTypeFilter`, `RegistryStatusFilter`, `DatePeriodFilter` (re-exported from `src/utils/datePeriod.ts`), `SummaryFilterValues`, `SummaryFilterOptions`, `INITIAL_SUMMARY_FILTER_VALUES`, `DEFAULT_SUMMARY_FILTERS`, `hasActiveSummaryFilters`, `formatBatchDate`, `formatBatchCode`, `getMemberStatusLabel`, `getMemberTypeLabel`, `resolveHierarchyName`, `matchesDateRange` (re-exported from `src/utils/datePeriod.ts`), `matchesSummarySearchTerm`, `matchesSummaryFilters`, `getFilteredSummaryRows`.
 
 ## Invariants
 - `excelExport.ts:formatSummaryRowForExport`: Maps missing/falsy string fields to `''`.

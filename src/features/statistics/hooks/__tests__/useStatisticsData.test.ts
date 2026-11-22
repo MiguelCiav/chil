@@ -430,4 +430,26 @@ describe('useStatisticsData hook', () => {
     expect(result.current.getFilterSummaryLabels().regionLabel).toBe('No aplica');
     expect(result.current.getFilterSummaryLabels().districtLabel).toBe('No aplica');
   });
+
+  it('filters reactively by searchTerm across member, batch, recognition, and territory fields', async () => {
+    const { result } = renderHook(() => useStatisticsData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.setFilter('searchTerm', 'Valencia');
+    });
+
+    expect(result.current.hasActiveFilters).toBe(true);
+    expect(result.current.stats.filteredMembersCount).toBe(1);
+    expect(result.current.stats.filteredBatchesCount).toBe(1);
+    expect(result.current.getFilterSummaryLabels().searchLabel).toBe('Valencia');
+
+    act(() => {
+      result.current.resetFilters();
+    });
+
+    expect(result.current.hasActiveFilters).toBe(false);
+    expect(result.current.filters.searchTerm).toBe('');
+    expect(result.current.stats.filteredMembersCount).toBe(3);
+  });
 });

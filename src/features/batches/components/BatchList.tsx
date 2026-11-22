@@ -6,7 +6,6 @@ import {
   useReactTable
 } from '@tanstack/react-table';
 import {
-  X,
   Plus,
   GitMerge,
   AlertCircle
@@ -17,7 +16,9 @@ import { Card } from '../../../components/Card';
 import { DataTable } from '../../../components/DataTable';
 import { ErrorAlert } from '../../../components/ErrorAlert';
 import { Pagination } from '../../../components/Pagination';
+import { Select } from '../../../components/Select';
 import { Toast } from '../../../components/Toast';
+import { buildCommonFilterBadges, FilterCard, HierarchyFilterSelects } from '../../../domain/components';
 import {
   useWalkthrough,
   WalkthroughOverlay,
@@ -30,7 +31,8 @@ import {
   getMembersByBatchId,
   getHierarchyData,
   deleteBatch,
-  getRecognitionName
+  getRecognitionName,
+  RECOGNITION_TYPES
 } from '../api';
 import {
   generateBatchCertificatesZip,
@@ -43,24 +45,23 @@ import {
   ScoutMember,
   Region,
   District,
-  ScoutGroup,
-  ActiveFilterChip
+  ScoutGroup
 } from '../types';
 import { useAuth } from '../../auth';
 import {
+  CompletenessStatus,
   consolidateMergedGroupTokens,
   deriveBatchTerritorialProjection
 } from '../utils/batchTerritorial';
 import {
-  FilterType,
-  DateFilterMode,
-  PredefinedPeriod,
   BatchRowData,
+  BatchListFilterValues,
+  INITIAL_BATCH_LIST_FILTER_VALUES,
+  hasActiveBatchListFilters,
   BATCH_LIST_TOUR_STEPS,
   formatBatchDate,
-  matchesActiveFilters,
+  getFilteredBatchRows,
   createBatchListColumns,
-  AddFilterModal,
   MergeBatchesModal,
   BatchMergeOption
 } from './list';
@@ -69,8 +70,6 @@ import {
   DeleteBatchModal
 } from './shared';
 import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
-
-export type { FilterType, DateFilterMode, PredefinedPeriod };
 
 export const BatchList: React.FC = () => {
   const navigate = useNavigate();
@@ -134,10 +133,86 @@ export const BatchList: React.FC = () => {
   }, []);
 
   // Filter state
-  const [activeFilters, setActiveFilters] = useState<ActiveFilterChip[]>([
-    { id: 'date-this-year', type: 'date', label: 'Fecha', value: 'Este Año' }
-  ]);
-  const [isAddFilterModalOpen, setIsAddFilterModalOpen] = useState(false);
+  const [filters, setFilters] = useState<BatchListFilterValues>(INITIAL_BATCH_LIST_FILTER_VALUES);
+  const updateFilter = useCallback(
+    <K extends keyof BatchListFilterValues>(key: K, value: BatchListFilterValues[K]) => {
+      setFilters(prev => ({ ...prev, [key]: value }));
+    },
+    []
+  );
+  const handleResetFilters = useCallback(() => {
+    setFilters(INITIAL_BATCH_LIST_FILTER_VALUES);
+  }, []);
+  const hasActiveFilters = useMemo(() => hasActiveBatchListFilters(filters), [filters]);
+
+  const recognitionOptions = useMemo(
+    () => (recognitionTypes.length > 0 ? recognitionTypes : RECOGNITION_TYPES),
+    [recognitionTypes]
+  );
+
+  const activeFilterBadges = useMemo(() => {
+    const badges = buildCommonFilterBadges({
+      recognition: {
+        id: filters.selectedRecognition,
+        options: recognitionOptions,
+        onRemove: () => updateFilter('selectedRecognition', '')
+      },
+      region: {
+        id: filters.selectedRegion,
+        options: regions,
+        onRemove: () =>
+          setFilters(prev => ({
+            ...prev,
+            selectedRegion: '',
+            selectedDistrict: '',
+            selectedGroup: ''
+          }))
+      },
+      district: {
+        id: filters.selectedDistrict,
+        options: districts,
+        onRemove: () =>
+          setFilters(prev => ({
+            ...prev,
+            selectedDistrict: '',
+            selectedGroup: ''
+          }))
+      },
+      group: {
+        id: filters.selectedGroup,
+        options: groups,
+        onRemove: () => updateFilter('selectedGroup', '')
+      },
+      period: {
+        value: filters.selectedDatePeriod,
+        startDate: filters.customStartDate,
+        endDate: filters.customEndDate,
+        onRemove: () =>
+          setFilters(prev => ({
+            ...prev,
+            selectedDatePeriod: 'all',
+            customStartDate: '',
+            customEndDate: ''
+          }))
+      }
+    });
+
+    if (filters.selectedCompleteness) {
+      const completenessLabels: Record<CompletenessStatus, string> = {
+        complete: 'Todos registrados',
+        pending: 'Registros pendientes',
+        empty: 'Sin miembros'
+      };
+      badges.push({
+        id: 'completeness',
+        label: 'Completitud',
+        value: completenessLabels[filters.selectedCompleteness],
+        onRemove: () => updateFilter('selectedCompleteness', '')
+      });
+    }
+
+    return badges;
+  }, [filters, recognitionOptions, regions, districts, groups, updateFilter]);
 
   // Row selection state & Merge Batches modal state
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
@@ -266,14 +341,6 @@ export const BatchList: React.FC = () => {
     }
   };
 
-  const removeFilter = (filterId: string) => {
-    setActiveFilters(prev => prev.filter(f => f.id !== filterId));
-  };
-
-  const handleApplyFilter = (newChip: ActiveFilterChip) => {
-    setActiveFilters(prev => [...prev.filter(f => f.type !== newChip.type), newChip]);
-  };
-
   // Format table rows
   const tableData = useMemo<BatchRowData[]>(() => {
     const membersByBatchId = new Map<number, ScoutMember[]>();
@@ -313,8 +380,8 @@ export const BatchList: React.FC = () => {
   }, [batches, members, regions, districts, groups, resolveRecognitionName]);
 
   const filteredData = useMemo(() => {
-    return tableData.filter(row => matchesActiveFilters(row, activeFilters));
-  }, [tableData, activeFilters]);
+    return getFilteredBatchRows(tableData, filters);
+  }, [tableData, filters]);
 
   // TanStack Table columns definition
   const columns = useMemo(
@@ -448,41 +515,73 @@ export const BatchList: React.FC = () => {
         />
       )}
 
-      {/* Filtros Activos Bar */}
-      <div data-walkthrough="batch-list-filters" className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-bold text-neutral mr-2">Filtros activos</span>
-          {activeFilters.map(chip => (
-            <span
-              key={chip.id}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary/70 text-neutral border border-primary/20"
-            >
-              <span>{chip.label}: {chip.value}</span>
-              <button
-                type="button"
-                onClick={() => removeFilter(chip.id)}
-                className="hover:text-red-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
-                aria-label={`Eliminar filtro ${chip.label}`}
-              >
-                <X className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
-            </span>
-          ))}
-
-          {activeFilters.length === 0 && (
-            <span className="text-xs text-neutral/75 italic">Ningún filtro aplicado</span>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setIsAddFilterModalOpen(true)}
-          className="inline-flex items-center gap-1 text-primary font-bold text-sm hover:text-primary/80 transition-colors"
+      {/* Filter Controls Card */}
+      <FilterCard
+        dataWalkthrough="batch-list-filters"
+        searchId="batch-list-search"
+        searchValue={filters.searchTerm}
+        onSearchChange={val => updateFilter('searchTerm', val)}
+        searchPlaceholder="Buscar por lote, comentario, reconocimiento, región, distrito, grupo..."
+        searchAriaLabel="Búsqueda de lotes"
+        period={filters.selectedDatePeriod}
+        onPeriodChange={val => updateFilter('selectedDatePeriod', val)}
+        periodSelectId="batch-list-filter-period"
+        customStartDate={filters.customStartDate}
+        customEndDate={filters.customEndDate}
+        onCustomStartDateChange={val => updateFilter('customStartDate', val)}
+        onCustomEndDateChange={val => updateFilter('customEndDate', val)}
+        customStartId="batch-list-custom-start"
+        customEndId="batch-list-custom-end"
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={handleResetFilters}
+        resetAriaLabel="Limpiar filtros"
+        activeFilters={activeFilterBadges}
+      >
+        <Select
+          id="batch-list-filter-rec"
+          label="Reconocimiento"
+          size="sm"
+          aria-label="Filtrar por reconocimiento"
+          value={filters.selectedRecognition}
+          onChange={e => updateFilter('selectedRecognition', e.target.value)}
         >
-          <Plus className="w-4 h-4" />
-          Añadir Filtro
-        </button>
-      </div>
+          <option value="">Todos los reconocimientos</option>
+          {recognitionOptions.map(t => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </Select>
+
+        <HierarchyFilterSelects
+          regions={regions}
+          districts={districts}
+          groups={groups}
+          regionId={filters.selectedRegion}
+          districtId={filters.selectedDistrict}
+          groupId={filters.selectedGroup}
+          showGroup
+          includeNoAplicaAlways
+          includeNoScoutInGroup
+          onRegionChange={val => updateFilter('selectedRegion', val)}
+          onDistrictChange={val => updateFilter('selectedDistrict', val)}
+          onGroupChange={val => updateFilter('selectedGroup', val)}
+        />
+
+        <Select
+          id="batch-list-filter-completeness"
+          label="Completitud"
+          size="sm"
+          aria-label="Filtrar por completitud"
+          value={filters.selectedCompleteness}
+          onChange={e => updateFilter('selectedCompleteness', e.target.value as '' | CompletenessStatus)}
+        >
+          <option value="">Todos los estados</option>
+          <option value="complete">Todos registrados</option>
+          <option value="pending">Registros pendientes</option>
+          <option value="empty">Sin miembros</option>
+        </Select>
+      </FilterCard>
 
       {/* Batches Data Table */}
       <Card data-walkthrough="batch-list-table">
@@ -519,17 +618,6 @@ export const BatchList: React.FC = () => {
         onConfirm={handleConfirmDelete}
         batch={batchToDelete}
         deleting={deleting}
-      />
-
-      {/* Modal: Añadir Filtro */}
-      <AddFilterModal
-        isOpen={isAddFilterModalOpen}
-        onClose={() => setIsAddFilterModalOpen(false)}
-        onApplyFilter={handleApplyFilter}
-        regions={regions}
-        districts={districts}
-        groups={groups}
-        recognitionTypes={recognitionTypes}
       />
 
       {/* Modal: Fusionar Lotes */}

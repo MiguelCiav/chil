@@ -70,6 +70,24 @@ describe('HierarchyFilterSelects component', () => {
     expect(groupSelect).toContainHTML('Grupo 1');
     expect(groupSelect).toContainHTML('Grupo Sin Distrito');
 
+    // Shows all districts and groups even when regionId and districtId are unset
+    rerender(
+      <HierarchyFilterSelects
+        regions={regions}
+        districts={districts}
+        groups={groups}
+        regionId=""
+        districtId=""
+        groupId=""
+        showGroup={true}
+        onRegionChange={vi.fn()}
+        onDistrictChange={vi.fn()}
+        onGroupChange={onGroupChange}
+      />
+    );
+    expect(screen.getByLabelText('Filtrar por distrito')).toContainHTML('Chacao');
+    expect(screen.getByLabelText('Filtrar por grupo')).toContainHTML('Grupo 1');
+
     rerender(
       <HierarchyFilterSelects
         regions={regions}
@@ -87,5 +105,32 @@ describe('HierarchyFilterSelects component', () => {
 
     expect(screen.getByLabelText('Filtrar por distrito')).toBeDisabled();
     expect(screen.getByLabelText('Filtrar por grupo')).toBeDisabled();
+  });
+
+  it('includes no_scout in group selector when includeNoScoutInGroup is enabled', () => {
+    const onGroupChange = vi.fn();
+    render(
+      <HierarchyFilterSelects
+        regions={regions}
+        districts={districts}
+        groups={groups}
+        regionId="0"
+        districtId="0"
+        groupId=""
+        showGroup={true}
+        includeNoAplicaAlways={true}
+        includeNoScoutInGroup={true}
+        onRegionChange={vi.fn()}
+        onDistrictChange={vi.fn()}
+        onGroupChange={onGroupChange}
+      />
+    );
+
+    const groupSelect = screen.getByLabelText('Filtrar por grupo');
+    expect(groupSelect).not.toBeDisabled();
+    expect(screen.getByRole('option', { name: 'No scout' })).toBeInTheDocument();
+
+    fireEvent.change(groupSelect, { target: { value: 'no_scout' } });
+    expect(onGroupChange).toHaveBeenCalledWith('no_scout');
   });
 });

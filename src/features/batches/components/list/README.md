@@ -1,23 +1,21 @@
 # Batch List Components
 
 ## Overview
-Table columns, filter matching/formatting utilities, tour steps, and modals (`AddFilterModal`, `MergeBatchesModal`) used by `BatchList` to browse, filter, and merge recognition batches (with `DeleteBatchModal` imported from `../shared`).
+Table columns, inline filter matching/formatting utilities, tour steps, and `MergeBatchesModal` used by `BatchList` to browse, filter, and merge recognition batches (with `DeleteBatchModal` imported from `../shared`).
 
 ## Interface
-- `index.ts: *` (re-exports `./types`, `./batchListTour`, `./batchListFilters`, `./batchListColumns`, `./AddFilterModal`, `./MergeBatchesModal`)
-- `types.ts:FilterType`, `types.ts:DateFilterMode`, `types.ts:PredefinedPeriod`, `types.ts:BatchRowData`, `types.ts:BatchActionsCellProps`, `types.ts:BatchListColumnsParams`
+- `index.ts: *` (re-exports `./types`, `./batchListTour`, `./batchListFilters`, `./batchListColumns`, `./MergeBatchesModal`)
+- `types.ts:BatchRowData`, `types.ts:BatchActionsCellProps`, `types.ts:BatchListColumnsParams`
 - `batchListTour.ts:BATCH_LIST_TOUR_STEPS`
-- `batchListFilters.ts:formatBatchDate`, `batchListFilters.ts:formatDateToDisplay`, `batchListFilters.ts:matchesPredefinedPeriod`, `batchListFilters.ts:matchesDateRange`, `batchListFilters.ts:matchesSpecificDate`, `batchListFilters.ts:matchesDateFilter`, `batchListFilters.ts:matchesRegionFilter`, `batchListFilters.ts:matchesDistrictFilter`, `batchListFilters.ts:matchesGroupFilter`, `batchListFilters.ts:matchesCompletenessFilter`, `batchListFilters.ts:matchesRecognitionFilter`, `batchListFilters.ts:matchesSingleFilter`, `batchListFilters.ts:matchesActiveFilters`, `batchListFilters.ts:getFilterLabelAndValue`, `batchListFilters.ts:isApplyFilterDisabled`
+- `batchListFilters.ts:DatePeriodFilter`, `batchListFilters.ts:BatchListFilterValues`, `batchListFilters.ts:INITIAL_BATCH_LIST_FILTER_VALUES`, `batchListFilters.ts:hasActiveBatchListFilters`, `batchListFilters.ts:formatBatchDate`, `batchListFilters.ts:matchesRegionFilter`, `batchListFilters.ts:matchesDistrictFilter`, `batchListFilters.ts:matchesGroupFilter`, `batchListFilters.ts:matchesCompletenessFilter`, `batchListFilters.ts:matchesRecognitionFilter`, `batchListFilters.ts:matchesBatchSearchTerm`, `batchListFilters.ts:matchesBatchListFilters`, `batchListFilters.ts:getFilteredBatchRows`
 - `batchListColumns.tsx:renderBatchDateCell`, `batchListColumns.tsx:renderTerritorialTokensCell`, `batchListColumns.tsx:renderBatchRegionCell`, `batchListColumns.tsx:renderBatchDistrictCell`, `batchListColumns.tsx:renderBatchGroupCell`, `batchListColumns.tsx:renderBatchCompletenessCell`, `batchListColumns.tsx:renderBatchRecognitionCell`, `batchListColumns.tsx:renderBatchMembersCell`, `batchListColumns.tsx:renderBatchActionsCell`, `batchListColumns.tsx:createBatchListColumns`
-- `AddFilterModal.tsx:AddFilterModal`, `AddFilterModal.tsx:AddFilterModalProps`
 - `MergeBatchesModal.tsx:MergeBatchesModal`, `MergeBatchesModal.tsx:MergeBatchesModalProps`, `MergeBatchesModal.tsx:BatchMergeOption`, `MergeBatchesModal.tsx:default` (`export default MergeBatchesModal`)
 
 ## Invariants
 - `types.ts:BatchRowData` includes `eligibleCount` (number of `'active'` or `'exceptional'` members in the batch) alongside `memberCount`, `pendingCount`, and territorial token projections.
 - `batchListColumns.tsx:renderTerritorialTokensCell` renders up to 3 territorial pills per cell and a `+N` overflow badge (`title` listing hidden token labels) when `tokens.length > 3`.
 - `batchListColumns.tsx:renderBatchActionsCell` disables `"Descargar reconocimientos (ZIP)"` when `downloadingId === rowData.id || rowData.eligibleCount === 0`.
-- `batchListFilters.ts:matchesActiveFilters` requires every active filter chip in `activeFilters` to match (`every`), matching territorial filters by canonical token `key` (`id:<n>`, `'nacional'`, `'0'`, `'no_scout'`) via `filter.filterValue ?? filter.value`.
-- `AddFilterModal.tsx:AddFilterModal` uses `<Select>` and `<Field>` primitives, excludes `id === 0` and `isNoAplicaDistrict` entries from base hierarchy loops, injects synthetic territorial options (`'nacional'`, `'0'`, `'no_scout'`), emits canonical token keys in `ActiveFilterChip.filterValue`, supports `'completeness'` (`'complete' | 'pending' | 'empty'`), and clears `filterValue` and date subfields (preserving `filterType`) when closed or after applying a filter via `handleResetAndClose`.
+- `batchListFilters.ts:matchesBatchListFilters` evaluates search text, recognition, territorial filters (`toTerritorialTokenKey` normalizing numeric IDs to `'id:<n>'` alongside `'nacional'`, `'0'`, `'no_scout'`), completeness, and date ranges (`matchesDateRange` from `src/utils/datePeriod.ts`).
 - `MergeBatchesModal.tsx:MergeBatchesModal` uses `<ErrorAlert variant="compact">` and `<Field multiline>` primitives, computes its consolidated group preview via `consolidateMergedGroupTokens`, prevents submission and disables the merge button when `selectedBatches.length < 2` or `merging` is true, and blocks closing the modal while `merging` is true.
 
 ## Side Effects

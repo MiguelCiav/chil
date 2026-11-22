@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import { StatisticsDataset } from '../types';
 
 export interface FilterSummaryLabels {
+  searchLabel?: string;
   periodLabel?: string;
   regionLabel?: string;
   districtLabel?: string;
@@ -230,6 +231,7 @@ export function checkPageBreak(doc: jsPDF, currentY: number, requiredSpace: numb
 
 function drawFilterSummaryBox(doc: jsPDF, filterSummary: FilterSummaryLabels, y: number): number {
   const filterParts: string[] = [];
+  if (filterSummary.searchLabel) filterParts.push(`Búsqueda: ${filterSummary.searchLabel}`);
   if (filterSummary.periodLabel) filterParts.push(`Período: ${filterSummary.periodLabel}`);
   if (filterSummary.recognitionLabel) filterParts.push(`Reconocimiento: ${filterSummary.recognitionLabel}`);
   if (filterSummary.regionLabel) filterParts.push(`Región: ${filterSummary.regionLabel}`);

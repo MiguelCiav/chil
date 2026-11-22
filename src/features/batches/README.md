@@ -13,7 +13,7 @@ The `batches` feature subsystem manages the full lifecycle of recognition batche
 - **API**: [`./api/README.md`](./api/README.md) - Firestore CRUD for batches and members, Scout hierarchy seeding/fetching, recognition metadata lookups, CSV/PDF batch reporting, and Scout registry scraper integration.
 - **Components**: [`./components/README.md`](./components/README.md) - Top-level workflow and page views (`BatchList`, `BatchDetail`, `NewBatchWizard`) and their nested subcomponents (`./components/detail/README.md`, `./components/list/README.md`, `./components/shared/README.md`, `./components/wizard/README.md`).
 - **Hooks**: [`./hooks/README.md`](./hooks/README.md) - `useCertificateZipDownload` (shared certificate ZIP progress, `AbortController` cancellation, and concurrency lock).
-- **Types**: [`./types/README.md`](./types/README.md) - Feature-level TypeScript type re-exports and `ActiveFilterChip` definition (including `filterValue` and `'completeness'`).
+- **Types**: [`./types/README.md`](./types/README.md) - Feature-level TypeScript type re-exports.
 - **Utils**: [`./utils/README.md`](./utils/README.md) - Pure helpers for recognition code generation, Scout hierarchy matching/classification, full-name splitting, age/scope-based unit inference, and read-time multi-territory batch projection and breakdown (`batchTerritorial.ts`).
 - **Shared Cross-Feature Resolver (`../../utils/memberHierarchy.ts`)**: Canonical member-first hierarchy resolver (`resolveMemberHierarchy`, `isNoAplicaDistrict`) shared across `batches`, `summary`, and `statistics`.
 
