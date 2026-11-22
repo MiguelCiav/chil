@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Save, Upload, Eye, Edit3, Undo2, Redo2, Magnet } from 'lucide-react';
-import { Button } from '../../../../components/Button';
-import { WalkthroughHelpButton } from '../../../../components/walkthrough';
+import { Card, CardBody, Button, WalkthroughHelpButton } from '../../../../components';
 
 export interface DesignerHeaderProps {
   recognitionName: string;
@@ -47,10 +46,11 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
   onStartTour
 }) => {
   return (
-    <div
-      data-walkthrough="designer-header"
-      className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-primary/20 rounded-2xl p-4 sm:p-5"
-    >
+    <Card data-walkthrough="designer-header">
+      <CardBody
+        padding="sm"
+        className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:p-5"
+      >
       <div className="flex items-center gap-3">
         <Button
           type="button"
@@ -116,7 +116,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
             className={`inline-flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
               isSnapEnabled
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                : 'bg-gray-100 text-neutral/70 border-gray-200 hover:bg-gray-200/70'
+                : 'bg-gray-100 text-neutral/75 border-gray-200 hover:bg-gray-200/70'
             }`}
           >
             <Magnet className="w-4 h-4" />
@@ -137,7 +137,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
             className={`p-2 rounded-lg text-xs font-semibold transition-all ${
               !isPreviewMode
                 ? 'bg-white text-neutral font-bold'
-                : 'text-neutral/60 hover:text-neutral'
+                : 'text-neutral/75 hover:text-neutral'
             }`}
           >
             <Edit3 className="w-4 h-4" />
@@ -150,7 +150,7 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
             className={`p-2 rounded-lg text-xs font-semibold transition-all ${
               isPreviewMode
                 ? 'bg-white text-primary font-bold'
-                : 'text-neutral/60 hover:text-neutral'
+                : 'text-neutral/75 hover:text-neutral'
             }`}
           >
             <Eye className="w-4 h-4" />
@@ -183,7 +183,8 @@ export const DesignerHeader: React.FC<DesignerHeaderProps> = ({
           {isSaving ? 'Guardando...' : 'Guardar Plantilla'}
         </Button>
       </div>
-    </div>
+      </CardBody>
+    </Card>
   );
 };
 

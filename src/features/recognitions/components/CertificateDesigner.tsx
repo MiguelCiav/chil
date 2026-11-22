@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { Button } from '../../../components/Button';
-import { Toast } from '../../../components/Toast';
+import { Toast, ErrorAlert } from '../../../components';
 import {
   WalkthroughOverlay,
   useWalkthrough,
@@ -485,30 +483,25 @@ export const CertificateDesigner: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto py-12 flex flex-col items-center justify-center gap-3">
+      <div
+        role="status"
+        className="max-w-7xl mx-auto py-12 flex flex-col items-center justify-center gap-3"
+      >
         <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-semibold text-neutral/70">Cargando diseñador de plantilla...</p>
+        <p className="text-sm font-semibold text-neutral/75">Cargando diseñador de plantilla...</p>
       </div>
     );
   }
 
   if (!recognition) {
     return (
-      <div className="max-w-3xl mx-auto py-12 text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-        <h2 className="text-xl font-bold text-neutral">Reconocimiento no encontrado</h2>
-        <p className="text-sm text-neutral/60">
-          El tipo de reconocimiento solicitado no existe o fue eliminado.
-        </p>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() => navigate('/reconocimientos')}
-          icon={<ArrowLeft size={16} />}
-        >
-          Volver al Catálogo
-        </Button>
-      </div>
+      <ErrorAlert
+        variant="centered"
+        title="Reconocimiento no encontrado"
+        message="El tipo de reconocimiento solicitado no existe o fue eliminado."
+        retryLabel="Volver al Catálogo"
+        onRetry={() => navigate('/reconocimientos')}
+      />
     );
   }
 

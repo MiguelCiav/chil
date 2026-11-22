@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { GitMerge, Calendar, Users, Award, AlertCircle, MapPin } from 'lucide-react';
+import { GitMerge, Calendar, Users, Award, MapPin } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
+import { ErrorAlert } from '../../../../components/ErrorAlert';
+import { Field } from '../../../../components/Field';
 import { mergeBatches } from '../../api';
 import { Batch } from '../../types';
 import {
@@ -101,15 +103,10 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
         </ModalHeader>
 
         <ModalBody className="space-y-4">
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 text-xs font-semibold rounded-xl border border-red-200">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+          {error && <ErrorAlert variant="compact" message={error} />}
 
           {/* Description */}
-          <p className="text-xs text-neutral/70">
+          <p className="text-xs text-neutral/75">
             Se consolidarán los registros de los <strong className="text-neutral">{selectedBatches.length}</strong> lotes seleccionados en un único nuevo lote. Los lotes originales serán reemplazados y los miembros reasignados conservando sus datos de grupo.
           </p>
 
@@ -125,22 +122,22 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-neutral">Lote #{b.id}</span>
                       {b.batch.comment && (
-                        <span className="text-neutral/60 italic truncate max-w-[180px]">
+                        <span className="text-neutral/75 italic truncate max-w-[180px]">
                           &ldquo;{b.batch.comment}&rdquo;
                         </span>
                       )}
                     </div>
-                    <div className="text-neutral/60 flex items-center gap-2">
+                    <div className="text-neutral/75 flex items-center gap-2">
                       <span>{b.groupName}</span>
                       <span>•</span>
                       <span>{b.formattedDate}</span>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 space-y-0.5">
-                    <span className="inline-block px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-[11px]">
+                    <span className="inline-block px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold text-xs">
                       {b.memberCount} {b.memberCount === 1 ? 'miembro' : 'miembros'}
                     </span>
-                    <div className="text-[11px] text-neutral/50 truncate max-w-[120px]">
+                    <div className="text-xs text-neutral/75 truncate max-w-[120px]">
                       {b.recognitionName}
                     </div>
                   </div>
@@ -156,21 +153,21 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1 text-neutral/60 text-[11px]">
+                <div className="flex items-center gap-1 text-neutral/75 text-xs">
                   <Calendar className="w-3.5 h-3.5 text-primary" />
                   <span>Fecha (más reciente)</span>
                 </div>
                 <div className="font-bold text-neutral">{latestFormattedDate}</div>
               </div>
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1 text-neutral/60 text-[11px]">
+                <div className="flex items-center gap-1 text-neutral/75 text-xs">
                   <Users className="w-3.5 h-3.5 text-primary" />
                   <span>Total miembros</span>
                 </div>
                 <div className="font-bold text-neutral">{totalCombinedMembers} miembros</div>
               </div>
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1 text-neutral/60 text-[11px]">
+                <div className="flex items-center gap-1 text-neutral/75 text-xs">
                   <MapPin className="w-3.5 h-3.5 text-primary" />
                   <span>Grupo</span>
                 </div>
@@ -179,7 +176,7 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
                 </div>
               </div>
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1 text-neutral/60 text-[11px]">
+                <div className="flex items-center gap-1 text-neutral/75 text-xs">
                   <Award className="w-3.5 h-3.5 text-primary" />
                   <span>Reconocimiento</span>
                 </div>
@@ -192,19 +189,17 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
 
           {/* New Comment Field */}
           <div>
-            <label htmlFor="merged-comment-input" className="block uppercase text-xs font-bold mb-1.5 tracking-wide text-neutral">
-              Nuevo comentario para el lote fusionado
-            </label>
-            <textarea
+            <Field
               id="merged-comment-input"
+              label="Nuevo comentario para el lote fusionado"
+              multiline
               rows={3}
               value={newComment}
               onChange={e => setNewComment(e.target.value)}
               placeholder="Ej.: Lote fusionado correspondiente a las actividades conjuntas de distrito..."
-              className="w-full rounded-field px-3 py-2 bg-white border border-primary/20 text-neutral text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-neutral/40"
               disabled={merging}
             />
-            <p className="text-[11px] text-neutral/50 mt-1">
+            <p className="text-xs text-neutral/75 mt-1">
               Opcional. Este comentario identificará al nuevo lote consolidado.
             </p>
           </div>

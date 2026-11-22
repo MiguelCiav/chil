@@ -7,3 +7,6 @@ export * from './components/RegisterPage';
 export * from './components/ForgotPasswordModal';
 export * from './components/ProtectedRoute';
 export * from './components/UserProfileMenu';
+export * from './components/AuthLayout';
+export * from './components/PasswordField';
+export * from './components/SessionLoadingState';

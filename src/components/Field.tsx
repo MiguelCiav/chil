@@ -1,33 +1,49 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { AlertCircle } from 'lucide-react';
 
-type FieldVariant = 'default' | 'error' | 'success';
+export type FieldVariant = 'default' | 'error' | 'success';
+export type FieldSize = 'md' | 'sm';
 
-interface FieldProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLTextAreaElement> {
+export interface FieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement | HTMLTextAreaElement>, 'size'> {
   label: string;
   multiline?: boolean;
   rows?: number;
   variant?: FieldVariant;
+  size?: FieldSize;
   errorText?: string;
 }
+
+const FIELD_SIZES: Record<FieldSize, { control: string; label: string }> = {
+  md: {
+    control: 'py-2.5 px-4 text-sm rounded-field',
+    label: 'text-sm mb-2'
+  },
+  sm: {
+    control: 'py-2 px-3 text-xs rounded-lg',
+    label: 'text-xs mb-1.5'
+  }
+};
 
 export const Field = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, FieldProps>(({
   label,
   multiline = false,
   rows = 4,
   variant = 'default',
+  size = 'md',
   errorText,
   className = '',
   id,
   disabled,
   ...props
 }, ref) => {
-  const fieldId = id || `field-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  const reactUseId = useId();
+  const fieldId = id ?? reactUseId;
   const hasError = variant === 'error';
   const errorId = hasError && errorText ? `${fieldId}-error` : undefined;
+  const sizeTokens = FIELD_SIZES[size];
   
   // Base styles
-  const baseStyles = "w-full rounded-field py-2.5 px-4 transition-all resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:border-transparent";
+  const baseStyles = "w-full transition-all resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:border-transparent";
   
   // Variant styles
   const variants: Record<FieldVariant, string> = {
@@ -40,6 +56,7 @@ export const Field = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, Fi
 
   const classes = [
     baseStyles,
+    sizeTokens.control,
     variants[variant],
     disabledStyles,
     className
@@ -49,7 +66,7 @@ export const Field = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, Fi
     <div className="w-full">
       <label
         htmlFor={fieldId}
-        className={`block text-sm font-semibold mb-2 ${hasError ? 'text-red-700' : 'text-neutral'}`}
+        className={`block font-semibold ${sizeTokens.label} ${hasError ? 'text-red-700' : 'text-neutral'}`}
       >
         {label}
       </label>

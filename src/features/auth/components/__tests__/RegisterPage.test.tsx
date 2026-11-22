@@ -33,7 +33,7 @@ describe('RegisterPage component', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: 'Crear una Cuenta' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Crear una Cuenta' })).toBeInTheDocument();
     expect(screen.getByLabelText(/Nombre y Apellido/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Correo Electrónico/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Contraseña$/i)).toBeInTheDocument();
@@ -151,7 +151,9 @@ describe('RegisterPage component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Crear Cuenta' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Ya existe una cuenta registrada con este correo electrónico.')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Ya existe una cuenta registrada con este correo electrónico.'
+      );
     });
   });
 

@@ -1,7 +1,5 @@
 export * from './Step1DataLoad';
 export * from './Step2ReviewConfirm';
-export * from './Step2Verification';
-export * from './Step3Review';
 export * from './WizardStepper';
 export * from './ScraperAlertModals';
 export * from './wizardTour';

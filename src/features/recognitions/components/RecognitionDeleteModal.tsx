@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
-import { Button } from '../../../components/Button';
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  ErrorAlert
+} from '../../../components';
 import { RecognitionType } from '../types';
 import { deleteRecognitionType } from '../api';
 
@@ -44,11 +50,7 @@ export const RecognitionDeleteModal: React.FC<RecognitionDeleteModalProps> = ({
         Eliminar Tipo de Reconocimiento
       </ModalHeader>
       <ModalBody className="space-y-4">
-        {errorMsg && (
-          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
-            {errorMsg}
-          </div>
-        )}
+        {errorMsg && <ErrorAlert variant="compact" message={errorMsg} />}
 
         <div className="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-200 text-red-800">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-600 mt-0.5" />
@@ -71,9 +73,9 @@ export const RecognitionDeleteModal: React.FC<RecognitionDeleteModalProps> = ({
         </Button>
         <Button
           type="button"
+          variant="destructive"
           onClick={handleDelete}
           disabled={loading}
-          className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
         >
           {loading ? 'Eliminando...' : 'Eliminar Reconocimiento'}
         </Button>

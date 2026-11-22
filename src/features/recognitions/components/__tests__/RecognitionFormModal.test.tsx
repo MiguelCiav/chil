@@ -250,4 +250,44 @@ describe('RecognitionFormModal Component', () => {
       'Insignia de Madera'
     );
   });
+
+  it('guards modal close while submission is loading', async () => {
+    let resolveCreate!: (value: RecognitionType) => void;
+    vi.mocked(api.createRecognitionType).mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveCreate = resolve;
+      })
+    );
+    const handleClose = vi.fn();
+
+    render(
+      <RecognitionFormModal
+        isOpen={true}
+        onClose={handleClose}
+        onSuccess={vi.fn()}
+      />
+    );
+
+    const input = screen.getByPlaceholderText(/Ej\. Medalla al Mérito Scout/i);
+    fireEvent.change(input, { target: { value: 'Medalla Test' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Crear Reconocimiento$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Guardando...' })).toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Cerrar modal/i }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(handleClose).not.toHaveBeenCalled();
+
+    resolveCreate({
+      id: 'medalla-test',
+      name: 'Medalla Test',
+      created_at: '2026-08-22T00:00:00.000Z'
+    });
+
+    await waitFor(() => {
+      expect(handleClose).toHaveBeenCalledTimes(1);
+    });
+  });
 });

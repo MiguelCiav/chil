@@ -107,7 +107,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ isCollapsed = 
           )}
         </div>
         {!isCollapsed && (
-          <ChevronDown className="w-3.5 h-3.5 text-neutral/50 transition-transform duration-200 shrink-0" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }} />
+          <ChevronDown className="w-3.5 h-3.5 text-neutral/75 transition-transform duration-200 shrink-0" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }} />
         )}
       </button>
 
@@ -127,7 +127,7 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ isCollapsed = 
                 <p className="text-xs font-bold text-neutral truncate">
                   {displayName}
                 </p>
-                <p className="text-[11px] text-neutral/60 truncate font-mono">
+                <p className="text-xs text-neutral/75 truncate font-mono">
                   {email}
                 </p>
               </div>
@@ -139,10 +139,10 @@ export const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ isCollapsed = 
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors font-semibold text-left"
+              className="w-full px-4 py-2.5 text-xs text-red-700 hover:bg-red-50 flex items-center gap-2.5 transition-colors font-semibold text-left"
               role="menuitem"
             >
-              <LogOut className="w-4 h-4 text-red-500" />
+              <LogOut className="w-4 h-4 text-red-700" />
               <span>Cerrar Sesión</span>
             </button>
           </div>

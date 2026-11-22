@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Toast } from '../../../components/Toast';
 
@@ -61,6 +61,26 @@ export const NewBatchWizard: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerWarningToast = (msg: string) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastMessage(msg);
+    setShowToast(true);
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+    }, 4000);
+  };
 
   // Step 2 State
   const [membersList, setMembersList] = useState<ScoutMember[]>([]);
@@ -166,9 +186,7 @@ export const NewBatchWizard: React.FC = () => {
               await saveUnregisteredMemberToDb(cedula, 'young', 'tropa', currentBatch.id, user?.uid);
             } else {
               await saveUnregisteredMemberToDb(cedula, 'young', 'tropa', currentBatch.id, user?.uid);
-              setToastMessage(`Error de red al verificar la cédula ${cedula}`);
-              setShowToast(true);
-              setTimeout(() => setShowToast(false), 4000);
+              triggerWarningToast(`Error de red al verificar la cédula ${cedula}`);
             }
           } finally {
             setVerifyProgress((prev) => ({ ...prev, current: prev.current + 1 }));
@@ -212,7 +230,13 @@ export const NewBatchWizard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
       {/* Toast Notification */}
-      {showToast && <Toast message={toastMessage} variant="warning" />}
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          variant="warning"
+          onDismiss={() => setShowToast(false)}
+        />
+      )}
 
       {/* Header */}
       <div
@@ -226,7 +250,7 @@ export const NewBatchWizard: React.FC = () => {
             </h1>
             <WalkthroughHelpButton onClick={() => startTour()} />
           </div>
-          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+          <p className="text-xs sm:text-sm text-neutral/75 mt-1">
             Ingresa las cédulas, verifica el registro automáticamente y genera reconocimientos oficiales.
           </p>
         </div>

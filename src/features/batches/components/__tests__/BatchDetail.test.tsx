@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { BatchDetail } from '../BatchDetail';
@@ -833,8 +833,9 @@ describe('BatchDetail component', () => {
       expect(screen.getByText('Ficha del Miembro Scout')).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('● Registro Inválido')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText('Registro Inválido')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^Cerrar$/i }));
 
@@ -966,7 +967,7 @@ describe('BatchDetail component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Ficha del Miembro Scout')).toBeInTheDocument();
-      expect(screen.getByText('● Emisión Excepcional')).toBeInTheDocument();
+      expect(within(screen.getByRole('dialog')).getByText('Emisión Excepcional')).toBeInTheDocument();
     });
   });
 

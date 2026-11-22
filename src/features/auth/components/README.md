@@ -4,12 +4,18 @@
 Authentication UI components implementing login, registration, password reset modal, route protection, and the authenticated user profile dropdown menu, integrated with `useAuth`, `react-hook-form` + Zod schemas, and `react-router-dom`.
 
 ## Interface
+- `AuthLayout.tsx:AuthLayoutProps`: Props interface `{ title: string; subtitle: string; footerPrompt: string; footerLinkLabel: string; footerLinkTo: string; children: React.ReactNode }`.
+- `AuthLayout.tsx:AuthLayout`: `React.FC<AuthLayoutProps>` rendering the shared centered `<Card>` + `<h1>` header + footer link wrapper for public auth routes.
 - `ForgotPasswordModal.tsx:ForgotPasswordModalProps`: Props interface `{ isOpen: boolean; onClose: () => void; defaultEmail?: string }` for `ForgotPasswordModal`.
 - `ForgotPasswordModal.tsx:ForgotPasswordModal`: `React.FC<ForgotPasswordModalProps>` rendering the password recovery modal.
-- `LoginPage.tsx:LoginPage`: `React.FC` rendering the sign-in page.
+- `LoginPage.tsx:LoginPage`: `React.FC` rendering the sign-in page via `AuthLayout`, `Field`, `PasswordField`, and `ErrorAlert`.
+- `PasswordField.tsx:PasswordFieldProps`: Props interface extending `Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>` (`label`, `labelAction?`, `errorText?`, `showToggleLabel?`, `hideToggleLabel?`).
+- `PasswordField.tsx:PasswordField`: `React.forwardRef<HTMLInputElement, PasswordFieldProps>` rendering canonical `Field` tokens with visibility toggle and `role="alert"` error text.
 - `ProtectedRoute.tsx:ProtectedRouteProps`: Props interface `{ children?: ReactNode }` for `ProtectedRoute`.
 - `ProtectedRoute.tsx:ProtectedRoute`: `React.FC<ProtectedRouteProps>` guarding authenticated routes.
-- `RegisterPage.tsx:RegisterPage`: `React.FC` rendering the account registration page.
+- `RegisterPage.tsx:RegisterPage`: `React.FC` rendering the account registration page via `AuthLayout`, `Field`, `PasswordField`, and `ErrorAlert`.
+- `SessionLoadingState.tsx:SessionLoadingStateProps`: Props interface `{ label?: string }` (`label` defaults to `'Cargando sesión'`).
+- `SessionLoadingState.tsx:SessionLoadingState`: `React.FC<SessionLoadingStateProps>` rendering the `<output aria-live="polite">` loading spinner shared by `ProtectedRoute` and `App.tsx`.
 - `UserProfileMenu.tsx:UserProfileMenuProps`: Props interface `{ isCollapsed?: boolean }` for `UserProfileMenu`.
 - `UserProfileMenu.tsx:UserProfileMenu`: `React.FC<UserProfileMenuProps>` rendering the user avatar/initials trigger and logout dropdown.
 

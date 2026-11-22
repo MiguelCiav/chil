@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
-import { Button } from '../../../components/Button';
-import { Field } from '../../../components/Field';
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Field,
+  ErrorAlert
+} from '../../../components';
 import {
   RecognitionType,
   RecognitionFormData,
@@ -30,6 +36,8 @@ function getSubmitButtonText(loading: boolean, isEdit: boolean): string {
 interface RecognitionFormContentProps {
   onClose: () => void;
   recognition?: RecognitionType | null;
+  loading: boolean;
+  onLoadingChange: (loading: boolean) => void;
   onSuccess?: (saved: RecognitionType, isEdit?: boolean) => void;
   onCreateSuccess?: (saved: RecognitionType) => void;
   onEditSuccess?: (saved: RecognitionType) => void;
@@ -38,13 +46,14 @@ interface RecognitionFormContentProps {
 const RecognitionFormContent: React.FC<RecognitionFormContentProps> = ({
   onClose,
   recognition,
+  loading,
+  onLoadingChange,
   onSuccess,
   onCreateSuccess,
   onEditSuccess
 }) => {
   const { user } = useAuth();
   const isEdit = Boolean(recognition);
-  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const {
@@ -68,7 +77,7 @@ const RecognitionFormContent: React.FC<RecognitionFormContentProps> = ({
   };
 
   const onSubmit = async (data: RecognitionFormData) => {
-    setLoading(true);
+    onLoadingChange(true);
     setErrorMsg(null);
     try {
       if (recognition) {
@@ -97,7 +106,7 @@ const RecognitionFormContent: React.FC<RecognitionFormContentProps> = ({
       console.error('Error saving recognition type:', err);
       setErrorMsg('Ocurrió un error al guardar el reconocimiento. Intente nuevamente.');
     } finally {
-      setLoading(false);
+      onLoadingChange(false);
     }
   };
 
@@ -111,14 +120,7 @@ const RecognitionFormContent: React.FC<RecognitionFormContentProps> = ({
         {isEdit ? 'Editar Tipo de Reconocimiento' : 'Nuevo Tipo de Reconocimiento'}
       </ModalHeader>
       <ModalBody className="space-y-4">
-        {errorMsg && (
-          <div
-            role="alert"
-            className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200"
-          >
-            {errorMsg}
-          </div>
-        )}
+        {errorMsg && <ErrorAlert variant="compact" message={errorMsg} />}
 
         {/* Nombre Field */}
         <div>
@@ -162,14 +164,17 @@ export const RecognitionFormModal: React.FC<RecognitionFormModalProps> = ({
   onCreateSuccess,
   onEditSuccess
 }) => {
+  const [loading, setLoading] = useState(false);
   const formKey = `${isOpen ? 'open' : 'closed'}-${recognition?.id ?? 'create'}-${recognition?.name ?? ''}`;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-lg">
+    <Modal isOpen={isOpen} onClose={() => !loading && onClose()} className="max-w-lg">
       <RecognitionFormContent
         key={formKey}
         onClose={onClose}
         recognition={recognition}
+        loading={loading}
+        onLoadingChange={setLoading}
         onSuccess={onSuccess}
         onCreateSuccess={onCreateSuccess}
         onEditSuccess={onEditSuccess}

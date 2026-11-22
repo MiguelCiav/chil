@@ -1,85 +1,29 @@
-import React from 'react';
-import { ColumnDef, CellContext } from '@tanstack/react-table';
+import { ColumnDef } from '@tanstack/react-table';
 import { Award, Edit2, Eye, MoreVertical } from 'lucide-react';
 import {
   Batch,
   ScoutMember,
-  ScoutGroup,
-  MemberStatus,
-  ScoutUnit,
-  getUnitBadge
+  ScoutGroup
 } from '../../types';
 import { resolveMemberHierarchy } from '../../../../utils/memberHierarchy';
+import {
+  renderMemberIdentityCell,
+  renderMemberNameCell,
+  renderMemberUnitCell,
+  renderMemberTypeCell,
+  renderMemberStatusCell,
+  renderMemberCodeCell
+} from '../shared/memberColumns';
 import { MemberActionsCellProps } from './types';
 
-export function renderMemberIdentityCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  return (
-    <span className="font-mono text-xs sm:text-sm text-neutral/80">
-      {info.getValue() as string}
-    </span>
-  );
-}
-
-export function renderMemberNameCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const rowData = info.row.original;
-  return (
-    <span className="font-bold text-neutral">
-      {rowData.first_names} {rowData.last_names}
-    </span>
-  );
-}
-
-export function renderMemberUnitCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const unit = info.getValue() as ScoutUnit | undefined;
-  const badge = getUnitBadge(unit);
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.badgeClass}`}
-    >
-      {badge.label}
-    </span>
-  );
-}
-
-export function renderMemberTypeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const val = info.getValue() as 'young' | 'adult';
-  return (
-    <span className="text-neutral/70 font-medium text-sm">
-      {val === 'young' ? 'Joven' : 'Adulto'}
-    </span>
-  );
-}
-
-export function renderMemberStatusCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const val = info.getValue() as MemberStatus;
-  if (val === 'active') {
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
-        <span>Registro Válido</span>
-      </span>
-    );
-  }
-  if (val === 'exceptional') {
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
-        <span>Emisión Excepcional</span>
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
-      <span>Registro Inválido</span>
-    </span>
-  );
-}
-
-export function renderMemberCodeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const code = (info.getValue() as string) || '-';
-  return <span className="font-mono text-xs sm:text-sm text-neutral/70">{code}</span>;
-}
+export {
+  renderMemberIdentityCell,
+  renderMemberNameCell,
+  renderMemberUnitCell,
+  renderMemberTypeCell,
+  renderMemberStatusCell,
+  renderMemberCodeCell
+};
 
 export function renderMemberActionsCell(props: MemberActionsCellProps) {
   const {
@@ -108,7 +52,7 @@ export function renderMemberActionsCell(props: MemberActionsCellProps) {
       <button
         type="button"
         onClick={() => setViewingMember(rowData)}
-        className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+        className="p-1.5 text-neutral/75 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
         title="Ver detalle del miembro"
         aria-label={`Ver detalle de ${rowData.first_names} ${rowData.last_names}`}
       >
@@ -120,7 +64,7 @@ export function renderMemberActionsCell(props: MemberActionsCellProps) {
         <button
           type="button"
           onClick={() => setActiveMenuMemberId(isMenuOpen ? null : menuKey)}
-          className="p-1.5 text-neutral/60 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
+          className="p-1.5 text-neutral/75 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors focus:outline-none"
           aria-label={`Opciones de ${rowData.first_names} ${rowData.last_names}`}
         >
           <MoreVertical className="w-4 h-4" />
@@ -192,7 +136,7 @@ export function createBatchDetailColumns(
           groups
         }).groupId;
         if (groupId === 0) {
-          return <span className="text-xs sm:text-sm text-neutral/50 font-medium">No aplica</span>;
+          return <span className="text-xs sm:text-sm text-neutral/75 font-medium">No aplica</span>;
         }
         const found = groups.find((g) => g.id === groupId);
         return (

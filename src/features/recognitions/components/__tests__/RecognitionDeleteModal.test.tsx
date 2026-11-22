@@ -90,7 +90,10 @@ describe('RecognitionDeleteModal Component', () => {
 
     await waitFor(() => {
       expect(api.deleteRecognitionType).toHaveBeenCalledWith('sct-wood-badge');
-      expect(screen.getByText(/Ocurrió un error al eliminar el reconocimiento/i)).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /Ocurrió un error al eliminar el reconocimiento/i
+      );
+      expect(deleteBtn).toHaveClass('bg-red-700');
       expect(handleSuccess).not.toHaveBeenCalled();
       expect(handleClose).not.toHaveBeenCalled();
     });

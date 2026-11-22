@@ -3,18 +3,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from '../Sidebar';
 import { ScraperSettingsModal } from '../ScraperSettingsModal';
-import { ScraperSettingsProvider } from '../../../context/ScraperSettingsContext';
-import * as api from '../../../features/batches/api';
-import * as authFeature from '../../../features/auth';
+import { ScraperSettingsProvider } from '../../../../context/ScraperSettingsContext';
+import * as api from '../../../../features/batches/api';
+import * as authFeature from '../../../../features/auth';
 
-vi.mock('../../../features/batches/api', () => ({
+vi.mock('../../../../features/batches/api', () => ({
   getScraperSessionStatus: vi.fn(),
   saveScraperSession: vi.fn(),
   clearScraperSession: vi.fn(),
   purgeLegacyScraperStorage: vi.fn()
 }));
 
-vi.mock('../../../features/auth', () => ({
+vi.mock('../../../../features/auth', () => ({
   useAuth: vi.fn(),
   UserProfileMenu: () => <div data-testid="user-profile-menu">User Profile Menu</div>
 }));

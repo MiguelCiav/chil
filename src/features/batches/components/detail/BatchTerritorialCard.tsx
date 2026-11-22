@@ -139,7 +139,7 @@ export const BatchTerritorialCard: React.FC<BatchTerritorialCardProps> = ({ brea
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             {noScoutCount > 0 && (
               <div className="bg-[#f5f5f4] border border-gray-200 rounded-xl px-3.5 py-2 flex items-center justify-between text-xs">
-                <span className="font-bold text-neutral/70">Miembros no scout</span>
+                <span className="font-bold text-neutral/75">Miembros no scout</span>
                 <span className="font-mono font-bold text-neutral">
                   {noScoutCount} ({noScoutPercentage}%)
                 </span>

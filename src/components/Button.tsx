@@ -1,9 +1,9 @@
 import React from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
-type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: React.ReactNode;
@@ -11,7 +11,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   children,
   className = '',
   variant = 'primary',
@@ -22,7 +22,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   type = 'button',
   ...props
-}) => {
+}, ref) => {
   // Base styles
   const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
   
@@ -31,7 +31,8 @@ export const Button: React.FC<ButtonProps> = ({
     primary: 'bg-primary text-white hover:bg-primary/90 focus-visible:ring-primary',
     secondary: 'bg-secondary text-primary hover:bg-secondary/90 focus-visible:ring-primary',
     outline: 'border border-gray-500 bg-white text-neutral hover:bg-gray-50 focus-visible:ring-neutral',
-    ghost: 'text-neutral hover:bg-gray-100 focus-visible:ring-neutral'
+    ghost: 'text-neutral hover:bg-gray-100 focus-visible:ring-neutral',
+    destructive: 'bg-red-700 text-white hover:bg-red-800 focus-visible:ring-red-700'
   };
 
   // Size styles
@@ -54,6 +55,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
+      ref={ref}
       type={type || 'button'}
       className={classes}
       disabled={disabled}
@@ -70,4 +72,6 @@ export const Button: React.FC<ButtonProps> = ({
       )}
     </button>
   );
-};
+});
+
+Button.displayName = 'Button';

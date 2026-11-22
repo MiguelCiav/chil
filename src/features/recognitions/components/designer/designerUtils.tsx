@@ -71,15 +71,19 @@ export function getFormatBadgeText(
   return `Formato: ${width} × ${height} (${ratioLabel})`;
 }
 
+export function isScoutsPlanarFont(family?: string): boolean {
+  return family === 'scouts-gt-planar-bold' || family === 'Scouts GT Planar';
+}
+
+export function roundPercentCoordinate(value: number, min = 0, max = 100): number {
+  return Math.max(min, Math.min(max, Math.round(value * 10) / 10));
+}
+
 export function getFontFamilyStyle(family: RecognitionFieldConfig['font_family']): string {
-  switch (family) {
-    case 'scouts-gt-planar-bold':
-    case 'Scouts GT Planar':
-      return '"Scouts GT Planar", sans-serif';
-    case 'noto-sans':
-    default:
-      return '"Noto Sans", sans-serif';
+  if (isScoutsPlanarFont(family)) {
+    return '"Scouts GT Planar", sans-serif';
   }
+  return '"Noto Sans", sans-serif';
 }
 
 export function getAlignTransform(align: RecognitionFieldConfig['align']): string {

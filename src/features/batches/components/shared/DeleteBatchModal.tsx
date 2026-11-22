@@ -1,6 +1,5 @@
 import React from 'react';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
-import { Button } from '../../../../components/Button';
+import { Modal, ModalHeader, ModalBody, ModalFooter, Button } from '../../../../components';
 import { consolidateMergedGroupTokens } from '../../utils/batchTerritorial';
 import { BatchRowData } from '../list/types';
 
@@ -44,7 +43,7 @@ export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
           <span className="font-bold">#{resolvedId}</span>
           {resolvedDetail ? ` (${resolvedDetail})` : ''} y todos sus miembros asociados?
         </p>
-        <p className="text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200">
+        <p className="text-xs text-red-700 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200">
           Esta acción no se puede deshacer y eliminará permanentemente los datos del lote y sus
           registros de miembros asociados.
         </p>
@@ -60,9 +59,9 @@ export const DeleteBatchModal: React.FC<DeleteBatchModalProps> = ({
         </Button>
         <Button
           type="button"
+          variant="destructive"
           onClick={onConfirm}
           disabled={deleting}
-          className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
         >
           {deleting ? 'Eliminando...' : 'Eliminar Lote'}
         </Button>

@@ -5,7 +5,7 @@ The `statistics` feature subsystem aggregates recognition batch and member recor
 
 ## Local Interface & Invariants
 - **Public Barrel (`index.ts`)**:
-  - `index.ts:*` re-exports `./types`, `./utils/statsCalculators`, `./utils/statsPdfExport`, `./hooks/useStatisticsData`, `./components/StatisticsDashboard`, `./components/StatKpiGrid`, `./components/FilterBar`, `./components/charts/MonthlyTrendChart`, `./components/charts/RecognitionRankingChart`, `./components/charts/DemographicsDonut`, `./components/charts/GeographicBarChart`, `./components/charts/StatusBreakdownCard`, `./components/charts/RegionSummaryTable`, `./components/charts/DistrictSummaryTable`, `./components/charts/UnitDistributionCard`, and `./components/YoYVariationBadge`.
+  - `index.ts:*` re-exports `./types`, `./utils/statsCalculators`, `./utils/statsPdfExport`, `./hooks/useStatisticsData`, `./components/StatisticsDashboard`, `./components/StatKpiGrid`, `./components/FilterBar`, `./components/charts/MonthlyTrendChart`, `./components/charts/DemographicsDonut`, `./components/charts/RegionSummaryTable`, `./components/charts/DistrictSummaryTable`, `./components/charts/GroupSummaryTable`, `./components/charts/UnitDistributionCard`, and `./components/YoYVariationBadge`.
   - **Invariants**: None (pure barrel re-export module).
   - **Side Effects**: None.
 

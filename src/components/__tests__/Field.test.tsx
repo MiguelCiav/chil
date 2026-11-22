@@ -29,4 +29,35 @@ describe('Field component accessibility & contrast', () => {
     expect(alert).toHaveTextContent('Ingresa un correo válido');
     expect(alert).toHaveClass('text-red-700');
   });
+
+  it('generates unique fallback IDs via useId and preserves explicit id props', () => {
+    render(
+      <>
+        <Field label="Nombre" />
+        <Field label="Nombre" />
+        <Field id="custom-field-id" label="Personalizado" />
+      </>
+    );
+
+    const inputs = screen.getAllByLabelText('Nombre');
+    expect(inputs).toHaveLength(2);
+    expect(inputs[0].id).toBeTruthy();
+    expect(inputs[1].id).toBeTruthy();
+    expect(inputs[0].id).not.toBe(inputs[1].id);
+
+    const custom = screen.getByLabelText('Personalizado');
+    expect(custom.id).toBe('custom-field-id');
+  });
+
+  it('supports md and sm control sizes', () => {
+    render(
+      <>
+        <Field label="Estándar" size="md" />
+        <Field label="Compacto" size="sm" />
+      </>
+    );
+
+    expect(screen.getByLabelText('Estándar')).toHaveClass('py-2.5', 'px-4', 'text-sm', 'rounded-field');
+    expect(screen.getByLabelText('Compacto')).toHaveClass('py-2', 'px-3', 'text-xs', 'rounded-lg');
+  });
 });

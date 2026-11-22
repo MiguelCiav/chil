@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   CheckCircle2,
@@ -12,13 +12,21 @@ import {
   ChevronRight,
   Eye
 } from 'lucide-react';
+import {
+  ColumnDef,
+  getCoreRowModel,
+  useReactTable
+} from '@tanstack/react-table';
 
-import { Card, CardBody } from '../../../components/Card';
-import { Button } from '../../../components/Button';
-import { Table } from '../../../components/Table';
-import { Toast } from '../../../components/Toast';
-import { ColumnDef, CellContext } from '@tanstack/react-table';
-
+import {
+  Card,
+  CardHeader,
+  CardBody,
+  Button,
+  Toast,
+  DataTable,
+  ErrorAlert
+} from '../../../components';
 import {
   getAllBatches,
   getBatchById,
@@ -32,7 +40,14 @@ import {
   getRecognitionTypeById,
   RecognitionType
 } from '../../recognitions';
-import { CertificateZipProgressModal } from './shared';
+import {
+  CertificateZipProgressModal,
+  renderMemberIdentityCell,
+  renderMemberNameCell,
+  renderMemberTypeCell,
+  renderMemberStatusCell,
+  renderMemberCodeCell
+} from './shared';
 import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
 
 interface StatSummaryCardProps {
@@ -57,65 +72,11 @@ const StatSummaryCard: React.FC<StatSummaryCardProps> = ({
       </div>
       <div>
         <div className="text-2xl font-black text-neutral">{value}</div>
-        <div className="text-xs text-neutral/50 font-bold uppercase tracking-wider">{title}</div>
+        <div className="text-xs text-neutral/75 font-bold uppercase tracking-wider">{title}</div>
       </div>
     </CardBody>
   </Card>
 );
-
-function renderSuccessIdentityCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  return <span className="font-mono text-xs sm:text-sm text-neutral/80">{info.getValue() as string}</span>;
-}
-
-function renderSuccessNameCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const rowData = info.row.original;
-  return <span className="font-bold text-neutral">{rowData.first_names} {rowData.last_names}</span>;
-}
-
-function renderSuccessTypeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const val = info.getValue() as 'young' | 'adult';
-  return (
-    <span className="text-neutral/70 font-medium text-sm">
-      {val === 'young' ? 'Joven' : 'Adulto'}
-    </span>
-  );
-}
-
-function renderSuccessStatusCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const val = info.getValue() as 'active' | 'pending' | 'exceptional';
-  if (val === 'active') {
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#e6f7eb] text-[#1b7a37] border border-[#c3eed0]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#1b7a37] mr-1.5 inline-block" />
-        <span>Registro Válido</span>
-      </span>
-    );
-  }
-  if (val === 'exceptional') {
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#f3e8ff] text-[#7e22ce] border border-[#e9d5ff]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#7e22ce] mr-1.5 inline-block" />
-        <span>Emisión Excepcional</span>
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#feeae8] text-[#c92a2a] border border-[#fccfca]">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#c92a2a] mr-1.5 inline-block" />
-      <span>Registro Inválido</span>
-    </span>
-  );
-}
-
-function renderSuccessCodeCell(info: CellContext<ScoutMember, unknown>): React.ReactNode {
-  const rowData = info.row.original;
-  const code = rowData.recognition_code || '-';
-  return (
-    <span className="font-mono text-xs sm:text-sm font-semibold text-primary">
-      {code}
-    </span>
-  );
-}
 
 function renderSuccessActionsCell(onNavigateToBatch: () => void): React.ReactNode {
   return (
@@ -123,7 +84,7 @@ function renderSuccessActionsCell(onNavigateToBatch: () => void): React.ReactNod
       <button
         type="button"
         onClick={onNavigateToBatch}
-        className="p-1.5 border border-gray-200 hover:border-primary text-neutral hover:text-primary rounded-lg transition-all"
+        className="p-1.5 border border-primary/20 hover:border-primary text-neutral hover:text-primary rounded-lg transition-all"
         title="Vista previa"
       >
         <Eye size={15} />
@@ -137,27 +98,27 @@ function createSuccessColumns(onNavigateToBatch: () => void): ColumnDef<ScoutMem
     {
       accessorKey: 'identity',
       header: 'CÉDULA',
-      cell: renderSuccessIdentityCell
+      cell: renderMemberIdentityCell
     },
     {
       accessorKey: 'name',
       header: 'NOMBRE COMPLETO',
-      cell: renderSuccessNameCell
+      cell: renderMemberNameCell
     },
     {
       accessorKey: 'member_type',
       header: 'TIPO',
-      cell: renderSuccessTypeCell
+      cell: renderMemberTypeCell
     },
     {
       accessorKey: 'status',
       header: 'ESTATUS',
-      cell: renderSuccessStatusCell
+      cell: renderMemberStatusCell
     },
     {
       accessorKey: 'recognition_code',
       header: 'CÓDIGO REC.',
-      cell: renderSuccessCodeCell
+      cell: renderMemberCodeCell
     },
     {
       id: 'actions',
@@ -180,12 +141,38 @@ export const SuccessPage: React.FC = () => {
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerToast = (msg: string) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastMessage(msg);
+    setShowToast(true);
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+    }, 4000);
+  };
 
   // Columns for Resumen del Lote
   const columns = useMemo(
     () => createSuccessColumns(() => navigate(`/lotes/${batch?.id}`)),
     [navigate, batch?.id]
   );
+
+  const table = useReactTable({
+    data: members,
+    columns,
+    getCoreRowModel: getCoreRowModel()
+  });
 
   useEffect(() => {
     const loadBatchData = async () => {
@@ -248,9 +235,7 @@ export const SuccessPage: React.FC = () => {
         scopeLabel: `Lote #${batch.id}`,
         initialTotal: 0,
         onSuccess: (path) => {
-          setToastMessage(`¡Reconocimientos descargados exitosamente en ${path}!`);
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 4000);
+          triggerToast(`¡Reconocimientos descargados exitosamente en ${path}!`);
         },
         onError: (err) => {
           console.error(err);
@@ -266,9 +251,7 @@ export const SuccessPage: React.FC = () => {
     try {
       const hierarchy = await getHierarchyData();
       await generateBatchReport(batch, members, hierarchy);
-      setToastMessage('¡Lista de miembros (PDF) descargada exitosamente!');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 4000);
+      triggerToast('¡Lista de miembros (PDF) descargada exitosamente!');
     } catch (err) {
       console.error('Error generating member list PDF:', err);
       alert('Error al generar la lista de miembros en PDF.');
@@ -279,7 +262,10 @@ export const SuccessPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] font-sans text-neutral/50">
+      <div
+        role="status"
+        className="flex items-center justify-center min-h-[400px] font-sans text-neutral/75"
+      >
         Cargando resultados...
       </div>
     );
@@ -287,13 +273,13 @@ export const SuccessPage: React.FC = () => {
 
   if (!batch) {
     return (
-      <div className="max-w-md mx-auto text-center space-y-4 py-12 font-sans">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-        <h2 className="text-xl font-bold text-neutral">No se encontró información del lote</h2>
-        <Button variant="primary" onClick={() => navigate('/lotes')}>
-          Volver a la lista
-        </Button>
-      </div>
+      <ErrorAlert
+        variant="centered"
+        title="No se encontró información del lote"
+        message="El lote solicitado no está disponible o fue eliminado."
+        retryLabel="Volver a la lista"
+        onRetry={() => navigate('/lotes')}
+      />
     );
   }
 
@@ -309,9 +295,14 @@ export const SuccessPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
-
       {/* Toast Notification */}
-      {showToast && <Toast message={toastMessage} variant="success" />}
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          variant="success"
+          onDismiss={() => setShowToast(false)}
+        />
+      )}
 
       {/* Success Hero Header */}
       <div className="text-center space-y-4 py-6 bg-white border border-primary/20 rounded-3xl p-8">
@@ -320,7 +311,7 @@ export const SuccessPage: React.FC = () => {
         </div>
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-neutral tracking-tight">¡Lote Generado Exitosamente!</h1>
-          <p className="text-xs sm:text-sm text-neutral/70 mt-1">
+          <p className="text-xs sm:text-sm text-neutral/75 mt-1">
             {'El lote '}
             <span className="text-primary font-bold">#{batch?.id}</span>
             {' está listo para ser procesado.'}
@@ -331,7 +322,7 @@ export const SuccessPage: React.FC = () => {
             variant="primary"
             onClick={handleDownloadPDF}
             disabled={zipDownload.isDownloading || eligibleCount === 0}
-            title={eligibleCount === 0 ? "No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos" : undefined}
+            title={eligibleCount === 0 ? 'No hay miembros habilitados (activos o con emisión excepcional) en este lote para generar reconocimientos' : undefined}
             icon={<Download size={18} />}
           >
             {zipDownload.isDownloading ? 'Generando ZIP...' : 'Descargar Reconocimientos (ZIP)'}
@@ -340,7 +331,7 @@ export const SuccessPage: React.FC = () => {
             variant="outline"
             onClick={handleDownloadReport}
             disabled={downloadingReport || members.length === 0}
-            title={members.length === 0 ? "No hay miembros en este lote para generar la lista" : undefined}
+            title={members.length === 0 ? 'No hay miembros en este lote para generar la lista' : undefined}
             icon={<FileText size={18} />}
           >
             {downloadingReport ? 'Generando Lista...' : 'Descargar Lista'}
@@ -389,12 +380,12 @@ export const SuccessPage: React.FC = () => {
       {totals.pending > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-3xl p-5 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
           <div className="flex gap-3 items-center">
-            <div className="p-2 bg-red-100 rounded-2xl text-red-600">
+            <div className="p-2 bg-red-100 rounded-2xl text-red-700">
               <AlertCircle className="w-5 h-5" />
             </div>
             <div>
               <div className="font-bold text-red-800">Hay registros no válidos o pendientes</div>
-              <p className="text-xs text-red-600 font-medium">Hay {totals.pending} miembros que no están inscritos en el sistema nacional de scouts.</p>
+              <p className="text-xs text-red-700 font-medium">Hay {totals.pending} miembros que no están inscritos en el sistema nacional de scouts.</p>
             </div>
           </div>
           <button
@@ -409,13 +400,17 @@ export const SuccessPage: React.FC = () => {
       )}
 
       {/* Resumen del Lote Table */}
-      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white">
-        <div className="p-4 sm:p-5 border-b border-primary/20 bg-primary/5 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-primary" />
+      <Card>
+        <CardHeader className="p-4 sm:p-5 bg-primary/5 flex items-center justify-start gap-2">
+          <FileText className="w-5 h-5 text-primary" aria-hidden="true" />
           <h2 className="text-base font-bold text-neutral">Resumen del Lote</h2>
-        </div>
-        <Table columns={columns} data={members} className="border-0 rounded-none shadow-none" />
-      </div>
+        </CardHeader>
+        <DataTable
+          table={table}
+          columnCount={columns.length}
+          bordered={false}
+        />
+      </Card>
 
       <CertificateZipProgressModal
         isOpen={zipDownload.isOpen}
@@ -428,4 +423,5 @@ export const SuccessPage: React.FC = () => {
     </div>
   );
 };
+
 export default SuccessPage;

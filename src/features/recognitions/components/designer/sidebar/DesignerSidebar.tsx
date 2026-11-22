@@ -49,14 +49,14 @@ export const DesignerSidebar: React.FC<DesignerSidebarProps> = ({
   return (
     <div data-walkthrough="designer-sidebar" className="lg:col-span-4 xl:col-span-4 2xl:col-span-3 space-y-4">
       {/* Quick Tab Switcher */}
-      <div className="flex rounded-2xl p-1 bg-white border border-gray-200">
+      <div className="flex rounded-2xl p-1 bg-white border border-primary/20">
         <button
           type="button"
           onClick={() => onTabChange('palette')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'palette'
               ? 'bg-primary text-white'
-              : 'text-neutral/60 hover:text-neutral hover:bg-gray-50'
+              : 'text-neutral/75 hover:text-neutral hover:bg-gray-50'
           }`}
         >
           <PaletteIcon className="w-3.5 h-3.5" />
@@ -68,7 +68,7 @@ export const DesignerSidebar: React.FC<DesignerSidebarProps> = ({
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'properties'
               ? 'bg-primary text-white'
-              : 'text-neutral/60 hover:text-neutral hover:bg-gray-50'
+              : 'text-neutral/75 hover:text-neutral hover:bg-gray-50'
           }`}
         >
           <Type className="w-3.5 h-3.5" />
@@ -80,7 +80,7 @@ export const DesignerSidebar: React.FC<DesignerSidebarProps> = ({
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'format'
               ? 'bg-primary text-white'
-              : 'text-neutral/60 hover:text-neutral hover:bg-gray-50'
+              : 'text-neutral/75 hover:text-neutral hover:bg-gray-50'
           }`}
         >
           <FileImage className="w-3.5 h-3.5" />

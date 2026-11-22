@@ -4,18 +4,18 @@ import { ScraperSettingsModal } from '../ScraperSettingsModal';
 import {
   ScraperSettingsProvider,
   useScraperSettings
-} from '../../../context/ScraperSettingsContext';
-import * as api from '../../../features/batches/api';
-import * as authFeature from '../../../features/auth';
+} from '../../../../context/ScraperSettingsContext';
+import * as api from '../../../../features/batches/api';
+import * as authFeature from '../../../../features/auth';
 
-vi.mock('../../../features/batches/api', () => ({
+vi.mock('../../../../features/batches/api', () => ({
   getScraperSessionStatus: vi.fn(),
   saveScraperSession: vi.fn(),
   clearScraperSession: vi.fn(),
   purgeLegacyScraperStorage: vi.fn()
 }));
 
-vi.mock('../../../features/auth', () => ({
+vi.mock('../../../../features/auth', () => ({
   useAuth: vi.fn()
 }));
 

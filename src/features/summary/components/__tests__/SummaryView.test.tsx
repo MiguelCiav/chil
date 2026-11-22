@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { SummaryView } from '../SummaryView';
@@ -190,10 +190,11 @@ describe('SummaryView component', () => {
     expect(screen.getByText('Carlos')).toBeInTheDocument();
     expect(screen.getByText('Rodríguez')).toBeInTheDocument();
 
-    // Verify status badges
-    expect(screen.getAllByText(/● Registro Válido/i)).toHaveLength(2);
-    expect(screen.getByText(/● Emisión Excepcional/i)).toBeInTheDocument();
-    expect(screen.getByText(/● Registro Inválido/i)).toBeInTheDocument();
+    // Verify status badges inside table
+    const tableQueries = within(screen.getByRole('table'));
+    expect(tableQueries.getAllByText('Registro Válido')).toHaveLength(2);
+    expect(tableQueries.getByText('Emisión Excepcional')).toBeInTheDocument();
+    expect(tableQueries.getByText('Registro Inválido')).toBeInTheDocument();
 
     // Verify summary counter
     expect(screen.getByText(/Mostrando 4 de 4 registros totales/i)).toBeInTheDocument();

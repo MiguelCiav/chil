@@ -8,7 +8,8 @@ Operational instructions for coding agents working in **Chil** (Scout recognitio
 - **Shared Client Layers**:
   - `src/lib/firebase.ts` — Firebase Auth, Firestore, and Functions client setup.
   - `src/context/ScraperSettingsContext.tsx` — Shared scraper login and active session provider.
-  - `src/components/` — Reusable UI primitives only; keep feature/domain logic out of here.
+  - `src/components/` — Strictly domain-agnostic UI primitives (`Button`, `Card`, `Field`, `Select`, `SearchInput`, `ErrorAlert`, `DataTable`, `Pagination`, `Modal`, `Toast`, `walkthrough/`); never import from `src/features/`, `src/domain/`, `src/types/`, `src/utils/`, or `src/context/`.
+  - `src/domain/components/` — Shared Scout-domain UI (`MemberStatusBadge`, `HierarchyFilterSelects`, `MemberHierarchySelects`) plus relocated app-shell `navigation/` (`Sidebar`, `ScraperSettingsModal`). Root domain widgets import only from `src/components/`, `src/types/`, and `src/utils/`.
 - **Features (`src/features/`)**:
   - `auth/`, `batches/`, `landing/`, `recognitions/`, `statistics/`, `summary/`
   - Keep `api/`, `hooks/`, `components/`, `types/`, `utils/` cleanly separated inside each feature.

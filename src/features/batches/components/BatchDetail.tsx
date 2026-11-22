@@ -5,9 +5,7 @@ import {
   getPaginationRowModel,
   useReactTable
 } from '@tanstack/react-table';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-
-import { Button } from '../../../components/Button';
+import { ErrorAlert } from '../../../components/ErrorAlert';
 import { Toast } from '../../../components/Toast';
 import {
   useWalkthrough,
@@ -47,12 +45,14 @@ import {
   BatchMembersTable,
   BatchSummaryCards,
   BatchTerritorialCard,
-  DeleteBatchModal,
-  EditMemberModal,
   MemberQuickViewModal,
   BatchDetailTotals
 } from './detail';
-import { CertificateZipProgressModal } from './shared';
+import {
+  CertificateZipProgressModal,
+  DeleteBatchModal,
+  EditMemberModal
+} from './shared';
 import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
 import { calculateBatchTerritorialBreakdown } from '../utils/batchTerritorial';
 
@@ -368,35 +368,25 @@ export const BatchDetail: React.FC = () => {
 
   if (loadError) {
     return (
-      <div
-        role="alert"
-        className="max-w-md mx-auto my-12 p-6 bg-red-50 border border-red-200 rounded-2xl text-center space-y-4 font-sans"
-      >
-        <AlertCircle className="w-12 h-12 text-red-700 mx-auto" aria-hidden="true" />
-        <h2 className="text-xl font-bold text-neutral">Error al cargar el lote</h2>
-        <p className="text-xs text-red-700 font-medium">{loadError}</p>
-        <div className="flex items-center justify-center gap-3">
-          <Button variant="outline" onClick={() => navigate('/lotes')}>
-            Volver al listado
-          </Button>
-          <Button variant="primary" onClick={loadBatchDetails} className="inline-flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" aria-hidden="true" />
-            Reintentar
-          </Button>
-        </div>
-      </div>
+      <ErrorAlert
+        variant="centered"
+        title="Error al cargar el lote"
+        message={loadError}
+        retryLabel="Reintentar"
+        onRetry={loadBatchDetails}
+      />
     );
   }
 
   if (!batch) {
     return (
-      <div role="alert" className="max-w-md mx-auto text-center space-y-4 py-12 font-sans">
-        <AlertCircle className="w-12 h-12 text-red-700 mx-auto" aria-hidden="true" />
-        <h2 className="text-xl font-bold text-neutral">Lote no encontrado</h2>
-        <Button variant="primary" onClick={() => navigate('/lotes')}>
-          Volver al listado
-        </Button>
-      </div>
+      <ErrorAlert
+        variant="centered"
+        title="Lote no encontrado"
+        message="El lote solicitado no existe o fue eliminado."
+        retryLabel="Volver al listado"
+        onRetry={() => navigate('/lotes')}
+      />
     );
   }
 
@@ -407,7 +397,13 @@ export const BatchDetail: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2 relative">
       {/* Toast Notification */}
-      {showToast && <Toast message={toastMessage} variant="success" />}
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          variant="success"
+          onDismiss={() => setShowToast(false)}
+        />
+      )}
 
       {/* Header with Title and Action Buttons */}
       <BatchDetailHeader

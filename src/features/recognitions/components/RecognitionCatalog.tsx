@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ColumnDef,
@@ -6,26 +6,26 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
-  useReactTable,
-  flexRender
+  useReactTable
 } from '@tanstack/react-table';
 import {
   Award,
   Plus,
-  Search,
   Pencil,
   Trash2,
-  Palette,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  AlertCircle,
-  RefreshCw
+  Palette
 } from 'lucide-react';
 
-import { Card, CardBody } from '../../../components/Card';
-import { Button } from '../../../components/Button';
-import { Toast } from '../../../components/Toast';
+import {
+  Card,
+  CardBody,
+  Button,
+  Toast,
+  SearchInput,
+  ErrorAlert,
+  DataTable,
+  Pagination
+} from '../../../components';
 import { RecognitionType } from '../types';
 import { getAllRecognitionTypes } from '../api';
 import { RecognitionFormModal } from './RecognitionFormModal';
@@ -104,7 +104,7 @@ function renderRecognitionActionsCell({
       <button
         type="button"
         onClick={() => onEdit(item)}
-        className="p-1.5 text-neutral/75 hover:text-primary hover:bg-primary/5 rounded-lg border border-gray-200 hover:border-primary/20 transition-colors"
+        className="p-1.5 text-neutral/75 hover:text-primary hover:bg-primary/5 rounded-lg border border-primary/20 transition-colors"
         title="Editar Reconocimiento"
         aria-label={`Editar ${item.name}`}
       >
@@ -114,7 +114,7 @@ function renderRecognitionActionsCell({
       <button
         type="button"
         onClick={() => onDelete(item)}
-        className="p-1.5 text-neutral/75 hover:text-red-700 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-colors"
+        className="p-1.5 text-neutral/75 hover:text-red-700 hover:bg-red-50 rounded-lg border border-primary/20 hover:border-red-200 transition-colors"
         title="Eliminar Reconocimiento"
         aria-label={`Eliminar ${item.name}`}
       >
@@ -128,100 +128,61 @@ function renderRecognitionActionsHeader() {
   return <div className="text-right">Acciones</div>;
 }
 
-interface TableBodyContentProps {
-  loading: boolean;
-  rows: Row<RecognitionType>[];
+interface RecognitionEmptyStateProps {
   totalCount: number;
-  columnsLength: number;
   globalFilter: string;
   onClearFilter: () => void;
   onOpenCreate: () => void;
 }
 
-function renderTableBodyContent({
-  loading,
-  rows,
+function renderRecognitionEmptyState({
   totalCount,
-  columnsLength,
   globalFilter,
   onClearFilter,
   onOpenCreate
-}: TableBodyContentProps) {
-  if (loading) {
-    return (
-      <tr>
-        <td colSpan={columnsLength} className="px-6 py-12 text-center text-neutral/75">
-          <div role="status" aria-busy="true" className="flex items-center justify-center gap-2">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span>Cargando tipos de reconocimiento...</span>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
-  if (rows.length > 0) {
-    return rows.map((row) => (
-      <tr key={row.id} className="hover:bg-primary/5 transition-colors bg-white">
-        {row.getVisibleCells().map((cell) => (
-          <td key={cell.id} className="px-6 py-4 text-sm text-neutral whitespace-nowrap">
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </td>
-        ))}
-      </tr>
-    ));
-  }
-
+}: RecognitionEmptyStateProps) {
   if (totalCount === 0) {
     return (
-      <tr>
-        <td colSpan={columnsLength} className="px-6 py-16 text-center text-neutral/75">
-          <div className="flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-              <Award className="w-6 h-6" aria-hidden="true" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-base font-bold text-neutral">
-                No hay tipos de reconocimiento registrados
-              </h3>
-              <p className="text-sm text-neutral/75">
-                No hay tipos de reconocimiento registrados. Haga clic en &apos;Nuevo Reconocimiento&apos; para comenzar.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={onOpenCreate}
-              icon={<Plus size={16} />}
-              className="mt-2"
-            >
-              Nuevo Reconocimiento
-            </Button>
-          </div>
-        </td>
-      </tr>
+      <div className="py-8 flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
+        <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+          <Award className="w-6 h-6" aria-hidden="true" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-base font-bold text-neutral">
+            No hay tipos de reconocimiento registrados
+          </h3>
+          <p className="text-sm text-neutral/75">
+            No hay tipos de reconocimiento registrados. Haga clic en &apos;Nuevo Reconocimiento&apos; para comenzar.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          onClick={onOpenCreate}
+          icon={<Plus size={16} />}
+          className="mt-2"
+        >
+          Nuevo Reconocimiento
+        </Button>
+      </div>
     );
   }
 
   return (
-    <tr>
-      <td colSpan={columnsLength} className="px-6 py-12 text-center text-neutral/60">
-        <div className="flex flex-col items-center justify-center gap-2">
-          <Award className="w-8 h-8 text-neutral/30" />
-          <p className="text-sm font-medium">No se encontraron reconocimientos.</p>
-          {globalFilter && (
-            <button
-              type="button"
-              onClick={onClearFilter}
-              className="text-xs text-primary hover:underline font-semibold"
-            >
-              Limpiar filtros de búsqueda
-            </button>
-          )}
-        </div>
-      </td>
-    </tr>
+    <div className="py-4 flex flex-col items-center justify-center gap-2 text-neutral/75">
+      <Award className="w-8 h-8 text-neutral/75" aria-hidden="true" />
+      <p className="text-sm font-medium">No se encontraron reconocimientos.</p>
+      {globalFilter && (
+        <button
+          type="button"
+          onClick={onClearFilter}
+          className="text-xs text-primary hover:underline font-semibold"
+        >
+          Limpiar filtros de búsqueda
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -242,11 +203,23 @@ export const RecognitionCatalog: React.FC = () => {
   // Toast notification state
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   const triggerToast = (msg: string) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     setToastMessage(msg);
     setShowToast(true);
-    setTimeout(() => {
+    toastTimerRef.current = setTimeout(() => {
       setShowToast(false);
     }, 4000);
   };
@@ -356,13 +329,19 @@ export const RecognitionCatalog: React.FC = () => {
     }
   });
 
-  const currentPageRows = table.getRowModel().rows;
   const totalCount = recognitions.length;
+  const filteredCount = table.getFilteredRowModel().rows.length;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-sans py-2">
       {/* Toast Notification */}
-      {showToast && <Toast message={toastMessage} variant="success" />}
+      {showToast && (
+        <Toast
+          message={toastMessage}
+          variant="success"
+          onDismiss={() => setShowToast(false)}
+        />
+      )}
 
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
@@ -387,118 +366,53 @@ export const RecognitionCatalog: React.FC = () => {
       </div>
 
       {loadError && (
-        <div
-          role="alert"
-          className="p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-        >
-          <div className="flex items-center gap-2.5 text-sm text-red-700 font-medium">
-            <AlertCircle className="w-5 h-5 shrink-0" aria-hidden="true" />
-            <span>{loadError}</span>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={fetchRecognitions}
-            className="inline-flex items-center gap-1.5 self-start sm:self-auto"
-          >
-            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
-            Reintentar
-          </Button>
-        </div>
+        <ErrorAlert variant="inline" message={loadError} onRetry={fetchRecognitions} />
       )}
 
       {/* Filter and Search Bar */}
       <Card>
-        <CardBody className="p-4">
-          {/* Search input */}
-          <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral/75" aria-hidden="true" />
-            <input
-              type="text"
+        <CardBody padding="sm">
+          <div className="w-full md:w-80">
+            <SearchInput
+              size="sm"
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(e.target.value)}
+              onClear={() => setGlobalFilter('')}
               placeholder="Buscar reconocimiento..."
-              className="w-full pl-9 pr-8 py-2 bg-primary/5 border border-primary/70 rounded-xl text-sm text-neutral placeholder:text-neutral/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-transparent"
             />
-            {globalFilter && (
-              <button
-                type="button"
-                onClick={() => setGlobalFilter('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral/75 hover:text-neutral"
-                aria-label="Limpiar búsqueda"
-              >
-                <X className="w-4 h-4" aria-hidden="true" />
-              </button>
-            )}
           </div>
         </CardBody>
       </Card>
 
       {/* Main Table */}
-      <div className="w-full border border-primary/20 rounded-2xl overflow-hidden bg-white">
-        <div className="overflow-x-auto min-h-[260px] pb-6">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="bg-primary/10 border-b border-primary/20">
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className="px-6 py-4 text-xs font-bold text-neutral uppercase tracking-wider"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {renderTableBodyContent({
-                loading,
-                rows: currentPageRows,
-                totalCount,
-                columnsLength: columns.length,
-                globalFilter,
-                onClearFilter: () => setGlobalFilter(''),
-                onOpenCreate: handleOpenCreateModal
-              })}
-            </tbody>
-          </table>
-        </div>
+      <Card>
+        <DataTable
+          table={table}
+          columnCount={columns.length}
+          bordered={false}
+          loading={loading}
+          loadingMessage="Cargando tipos de reconocimiento..."
+          scrollContainerClassName="min-h-[260px] pb-6"
+          emptyState={renderRecognitionEmptyState({
+            totalCount,
+            globalFilter,
+            onClearFilter: () => setGlobalFilter(''),
+            onOpenCreate: handleOpenCreateModal
+          })}
+        />
 
-        {/* Table Footer with Pagination */}
-        {!loading && totalCount > 0 && (
-          <div className="px-6 py-4 border-t border-primary/15 bg-white flex items-center justify-between text-xs font-semibold text-neutral/75">
-            <div>
-              Mostrando {currentPageRows.length} de {totalCount} reconocimientos
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                aria-label="Página anterior"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                aria-label="Página siguiente"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+        {!loading && (
+          <Pagination
+            table={table}
+            totalCount={totalCount}
+            filteredCount={filteredCount}
+            itemLabel="reconocimientos"
+            mode="summary"
+            counterFormat="count"
+            hideWhenEmpty
+          />
         )}
-      </div>
+      </Card>
 
       {/* Modals */}
       <RecognitionFormModal

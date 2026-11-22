@@ -88,14 +88,16 @@ export const BackgroundFormatTab: React.FC<BackgroundFormatTabProps> = ({
               >
                 {isUploadingBg ? 'Procesando...' : 'Cambiar'}
               </Button>
-              <button
+              <Button
                 type="button"
+                variant="destructive"
+                size="sm"
+                className="flex-1"
                 onClick={onRemoveBg}
-                className="py-1.5 px-3 text-xs text-red-600 hover:bg-red-50 border border-red-200 rounded-xl font-medium flex items-center justify-center gap-1 transition-colors flex-1"
+                icon={<Trash2 className="w-3.5 h-3.5" />}
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Quitar</span>
-              </button>
+                Quitar
+              </Button>
             </div>
           </div>
         ) : (

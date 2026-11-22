@@ -12,10 +12,10 @@ import {
   ChevronLeft,
   X
 } from 'lucide-react';
-import logo from '../../assets/CHIL_LOGO.png';
-import { Button } from '../Button';
-import { useAuth, UserProfileMenu } from '../../features/auth';
-import { useScraperSettings } from '../../context/ScraperSettingsContext';
+import logo from '../../../assets/CHIL_LOGO.png';
+import { Button } from '../../../components';
+import { useAuth, UserProfileMenu } from '../../../features/auth';
+import { useScraperSettings } from '../../../context/ScraperSettingsContext';
 
 const SIDEBAR_COLLAPSED_KEY = 'chil_sidebar_collapsed';
 
@@ -225,7 +225,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         className={`w-5 h-5 shrink-0 transition-colors ${
                           isActive
                             ? 'text-primary'
-                            : 'text-neutral/70 group-hover:text-neutral'
+                            : 'text-neutral/75 group-hover:text-neutral'
                         }`}
                       />
                       {!collapsed && <span className="truncate">{item.label}</span>}

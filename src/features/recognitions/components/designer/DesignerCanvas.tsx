@@ -59,7 +59,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
   return (
     <div data-walkthrough="designer-canvas" className="lg:col-span-8 xl:col-span-8 2xl:col-span-9 space-y-4">
       {/* Large Interactive Canvas Viewport */}
-      <div className="bg-gray-100/80 border border-gray-200/80 rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[480px]">
+      <div className="bg-gray-100/80 border border-primary/20 rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[480px]">
         {/* The Dynamic Canvas Box */}
         <div
           ref={canvasRef}
@@ -110,7 +110,7 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
                 </div>
 
                 {/* Footer Decorative Line */}
-                <div className="flex justify-between items-center text-[10px] text-neutral/40 font-mono pb-1 px-4 border-t border-primary/10">
+                <div className="flex justify-between items-center text-xs text-neutral/75 font-mono pb-1 px-4 border-t border-primary/10">
                   <span>Fondo Estándar Scout</span>
                   <span>Formato 297 × 210 mm</span>
                 </div>
@@ -145,12 +145,11 @@ export const DesignerCanvas: React.FC<DesignerCanvasProps> = ({
         </div>
 
         {/* Canvas Bottom Helper */}
-        <div className="flex flex-wrap items-center justify-between w-full text-xs text-neutral/50 px-2 pt-4 gap-2">
+        <div className="flex flex-wrap items-center justify-between w-full text-xs text-neutral/75 px-2 pt-4 gap-2">
           <span className="flex items-center gap-1.5">
             <Move className="w-3.5 h-3.5 text-primary" />
             <span>Arrastra los campos libremente (mantén Alt para ignorar las guías) o usa las flechas para ajustar</span>
           </span>
-          <span className="font-mono text-[11px]">{formatBadgeText}</span>
         </div>
       </div>
 

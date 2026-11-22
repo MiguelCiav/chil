@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
-import { Mail, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../components/Modal';
-import { Button } from '../../../components/Button';
-import { Field } from '../../../components/Field';
+import { Mail, CheckCircle2 } from 'lucide-react';
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Field,
+  ErrorAlert
+} from '../../../components';
 import { useAuth } from '../hooks/useAuth';
 import { forgotPasswordSchema } from '../types';
 
@@ -63,16 +69,11 @@ const ForgotPasswordForm: React.FC<{ onClose: () => void; defaultEmail: string }
           </div>
         ) : (
           <>
-            <p className="text-xs text-neutral/70">
+            <p className="text-xs text-neutral/75">
               Ingrese la dirección de correo electrónico asociada a su cuenta para recibir un enlace de restablecimiento de contraseña.
             </p>
 
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs text-red-700 font-medium" role="alert">
-                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+            {error && <ErrorAlert variant="compact" message={error} />}
 
             <Field
               label="Correo Electrónico"

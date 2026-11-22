@@ -136,7 +136,7 @@ export const ScopedExportSplitButton: React.FC<ScopedExportSplitButtonProps> = (
                       {bucket.label}
                     </span>
                     {showDistrict && (
-                      <span className="block text-xs text-neutral/60 truncate">
+                      <span className="block text-xs text-neutral/75 truncate">
                         {bucket.districtName}
                       </span>
                     )}

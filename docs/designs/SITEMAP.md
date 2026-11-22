@@ -11,12 +11,19 @@ Central index for Chil's architecture design documents, operational runbooks, an
 | [multi-territory-batch-attribution.md](./multi-territory-batch-attribution.md) | `Implemented` | 2026-11-13 | Miguel Ciavato | Shared member-first hierarchy resolver (`src/utils/memberHierarchy.ts`), `BatchList` read-time multi-badges (`<= 3 + +N`) + `"Completitud"` + exact token filters, `SummaryView`/`Statistics` decoupling (`"Nacional"`, member-scoped KPIs), and `BatchDetail` 4th territorial breakdown card (`BatchTerritorialCard`). |
 | [scoped-certificate-zip-and-progress-modal.md](./scoped-certificate-zip-and-progress-modal.md) | `Implemented` | 2026-11-16 | Miguel Ciavato | Split-button `"Por grupo"` exports on `BatchDetailHeader` (`ScopedExportSplitButton`, eligible-only `filterEligibleReportBuckets`, `_<bucketSlug>` ZIP filenames), `BatchList` `eligibleCount === 0` row gating, and shared `useCertificateZipDownload` / `CertificateZipProgressModal` across `BatchDetail`, `BatchList`, and `SuccessPage`. |
 | [recognition-designer-pdf-and-ergonomics.md](./recognition-designer-pdf-and-ergonomics.md) | `Implemented` | 2026-11-16 | Miguel Ciavato | Client-side page-1 `.pdf` background conversion via dynamic `pdfjs-dist` onto `#ffffff` with uniform `<= 750,000`-char scaling and 1:1 WYSIWYG placement parity, `Delete`/`Backspace` field removal with automatic `Ctrl+Z` re-selection, amber multi-page/compression notifications, and `useWalkthrough` `?` / `autoStart` fixes. |
+| [authenticated-ui-standardization-and-cleanup.md](./authenticated-ui-standardization-and-cleanup.md) | `Proposed` | 2026-11-22 | Miguel Ciavato | Rewrite `docs/DESIGN.md` in `spec.md` (`version: alpha`) format, extend/add domain-agnostic `src/components/` primitives (`Button`, `Card`, `Field`, `Select`, `SearchInput`, `ErrorAlert`, inverted `DataTable`/`Pagination`), introduce `src/domain/components/` (`MemberStatusBadge`, `HierarchyFilterSelects`, `MemberHierarchySelects`, relocated `navigation/`), delete eight unused components after migrating `EditMemberModal` tests, and consolidate UI across `auth`, `recognitions`, `statistics`, `summary`, and `batches`. |
 
 ## Operational Runbooks (`docs/`)
 
 | Document | Purpose |
 | :--- | :--- |
 | [ROLLBACK_FIREBASE_FUNCTIONS.md](../ROLLBACK_FIREBASE_FUNCTIONS.md) | Step-by-step procedure to retire the temporary Vercel `scraper-api/` deployment (`VITE_SCRAPER_API_URL`) and return to native Firebase Cloud Functions once GCP Blaze billing is active on `chil-2d600`. |
+
+## Shared Layers (`src/`)
+
+| Layer | Blueprint | Contents |
+| :--- | :--- | :--- |
+| Domain UI & Navigation | [src/domain/components/README.md](../../src/domain/components/README.md) | `MemberStatusBadge`, `HierarchyFilterSelects`, `MemberHierarchySelects`, and `navigation/` (`Sidebar`, `ScraperSettingsModal`). |
 
 ## Feature Blueprints & Contracts (`src/features/`)
 

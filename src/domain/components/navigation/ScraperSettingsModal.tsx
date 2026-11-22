@@ -6,14 +6,20 @@ import {
   LogOut,
   Lock,
 } from 'lucide-react';
-import { Modal, ModalHeader, ModalBody, ModalFooter } from '../Modal';
-import { Button } from '../Button';
-import { Field } from '../Field';
-import { useScraperSettings } from '../../context/ScraperSettingsContext';
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Field,
+  ErrorAlert,
+} from '../../../components';
+import { useScraperSettings } from '../../../context/ScraperSettingsContext';
 import {
   saveScraperSession,
   clearScraperSession,
-} from '../../features/batches/api';
+} from '../../../features/batches/api';
 
 export const ScraperSettingsModal: React.FC = () => {
   const {
@@ -143,7 +149,7 @@ export const ScraperSettingsModal: React.FC = () => {
               <strong>nunca guarda ni registra tu contraseña</strong> en base
               de datos ni en tu navegador.
             </p>
-            <p className="text-xs text-neutral/70 leading-relaxed flex items-start gap-1.5 pt-0.5">
+            <p className="text-xs text-neutral/75 leading-relaxed flex items-start gap-1.5 pt-0.5">
               <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5 text-primary/70" />
               <span>
                 Solo conservamos las cookies de sesión cifradas en el servidor
@@ -156,7 +162,7 @@ export const ScraperSettingsModal: React.FC = () => {
 
           {/* Current Session Status */}
           {isLoadingStatus ? (
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-neutral/60">
+            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-neutral/75">
               Verificando estado de sesión...
             </div>
           ) : status === 'active' ? (
@@ -207,7 +213,7 @@ export const ScraperSettingsModal: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-neutral/70">
+            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-xs text-neutral/75">
               No hay ninguna sesión de Impeesa conectada actualmente.
             </div>
           )}
@@ -236,11 +242,7 @@ export const ScraperSettingsModal: React.FC = () => {
             required
           />
 
-          {errorMsg && (
-            <div className="p-2.5 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-              {errorMsg}
-            </div>
-          )}
+          {errorMsg && <ErrorAlert variant="compact" message={errorMsg} />}
 
           {successMsg && (
             <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-700">
