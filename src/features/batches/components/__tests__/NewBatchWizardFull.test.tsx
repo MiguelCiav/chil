@@ -10,6 +10,7 @@ vi.mock('../../api', async (importOriginal) => {
     ...actual,
     getHierarchyData: vi.fn(),
     createBatch: vi.fn(),
+    createBatchWithMembers: vi.fn(),
     updateBatch: vi.fn(),
     getMemberStatus: vi.fn(),
     createMember: vi.fn(),
@@ -70,14 +71,17 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
   });
 
   it('completes full flow from Step 1 to Step 2 and redirects to success', async () => {
-    vi.mocked(api.createBatch).mockResolvedValue({
-      id: 777,
-      comment: 'Mi Lote Completo',
-      region_id: 0,
-      district_id: 0,
-      group_id: 0,
-      recognition_type: 'sct-wood-badge',
-      created_at: '2026-08-21T12:00:00.000Z'
+    vi.mocked(api.createBatchWithMembers).mockResolvedValue({
+      batch: {
+        id: 777,
+        comment: 'Mi Lote Completo',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2026-08-21T12:00:00.000Z'
+      },
+      members: []
     });
 
     vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
@@ -98,35 +102,6 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
       unidad: 'Comunidad',
       edad: 17
     });
-    vi.mocked(api.createMember).mockResolvedValue({
-      identity: '29111222',
-      first_names: 'Carlos Eduardo',
-      last_names: 'Gomez Perez',
-      birth_date: '2004-10-25',
-      member_type: 'young',
-      unit: 'caminantes',
-      status: 'active',
-      batch_id: 777,
-      group_name: 'DON BOSCO 21',
-      district_name: 'AVILA',
-      region_name: 'DISTRITO CAPITAL'
-    });
-    vi.mocked(api.getMembersByBatchId).mockResolvedValue([
-      {
-        identity: '29111222',
-        first_names: 'Carlos Eduardo',
-        last_names: 'Gomez Perez',
-        birth_date: '2004-10-25',
-        member_type: 'young',
-        unit: 'caminantes',
-        status: 'active',
-        batch_id: 777,
-        group_name: 'DON BOSCO 21',
-        district_name: 'AVILA',
-        region_name: 'DISTRITO CAPITAL'
-      }
-    ]);
-    vi.mocked(api.batchUpdateMembers).mockResolvedValue([]);
 
     render(
       <MemoryRouter>
@@ -167,20 +142,23 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
     fireEvent.click(finalizeBtn);
 
     await waitFor(() => {
-      expect(api.batchUpdateMembers).toHaveBeenCalled();
+      expect(api.createBatchWithMembers).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('/lotes/777');
     });
   });
 
   it('supports single-member fast emission shortcut with Emitir y Descargar PDF button', async () => {
-    vi.mocked(api.createBatch).mockResolvedValue({
-      id: 888,
-      comment: 'Emisión Rápida Individual',
-      region_id: 0,
-      district_id: 0,
-      group_id: 0,
-      recognition_type: 'sct-wood-badge',
-      created_at: '2026-08-21T12:00:00.000Z'
+    vi.mocked(api.createBatchWithMembers).mockResolvedValue({
+      batch: {
+        id: 888,
+        comment: 'Emisión Rápida Individual',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2026-08-21T12:00:00.000Z'
+      },
+      members: []
     });
 
     vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
@@ -198,29 +176,6 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
       unidad: 'Caminantes',
       edad: 17
     });
-    vi.mocked(api.createMember).mockResolvedValue({
-      identity: '30541929',
-      first_names: 'Miguel',
-      last_names: 'Ciavato',
-      birth_date: '2005-05-15',
-      member_type: 'young',
-      unit: 'caminantes',
-      status: 'active',
-      batch_id: 888
-    });
-    vi.mocked(api.getMembersByBatchId).mockResolvedValue([
-      {
-        identity: '30541929',
-        first_names: 'Miguel',
-        last_names: 'Ciavato',
-        birth_date: '2005-05-15',
-        member_type: 'young',
-        unit: 'caminantes',
-        status: 'active',
-        batch_id: 888
-      }
-    ]);
-    vi.mocked(api.batchUpdateMembers).mockResolvedValue([]);
 
     render(
       <MemoryRouter>
@@ -252,7 +207,7 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Emitir Lote/i }));
 
     await waitFor(() => {
-      expect(api.batchUpdateMembers).toHaveBeenCalled();
+      expect(api.createBatchWithMembers).toHaveBeenCalled();
       expect(recognitionsModule.downloadSingleCertificatePdf).not.toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('/lotes/888');
     });

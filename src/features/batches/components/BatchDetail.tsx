@@ -34,6 +34,7 @@ import {
   generateBatchCertificatesZip,
   downloadSingleCertificatePdf,
   getAllRecognitionTypes,
+  getRecognitionTypeById,
   RecognitionType
 } from '../../recognitions';
 import { useAuth } from '../../auth';
@@ -141,21 +142,27 @@ export const BatchDetail: React.FC = () => {
     Promise.all([
       getBatchById(batchId),
       getMembersByBatchId(batchId),
-      getHierarchyData(),
-      getAllRecognitionTypes(user?.uid)
+      getHierarchyData()
     ])
-      .then(([b, m, hierarchy, recTypes]) => {
+      .then(async ([b, m, hierarchy]) => {
         setBatch(b);
         setMembers(m);
         setRegions(hierarchy.regions);
         setDistricts(hierarchy.districts);
         setGroups(hierarchy.groups);
         if (b?.recognition_type) {
-          const found = recTypes.find(
-            (r) =>
-              r.id === b.recognition_type ||
-              r.name.toLowerCase() === b.recognition_type?.toLowerCase()
-          );
+          let found = await getRecognitionTypeById(b.recognition_type);
+          if (!found) {
+            const recTypes = await getAllRecognitionTypes(user?.uid);
+            const matched = recTypes.find(
+              (r) =>
+                r.id === b.recognition_type ||
+                r.name.toLowerCase() === b.recognition_type?.toLowerCase()
+            );
+            if (matched) {
+              found = matched.template ? matched : (await getRecognitionTypeById(matched.id)) || matched;
+            }
+          }
           setRecognition(found || null);
         }
       })

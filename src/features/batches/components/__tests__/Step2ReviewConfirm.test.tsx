@@ -147,9 +147,10 @@ describe('Step2ReviewConfirm component', () => {
     );
   });
 
-  it('uses standard Emitir Lote flow even when only 1 member is loaded (no PDF fast-path button)', async () => {
+  it('uses standard Emitir Lote flow even when only 1 member is loaded and delegates persistence to onFinalizeBatch', async () => {
     const singleMemberProps = {
       ...defaultProps,
+      batchId: null,
       membersList: [mockMembers[0]]
     };
 
@@ -163,26 +164,24 @@ describe('Step2ReviewConfirm component', () => {
     fireEvent.click(emitBtn);
 
     await waitFor(() => {
-      expect(api.batchUpdateMembers).toHaveBeenCalledWith([mockMembers[0]]);
-      expect(defaultProps.onFinalizeBatch).toHaveBeenCalled();
+      expect(defaultProps.onFinalizeBatch).toHaveBeenCalledTimes(1);
+      expect(api.batchUpdateMembers).not.toHaveBeenCalled();
     });
   });
 
-  it('finalizes batch and updates all members on Emitir Lote click', async () => {
+  it('delegates finalization to onFinalizeBatch on Emitir Lote click', async () => {
     render(<Step2ReviewConfirm {...defaultProps} />);
 
     const finalizeBtn = screen.getByRole('button', { name: /Emitir Lote/i });
     fireEvent.click(finalizeBtn);
 
     await waitFor(() => {
-      expect(api.batchUpdateMembers).toHaveBeenCalledWith(mockMembers);
-      expect(defaultProps.onFinalizeBatch).toHaveBeenCalled();
+      expect(defaultProps.onFinalizeBatch).toHaveBeenCalledTimes(1);
     });
   });
 
-  it('handles member deletion after user confirmation', async () => {
+  it('removes member in memory after user confirmation with 0 Firestore deleteMember calls', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    vi.mocked(api.deleteMember).mockResolvedValue();
 
     render(<Step2ReviewConfirm {...defaultProps} />);
 
@@ -190,8 +189,40 @@ describe('Step2ReviewConfirm component', () => {
     fireEvent.click(deleteBtn);
 
     await waitFor(() => {
-      expect(api.deleteMember).toHaveBeenCalledWith('99888777', '99888777', 101);
+      expect(api.deleteMember).not.toHaveBeenCalled();
       expect(defaultProps.onMembersUpdated).toHaveBeenCalledWith([mockMembers[0], mockMembers[1]]);
+    });
+  });
+
+  it('adds a manual No Scout member in memory without Firestore calls', async () => {
+    render(<Step2ReviewConfirm {...defaultProps} batchId={null} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Agregar No Scout/i }));
+
+    fireEvent.change(screen.getByPlaceholderText('Ej. 12345678'), {
+      target: { value: '55443322' }
+    });
+    fireEvent.change(screen.getByPlaceholderText('Ej. Juan'), {
+      target: { value: 'Elena' }
+    });
+    fireEvent.change(screen.getByPlaceholderText('Ej. Pérez'), {
+      target: { value: 'Rojas' }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Agregar Miembro/i }));
+
+    await waitFor(() => {
+      expect(api.getMembersByBatchId).not.toHaveBeenCalled();
+      expect(defaultProps.onMembersUpdated).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            identity: '55443322',
+            first_names: 'Elena',
+            last_names: 'Rojas',
+            unit: 'no_scout'
+          })
+        ])
+      );
     });
   });
 

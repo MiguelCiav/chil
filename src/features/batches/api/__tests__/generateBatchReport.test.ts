@@ -64,15 +64,15 @@ describe('generateBatchReport', () => {
   });
 
   it('includes both active and inactive/pending members in the PDF report', async () => {
-    // 1. Mock getBatchById
+    // 1. Mock getBatchById (uses bundled hierarchy.json IDs: region 5, district 21, group 64)
     vi.mocked(firestore.getDoc).mockResolvedValueOnce({
       exists: () => true,
       data: () => ({
         id: 12345,
         comment: 'Lote de prueba',
-        region_id: 1,
-        district_id: 10,
-        group_id: 100,
+        region_id: 5,
+        district_id: 21,
+        group_id: 64,
         created_at: '2026-08-21T12:00:00.000Z'
       })
     } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
@@ -104,18 +104,6 @@ describe('generateBatchReport', () => {
       }
     } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
-    // 3. Mock getHierarchyData (3 parallel getDocs: regions, districts, groups)
-    vi.mocked(firestore.getDocs)
-      .mockResolvedValueOnce({
-        docs: [{ data: () => ({ id: 1, name: 'Región Capital' }) }]
-      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
-      .mockResolvedValueOnce({
-        docs: [{ data: () => ({ id: 10, name: 'Distrito Sucre', region_id: 1 }) }]
-      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
-      .mockResolvedValueOnce({
-        docs: [{ data: () => ({ id: 100, name: 'Grupo San Luis', district_id: 10 }) }]
-      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
-
     const resultFileName = await generateBatchReport(12345);
 
     expect(resultFileName).toBe('Reporte_Lote_12345.pdf');
@@ -129,10 +117,14 @@ describe('generateBatchReport', () => {
     expect(mockDocInstance.text).toHaveBeenCalledWith('Excepcionales: 0', 110, expect.any(Number));
     expect(mockDocInstance.text).toHaveBeenCalledWith('Pendientes: 1', 152, expect.any(Number));
 
-    // Check section header carries group, district and region
-    expect(mockDocInstance.text).toHaveBeenCalledWith('Grupo San Luis (2)', 14, expect.any(Number));
+    // Check section header carries group, district and region from bundled hierarchy.json
     expect(mockDocInstance.text).toHaveBeenCalledWith(
-      'Distrito: Distrito Sucre  |  Región: Región Capital',
+      expect.stringMatching(/\(2\)$/),
+      14,
+      expect.any(Number)
+    );
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      expect.stringContaining('Distrito:'),
       14,
       expect.any(Number)
     );

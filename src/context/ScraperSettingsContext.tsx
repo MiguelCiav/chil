@@ -39,6 +39,20 @@ const DEFAULT_CONTEXT: ScraperSettingsContextValue = {
 const ScraperSettingsContext =
   createContext<ScraperSettingsContextValue>(DEFAULT_CONTEXT);
 
+const inFlightStatusByUid = new Map<string, Promise<ScraperSessionStatus>>();
+
+function fetchScraperSessionStatusDeduplicated(uid: string): Promise<ScraperSessionStatus> {
+  const existing = inFlightStatusByUid.get(uid);
+  if (existing) {
+    return existing;
+  }
+  const promise = getScraperSessionStatus().finally(() => {
+    inFlightStatusByUid.delete(uid);
+  });
+  inFlightStatusByUid.set(uid, promise);
+  return promise;
+}
+
 export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -66,7 +80,7 @@ export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
 
     setIsLoadingStatus(true);
     try {
-      const status = await getScraperSessionStatus();
+      const status = await fetchScraperSessionStatusDeduplicated(user.uid);
       setSessionStatus(status);
       return status;
     } catch (error) {
@@ -85,7 +99,7 @@ export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
-    getScraperSessionStatus()
+    fetchScraperSessionStatusDeduplicated(currentUid)
       .then((status) => {
         if (!cancelled) {
           setSessionStatus(status);

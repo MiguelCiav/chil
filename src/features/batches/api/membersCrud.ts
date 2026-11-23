@@ -11,8 +11,12 @@ import {
   WriteBatch
 } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
+import { createKeyedSessionCache } from '../../../lib/sessionCache';
 import { ScoutMember } from '../types';
 import { commitChunkedBatches } from './batchesCrud';
+
+const membersByUserCache = createKeyedSessionCache<string, ScoutMember[]>();
+const coldMembersByBatchCache = createKeyedSessionCache<number, ScoutMember[]>();
 
 export function isGenericIdentity(id?: string): boolean {
   if (!id) return true;
@@ -102,7 +106,7 @@ const OPTIONAL_MEMBER_NUMBER_FIELDS = [
   'batch_id'
 ] as const;
 
-function sanitizeMemberForSave(member: ScoutMember, userId?: string): ScoutMember {
+export function sanitizeMemberForSave(member: ScoutMember, userId?: string): ScoutMember {
   const targetUserId = member.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const sanitized: ScoutMember = {
     identity: member.identity,
@@ -142,10 +146,132 @@ function sanitizeMemberForSave(member: ScoutMember, userId?: string): ScoutMembe
   return sanitized;
 }
 
+function deduplicateMembersByBatch(allRaw: ScoutMember[]): ScoutMember[] {
+  const byBatch = new Map<number, ScoutMember[]>();
+  for (const m of allRaw) {
+    const bId = m.batch_id ?? 0;
+    const batchGroup = byBatch.get(bId);
+    if (batchGroup) {
+      batchGroup.push(m);
+    } else {
+      byBatch.set(bId, [m]);
+    }
+  }
+
+  const result: ScoutMember[] = [];
+  for (const [, batchMembers] of byBatch.entries()) {
+    result.push(...deduplicateBatchMembers(batchMembers));
+  }
+  return result;
+}
+
+function mergeMembersIntoList(existing: ScoutMember[], incoming: ScoutMember[]): ScoutMember[] {
+  const incomingByDocId = new Map<string, ScoutMember>();
+  for (const member of incoming) {
+    incomingByDocId.set(getMemberDocId(member), member);
+  }
+
+  const merged: ScoutMember[] = [];
+  for (const member of existing) {
+    const docId = getMemberDocId(member);
+    if (!incomingByDocId.has(docId)) {
+      merged.push(member);
+    }
+  }
+  merged.push(...incoming);
+  return deduplicateMembersByBatch(merged);
+}
+
+export function upsertMembersInCache(members: ScoutMember[], userId?: string): void {
+  if (!members || members.length === 0) {
+    return;
+  }
+
+  const targetUserId = userId ?? members[0]?.user_id ?? auth.currentUser?.uid ?? '';
+  if (targetUserId && membersByUserCache.has(targetUserId)) {
+    const existing = membersByUserCache.get(targetUserId) ?? [];
+    membersByUserCache.set(targetUserId, mergeMembersIntoList(existing, members));
+  }
+
+  const byBatch = new Map<number, ScoutMember[]>();
+  for (const member of members) {
+    if (member.batch_id !== undefined && !Number.isNaN(member.batch_id)) {
+      const list = byBatch.get(member.batch_id);
+      if (list) {
+        list.push(member);
+      } else {
+        byBatch.set(member.batch_id, [member]);
+      }
+    }
+  }
+
+  for (const [batchId, batchIncoming] of byBatch.entries()) {
+    if (coldMembersByBatchCache.has(batchId)) {
+      const existing = coldMembersByBatchCache.get(batchId) ?? [];
+      coldMembersByBatchCache.set(batchId, mergeMembersIntoList(existing, batchIncoming));
+    }
+  }
+}
+
+function matchesDeletedMember(
+  member: ScoutMember,
+  identityOrCode: string,
+  alternativeKey?: string,
+  batchId?: number
+): boolean {
+  if (batchId !== undefined && !Number.isNaN(batchId) && member.batch_id !== batchId) {
+    return false;
+  }
+  const docId = getMemberDocId(member);
+  const candidateKeys = new Set<string>([identityOrCode]);
+  if (alternativeKey) {
+    candidateKeys.add(alternativeKey);
+  }
+  if (batchId !== undefined && !Number.isNaN(batchId)) {
+    candidateKeys.add(`${batchId}_${alternativeKey || identityOrCode}`);
+  }
+  return (
+    candidateKeys.has(docId) ||
+    candidateKeys.has(member.identity) ||
+    (Boolean(member.recognition_code) && candidateKeys.has(member.recognition_code!))
+  );
+}
+
+export function removeMemberFromCache(
+  identityOrCode: string,
+  alternativeKey?: string,
+  batchId?: number
+): void {
+  for (const [uid, list] of membersByUserCache.entries()) {
+    const filtered = list.filter((m) => !matchesDeletedMember(m, identityOrCode, alternativeKey, batchId));
+    if (filtered.length !== list.length) {
+      membersByUserCache.set(uid, filtered);
+    }
+  }
+
+  for (const [cachedBatchId, list] of coldMembersByBatchCache.entries()) {
+    const filtered = list.filter((m) => !matchesDeletedMember(m, identityOrCode, alternativeKey, batchId));
+    if (filtered.length !== list.length) {
+      coldMembersByBatchCache.set(cachedBatchId, filtered);
+    }
+  }
+}
+
+export function removeMembersByBatchIdFromCache(batchId: number): void {
+  coldMembersByBatchCache.delete(batchId);
+  for (const [uid, list] of membersByUserCache.entries()) {
+    const filtered = list.filter((m) => m.batch_id !== batchId);
+    if (filtered.length !== list.length) {
+      membersByUserCache.set(uid, filtered);
+    }
+  }
+}
+
 export async function createMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
   const newMember = sanitizeMemberForSave(member, userId);
   const docId = getMemberDocId(newMember);
   await setDoc(doc(db, "scout_members", docId), newMember);
+  upsertMembersInCache([newMember], newMember.user_id ?? userId);
   return newMember;
 }
 
@@ -153,6 +279,7 @@ export async function updateMember(member: ScoutMember, userId?: string): Promis
   const updatedMember = sanitizeMemberForSave(member, userId);
   const targetDocId = getMemberDocId(updatedMember);
   await setDoc(doc(db, "scout_members", targetDocId), updatedMember);
+  upsertMembersInCache([updatedMember], updatedMember.user_id ?? userId);
   return updatedMember;
 }
 
@@ -170,6 +297,7 @@ export async function batchUpdateMembers(
     batch.set(docRef, sanitized);
   });
   await commitChunkedBatches(operations, chunkSize);
+  upsertMembersInCache(sanitizedMembers, userId);
   return sanitizedMembers;
 }
 
@@ -198,6 +326,7 @@ export async function deleteMember(
       }
     }
   }
+  removeMemberFromCache(identityOrCode, alternativeKey, batchId);
 }
 
 function filterUniqueDraftMembers(
@@ -249,22 +378,35 @@ function deduplicateBatchMembers(batchMembers: ScoutMember[]): ScoutMember[] {
 }
 
 export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[]> {
-  const q = buildMembersQueryForBatch(batchId);
-  const querySnapshot = await getDocs(q);
-
-  const rawDocs: FirestoreDocLike[] = [];
-  if (Array.isArray(querySnapshot?.docs)) {
-    rawDocs.push(...querySnapshot.docs);
-  } else if (typeof querySnapshot?.forEach === 'function') {
-    querySnapshot.forEach((docSnap) => rawDocs.push(docSnap));
+  const numericBatchId = Number(batchId);
+  const currentUid = auth.currentUser?.uid;
+  if (currentUid && membersByUserCache.has(currentUid)) {
+    const userMembers = membersByUserCache.get(currentUid) ?? [];
+    return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
   }
 
-  const members = rawDocs.map((docSnapshot) => {
-    const rawData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot;
-    return rawData as ScoutMember;
-  });
+  for (const [, userMembers] of membersByUserCache.entries()) {
+    return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
+  }
 
-  return deduplicateBatchMembers(members);
+  return coldMembersByBatchCache.getOrLoad(numericBatchId, async () => {
+    const q = buildMembersQueryForBatch(numericBatchId);
+    const querySnapshot = await getDocs(q);
+
+    const rawDocs: FirestoreDocLike[] = [];
+    if (Array.isArray(querySnapshot?.docs)) {
+      rawDocs.push(...querySnapshot.docs);
+    } else if (typeof querySnapshot?.forEach === 'function') {
+      querySnapshot.forEach((docSnap) => rawDocs.push(docSnap));
+    }
+
+    const members = rawDocs.map((docSnapshot) => {
+      const rawData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot;
+      return rawData as ScoutMember;
+    });
+
+    return deduplicateBatchMembers(members);
+  });
 }
 
 export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
@@ -273,35 +415,20 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
     return [];
   }
 
-  const q = buildMembersQueryForUser(targetUserId);
-  const snap = await getDocs(q);
-  const snapDocs: FirestoreDocLike[] = [];
-  if (Array.isArray(snap?.docs)) {
-    snapDocs.push(...snap.docs);
-  } else if (typeof snap?.forEach === 'function') {
-    snap.forEach((docSnap) => snapDocs.push(docSnap));
-  }
-
-  const allRaw = snapDocs.map(
-    (docSnapshot) => (typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot) as ScoutMember
-  );
-
-  // Deduplicate per batch preserving all unique recognition codes and generic identities (e.g. S/C)
-  const byBatch = new Map<number, ScoutMember[]>();
-  for (const m of allRaw) {
-    const bId = m.batch_id ?? 0;
-    const batchGroup = byBatch.get(bId);
-    if (batchGroup) {
-      batchGroup.push(m);
-    } else {
-      byBatch.set(bId, [m]);
+  return membersByUserCache.getOrLoad(targetUserId, async () => {
+    const q = buildMembersQueryForUser(targetUserId);
+    const snap = await getDocs(q);
+    const snapDocs: FirestoreDocLike[] = [];
+    if (Array.isArray(snap?.docs)) {
+      snapDocs.push(...snap.docs);
+    } else if (typeof snap?.forEach === 'function') {
+      snap.forEach((docSnap) => snapDocs.push(docSnap));
     }
-  }
 
-  const result: ScoutMember[] = [];
-  for (const [, batchMembers] of byBatch.entries()) {
-    result.push(...deduplicateBatchMembers(batchMembers));
-  }
+    const allRaw = snapDocs.map(
+      (docSnapshot) => (typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot) as ScoutMember
+    );
 
-  return result;
+    return deduplicateMembersByBatch(allRaw);
+  });
 }

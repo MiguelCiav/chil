@@ -24,5 +24,8 @@ service cloud.firestore {
     match /recognition_types/{document=**} {
       allow read, write: if true;
     }
+    match /recognition_templates/{document=**} {
+      allow read, write: if true;
+    }
   }
 }

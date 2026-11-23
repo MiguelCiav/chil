@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getHierarchyData,
   createBatch,
+  createBatchWithMembers,
   updateBatch,
   deleteBatch,
   getAllBatches,
@@ -106,62 +107,42 @@ describe('Batches API Layer', () => {
   });
 
   describe('getHierarchyData', () => {
-    it('returns sorted regions, districts, and groups from Firestore when present', async () => {
-      vi.mocked(firestore.getDocs)
-        .mockResolvedValueOnce({
-          docs: [
-            { data: () => ({ id: 2, name: 'Región Central' }) },
-            { data: () => ({ id: 1, name: 'Región Capital' }) }
-          ]
-        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
-        .mockResolvedValueOnce({
-          docs: [
-            { data: () => ({ id: 20, name: 'Distrito Valencia', region_id: 2 }) },
-            { data: () => ({ id: 10, name: 'Distrito Sucre', region_id: 1 }) }
-          ]
-        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
-        .mockResolvedValueOnce({
-          docs: [
-            { data: () => ({ id: 200, name: 'Grupo Cabriales', district_id: 20 }) },
-            { data: () => ({ id: 100, name: 'Grupo San Luis', district_id: 10 }) }
-          ]
-        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
-
+    it('returns normalized regions, districts, and groups from bundled hierarchy.json with 0 Firestore reads or writes', async () => {
       const data = await getHierarchyData();
-      expect(data.regions[0].id).toBe(0);
-      expect(data.regions[0].name).toBe('No aplica');
-      expect(data.regions[1].id).toBe(1);
-      expect(data.districts[0].id).toBe(0);
-      expect(data.districts[0].name).toBe('No aplica');
-      expect(data.districts[1].id).toBe(10);
-      expect(data.groups[0].id).toBe(0);
-      expect(data.groups[0].name).toBe('No aplica');
-      expect(data.groups[1].id).toBe(100);
+
+      expect(firestore.getDocs).not.toHaveBeenCalled();
+      expect(firestore.writeBatch).not.toHaveBeenCalled();
+
+      expect(data.regions.length).toBeGreaterThanOrEqual(12);
+      expect(data.districts.length).toBeGreaterThanOrEqual(71);
+      expect(data.groups.length).toBeGreaterThanOrEqual(199);
+
+      expect(data.regions[0]).toMatchObject({ id: 0, name: 'No aplica' });
+      expect(data.districts[0]).toMatchObject({ id: 0, name: 'No aplica', region_id: 0 });
+      expect(data.groups[0]).toMatchObject({ id: 0, name: 'No aplica', district_id: 0 });
+
+      for (let i = 1; i < data.regions.length; i++) {
+        expect(data.regions[i].id).toBeGreaterThan(data.regions[i - 1].id);
+      }
+      for (let i = 1; i < data.districts.length; i++) {
+        expect(data.districts[i].id).toBeGreaterThan(data.districts[i - 1].id);
+      }
+      for (let i = 1; i < data.groups.length; i++) {
+        expect(data.groups[i].id).toBeGreaterThan(data.groups[i - 1].id);
+      }
     });
 
-    it('seeds Firestore collections when empty and returns fallback seeded data', async () => {
-      const commitMock = vi.fn();
-      const setMock = vi.fn();
-      vi.mocked(firestore.writeBatch).mockReturnValue({
-        set: setMock,
-        commit: commitMock
-      } as unknown as ReturnType<typeof firestore.writeBatch>);
+    it('returns shallow copies on repeat calls so caller mutations do not corrupt the cached dataset', async () => {
+      const first = await getHierarchyData();
+      const originalRegionCount = first.regions.length;
+      first.regions.push({ id: 9999, name: 'Mutated Region' });
 
-      vi.mocked(firestore.getDocs)
-        .mockResolvedValueOnce({ docs: [] } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
-        .mockResolvedValueOnce({ docs: [] } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
-        .mockResolvedValueOnce({ docs: [] } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
-
-      const data = await getHierarchyData();
-      expect(commitMock).toHaveBeenCalled();
-      expect(data.regions.length).toBeGreaterThan(0);
-    });
-
-    it('falls back to local JSON on Firestore query error', async () => {
-      vi.mocked(firestore.getDocs).mockRejectedValueOnce(new Error('Firestore permission denied'));
-
-      const data = await getHierarchyData();
-      expect(data.regions.length).toBeGreaterThan(0);
+      const second = await getHierarchyData();
+      expect(second.regions).toHaveLength(originalRegionCount);
+      expect(second.regions).not.toBe(first.regions);
+      expect(second.districts).toEqual(first.districts);
+      expect(second.groups).toEqual(first.groups);
+      expect(firestore.getDocs).not.toHaveBeenCalled();
     });
   });
 
@@ -693,6 +674,82 @@ describe('Batches API Layer', () => {
       const list = await getAllMembers('test-user-uid');
       expect(list).toHaveLength(2);
       expect(list.map((m) => m.recognition_code)).toEqual(['CCRL-01', 'CCRL-02']);
+    });
+
+    it('serves warm batches and members from session cache and syncs mutations via write-through', async () => {
+      const existingBatch = {
+        id: 501,
+        comment: 'Lote Inicial',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2026-08-01T00:00:00.000Z',
+        user_id: 'test-user-uid'
+      };
+      const existingMember = {
+        ...mockMember,
+        batch_id: 501,
+        user_id: 'test-user-uid'
+      };
+
+      vi.mocked(firestore.getDocs)
+        .mockResolvedValueOnce({
+          forEach: (cb: (doc: { data: () => unknown }) => void) => cb({ data: () => existingBatch })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
+        .mockResolvedValueOnce({
+          docs: [{ data: () => existingMember }]
+        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const batches1 = await getAllBatches('test-user-uid');
+      const members1 = await getAllMembers('test-user-uid');
+      expect(batches1).toHaveLength(1);
+      expect(members1).toHaveLength(1);
+      expect(firestore.getDocs).toHaveBeenCalledTimes(2);
+
+      // Subsequent reads hit warm session cache with 0 Firestore calls
+      const batches2 = await getAllBatches('test-user-uid');
+      const members2 = await getAllMembers('test-user-uid');
+      const byId = await getBatchById(501);
+      const batchMembers = await getMembersByBatchId(501);
+      expect(batches2).toHaveLength(1);
+      expect(members2).toHaveLength(1);
+      expect(byId?.id).toBe(501);
+      expect(batchMembers).toHaveLength(1);
+      expect(firestore.getDocs).toHaveBeenCalledTimes(2);
+      expect(firestore.getDoc).not.toHaveBeenCalled();
+
+      // Atomic createBatchWithMembers commits in 1 WriteBatch and updates warm caches
+      const setMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: setMock,
+        delete: vi.fn(),
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      const { batch: createdBatch, members: createdMembers } = await createBatchWithMembers(
+        {
+          comment: 'Lote Atómico',
+          region_id: 1,
+          district_id: 10,
+          group_id: 100,
+          recognition_type: 'sct-wood-badge'
+        },
+        [{ ...mockMember, identity: 'V-88888888', recognition_code: 'REC-NEW01' }],
+        'test-user-uid'
+      );
+
+      expect(commitMock).toHaveBeenCalledTimes(1);
+      expect(setMock).toHaveBeenCalledTimes(2);
+      expect(createdMembers[0].batch_id).toBe(createdBatch.id);
+
+      const updatedBatches = await getAllBatches('test-user-uid');
+      const updatedMembers = await getMembersByBatchId(createdBatch.id);
+      expect(updatedBatches.map((b) => b.id)).toContain(createdBatch.id);
+      expect(updatedMembers).toHaveLength(1);
+      expect(updatedMembers[0].identity).toBe('V-88888888');
+      expect(firestore.getDocs).toHaveBeenCalledTimes(2);
     });
   });
 

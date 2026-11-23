@@ -4,10 +4,8 @@ import { Toast } from '../../../components/Toast';
 
 import {
   getHierarchyData,
-  createBatch,
-  updateBatch,
+  createBatchWithMembers,
   getMemberStatus,
-  getMembersByBatchId,
   getScraperSessionStatus,
   isScraperSessionError,
   assignBatchRecognitionCodes
@@ -30,13 +28,15 @@ import {
   NEW_BATCH_WIZARD_TOUR_STEPS,
   Step1DataLoadFormData,
   parseCedulasFromText,
-  saveScrapedMemberToDb,
-  saveUnregisteredMemberToDb
+  buildScrapedMemberRecord,
+  buildUnregisteredMemberRecord
 } from './wizard';
+
+const VERIFICATION_POOL_CONCURRENCY = 4;
 
 export const NewBatchWizard: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshSessionStatus } = useScraperSettings();
+  const { sessionStatus, refreshSessionStatus, setSessionStatus } = useScraperSettings();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [batchId, setBatchId] = useState<number | null>(null);
   const [batchMetadata, setBatchMetadata] = useState<{
@@ -124,7 +124,39 @@ export const NewBatchWizard: React.FC = () => {
       });
   }, [user?.uid]);
 
-  // Step 1 Submission: Validate, Check Auth, Scrape Impeesa, and Save Initial Batch
+  const handleScraperSessionFailure = (err: Error) => {
+    const isNotConfigured =
+      isScraperSessionError(err) && err.reason === 'SCRAPER_NOT_CONFIGURED';
+    setSessionStatus((prev) => ({
+      connected: false,
+      status: isNotConfigured ? 'none' : 'expired',
+      impeesaEmail: isNotConfigured ? null : (prev?.impeesaEmail ?? null),
+      updatedAt: new Date().toISOString()
+    }));
+    if (isNotConfigured) {
+      setShowAuthAlert(true);
+    } else {
+      setAuthError(err.message);
+    }
+  };
+
+  const verifySingleCedulaInMemory = async (cedula: string): Promise<ScoutMember> => {
+    try {
+      const res = await getMemberStatus(cedula);
+      return buildScrapedMemberRecord(cedula, res, undefined, undefined, null, user?.uid);
+    } catch (scrapeErr) {
+      if (isScraperSessionError(scrapeErr)) {
+        throw scrapeErr;
+      }
+      const errStr = scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr);
+      if (!errStr.includes('No registrado')) {
+        triggerWarningToast(`Error de red al verificar la cédula ${cedula}`);
+      }
+      return buildUnregisteredMemberRecord(cedula, 'young', 'tropa', null, user?.uid);
+    }
+  };
+
+  // Step 1 Submission: Validate, Check Context Session, Probe-First + Pool-of-4 Delta Scrape (0 Firestore Writes)
   const onSubmitStep1 = async (data: Step1DataLoadFormData) => {
     const cedulas = parseCedulasFromText(data.cedulas);
     if (cedulas.length === 0) {
@@ -136,81 +168,107 @@ export const NewBatchWizard: React.FC = () => {
     setAuthError(null);
 
     try {
-      const sessionStatus = await getScraperSessionStatus();
-      if (!sessionStatus.connected) {
+      const activeSession =
+        sessionStatus ?? (await refreshSessionStatus()) ?? (await getScraperSessionStatus());
+      if (!activeSession?.connected) {
         setIsVerifying(false);
         setShowAuthAlert(true);
         return;
       }
 
-      // Create or update batch
-      const batchParams = {
-        comment: data.comment || '',
-        region_id: 0,
-        district_id: 0,
-        group_id: 0,
-        unit_scope: 'mixed' as const,
-        recognition_type: data.recognitionType,
-        user_id: user?.uid
-      };
-
-      let currentBatch;
-      if (batchId) {
-        currentBatch = await updateBatch(batchId, batchParams, user?.uid);
-      } else {
-        currentBatch = await createBatch(batchParams, user?.uid);
-      }
-
-      setBatchId(currentBatch.id);
       setBatchMetadata({
         comment: data.comment || '',
         recognitionType: data.recognitionType
       });
 
-      // Verification loop
-      setVerifyProgress({ current: 0, total: cedulas.length });
+      const manualMembers = membersList.filter((m) => m.unit === 'no_scout');
+      const existingByIdentity = new Map<string, ScoutMember>();
+      for (const m of membersList) {
+        if (m.unit !== 'no_scout') {
+          existingByIdentity.set(m.identity, m);
+        }
+      }
+
+      const deltaCedulas = cedulas.filter((c) => !existingByIdentity.has(c));
+      const newlyVerifiedMap = new Map<string, ScoutMember>();
       let sessionError: Error | null = null;
 
-      await Promise.all(
-        cedulas.map(async (cedula) => {
-          try {
-            const res = await getMemberStatus(cedula);
-            await saveScrapedMemberToDb(cedula, res, undefined, undefined, currentBatch.id, user?.uid);
-          } catch (scrapeErr) {
-            if (isScraperSessionError(scrapeErr)) {
-              sessionError = scrapeErr;
-              return;
-            }
-            const errStr = scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr);
-            if (errStr.includes('No registrado')) {
-              await saveUnregisteredMemberToDb(cedula, 'young', 'tropa', currentBatch.id, user?.uid);
-            } else {
-              await saveUnregisteredMemberToDb(cedula, 'young', 'tropa', currentBatch.id, user?.uid);
-              triggerWarningToast(`Error de red al verificar la cédula ${cedula}`);
-            }
-          } finally {
-            setVerifyProgress((prev) => ({ ...prev, current: prev.current + 1 }));
+      if (deltaCedulas.length > 0) {
+        setVerifyProgress({ current: 0, total: deltaCedulas.length });
+
+        // 1. Probe request on first delta cedula (warms container & fails fast on expired session)
+        try {
+          const probeMember = await verifySingleCedulaInMemory(deltaCedulas[0]);
+          newlyVerifiedMap.set(deltaCedulas[0], probeMember);
+          setVerifyProgress((prev) => ({ ...prev, current: prev.current + 1 }));
+        } catch (probeErr) {
+          if (isScraperSessionError(probeErr)) {
+            handleScraperSessionFailure(probeErr);
+            return;
           }
-        })
-      );
+          throw probeErr;
+        }
+
+        // 2. Remaining delta cedulas via 4-worker concurrency pool with mid-batch circuit breaker
+        const remaining = deltaCedulas.slice(1);
+        if (remaining.length > 0) {
+          let nextIndex = 0;
+          let sessionExpired = false;
+
+          const runWorker = async () => {
+            while (!sessionExpired) {
+              const currentIdx = nextIndex++;
+              if (currentIdx >= remaining.length) {
+                return;
+              }
+              const cedula = remaining[currentIdx];
+              try {
+                const member = await verifySingleCedulaInMemory(cedula);
+                newlyVerifiedMap.set(cedula, member);
+              } catch (workerErr) {
+                if (isScraperSessionError(workerErr)) {
+                  sessionExpired = true;
+                  if (!sessionError) {
+                    sessionError = workerErr;
+                  }
+                  return;
+                }
+                throw workerErr;
+              } finally {
+                setVerifyProgress((prev) => ({ ...prev, current: prev.current + 1 }));
+              }
+            }
+          };
+
+          const workerCount = Math.min(VERIFICATION_POOL_CONCURRENCY, remaining.length);
+          await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+        }
+      }
 
       if (sessionError) {
-        await refreshSessionStatus().catch(() => {});
-        const sessionErrObj = sessionError as Error;
-        if (
-          isScraperSessionError(sessionErrObj) &&
-          sessionErrObj.reason === 'SCRAPER_NOT_CONFIGURED'
-        ) {
-          setShowAuthAlert(true);
-        } else {
-          setAuthError(sessionErrObj.message);
+        // Retain all already-verified members so resuming after re-auth skips completed cedulas
+        const partialMembers: ScoutMember[] = [];
+        for (const cedula of cedulas) {
+          const existing = existingByIdentity.get(cedula) ?? newlyVerifiedMap.get(cedula);
+          if (existing) {
+            partialMembers.push(existing);
+          }
         }
+        setMembersList([...partialMembers, ...manualMembers]);
+        handleScraperSessionFailure(sessionError);
         return;
       }
 
-      // Load all saved members from DB and assign recognition codes
-      const saved = await getMembersByBatchId(currentBatch.id);
-      const withCodes = assignBatchRecognitionCodes(saved, 'auto');
+      const combined: ScoutMember[] = [];
+      for (const cedula of cedulas) {
+        const member = existingByIdentity.get(cedula) ?? newlyVerifiedMap.get(cedula);
+        if (member) {
+          combined.push(member);
+        }
+      }
+      combined.push(...manualMembers);
+
+      const withCodes = assignBatchRecognitionCodes(combined, 'auto');
       setMembersList(withCodes);
       setCurrentStep(2);
     } catch (err) {
@@ -221,10 +279,26 @@ export const NewBatchWizard: React.FC = () => {
     }
   };
 
-  const handleFinalizeBatch = () => {
-    if (batchId === null) return;
-    void navigate(`/lotes/${batchId}`);
+  const handleFinalizeBatch = async () => {
+    const batchParams = {
+      comment: batchMetadata.comment || '',
+      region_id: 0,
+      district_id: 0,
+      group_id: 0,
+      unit_scope: 'mixed' as const,
+      recognition_type: batchMetadata.recognitionType,
+      user_id: user?.uid
+    };
+
+    const { batch } = await createBatchWithMembers(batchParams, membersList, user?.uid);
+    setBatchId(batch.id);
+    void navigate(`/lotes/${batch.id}`);
   };
+
+  const initialCedulas = membersList
+    .filter((m) => m.unit !== 'no_scout')
+    .map((m) => m.identity)
+    .join('\n');
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 font-sans relative py-2">
@@ -268,12 +342,12 @@ export const NewBatchWizard: React.FC = () => {
           onSubmitStep1={onSubmitStep1}
           initialComment={batchMetadata.comment}
           initialRecognitionType={batchMetadata.recognitionType}
-          initialCedulas={membersList.map((m) => m.identity).join('\n')}
+          initialCedulas={initialCedulas}
         />
       )}
 
       {/* STEP 2: REVIEW & CONFIRM */}
-      {currentStep === 2 && batchId !== null && (
+      {currentStep === 2 && (
         <Step2ReviewConfirm
           batchId={batchId}
           membersList={membersList}

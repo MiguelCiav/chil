@@ -10,8 +10,60 @@ import {
   WriteBatch
 } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
+import { createKeyedSessionCache } from '../../../lib/sessionCache';
 import { Batch, BatchCreationParams, ScoutMember } from '../types';
-import { getMembersByBatchId, getMemberDocId } from './membersCrud';
+import {
+  getMembersByBatchId,
+  getMemberDocId,
+  sanitizeMemberForSave,
+  upsertMembersInCache,
+  removeMembersByBatchIdFromCache
+} from './membersCrud';
+
+const batchesByUserCache = createKeyedSessionCache<string, Batch[]>();
+
+function sortBatchesDescending(batches: Batch[]): Batch[] {
+  return [...batches].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+function findCachedBatchById(id: number): Batch | null {
+  for (const batches of batchesByUserCache.values()) {
+    const found = batches.find((b) => b.id === id);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+}
+
+function upsertBatchInCache(batch: Batch, userId?: string): void {
+  const targetUserId = batch.user_id ?? userId ?? auth.currentUser?.uid ?? '';
+  if (targetUserId && batchesByUserCache.has(targetUserId)) {
+    const existing = batchesByUserCache.get(targetUserId) ?? [];
+    const filtered = existing.filter((b) => b.id !== batch.id);
+    batchesByUserCache.set(targetUserId, sortBatchesDescending([batch, ...filtered]));
+    return;
+  }
+
+  for (const [uid, list] of batchesByUserCache.entries()) {
+    if (list.some((b) => b.id === batch.id)) {
+      const updated = list.map((b) => (b.id === batch.id ? batch : b));
+      batchesByUserCache.set(uid, sortBatchesDescending(updated));
+    }
+  }
+}
+
+function removeBatchesFromCache(batchIds: number[]): void {
+  const idSet = new Set(batchIds);
+  for (const [uid, list] of batchesByUserCache.entries()) {
+    const filtered = list.filter((b) => !idSet.has(b.id));
+    if (filtered.length !== list.length) {
+      batchesByUserCache.set(uid, filtered);
+    }
+  }
+}
 
 export function generateSecureBatchId(): number {
   const MIN_BATCH_ID = 100_000_000;
@@ -51,14 +103,13 @@ export function buildBatchQueryForUser(userId: string) {
   return query(collection(db, "batches"), where("user_id", "==", userId));
 }
 
-export async function createBatch(params: BatchCreationParams, userId?: string): Promise<Batch> {
-  const numericId = generateSecureBatchId();
+function buildBatchRecord(numericId: number, params: BatchCreationParams, userId?: string): Batch {
   const targetUserId = params.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   const regionId = typeof params.region_id === 'number' && !Number.isNaN(params.region_id) ? params.region_id : 0;
   const districtId = typeof params.district_id === 'number' && !Number.isNaN(params.district_id) ? params.district_id : 0;
   const groupId = typeof params.group_id === 'number' && !Number.isNaN(params.group_id) ? params.group_id : 0;
 
-  const newBatch: Batch = {
+  return {
     id: numericId,
     comment: params.comment || '',
     region_id: regionId,
@@ -70,15 +121,61 @@ export async function createBatch(params: BatchCreationParams, userId?: string):
     created_at: new Date().toISOString(),
     ...(targetUserId ? { user_id: targetUserId } : {})
   };
+}
+
+export async function createBatch(params: BatchCreationParams, userId?: string): Promise<Batch> {
+  const numericId = generateSecureBatchId();
+  const newBatch = buildBatchRecord(numericId, params, userId);
 
   await setDoc(doc(db, "batches", String(numericId)), newBatch);
+  upsertBatchInCache(newBatch, newBatch.user_id ?? userId);
   return newBatch;
+}
+
+export async function createBatchWithMembers(
+  params: BatchCreationParams,
+  members: ScoutMember[],
+  userId?: string,
+  chunkSize = 450
+): Promise<{ batch: Batch; members: ScoutMember[] }> {
+  const numericId = generateSecureBatchId();
+  const newBatch = buildBatchRecord(numericId, params, userId);
+  const targetUserId = newBatch.user_id ?? userId ?? auth.currentUser?.uid ?? '';
+
+  const sanitizedMembers = members.map((member) =>
+    sanitizeMemberForSave(
+      {
+        ...member,
+        batch_id: numericId
+      },
+      targetUserId
+    )
+  );
+
+  const operations: ((batchOp: WriteBatch) => void)[] = [];
+  const batchDocRef = doc(db, "batches", String(numericId));
+  operations.push((batchOp) => batchOp.set(batchDocRef, newBatch));
+
+  for (const sanitized of sanitizedMembers) {
+    const memberRef = doc(db, "scout_members", getMemberDocId(sanitized));
+    operations.push((batchOp) => batchOp.set(memberRef, sanitized));
+  }
+
+  await commitChunkedBatches(operations, chunkSize);
+
+  upsertBatchInCache(newBatch, targetUserId);
+  upsertMembersInCache(sanitizedMembers, targetUserId);
+
+  return { batch: newBatch, members: sanitizedMembers };
 }
 
 export async function updateBatch(id: number, params: BatchCreationParams, userId?: string): Promise<Batch> {
   const batchRef = doc(db, "batches", String(id));
-  const docSnap = await getDoc(batchRef);
-  const existingData = docSnap.exists() ? (docSnap.data() as Batch) : null;
+  let existingData = findCachedBatchById(id);
+  if (!existingData) {
+    const docSnap = await getDoc(batchRef);
+    existingData = docSnap.exists() ? (docSnap.data() as Batch) : null;
+  }
   const targetUserId = params.user_id ?? userId ?? existingData?.user_id ?? auth.currentUser?.uid ?? '';
   const regionId = typeof params.region_id === 'number' && !Number.isNaN(params.region_id) ? params.region_id : (existingData?.region_id ?? 0);
   const districtId = typeof params.district_id === 'number' && !Number.isNaN(params.district_id) ? params.district_id : (existingData?.district_id ?? 0);
@@ -98,6 +195,7 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
   };
 
   await setDoc(batchRef, updatedBatch);
+  upsertBatchInCache(updatedBatch, targetUserId);
   return updatedBatch;
 }
 
@@ -120,6 +218,8 @@ export async function deleteBatch(batchId: number): Promise<void> {
   operations.push((batchOp) => batchOp.delete(batchDocRef));
 
   await commitChunkedBatches(operations);
+  removeBatchesFromCache([batchId]);
+  removeMembersByBatchIdFromCache(batchId);
 }
 
 export async function getAllBatches(userId?: string): Promise<Batch[]> {
@@ -127,17 +227,24 @@ export async function getAllBatches(userId?: string): Promise<Batch[]> {
   if (!targetUserId) {
     return [];
   }
-  const q = buildBatchQueryForUser(targetUserId);
-  const querySnapshot = await getDocs(q);
-  const batches: Batch[] = [];
-  querySnapshot.forEach((docSnapshot) => {
-    batches.push(docSnapshot.data() as Batch);
+
+  return batchesByUserCache.getOrLoad(targetUserId, async () => {
+    const q = buildBatchQueryForUser(targetUserId);
+    const querySnapshot = await getDocs(q);
+    const batches: Batch[] = [];
+    querySnapshot.forEach((docSnapshot) => {
+      batches.push(docSnapshot.data() as Batch);
+    });
+    return sortBatchesDescending(batches);
   });
-  // Sort batches by creation date descending
-  return batches.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export async function getBatchById(id: number): Promise<Batch | null> {
+  const cached = findCachedBatchById(id);
+  if (cached) {
+    return cached;
+  }
+
   const docRef = doc(db, "batches", String(id));
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
@@ -237,6 +344,7 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
   operations.push((batchOp) => batchOp.set(newBatchRef, mergedBatch));
 
   // 2. Member reassignment
+  const reassignedMembers: ScoutMember[] = [];
   for (const { batch: sourceBatch, members } of membersByBatch) {
     for (const member of members) {
       const memberGroupId = resolveMergedMemberGroupId(member, sourceBatch);
@@ -247,6 +355,7 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
         group_id: memberGroupId,
         ...(targetUserId ? { user_id: targetUserId } : {})
       };
+      reassignedMembers.push(updatedMember);
       const newDocId = getMemberDocId(updatedMember);
       const memberRef = doc(db, 'scout_members', newDocId);
       operations.push((batchOp) => batchOp.set(memberRef, updatedMember));
@@ -269,6 +378,14 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
   }
 
   await commitChunkedBatches(operations);
+
+  const sourceBatchIds = existingBatches.map((b) => b.id);
+  removeBatchesFromCache(sourceBatchIds);
+  for (const sourceId of sourceBatchIds) {
+    removeMembersByBatchIdFromCache(sourceId);
+  }
+  upsertBatchInCache(mergedBatch, targetUserId);
+  upsertMembersInCache(reassignedMembers, targetUserId);
 
   return mergedBatch;
 }

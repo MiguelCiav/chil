@@ -31,11 +31,12 @@ vi.mock('firebase/firestore', async (importOriginal) => {
     getDoc: vi.fn(),
     setDoc: vi.fn(),
     deleteDoc: vi.fn(),
+    deleteField: vi.fn(() => ({ __sentinel: 'deleteField' })),
     query: vi.fn(),
     where: vi.fn(),
     writeBatch: vi.fn(() => ({
       set: vi.fn(),
-      commit: vi.fn()
+      commit: vi.fn().mockResolvedValue(undefined)
     }))
   };
 });
@@ -108,6 +109,53 @@ describe('Recognition Types API Layer', () => {
       expect(result[0].name).toBe('Promesa Scout');
       expect(result[1].name).toBe('sct-wood-badge');
       expect(result[0].template).toBeDefined();
+
+      // Repeat call is served from session cache (0 extra Firestore reads)
+      const cached = await getAllRecognitionTypes();
+      expect(cached).toHaveLength(2);
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+    });
+
+    it('lazily migrates legacy embedded templates via atomic WriteBatch without failing read if migration rejects', async () => {
+      const setMock = vi.fn();
+      const commitMock = vi.fn().mockRejectedValueOnce(new Error('Migration permission error'));
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: setMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        empty: false,
+        docs: [
+          {
+            id: 'sct-legacy',
+            data: () => ({
+              name: 'Legado',
+              created_at: '2026-01-01T00:00:00.000Z',
+              template: { background_url: 'data:image/jpeg;base64,abc', fields: [] }
+            })
+          }
+        ]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const result = await getAllRecognitionTypes('test-user-uid');
+      await Promise.resolve();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].template?.background_url).toBe('data:image/jpeg;base64,abc');
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'recognition_templates/sct-legacy' }),
+        expect.objectContaining({ template: { background_url: 'data:image/jpeg;base64,abc', fields: [] } }),
+        { merge: true }
+      );
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'recognition_types/sct-legacy' }),
+        expect.objectContaining({ template: expect.anything() }),
+        { merge: true }
+      );
+      expect(commitMock).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
     });
 
     it('returns empty array on Firestore read error', async () => {
@@ -119,16 +167,54 @@ describe('Recognition Types API Layer', () => {
   });
 
   describe('getRecognitionTypeById', () => {
-    it('returns recognition type when document exists', async () => {
-      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
-        exists: () => true,
+    it('returns recognition type hydrated from decoupled recognition_templates collection', async () => {
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          id: 'sct-merit',
+          data: () => ({
+            name: 'Medalla al Mérito',
+            created_at: '2026-01-01T00:00:00.000Z'
+          })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          id: 'sct-merit',
+          data: () => ({
+            template: { background_url: 'bg-decoupled', fields: [] }
+          })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      const result = await getRecognitionTypeById('sct-merit');
+      expect(result).toEqual({
         id: 'sct-merit',
-        data: () => ({
-          name: 'Medalla al Mérito',
-          created_at: '2026-01-01T00:00:00.000Z',
-          template: { background_url: 'bg', fields: [] }
-        })
-      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+        name: 'Medalla al Mérito',
+        created_at: '2026-01-01T00:00:00.000Z',
+        template: { background_url: 'bg-decoupled', fields: [] }
+      });
+    });
+
+    it('falls back to legacy embedded template when decoupled template doc does not exist and migrates lazily', async () => {
+      const setMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: setMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          id: 'sct-merit',
+          data: () => ({
+            name: 'Medalla al Mérito',
+            created_at: '2026-01-01T00:00:00.000Z',
+            template: { background_url: 'bg', fields: [] }
+          })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
 
       const result = await getRecognitionTypeById('sct-merit');
       expect(result).toEqual({
@@ -137,14 +223,19 @@ describe('Recognition Types API Layer', () => {
         created_at: '2026-01-01T00:00:00.000Z',
         template: { background_url: 'bg', fields: [] }
       });
+      expect(commitMock).toHaveBeenCalledTimes(1);
     });
 
     it('returns default fallback name and date when missing in document data', async () => {
-      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
-        exists: () => true,
-        id: 'sct-default',
-        data: () => ({})
-      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          id: 'sct-default',
+          data: () => ({})
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
 
       const result = await getRecognitionTypeById('sct-default');
       expect(result?.id).toBe('sct-default');
@@ -194,16 +285,7 @@ describe('Recognition Types API Layer', () => {
   });
 
   describe('updateRecognitionType', () => {
-    it('updates existing recognition type in Firestore', async () => {
-      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
-        exists: () => true,
-        id: 'sct-merit',
-        data: () => ({
-          name: 'Medalla al Mérito',
-          created_at: '2026-01-01T00:00:00.000Z',
-          template: { background_url: 'template_url', fields: [] }
-        })
-      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+    it('updates catalog metadata in Firestore using merge without reading template', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
 
       const updated = await updateRecognitionType('sct-merit', {
@@ -212,32 +294,16 @@ describe('Recognition Types API Layer', () => {
 
       expect(updated.id).toBe('sct-merit');
       expect(updated.name).toBe('Medalla al Mérito Extraordinario');
-      expect(updated.created_at).toBe('2026-01-01T00:00:00.000Z');
-      expect(updated.template).toBeDefined();
-      expect(firestore.setDoc).toHaveBeenCalled();
-    });
-
-    it('handles update when existing item has no previous data or template', async () => {
-      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
-        exists: () => false
-      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
-      vi.mocked(firestore.setDoc).mockResolvedValueOnce();
-
-      const updated = await updateRecognitionType('sct-new-id', {
-        name: 'Nuevo Nombre'
-      });
-
-      expect(updated.id).toBe('sct-new-id');
-      expect(updated.name).toBe('Nuevo Nombre');
       expect(updated.created_at).toBeDefined();
+      expect(firestore.getDoc).not.toHaveBeenCalled();
+      expect(firestore.setDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'recognition_types/sct-merit' }),
+        expect.objectContaining({ id: 'sct-merit', name: 'Medalla al Mérito Extraordinario' }),
+        { merge: true }
+      );
     });
 
     it('throws error when setDoc fails in updateRecognitionType', async () => {
-      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
-        exists: () => true,
-        id: 'sct-merit',
-        data: () => ({ name: 'Test' })
-      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
       vi.mocked(firestore.setDoc).mockRejectedValueOnce(new Error('Update failed'));
 
       await expect(updateRecognitionType('sct-merit', { name: 'Update test' })).rejects.toThrow('Update failed');
@@ -245,17 +311,28 @@ describe('Recognition Types API Layer', () => {
   });
 
   describe('deleteRecognitionType', () => {
-    it('deletes recognition document from Firestore', async () => {
-      vi.mocked(firestore.deleteDoc).mockResolvedValueOnce();
+    it('deletes recognition catalog document and decoupled template document from Firestore', async () => {
+      vi.mocked(firestore.deleteDoc).mockResolvedValue();
 
       await deleteRecognitionType('sct-merit');
 
       expect(firestore.deleteDoc).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'sct-merit' })
+        expect.objectContaining({ path: 'recognition_types/sct-merit' })
+      );
+      expect(firestore.deleteDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'recognition_templates/sct-merit' })
       );
     });
 
-    it('throws error when deleteDoc fails', async () => {
+    it('succeeds even if decoupled recognition_templates document does not exist', async () => {
+      vi.mocked(firestore.deleteDoc)
+        .mockResolvedValueOnce()
+        .mockRejectedValueOnce(new Error('NOT_FOUND'));
+
+      await expect(deleteRecognitionType('sct-no-template')).resolves.toBeUndefined();
+    });
+
+    it('throws error when deleting recognition_types document fails', async () => {
       vi.mocked(firestore.deleteDoc).mockRejectedValueOnce(new Error('Delete error'));
 
       await expect(deleteRecognitionType('sct-error')).rejects.toThrow('Delete error');
@@ -263,8 +340,13 @@ describe('Recognition Types API Layer', () => {
   });
 
   describe('saveCertificateTemplate', () => {
-    it('updates recognition document with certificate template using merge', async () => {
-      vi.mocked(firestore.setDoc).mockResolvedValueOnce();
+    it('saves template to recognition_templates and strips legacy field via atomic WriteBatch', async () => {
+      const setMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: setMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
 
       const mockTemplate: CertificateTemplate = {
         background_url: 'data:image/jpeg;base64,mockdata',
@@ -289,11 +371,17 @@ describe('Recognition Types API Layer', () => {
 
       await saveCertificateTemplate('sct-wood-badge', mockTemplate);
 
-      expect(firestore.setDoc).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'sct-wood-badge' }),
-        { template: mockTemplate },
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'recognition_templates/sct-wood-badge' }),
+        expect.objectContaining({ template: mockTemplate }),
         { merge: true }
       );
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'recognition_types/sct-wood-badge' }),
+        expect.objectContaining({ template: expect.anything() }),
+        { merge: true }
+      );
+      expect(commitMock).toHaveBeenCalledTimes(1);
     });
 
     it('rejects template payload exceeding Firestore 1 MB document limit', async () => {
@@ -308,11 +396,14 @@ describe('Recognition Types API Layer', () => {
       await expect(saveCertificateTemplate('sct-wood-badge', oversizedTemplate)).rejects.toThrow(
         'La imagen de fondo excede el límite máximo de almacenamiento permitido (1 MB)'
       );
-      expect(firestore.setDoc).not.toHaveBeenCalled();
+      expect(firestore.writeBatch).not.toHaveBeenCalled();
     });
 
-    it('throws error when setDoc fails in saveCertificateTemplate', async () => {
-      vi.mocked(firestore.setDoc).mockRejectedValueOnce(new Error('Template save error'));
+    it('throws error when WriteBatch commit fails in saveCertificateTemplate', async () => {
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: vi.fn(),
+        commit: vi.fn().mockRejectedValueOnce(new Error('Template save error'))
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
 
       await expect(
         saveCertificateTemplate('sct-error', {

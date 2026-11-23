@@ -24,21 +24,15 @@ import {
 import { MemberStatusBadge } from '../../../../domain/components';
 import { ColumnDef, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { ScoutGroup, ScoutMember, Region, District, getUnitBadge } from '../../types';
-import {
-  updateMember,
-  deleteMember,
-  batchUpdateMembers,
-  getMembersByBatchId,
-  assignBatchRecognitionCodes
-} from '../../api';
+import { assignBatchRecognitionCodes } from '../../api';
 import { EditMemberModal, ManualMemberModal } from '../shared';
 
 export interface Step2ReviewConfirmProps {
-  batchId: number;
+  batchId?: number | null;
   membersList: ScoutMember[];
   onMembersUpdated: (members: ScoutMember[]) => void;
   onBack: () => void;
-  onFinalizeBatch: () => void;
+  onFinalizeBatch: () => void | Promise<void>;
   regions?: Region[];
   districts?: District[];
   groups?: ScoutGroup[];
@@ -230,19 +224,13 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
     onMembersUpdated(updated);
   }, [membersList, onMembersUpdated]);
 
-  const handleDeleteMember = useCallback(async (member: ScoutMember) => {
+  const handleDeleteMember = useCallback((member: ScoutMember) => {
     if (!window.confirm(`¿Seguro que deseas quitar a ${member.first_names} ${member.last_names} del lote?`)) {
       return;
     }
-    try {
-      await deleteMember(member.recognition_code || member.identity, member.identity, batchId);
-      const remaining = membersList.filter((m) => m.identity !== member.identity);
-      onMembersUpdated(remaining);
-    } catch (err) {
-      console.error('Error deleting member from batch:', err);
-      alert('No se pudo eliminar el miembro del lote.');
-    }
-  }, [batchId, membersList, onMembersUpdated]);
+    const remaining = membersList.filter((m) => m.identity !== member.identity);
+    onMembersUpdated(remaining);
+  }, [membersList, onMembersUpdated]);
 
   const handleEditMemberClick = useCallback((member: ScoutMember) => {
     setEditingMember({ ...member });
@@ -250,30 +238,22 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
   }, []);
 
   const handleSaveEditedMember = async (updatedMember: ScoutMember) => {
-    try {
-      await updateMember(updatedMember);
-      const refreshed = await getMembersByBatchId(batchId);
-      onMembersUpdated(refreshed);
-      setIsEditModalOpen(false);
-      setEditingMember(null);
-    } catch (err) {
-      console.error('Error saving edited member:', err);
-      alert('Error al actualizar la información del miembro.');
-    }
+    const replaced = membersList.map((m) =>
+      m.identity === updatedMember.identity ? updatedMember : m
+    );
+    const nextList =
+      codeMode === 'auto' ? assignBatchRecognitionCodes(replaced, 'auto') : replaced;
+    onMembersUpdated(nextList);
+    setIsEditModalOpen(false);
+    setEditingMember(null);
   };
 
-  const handleSaveManualMember = async (_newMember: ScoutMember) => {
-    try {
-      const refreshed = await getMembersByBatchId(batchId);
-      let updated = refreshed;
-      if (codeMode === 'auto') {
-        updated = assignBatchRecognitionCodes(refreshed, 'auto');
-      }
-      onMembersUpdated(updated);
-      setIsManualModalOpen(false);
-    } catch (err) {
-      console.error('Error refreshing members after manual add:', err);
-    }
+  const handleSaveManualMember = async (newMember: ScoutMember) => {
+    const appended = [...membersList, newMember];
+    const nextList =
+      codeMode === 'auto' ? assignBatchRecognitionCodes(appended, 'auto') : appended;
+    onMembersUpdated(nextList);
+    setIsManualModalOpen(false);
   };
 
   const validMembers = useMemo(
@@ -314,14 +294,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
   const handleFinalizeBatch = async () => {
     setIsFinalizing(true);
     try {
-      const isUpdateMemberSpyActive =
-        'mock' in updateMember && !('mock' in batchUpdateMembers);
-      if (isUpdateMemberSpyActive) {
-        await Promise.all(membersList.map((m) => updateMember(m)));
-      } else {
-        await batchUpdateMembers(membersList);
-      }
-      onFinalizeBatch();
+      await onFinalizeBatch();
     } catch (err) {
       console.error('Error saving batch members:', err);
       alert('Error al guardar los reconocimientos del lote.');

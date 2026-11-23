@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
+import { clearAllSessionCaches } from '../../../lib/sessionCache';
 import {
   AuthContextType,
   AuthUser,
@@ -23,9 +24,15 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const activeUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChangedListener((authUser) => {
+      const nextUid = authUser?.uid ?? null;
+      if (activeUidRef.current !== nextUid) {
+        clearAllSessionCaches();
+        activeUidRef.current = nextUid;
+      }
       setUser(authUser);
       setLoading(false);
     });
@@ -47,6 +54,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     await logoutUser();
+    clearAllSessionCaches();
+    activeUidRef.current = null;
     setUser(null);
   }, []);
 

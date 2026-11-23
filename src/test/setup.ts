@@ -1,4 +1,13 @@
 import '@testing-library/jest-dom';
+import { afterEach } from 'vitest';
+import { clearAllSessionCaches } from '../lib/sessionCache';
+
+afterEach(() => {
+  clearAllSessionCaches();
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    window.sessionStorage.clear();
+  }
+});
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
