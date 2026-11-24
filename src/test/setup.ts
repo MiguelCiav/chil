@@ -1,11 +1,16 @@
 import '@testing-library/jest-dom';
 import { afterEach } from 'vitest';
 import { clearAllSessionCaches } from '../lib/sessionCache';
+import { setPersistentCacheAdapterForTests } from '../lib/persistentCache';
 
 afterEach(() => {
   clearAllSessionCaches();
+  setPersistentCacheAdapterForTests(null);
   if (typeof window !== 'undefined' && window.sessionStorage) {
     window.sessionStorage.clear();
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.clear();
   }
 });
 

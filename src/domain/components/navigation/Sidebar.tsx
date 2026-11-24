@@ -7,6 +7,7 @@ import {
   Table,
   BarChart3,
   Settings,
+  RefreshCw,
   LogIn,
   UserPlus,
   ChevronLeft,
@@ -14,8 +15,16 @@ import {
 } from 'lucide-react';
 import logo from '../../../assets/CHIL_LOGO.png';
 import { Button } from '../../../components';
+import { clearAllSessionCaches } from '../../../lib/sessionCache';
+import {
+  clearBrowserStorageByPrefix,
+  clearPersistentCacheForUid
+} from '../../../lib/persistentCache';
 import { useAuth, UserProfileMenu } from '../../../features/auth';
-import { useScraperSettings } from '../../../context/ScraperSettingsContext';
+import {
+  SCRAPER_STATUS_STORAGE_PREFIX,
+  useScraperSettings
+} from '../../../context/ScraperSettingsContext';
 
 const SIDEBAR_COLLAPSED_KEY = 'chil_sidebar_collapsed';
 
@@ -24,16 +33,19 @@ export interface SidebarProps {
   onMobileClose?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onSyncData?: () => void | Promise<void>;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen = false,
   onMobileClose = () => {},
   isCollapsed: controlledCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  onSyncData
 }) => {
   const { user } = useAuth();
   const { openModal, sessionStatus } = useScraperSettings();
+  const [isSyncing, setIsSyncing] = useState(false);
   const [internalCollapsed, setInternalCollapsed] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
@@ -105,6 +117,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }
         return next;
       });
+    }
+  };
+
+  const handleSyncData = async () => {
+    if (!user || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      clearAllSessionCaches();
+      await clearPersistentCacheForUid(user.uid);
+      clearBrowserStorageByPrefix(SCRAPER_STATUS_STORAGE_PREFIX);
+      if (onSyncData) {
+        await onSyncData();
+      } else {
+        window.location.reload();
+      }
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -281,6 +310,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="border-t border-gray-200 p-3 space-y-2">
           {user && (
             <>
+              <button
+                type="button"
+                onClick={() => {
+                  void handleSyncData();
+                }}
+                disabled={isSyncing}
+                className={`w-full flex items-center gap-3 p-2 rounded-xl text-neutral/75 hover:text-neutral hover:bg-gray-100 transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 ${
+                  collapsed ? 'justify-center' : ''
+                }`}
+                aria-label="Sincronizar datos con el servidor"
+                title="Sincronizar datos con el servidor"
+              >
+                <RefreshCw
+                  className={`w-5 h-5 shrink-0 ${isSyncing ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
+                {!collapsed && <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar datos'}</span>}
+              </button>
+
               <button
                 type="button"
                 onClick={openModal}

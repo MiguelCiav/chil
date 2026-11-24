@@ -203,4 +203,28 @@ describe('Sidebar component', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it('renders Sincronizar datos button when authenticated, clears scraper status cache, and triggers onSyncData', async () => {
+    const onSyncData = vi.fn();
+    window.localStorage.setItem(
+      'chil_scraper_status_user-123',
+      JSON.stringify({ status: { connected: true, status: 'active' }, cachedAt: Date.now() })
+    );
+
+    render(
+      <ScraperSettingsProvider>
+        <MemoryRouter>
+          <Sidebar onSyncData={onSyncData} />
+        </MemoryRouter>
+      </ScraperSettingsProvider>
+    );
+
+    const syncBtn = screen.getByRole('button', { name: /Sincronizar datos con el servidor/i });
+    fireEvent.click(syncBtn);
+
+    await waitFor(() => {
+      expect(onSyncData).toHaveBeenCalledTimes(1);
+    });
+    expect(window.localStorage.getItem('chil_scraper_status_user-123')).toBeNull();
+  });
 });

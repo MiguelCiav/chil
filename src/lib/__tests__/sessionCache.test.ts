@@ -26,6 +26,7 @@ describe('sessionCache', () => {
     );
 
     const p1 = cache.getOrLoad('uid-1', loader);
+    expect(cache.getInFlight('uid-1')).toBe(p1);
     const p2 = cache.getOrLoad('uid-1', loader);
 
     expect(loader).toHaveBeenCalledTimes(1);
@@ -34,6 +35,7 @@ describe('sessionCache', () => {
     const [v1, v2] = await Promise.all([p1, p2]);
     expect(v1).toBe(42);
     expect(v2).toBe(42);
+    expect(cache.getInFlight('uid-1')).toBeUndefined();
   });
 
   it('does not cache rejected promises and allows retry on subsequent calls', async () => {

@@ -46,10 +46,16 @@ async function readSessionDoc(uid) {
     .get()
     .then((snap) => {
       const data = snap.exists ? snap.data() || {} : null;
-      sessionCache.set(uid, {
-        data,
-        expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
-      });
+      // Only cache active sessions; never cache expired or missing docs so reconnects
+      // in another serverless container take effect immediately.
+      if (data && data.status !== "expired") {
+        sessionCache.set(uid, {
+          data,
+          expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
+        });
+      } else {
+        sessionCache.delete(uid);
+      }
       return data;
     })
     .finally(() => {
@@ -148,27 +154,13 @@ async function markSessionExpired(uid) {
     });
   } catch (err) {
     if (isNotFoundError(err)) {
-      sessionCache.set(uid, {
-        data: null,
-        expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
-      });
+      sessionCache.delete(uid);
       return;
     }
     throw err;
   }
 
-  const cached = sessionCache.get(uid);
-  if (cached && cached.data) {
-    const expiredAt = new Date();
-    sessionCache.set(uid, {
-      data: {
-        ...cached.data,
-        status: "expired",
-        updatedAt: { toDate: () => expiredAt },
-      },
-      expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
-    });
-  }
+  sessionCache.delete(uid);
 }
 
 /**

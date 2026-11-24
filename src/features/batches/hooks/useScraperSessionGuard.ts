@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useScraperSettings } from '../../../context/ScraperSettingsContext';
-import { getScraperSessionStatus, isScraperSessionError } from '../api';
+import { isScraperSessionError } from '../api';
 import type { ScraperAlertModalsProps } from '../components/shared/ScraperAlertModals';
 
 export interface UseScraperSessionGuardResult {
@@ -29,8 +29,7 @@ export function useScraperSessionGuard(): UseScraperSessionGuardResult {
   );
 
   const ensureActiveSession = useCallback(async (): Promise<boolean> => {
-    const activeSession =
-      sessionStatus ?? (await refreshSessionStatus()) ?? (await getScraperSessionStatus());
+    const activeSession = sessionStatus ?? (await refreshSessionStatus());
     if (!activeSession?.connected) {
       setShowAuthAlert(true);
       return false;

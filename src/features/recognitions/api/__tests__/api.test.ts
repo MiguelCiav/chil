@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as firestore from 'firebase/firestore';
+import { clearAllSessionCaches } from '../../../../lib/sessionCache';
+import {
+  createInMemoryPersistentAdapter,
+  setPersistentCacheAdapterForTests
+} from '../../../../lib/persistentCache';
 import {
   getAllRecognitionTypes,
   getRecognitionTypeById,
@@ -258,10 +263,99 @@ describe('Recognition Types API Layer', () => {
       const result = await getRecognitionTypeById('error-id');
       expect(result).toBeNull();
     });
+
+    it('caches cold getRecognitionTypeById hits and null misses to prevent repeated Firestore reads', async () => {
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          id: 'sct-cold-hit',
+          data: () => ({ name: 'Cold Hit', created_at: '2026-01-01T00:00:00.000Z' })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      const first = await getRecognitionTypeById('sct-cold-hit');
+      const second = await getRecognitionTypeById('sct-cold-hit');
+      expect(first?.name).toBe('Cold Hit');
+      expect(second?.name).toBe('Cold Hit');
+
+      const miss1 = await getRecognitionTypeById('sct-missing-id');
+      const miss2 = await getRecognitionTypeById('sct-missing-id');
+      expect(miss1).toBeNull();
+      expect(miss2).toBeNull();
+      // 2 reads for sct-cold-hit (doc + template) + 1 read for sct-missing-id
+      expect(firestore.getDoc).toHaveBeenCalledTimes(3);
+    });
+
+    it('returns base catalog record even if decoupled template getDoc fails', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          id: 'sct-tpl-err',
+          data: () => ({ name: 'Sin Plantilla Temporal', created_at: '2026-01-01T00:00:00.000Z' })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockRejectedValueOnce(new Error('Template permission error'));
+
+      const result = await getRecognitionTypeById('sct-tpl-err');
+      expect(result).toEqual({
+        id: 'sct-tpl-err',
+        name: 'Sin Plantilla Temporal',
+        created_at: '2026-01-01T00:00:00.000Z'
+      });
+      warnSpy.mockRestore();
+    });
+
+    it('hydrates recognition catalog and templates from persistent cache across simulated F5 with 0 Firestore reads', async () => {
+      const adapter = createInMemoryPersistentAdapter();
+      setPersistentCacheAdapterForTests(adapter);
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        empty: false,
+        docs: [
+          {
+            id: 'sct-persisted',
+            data: () => ({
+              name: 'Reconocimiento Persistente',
+              created_at: '2026-01-01T00:00:00.000Z'
+            })
+          }
+        ]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      vi.mocked(firestore.getDoc).mockResolvedValueOnce({
+        exists: () => true,
+        id: 'sct-persisted',
+        data: () => ({
+          template: { background_url: 'data:image/jpeg;base64,cached-bg', fields: [] }
+        })
+      } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      await getAllRecognitionTypes('test-user-uid');
+      const loadedWithTemplate = await getRecognitionTypeById('sct-persisted');
+      expect(loadedWithTemplate?.template?.background_url).toBe('data:image/jpeg;base64,cached-bg');
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+      expect(firestore.getDoc).toHaveBeenCalledTimes(1);
+
+      // Simulate full browser reload (F5)
+      clearAllSessionCaches();
+
+      const reloadedCatalog = await getAllRecognitionTypes('test-user-uid');
+      const reloadedWithTemplate = await getRecognitionTypeById('sct-persisted');
+      expect(reloadedCatalog).toHaveLength(1);
+      expect(reloadedCatalog[0].name).toBe('Reconocimiento Persistente');
+      expect(reloadedWithTemplate?.template?.background_url).toBe('data:image/jpeg;base64,cached-bg');
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+      expect(firestore.getDoc).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('createRecognitionType', () => {
-    it('creates and persists new recognition type to Firestore', async () => {
+    it('creates and persists new recognition type to Firestore and seeds null template cache', async () => {
       vi.mocked(firestore.setDoc).mockResolvedValueOnce();
 
       const created = await createRecognitionType({
@@ -275,6 +369,12 @@ describe('Recognition Types API Layer', () => {
         expect.objectContaining({ id: 'sct-orden-del-sol-naciente' }),
         expect.objectContaining({ name: 'Orden del Sol Naciente' })
       );
+
+      // Immediate detail lookup hits warm caches with 0 Firestore reads
+      const loaded = await getRecognitionTypeById(created.id);
+      expect(loaded?.id).toBe(created.id);
+      expect(loaded?.template).toBeUndefined();
+      expect(firestore.getDoc).not.toHaveBeenCalled();
     });
 
     it('throws error when setDoc fails in createRecognitionType', async () => {

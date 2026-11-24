@@ -130,23 +130,42 @@ describe('scraper sessionStore module', () => {
     expect(env?.status).toBe('active');
   });
 
-  it('getSessionMetadata returns connected=false when session is marked expired', async () => {
-    mockDocRef.get.mockResolvedValueOnce({
-      exists: true,
-      data: () => ({
-        impeesaEmail: 'scout@scouts.org.ve',
-        status: 'expired',
-        encrypted: { iv: 'a' }
+  it('getSessionMetadata does not cache missing or expired session docs so reconnects are observed immediately', async () => {
+    mockDocRef.get
+      .mockResolvedValueOnce({ exists: false })
+      .mockResolvedValueOnce({
+        exists: true,
+        data: () => ({
+          impeesaEmail: 'scout@scouts.org.ve',
+          status: 'expired',
+          encrypted: { iv: 'a' }
+        })
       })
-    });
+      .mockResolvedValueOnce({
+        exists: true,
+        data: () => ({
+          impeesaEmail: 'scout@scouts.org.ve',
+          status: 'active',
+          encrypted: { iv: 'b', authTag: 'c', ciphertext: 'd', keyVersion: 1 }
+        })
+      });
 
-    const meta = await sessionStore.getSessionMetadata('uid-1');
-    expect(meta.connected).toBe(false);
-    expect(meta.status).toBe('expired');
-    expect(meta.impeesaEmail).toBe('scout@scouts.org.ve');
+    const metaNone = await sessionStore.getSessionMetadata('uid-1');
+    expect(metaNone.status).toBe('none');
+
+    const metaExpired = await sessionStore.getSessionMetadata('uid-1');
+    expect(metaExpired.connected).toBe(false);
+    expect(metaExpired.status).toBe('expired');
+    expect(metaExpired.impeesaEmail).toBe('scout@scouts.org.ve');
+
+    // Because 'expired' was NOT cached, a subsequent read sees the newly reconnected 'active' session immediately
+    const metaActive = await sessionStore.getSessionMetadata('uid-1');
+    expect(metaActive.connected).toBe(true);
+    expect(metaActive.status).toBe('active');
+    expect(mockDocRef.get).toHaveBeenCalledTimes(3);
   });
 
-  it('markSessionExpired updates existing doc directly without a prior get() and updates cache', async () => {
+  it('markSessionExpired updates existing doc directly without a prior get() and evicts cache', async () => {
     await sessionStore.saveSession('uid-1', {
       impeesaEmail: 'scout@scouts.org.ve',
       encrypted: { iv: 'a', authTag: 'b', ciphertext: 'c', keyVersion: 1 }
@@ -159,7 +178,17 @@ describe('scraper sessionStore module', () => {
       updatedAt: 'SERVER_TIMESTAMP'
     });
 
+    // Evicted cache must query Firestore on next read so cross-container reconnects take effect immediately
+    mockDocRef.get.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        impeesaEmail: 'scout@scouts.org.ve',
+        status: 'expired',
+        encrypted: { iv: 'a' }
+      })
+    });
     const meta = await sessionStore.getSessionMetadata('uid-1');
+    expect(mockDocRef.get).toHaveBeenCalledTimes(1);
     expect(meta.connected).toBe(false);
     expect(meta.status).toBe('expired');
   });

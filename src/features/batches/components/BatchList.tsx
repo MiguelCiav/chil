@@ -283,7 +283,14 @@ export const BatchList: React.FC = () => {
 
             let recType: RecognitionType | null = null;
             if (targetBatch.recognition_type) {
-              recType = await getRecognitionTypeById(targetBatch.recognition_type);
+              const matchedCatalog = recognitionTypes.find(
+                r =>
+                  r.id === targetBatch.recognition_type ||
+                  r.name.toLowerCase() === targetBatch.recognition_type?.toLowerCase()
+              );
+              recType = await getRecognitionTypeById(
+                matchedCatalog?.id ?? targetBatch.recognition_type
+              );
               if (signal.aborted) {
                 throw new DOMException('Aborted', 'AbortError');
               }
@@ -314,7 +321,7 @@ export const BatchList: React.FC = () => {
         }
       );
     },
-    [startDownload, batches, members, regions, districts, groups, triggerToast]
+    [startDownload, batches, members, recognitionTypes, regions, districts, groups, triggerToast]
   );
 
   const handleDeleteClick = useCallback((rowData: BatchRowData) => {

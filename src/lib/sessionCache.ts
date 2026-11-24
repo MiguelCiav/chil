@@ -3,6 +3,7 @@ export interface KeyedSessionCache<K, V> {
   has: (key: K) => boolean;
   set: (key: K, value: V) => void;
   delete: (key: K) => boolean;
+  getInFlight: (key: K) => Promise<V> | undefined;
   getOrLoad: (key: K, loader: () => Promise<V>) => Promise<V>;
   entries: () => IterableIterator<[K, V]>;
   values: () => IterableIterator<V>;
@@ -29,6 +30,7 @@ export function createKeyedSessionCache<K, V>(): KeyedSessionCache<K, V> {
       store.set(key, value);
     },
     delete: (key: K) => store.delete(key),
+    getInFlight: (key: K) => inFlight.get(key),
     getOrLoad: (key: K, loader: () => Promise<V>): Promise<V> => {
       if (store.has(key)) {
         return Promise.resolve(store.get(key) as V);

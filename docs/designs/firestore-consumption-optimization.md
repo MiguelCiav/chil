@@ -436,6 +436,13 @@ Run the full verification pipeline from the repository root after Phase 5:
 3.  **Test Coverage Verification**:
     *   `npx vitest run --coverage` — Exits 0 and reports coverage for all modified files in `src/**/*.{ts,tsx}` and `functions/**/*.js` without regressions against the pre-change baseline.
 
+## Addendum (2026-11-24): Persistent 24h IndexedDB Cache, Lazy Scraper Status & Cold-Path Fixes
+
+Post-deployment telemetry revealed ~61k daily reads for a single coordinator caused by three remaining gaps:
+1.  **RAM-only caches evaporated on F5 / tab reopen / login**: Resolved by adding a native IndexedDB persistence layer (`src/lib/persistentCache.ts`, 24-hour TTL, cross-tab `localStorage` sync ping, and manual `"Sincronizar datos"` escape hatch in `Sidebar`) underneath `batchesCrud.ts`, `membersCrud.ts` (preserving `legacyDocIds`), and `recognitions/api/index.ts`, plus fixing the `AuthContext` cold-boot `activeUidRef` race.
+2.  **Eager scraper status check on mount & outdated Vercel production branch**: Resolved by removing eager mount `getScraperSessionStatus()` in `ScraperSettingsContext` (lazy-fetching on modal open / `ensureActiveSession()` with 60-minute `localStorage` caching), ensuring `sessionStore.js` (both `functions/` and `scraper-api/`) only caches active sessions and evicts on `markSessionExpired`, and deploying `main` to Vercel `chil-scraper-api`.
+3.  **Cold-path & helper leaks**: Resolved by adding `coldBatchesByIdCache`, `coldRecognitionTypeByIdCache`, `membersByBatchIdCache` seeding on `createBatchWithMembers`/`mergeBatches`, in-flight `getAllMembers` sharing in `getMembersByBatchId`, zero-read warm `deleteBatch`, graceful template read fallback in `getRecognitionTypeById`, and catalog matching before `getRecognitionTypeById` in `BatchList.handleDownloadPDF`.
+
 ---
 
 *Drafted with EGM*

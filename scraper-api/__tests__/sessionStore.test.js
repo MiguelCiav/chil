@@ -95,7 +95,33 @@ describe('scraper-api sessionStore module', () => {
     expect(mockDocRef.get).toHaveBeenCalledTimes(1);
   });
 
-  it('markSessionExpired updates doc without get() and ignores NOT_FOUND gracefully', async () => {
+  it('does not cache missing or expired session docs so cross-container reconnects work immediately', async () => {
+    mockDocRef.get
+      .mockResolvedValueOnce({ exists: false })
+      .mockResolvedValueOnce({
+        exists: true,
+        data: () => ({
+          impeesaEmail: 'scout@scouts.org.ve',
+          status: 'expired',
+          encrypted: { iv: 'a' }
+        })
+      })
+      .mockResolvedValueOnce({
+        exists: true,
+        data: () => ({
+          impeesaEmail: 'scout@scouts.org.ve',
+          status: 'active',
+          encrypted: { iv: 'b' }
+        })
+      });
+
+    expect((await sessionStore.getSessionMetadata('uid-exp')).status).toBe('none');
+    expect((await sessionStore.getSessionMetadata('uid-exp')).status).toBe('expired');
+    expect((await sessionStore.getSessionMetadata('uid-exp')).status).toBe('active');
+    expect(mockDocRef.get).toHaveBeenCalledTimes(3);
+  });
+
+  it('markSessionExpired updates doc without get(), evicts cache, and ignores NOT_FOUND gracefully', async () => {
     await sessionStore.saveSession('uid-1', {
       impeesaEmail: 'scout@scouts.org.ve',
       encrypted: { iv: 'a' }
@@ -107,7 +133,17 @@ describe('scraper-api sessionStore module', () => {
       status: 'expired',
       updatedAt: 'SERVER_TIMESTAMP'
     });
+
+    mockDocRef.get.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        impeesaEmail: 'scout@scouts.org.ve',
+        status: 'expired',
+        encrypted: { iv: 'a' }
+      })
+    });
     const meta = await sessionStore.getSessionMetadata('uid-1');
+    expect(mockDocRef.get).toHaveBeenCalledTimes(1);
     expect(meta.status).toBe('expired');
     expect(meta.connected).toBe(false);
 

@@ -14,6 +14,9 @@ import {
   ScraperSessionStatus,
 } from '../features/batches/api';
 
+export const SCRAPER_STATUS_STORAGE_PREFIX = 'chil_scraper_status_';
+export const SCRAPER_STATUS_TTL_MS = 60 * 60 * 1000; // 60 minutes
+
 export interface ScraperSettingsContextValue {
   isOpen: boolean;
   sessionStatus: ScraperSessionStatus | null;
@@ -32,7 +35,13 @@ const DEFAULT_CONTEXT: ScraperSettingsContextValue = {
   isLoadingStatus: false,
   openModal: () => {},
   closeModal: () => {},
-  refreshSessionStatus: async () => null,
+  refreshSessionStatus: async () => {
+    try {
+      return await getScraperSessionStatus();
+    } catch {
+      return null;
+    }
+  },
   setSessionStatus: () => {},
 };
 
@@ -53,6 +62,56 @@ function fetchScraperSessionStatusDeduplicated(uid: string): Promise<ScraperSess
   return promise;
 }
 
+function getStorageKey(uid: string): string {
+  return `${SCRAPER_STATUS_STORAGE_PREFIX}${uid}`;
+}
+
+function readCachedScraperStatus(uid: string | null): ScraperSessionStatus | null {
+  if (!uid || typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(getStorageKey(uid));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      status?: ScraperSessionStatus;
+      cachedAt?: number;
+    };
+    if (
+      !parsed?.status ||
+      typeof parsed.cachedAt !== 'number' ||
+      Date.now() - parsed.cachedAt >= SCRAPER_STATUS_TTL_MS
+    ) {
+      window.localStorage.removeItem(getStorageKey(uid));
+      return null;
+    }
+    return parsed.status;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedScraperStatus(
+  uid: string | null,
+  status: ScraperSessionStatus | null
+): void {
+  if (!uid || typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+  try {
+    if (!status) {
+      window.localStorage.removeItem(getStorageKey(uid));
+      return;
+    }
+    window.localStorage.setItem(
+      getStorageKey(uid),
+      JSON.stringify({ status, cachedAt: Date.now() })
+    );
+  } catch {
+    // Ignore storage quota or privacy mode errors
+  }
+}
+
 export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -60,28 +119,42 @@ export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
   const currentUid = user?.uid ?? null;
   const [prevUid, setPrevUid] = useState<string | null>(currentUid);
   const [isOpen, setIsOpen] = useState(false);
-  const [sessionStatus, setSessionStatus] =
-    useState<ScraperSessionStatus | null>(null);
-  const [isLoadingStatus, setIsLoadingStatus] = useState(Boolean(currentUid));
+  const [sessionStatus, setSessionStatusState] =
+    useState<ScraperSessionStatus | null>(() => readCachedScraperStatus(currentUid));
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
 
   if (currentUid !== prevUid) {
     setPrevUid(currentUid);
-    setSessionStatus(null);
-    setIsLoadingStatus(Boolean(currentUid));
+    setSessionStatusState(readCachedScraperStatus(currentUid));
+    setIsLoadingStatus(false);
   }
+
+  const setSessionStatus: React.Dispatch<
+    React.SetStateAction<ScraperSessionStatus | null>
+  > = useCallback(
+    (updater) => {
+      setSessionStatusState((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        writeCachedScraperStatus(currentUid, next);
+        return next;
+      });
+    },
+    [currentUid]
+  );
 
   const refreshSessionStatus = useCallback(async () => {
     purgeLegacyScraperStorage();
 
-    if (!user) {
-      setSessionStatus(null);
+    if (!currentUid) {
+      setSessionStatusState(null);
       return null;
     }
 
     setIsLoadingStatus(true);
     try {
-      const status = await fetchScraperSessionStatusDeduplicated(user.uid);
-      setSessionStatus(status);
+      const status = await fetchScraperSessionStatusDeduplicated(currentUid);
+      setSessionStatusState(status);
+      writeCachedScraperStatus(currentUid, status);
       return status;
     } catch (error) {
       console.warn('Could not load scraper session status:', error);
@@ -89,41 +162,18 @@ export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [user]);
+  }, [currentUid]);
 
   useEffect(() => {
-    let cancelled = false;
     purgeLegacyScraperStorage();
-
-    if (!currentUid) {
-      return;
-    }
-
-    fetchScraperSessionStatusDeduplicated(currentUid)
-      .then((status) => {
-        if (!cancelled) {
-          setSessionStatus(status);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          console.warn('Could not load scraper session status:', error);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoadingStatus(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
   }, [currentUid]);
 
   const openModal = useCallback(() => {
     setIsOpen(true);
-  }, []);
+    if (currentUid && !sessionStatus) {
+      void refreshSessionStatus();
+    }
+  }, [currentUid, sessionStatus, refreshSessionStatus]);
 
   const closeModal = useCallback(() => {
     setIsOpen(false);
@@ -146,6 +196,7 @@ export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
       openModal,
       closeModal,
       refreshSessionStatus,
+      setSessionStatus,
     ]
   );
 

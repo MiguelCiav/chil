@@ -13,6 +13,11 @@ import {
 import { db, auth } from '../../../lib/firebase';
 import { createKeyedSessionCache } from '../../../lib/sessionCache';
 import {
+  deletePersistentEntry,
+  getPersistentEntry,
+  setPersistentEntry
+} from '../../../lib/persistentCache';
+import {
   RecognitionType,
   CreateRecognitionTypeParams,
   UpdateRecognitionTypeParams,
@@ -22,7 +27,29 @@ import {
 export const MAX_FIRESTORE_TEMPLATE_BYTES = 950_000;
 
 const recognitionTypesByUserCache = createKeyedSessionCache<string, RecognitionType[]>();
+const coldRecognitionTypeByIdCache = createKeyedSessionCache<string, RecognitionType | null>();
 const recognitionTemplatesByIdCache = createKeyedSessionCache<string, CertificateTemplate | null>();
+
+interface PersistedTemplateWrapper {
+  template: CertificateTemplate | null;
+}
+
+function getCatalogPersistentKey(uid: string): string {
+  return `recognition_types:${uid}`;
+}
+
+function getTemplatePersistentKey(id: string): string {
+  return `recognition_template:${id}`;
+}
+
+function stripTemplateForCatalog(item: RecognitionType): RecognitionType {
+  return {
+    id: item.id,
+    name: item.name,
+    created_at: item.created_at,
+    ...(item.user_id ? { user_id: item.user_id } : {})
+  };
+}
 
 function sortRecognitionTypes(items: RecognitionType[]): RecognitionType[] {
   return [...items].sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
@@ -38,31 +65,102 @@ function findCachedRecognitionCatalogById(id: string): RecognitionType | null {
   return null;
 }
 
-function upsertRecognitionTypeInCache(item: RecognitionType, userId?: string): void {
+async function persistCatalogSnapshot(
+  uid: string,
+  items: RecognitionType[],
+  notifyTabs = true
+): Promise<void> {
+  if (!uid) return;
+  await setPersistentEntry(
+    getCatalogPersistentKey(uid),
+    uid,
+    items.map(stripTemplateForCatalog),
+    undefined,
+    notifyTabs
+  );
+}
+
+async function upsertRecognitionTypeInCache(
+  item: RecognitionType,
+  userId?: string
+): Promise<void> {
+  coldRecognitionTypeByIdCache.set(item.id, item);
+
   const targetUserId = item.user_id ?? userId ?? auth.currentUser?.uid ?? '';
   if (targetUserId && recognitionTypesByUserCache.has(targetUserId)) {
     const existing = recognitionTypesByUserCache.get(targetUserId) ?? [];
     const filtered = existing.filter((r) => r.id !== item.id);
-    recognitionTypesByUserCache.set(targetUserId, sortRecognitionTypes([...filtered, item]));
+    const next = sortRecognitionTypes([...filtered, item]);
+    recognitionTypesByUserCache.set(targetUserId, next);
+    await persistCatalogSnapshot(targetUserId, next);
     return;
   }
 
+  const persistedUids: string[] = [];
   for (const [uid, list] of recognitionTypesByUserCache.entries()) {
     if (list.some((r) => r.id === item.id)) {
-      const updated = list.map((r) => (r.id === item.id ? item : r));
-      recognitionTypesByUserCache.set(uid, sortRecognitionTypes(updated));
+      const updated = sortRecognitionTypes(list.map((r) => (r.id === item.id ? item : r)));
+      recognitionTypesByUserCache.set(uid, updated);
+      persistedUids.push(uid);
+    }
+  }
+  for (const uid of persistedUids) {
+    const list = recognitionTypesByUserCache.get(uid);
+    if (list) {
+      await persistCatalogSnapshot(uid, list);
+    }
+  }
+
+  if (targetUserId && persistedUids.length === 0 && !recognitionTypesByUserCache.has(targetUserId)) {
+    const persisted = await getPersistentEntry<RecognitionType[]>(
+      getCatalogPersistentKey(targetUserId)
+    );
+    if (Array.isArray(persisted)) {
+      const filtered = persisted.filter((r) => r.id !== item.id);
+      const next = sortRecognitionTypes([...filtered, stripTemplateForCatalog(item)]);
+      await persistCatalogSnapshot(targetUserId, next);
     }
   }
 }
 
-function removeRecognitionTypeFromCache(id: string): void {
+async function removeRecognitionTypeFromCache(id: string, userId?: string): Promise<void> {
   recognitionTemplatesByIdCache.delete(id);
+  coldRecognitionTypeByIdCache.delete(id);
+
+  const persistedUids = new Set<string>();
   for (const [uid, list] of recognitionTypesByUserCache.entries()) {
     const filtered = list.filter((r) => r.id !== id);
     if (filtered.length !== list.length) {
       recognitionTypesByUserCache.set(uid, filtered);
+      persistedUids.add(uid);
     }
   }
+
+  for (const uid of persistedUids) {
+    const list = recognitionTypesByUserCache.get(uid);
+    if (list) {
+      await persistCatalogSnapshot(uid, list);
+    }
+  }
+
+  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
+  if (
+    targetUserId &&
+    !persistedUids.has(targetUserId) &&
+    !recognitionTypesByUserCache.has(targetUserId)
+  ) {
+    const persisted = await getPersistentEntry<RecognitionType[]>(
+      getCatalogPersistentKey(targetUserId)
+    );
+    if (Array.isArray(persisted)) {
+      const filtered = persisted.filter((r) => r.id !== id);
+      if (filtered.length !== persisted.length) {
+        await persistCatalogSnapshot(targetUserId, filtered);
+      }
+    }
+  }
+
+  await deletePersistentEntry(getTemplatePersistentKey(id), targetUserId);
 }
 
 async function migrateLegacyTemplateIfNeeded(
@@ -104,9 +202,17 @@ export async function getAllRecognitionTypes(userId?: string): Promise<Recogniti
     }
 
     return await recognitionTypesByUserCache.getOrLoad(targetUserId, async () => {
+      const persisted = await getPersistentEntry<RecognitionType[]>(
+        getCatalogPersistentKey(targetUserId)
+      );
+      if (Array.isArray(persisted)) {
+        return sortRecognitionTypes(persisted);
+      }
+
       const q = query(collection(db, 'recognition_types'), where('user_id', '==', targetUserId));
       const snap = await getDocs(q);
       if (snap.empty || snap.docs.length === 0) {
+        await persistCatalogSnapshot(targetUserId, [], false);
         return [];
       }
 
@@ -114,6 +220,13 @@ export async function getAllRecognitionTypes(userId?: string): Promise<Recogniti
         const data = d.data() as Omit<RecognitionType, 'id'>;
         if (data.template) {
           recognitionTemplatesByIdCache.set(d.id, data.template);
+          void setPersistentEntry<PersistedTemplateWrapper>(
+            getTemplatePersistentKey(d.id),
+            targetUserId,
+            { template: data.template },
+            undefined,
+            false
+          );
           void migrateLegacyTemplateIfNeeded(d.id, data.template).catch((err) => {
             console.warn(`Failed to lazily migrate legacy template for ${d.id}:`, err);
           });
@@ -127,7 +240,9 @@ export async function getAllRecognitionTypes(userId?: string): Promise<Recogniti
         };
       });
 
-      return sortRecognitionTypes(items);
+      const sorted = sortRecognitionTypes(items);
+      await persistCatalogSnapshot(targetUserId, sorted, false);
+      return sorted;
     });
   } catch (error) {
     console.error('Failed to fetch recognition types from Firestore:', error);
@@ -138,43 +253,104 @@ export async function getAllRecognitionTypes(userId?: string): Promise<Recogniti
 export async function getRecognitionTypeById(id: string): Promise<RecognitionType | null> {
   try {
     let baseRecord = findCachedRecognitionCatalogById(id);
+    const currentUid = auth.currentUser?.uid ?? '';
+
+    if (!baseRecord && currentUid) {
+      const inFlightCatalog = recognitionTypesByUserCache.getInFlight(currentUid);
+      if (inFlightCatalog) {
+        const list = await inFlightCatalog;
+        baseRecord = list.find((item) => item.id === id) ?? null;
+      } else if (!recognitionTypesByUserCache.has(currentUid)) {
+        const persisted = await getPersistentEntry<RecognitionType[]>(
+          getCatalogPersistentKey(currentUid)
+        );
+        if (Array.isArray(persisted)) {
+          const sorted = sortRecognitionTypes(persisted);
+          recognitionTypesByUserCache.set(currentUid, sorted);
+          baseRecord = sorted.find((item) => item.id === id) ?? null;
+        }
+      }
+    }
+
     let legacyTemplateFromDoc: CertificateTemplate | undefined = baseRecord?.template;
 
     if (!baseRecord) {
-      const docRef = doc(db, 'recognition_types', id);
-      const snap = await getDoc(docRef);
-      if (!snap.exists()) {
+      baseRecord = await coldRecognitionTypeByIdCache.getOrLoad(id, async () => {
+        const docRef = doc(db, 'recognition_types', id);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) {
+          return null;
+        }
+        const data = snap.data() as Omit<RecognitionType, 'id'>;
+        return {
+          id: snap.id,
+          name: data.name || snap.id,
+          created_at: data.created_at || new Date().toISOString(),
+          ...(data.user_id ? { user_id: data.user_id } : {}),
+          ...(data.template ? { template: data.template } : {})
+        };
+      });
+      if (!baseRecord) {
         return null;
       }
-      const data = snap.data() as Omit<RecognitionType, 'id'>;
-      legacyTemplateFromDoc = data.template;
-      baseRecord = {
-        id: snap.id,
-        name: data.name || snap.id,
-        created_at: data.created_at || new Date().toISOString(),
-        ...(data.user_id ? { user_id: data.user_id } : {})
-      };
+      legacyTemplateFromDoc = baseRecord.template;
     }
 
+    const templateUid = baseRecord.user_id ?? currentUid;
     const template = await recognitionTemplatesByIdCache.getOrLoad(id, async () => {
-      const templateSnap = await getDoc(doc(db, 'recognition_templates', id));
-      if (templateSnap && templateSnap.exists()) {
-        const templateData = templateSnap.data() as { template?: CertificateTemplate } | undefined;
-        if (templateData?.template) {
-          return templateData.template;
-        }
+      const persistedTemplate = await getPersistentEntry<PersistedTemplateWrapper>(
+        getTemplatePersistentKey(id)
+      );
+      if (persistedTemplate && 'template' in persistedTemplate) {
+        return persistedTemplate.template;
       }
+
+      try {
+        const templateSnap = await getDoc(doc(db, 'recognition_templates', id));
+        if (templateSnap && templateSnap.exists()) {
+          const templateData = templateSnap.data() as { template?: CertificateTemplate } | undefined;
+          if (templateData?.template) {
+            await setPersistentEntry<PersistedTemplateWrapper>(
+              getTemplatePersistentKey(id),
+              templateUid,
+              { template: templateData.template },
+              undefined,
+              false
+            );
+            return templateData.template;
+          }
+        }
+      } catch (templateErr) {
+        console.warn(`Failed to fetch decoupled template for ${id}, falling back:`, templateErr);
+        return legacyTemplateFromDoc ?? null;
+      }
+
       if (legacyTemplateFromDoc) {
         void migrateLegacyTemplateIfNeeded(id, legacyTemplateFromDoc).catch((err) => {
           console.warn(`Failed to lazily migrate legacy template for ${id}:`, err);
         });
+        await setPersistentEntry<PersistedTemplateWrapper>(
+          getTemplatePersistentKey(id),
+          templateUid,
+          { template: legacyTemplateFromDoc },
+          undefined,
+          false
+        );
         return legacyTemplateFromDoc;
       }
+
+      await setPersistentEntry<PersistedTemplateWrapper>(
+        getTemplatePersistentKey(id),
+        templateUid,
+        { template: null },
+        undefined,
+        false
+      );
       return null;
     });
 
     return {
-      ...baseRecord,
+      ...stripTemplateForCatalog(baseRecord),
       ...(template ? { template } : {})
     };
   } catch (error) {
@@ -197,7 +373,13 @@ export async function createRecognitionType(
   };
 
   await setDoc(doc(db, 'recognition_types', id), newRecognition);
-  upsertRecognitionTypeInCache(newRecognition, targetUserId);
+  recognitionTemplatesByIdCache.set(id, null);
+  await setPersistentEntry<PersistedTemplateWrapper>(
+    getTemplatePersistentKey(id),
+    targetUserId,
+    { template: null }
+  );
+  await upsertRecognitionTypeInCache(newRecognition, targetUserId);
   return newRecognition;
 }
 
@@ -206,7 +388,7 @@ export async function updateRecognitionType(
   data: UpdateRecognitionTypeParams,
   userId?: string
 ): Promise<RecognitionType> {
-  const cached = findCachedRecognitionCatalogById(id);
+  const cached = findCachedRecognitionCatalogById(id) ?? coldRecognitionTypeByIdCache.get(id);
   const targetUserId = userId ?? cached?.user_id ?? auth.currentUser?.uid ?? '';
   const createdAt = cached?.created_at ?? new Date().toISOString();
   const catalogUpdate: RecognitionType = {
@@ -223,7 +405,7 @@ export async function updateRecognitionType(
     ...catalogUpdate,
     ...(cachedTemplate ? { template: cachedTemplate } : {})
   };
-  upsertRecognitionTypeInCache(updated, targetUserId);
+  await upsertRecognitionTypeInCache(updated, targetUserId);
   return updated;
 }
 
@@ -234,7 +416,7 @@ export async function deleteRecognitionType(id: string): Promise<void> {
   } catch {
     // Ignore if decoupled template document does not exist
   }
-  removeRecognitionTypeFromCache(id);
+  await removeRecognitionTypeFromCache(id);
 }
 
 export async function saveCertificateTemplate(
@@ -252,9 +434,18 @@ export async function saveCertificateTemplate(
   await migrateLegacyTemplateIfNeeded(recognitionId, template);
   recognitionTemplatesByIdCache.set(recognitionId, template);
 
-  const cached = findCachedRecognitionCatalogById(recognitionId);
+  const cached =
+    findCachedRecognitionCatalogById(recognitionId) ??
+    coldRecognitionTypeByIdCache.get(recognitionId);
+  const targetUserId = cached?.user_id ?? auth.currentUser?.uid ?? '';
+  await setPersistentEntry<PersistedTemplateWrapper>(
+    getTemplatePersistentKey(recognitionId),
+    targetUserId,
+    { template }
+  );
+
   if (cached) {
-    upsertRecognitionTypeInCache({ ...cached, template }, cached.user_id);
+    await upsertRecognitionTypeInCache({ ...cached, template }, cached.user_id);
   }
 }
 

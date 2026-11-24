@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { createKeyedSessionCache } from '../../../lib/sessionCache';
+import { getPersistentEntry, setPersistentEntry } from '../../../lib/persistentCache';
 import { ScoutMember } from '../types';
 import {
   isGenericIdentity,
@@ -25,6 +26,54 @@ export { isGenericIdentity, getMemberDocId };
 const membersByUserCache = createKeyedSessionCache<string, ScoutMember[]>();
 const coldMembersByBatchCache = createKeyedSessionCache<number, ScoutMember[]>();
 const legacyDocIdByCanonicalKey = createKeyedSessionCache<string, string>();
+
+interface PersistedMembersSnapshot {
+  members: ScoutMember[];
+  legacyDocIds: Record<string, string>;
+}
+
+function getMembersPersistentKey(uid: string): string {
+  return `members:${uid}`;
+}
+
+function serializeLegacyDocIdsForMembers(members: ScoutMember[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const member of members) {
+    const canonical = getMemberDocId(member);
+    const legacy = legacyDocIdByCanonicalKey.get(canonical);
+    if (legacy && legacy !== canonical) {
+      result[canonical] = legacy;
+    }
+  }
+  return result;
+}
+
+function restoreLegacyDocIds(legacyDocIds?: Record<string, string>): void {
+  if (!legacyDocIds) return;
+  for (const [canonical, actual] of Object.entries(legacyDocIds)) {
+    if (canonical && actual && actual !== canonical) {
+      legacyDocIdByCanonicalKey.set(canonical, actual);
+    }
+  }
+}
+
+async function persistMembersSnapshot(
+  uid: string,
+  members: ScoutMember[],
+  notifyTabs = true
+): Promise<void> {
+  if (!uid) return;
+  await setPersistentEntry<PersistedMembersSnapshot>(
+    getMembersPersistentKey(uid),
+    uid,
+    {
+      members,
+      legacyDocIds: serializeLegacyDocIdsForMembers(members)
+    },
+    undefined,
+    notifyTabs
+  );
+}
 
 interface FirestoreDocLike {
   id?: string;
@@ -126,7 +175,7 @@ function recordLegacyDocIdIfNeeded(docSnapshot: FirestoreDocLike, member: ScoutM
   }
 }
 
-function resolveActualFirestoreDocId(member: ScoutMember): string {
+export function resolveActualFirestoreDocId(member: ScoutMember): string {
   const canonical = getMemberDocId(member);
   return legacyDocIdByCanonicalKey.get(canonical) ?? canonical;
 }
@@ -167,15 +216,17 @@ function mergeMembersIntoList(existing: ScoutMember[], incoming: ScoutMember[]):
   return deduplicateMembersByBatch(merged);
 }
 
-function removeDocIdsFromCache(docIds: Set<string>): void {
+async function removeDocIdsFromCache(docIds: Set<string>, userId?: string): Promise<void> {
   if (docIds.size === 0) {
     return;
   }
 
+  const persistedUids = new Set<string>();
   for (const [uid, list] of membersByUserCache.entries()) {
     const filtered = list.filter((m) => !docIds.has(getMemberDocId(m)));
     if (filtered.length !== list.length) {
       membersByUserCache.set(uid, filtered);
+      persistedUids.add(uid);
     }
   }
 
@@ -185,17 +236,59 @@ function removeDocIdsFromCache(docIds: Set<string>): void {
       coldMembersByBatchCache.set(cachedBatchId, filtered);
     }
   }
+
+  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
+  for (const uid of persistedUids) {
+    const updated = membersByUserCache.get(uid);
+    if (updated) {
+      await persistMembersSnapshot(uid, updated);
+    }
+  }
+
+  if (targetUserId && !persistedUids.has(targetUserId) && !membersByUserCache.has(targetUserId)) {
+    const persisted = await getPersistentEntry<PersistedMembersSnapshot>(
+      getMembersPersistentKey(targetUserId)
+    );
+    if (persisted && Array.isArray(persisted.members)) {
+      restoreLegacyDocIds(persisted.legacyDocIds);
+      const filtered = persisted.members.filter((m) => !docIds.has(getMemberDocId(m)));
+      if (filtered.length !== persisted.members.length) {
+        await persistMembersSnapshot(targetUserId, filtered);
+      }
+    }
+  }
 }
 
-export function upsertMembersInCache(members: ScoutMember[], userId?: string): void {
+export function seedBatchMembersCache(batchId: number, members: ScoutMember[]): void {
+  const numericBatchId = Number(batchId);
+  if (Number.isNaN(numericBatchId)) return;
+  coldMembersByBatchCache.set(numericBatchId, deduplicateBatchMembers(members));
+}
+
+export function getCachedMembersForBatch(batchId: number): ScoutMember[] | null {
+  const numericBatchId = Number(batchId);
+  const currentUid = auth.currentUser?.uid;
+  if (currentUid && membersByUserCache.has(currentUid)) {
+    const userMembers = membersByUserCache.get(currentUid) ?? [];
+    return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
+  }
+  if (coldMembersByBatchCache.has(numericBatchId)) {
+    return coldMembersByBatchCache.get(numericBatchId) ?? [];
+  }
+  return null;
+}
+
+export async function upsertMembersInCache(members: ScoutMember[], userId?: string): Promise<void> {
   if (!members || members.length === 0) {
     return;
   }
 
   const targetUserId = userId ?? members[0]?.user_id ?? auth.currentUser?.uid ?? '';
+  let updatedUserMembers: ScoutMember[] | null = null;
   if (targetUserId && membersByUserCache.has(targetUserId)) {
     const existing = membersByUserCache.get(targetUserId) ?? [];
-    membersByUserCache.set(targetUserId, mergeMembersIntoList(existing, members));
+    updatedUserMembers = mergeMembersIntoList(existing, members);
+    membersByUserCache.set(targetUserId, updatedUserMembers);
   }
 
   const byBatch = new Map<number, ScoutMember[]>();
@@ -216,14 +309,53 @@ export function upsertMembersInCache(members: ScoutMember[], userId?: string): v
       coldMembersByBatchCache.set(batchId, mergeMembersIntoList(existing, batchIncoming));
     }
   }
+
+  if (targetUserId && updatedUserMembers) {
+    await persistMembersSnapshot(targetUserId, updatedUserMembers);
+  } else if (targetUserId && !membersByUserCache.has(targetUserId)) {
+    const persisted = await getPersistentEntry<PersistedMembersSnapshot>(
+      getMembersPersistentKey(targetUserId)
+    );
+    if (persisted && Array.isArray(persisted.members)) {
+      restoreLegacyDocIds(persisted.legacyDocIds);
+      const merged = mergeMembersIntoList(persisted.members, members);
+      await persistMembersSnapshot(targetUserId, merged);
+    }
+  }
 }
 
-export function removeMembersByBatchIdFromCache(batchId: number): void {
+export async function removeMembersByBatchIdFromCache(
+  batchId: number,
+  userId?: string
+): Promise<void> {
   coldMembersByBatchCache.delete(batchId);
+  const persistedUids = new Set<string>();
   for (const [uid, list] of membersByUserCache.entries()) {
     const filtered = list.filter((m) => m.batch_id !== batchId);
     if (filtered.length !== list.length) {
       membersByUserCache.set(uid, filtered);
+      persistedUids.add(uid);
+    }
+  }
+
+  for (const uid of persistedUids) {
+    const updated = membersByUserCache.get(uid);
+    if (updated) {
+      await persistMembersSnapshot(uid, updated);
+    }
+  }
+
+  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
+  if (targetUserId && !persistedUids.has(targetUserId) && !membersByUserCache.has(targetUserId)) {
+    const persisted = await getPersistentEntry<PersistedMembersSnapshot>(
+      getMembersPersistentKey(targetUserId)
+    );
+    if (persisted && Array.isArray(persisted.members)) {
+      restoreLegacyDocIds(persisted.legacyDocIds);
+      const filtered = persisted.members.filter((m) => m.batch_id !== batchId);
+      if (filtered.length !== persisted.members.length) {
+        await persistMembersSnapshot(targetUserId, filtered);
+      }
     }
   }
 }
@@ -232,7 +364,7 @@ export async function createMember(member: ScoutMember, userId?: string): Promis
   const newMember = sanitizeMemberForSave(member, userId);
   const docId = getMemberDocId(newMember);
   await setDoc(doc(db, 'scout_members', docId), newMember);
-  upsertMembersInCache([newMember], newMember.user_id ?? userId);
+  await upsertMembersInCache([newMember], newMember.user_id ?? userId);
   return newMember;
 }
 
@@ -240,7 +372,7 @@ export async function updateMember(member: ScoutMember, userId?: string): Promis
   const updatedMember = sanitizeMemberForSave(member, userId);
   const targetDocId = getMemberDocId(updatedMember);
   await setDoc(doc(db, 'scout_members', targetDocId), updatedMember);
-  upsertMembersInCache([updatedMember], updatedMember.user_id ?? userId);
+  await upsertMembersInCache([updatedMember], updatedMember.user_id ?? userId);
   return updatedMember;
 }
 
@@ -288,8 +420,9 @@ export async function saveBatchMemberUpdates(
 
   await commitChunkedBatches(operations, chunkSize);
 
-  removeDocIdsFromCache(removedCanonicalDocIds);
-  upsertMembersInCache(sanitizedMembers, userId);
+  const resolvedUserId = userId ?? sanitizedMembers[0]?.user_id;
+  await removeDocIdsFromCache(removedCanonicalDocIds, resolvedUserId);
+  await upsertMembersInCache(sanitizedMembers, resolvedUserId);
   return sanitizedMembers;
 }
 
@@ -315,7 +448,7 @@ export async function deleteBatchMember(member: ScoutMember): Promise<void> {
   const actualDocId = resolveActualFirestoreDocId(member);
   await deleteDoc(doc(db, 'scout_members', actualDocId));
   legacyDocIdByCanonicalKey.delete(canonicalDocId);
-  removeDocIdsFromCache(new Set([canonicalDocId]));
+  await removeDocIdsFromCache(new Set([canonicalDocId]), member.user_id);
 }
 
 function filterUniqueDraftMembers(
@@ -373,13 +506,28 @@ function deduplicateBatchMembers(batchMembers: ScoutMember[]): ScoutMember[] {
 export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[]> {
   const numericBatchId = Number(batchId);
   const currentUid = auth.currentUser?.uid;
-  if (currentUid && membersByUserCache.has(currentUid)) {
-    const userMembers = membersByUserCache.get(currentUid) ?? [];
-    return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
-  }
+  if (currentUid) {
+    if (membersByUserCache.has(currentUid)) {
+      const userMembers = membersByUserCache.get(currentUid) ?? [];
+      return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
+    }
 
-  for (const [, userMembers] of membersByUserCache.entries()) {
-    return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
+    const inFlightUserMembers = membersByUserCache.getInFlight(currentUid);
+    if (inFlightUserMembers) {
+      const userMembers = await inFlightUserMembers;
+      return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
+    }
+
+    const persisted = await getPersistentEntry<PersistedMembersSnapshot>(
+      getMembersPersistentKey(currentUid)
+    );
+    if (persisted && Array.isArray(persisted.members)) {
+      restoreLegacyDocIds(persisted.legacyDocIds);
+      membersByUserCache.set(currentUid, persisted.members);
+      return deduplicateBatchMembers(
+        persisted.members.filter((m) => m.batch_id === numericBatchId)
+      );
+    }
   }
 
   return coldMembersByBatchCache.getOrLoad(numericBatchId, async () => {
@@ -412,6 +560,14 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
   }
 
   return membersByUserCache.getOrLoad(targetUserId, async () => {
+    const persisted = await getPersistentEntry<PersistedMembersSnapshot>(
+      getMembersPersistentKey(targetUserId)
+    );
+    if (persisted && Array.isArray(persisted.members)) {
+      restoreLegacyDocIds(persisted.legacyDocIds);
+      return persisted.members;
+    }
+
     const q = buildMembersQueryForUser(targetUserId);
     const snap = await getDocs(q);
     const snapDocs: FirestoreDocLike[] = [];
@@ -429,6 +585,8 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
       return member;
     });
 
-    return deduplicateMembersByBatch(allRaw);
+    const deduped = deduplicateMembersByBatch(allRaw);
+    await persistMembersSnapshot(targetUserId, deduped, false);
+    return deduped;
   });
 }

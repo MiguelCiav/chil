@@ -35,6 +35,10 @@ import {
 import * as firestore from 'firebase/firestore';
 import * as functionsSdk from 'firebase/functions';
 import { clearAllSessionCaches } from '../../../../lib/sessionCache';
+import {
+  createInMemoryPersistentAdapter,
+  setPersistentCacheAdapterForTests
+} from '../../../../lib/persistentCache';
 
 const createStorageMock = () => {
   let store: Record<string, string> = {};
@@ -992,6 +996,179 @@ describe('Batches API Layer', () => {
       expect(updatedMembers).toHaveLength(1);
       expect(updatedMembers[0].identity).toBe('V-88888888');
       expect(firestore.getDocs).toHaveBeenCalledTimes(2);
+    });
+
+    it('hydrates batches, members, and legacy doc IDs from persistent cache across simulated F5 with 0 Firestore reads', async () => {
+      const adapter = createInMemoryPersistentAdapter();
+      setPersistentCacheAdapterForTests(adapter);
+
+      const batchRecord = {
+        id: 801,
+        comment: 'Lote Persistente',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2026-11-24T00:00:00.000Z',
+        user_id: 'test-user-uid'
+      };
+      const legacyMember = {
+        ...mockMember,
+        identity: '88888881',
+        batch_id: 801,
+        user_id: 'test-user-uid'
+      };
+
+      vi.mocked(firestore.getDocs)
+        .mockResolvedValueOnce({
+          forEach: (cb: (doc: { data: () => unknown }) => void) => cb({ data: () => batchRecord })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
+        .mockResolvedValueOnce({
+          docs: [{ id: 'LEGACY_F5_DOC_88888881', data: () => legacyMember }]
+        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      await getAllBatches('test-user-uid');
+      await getAllMembers('test-user-uid');
+      expect(firestore.getDocs).toHaveBeenCalledTimes(2);
+
+      // Simulate full browser reload (F5): wipe RAM session caches while persistent IndexedDB remains intact
+      clearAllSessionCaches();
+
+      const reloadedBatches = await getAllBatches('test-user-uid');
+      const reloadedMembers = await getAllMembers('test-user-uid');
+      const reloadedBatchById = await getBatchById(801);
+      const reloadedBatchMembers = await getMembersByBatchId(801);
+
+      expect(reloadedBatches).toHaveLength(1);
+      expect(reloadedMembers).toHaveLength(1);
+      expect(reloadedBatchById?.id).toBe(801);
+      expect(reloadedBatchMembers).toHaveLength(1);
+      expect(firestore.getDocs).toHaveBeenCalledTimes(2);
+      expect(firestore.getDoc).not.toHaveBeenCalled();
+
+      // Verify legacyDocIds map survived F5 hydration
+      vi.mocked(firestore.deleteDoc).mockResolvedValueOnce();
+      await deleteBatchMember(legacyMember);
+      expect(firestore.deleteDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/LEGACY_F5_DOC_88888881' })
+      );
+    });
+
+    it('seeds cold batch and member caches on createBatchWithMembers so immediate detail reads incur 0 Firestore reads', async () => {
+      clearAllSessionCaches();
+      const setMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: setMock,
+        delete: vi.fn(),
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      const { batch } = await createBatchWithMembers(
+        {
+          comment: 'Lote Frío',
+          region_id: 1,
+          district_id: 10,
+          group_id: 100,
+          recognition_type: 'sct-wood-badge'
+        },
+        [{ ...mockMember, identity: 'V-77777777', recognition_code: 'REC-COLD1' }],
+        'test-user-uid'
+      );
+
+      const loadedBatch = await getBatchById(batch.id);
+      const loadedMembers = await getMembersByBatchId(batch.id);
+
+      expect(loadedBatch?.id).toBe(batch.id);
+      expect(loadedMembers).toHaveLength(1);
+      expect(loadedMembers[0].identity).toBe('V-77777777');
+      expect(firestore.getDoc).not.toHaveBeenCalled();
+      expect(firestore.getDocs).not.toHaveBeenCalled();
+    });
+
+    it('caches cold getBatchById hits and null misses to avoid repeated single-doc reads', async () => {
+      clearAllSessionCaches();
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => ({ id: 910, comment: 'Cold Hit', user_id: 'test-user-uid' })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false,
+          data: () => null
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      expect((await getBatchById(910))?.comment).toBe('Cold Hit');
+      expect((await getBatchById(910))?.comment).toBe('Cold Hit');
+      expect(await getBatchById(911)).toBeNull();
+      expect(await getBatchById(911)).toBeNull();
+      expect(firestore.getDoc).toHaveBeenCalledTimes(2);
+    });
+
+    it('deletes warm batch members directly from cache with 0 Firestore getDocs reads', async () => {
+      clearAllSessionCaches();
+      const warmMember = {
+        ...mockMember,
+        identity: 'V-66666666',
+        batch_id: 920,
+        user_id: 'test-user-uid'
+      };
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [{ id: '920_V-66666666', data: () => warmMember }]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      await getAllMembers('test-user-uid');
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+
+      const deleteMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        delete: deleteMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      await deleteBatch(920);
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/920_V-66666666' })
+      );
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'batches/920' })
+      );
+      expect(commitMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('awaits in-flight getAllMembers in getMembersByBatchId instead of issuing a duplicate query', async () => {
+      clearAllSessionCaches();
+      let resolveDocs!: (val: unknown) => void;
+      vi.mocked(firestore.getDocs).mockImplementationOnce(
+        () =>
+          new Promise<unknown>((resolve) => {
+            resolveDocs = resolve;
+          }) as ReturnType<typeof firestore.getDocs>
+      );
+
+      const allPromise = getAllMembers('test-user-uid');
+      const batchPromise = getMembersByBatchId(930);
+
+      await vi.waitFor(() => {
+        expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+      });
+
+      resolveDocs({
+        docs: [
+          {
+            id: '930_V-55555555',
+            data: () => ({ ...mockMember, identity: 'V-55555555', batch_id: 930, user_id: 'test-user-uid' })
+          }
+        ]
+      });
+
+      const [all, byBatch] = await Promise.all([allPromise, batchPromise]);
+      expect(all).toHaveLength(1);
+      expect(byBatch).toHaveLength(1);
+      expect(byBatch[0].identity).toBe('V-55555555');
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
     });
   });
 
