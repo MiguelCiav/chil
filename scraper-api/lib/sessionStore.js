@@ -5,6 +5,11 @@ const SESSION_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const sessionCache = new Map();
 const inFlightReads = new Map();
+const mutationEpochs = new Map();
+
+function bumpEpoch(uid) {
+  mutationEpochs.set(uid, (mutationEpochs.get(uid) || 0) + 1);
+}
 
 function getCollection() {
   return firebaseAdmin.getFirestore().collection(COLLECTION_NAME);
@@ -27,6 +32,7 @@ function isNotFoundError(err) {
 function clearSessionCache() {
   sessionCache.clear();
   inFlightReads.clear();
+  mutationEpochs.clear();
 }
 
 async function readSessionDoc(uid) {
@@ -41,11 +47,15 @@ async function readSessionDoc(uid) {
     return pending;
   }
 
+  const startEpoch = mutationEpochs.get(uid) || 0;
   const promise = getCollection()
     .doc(uid)
     .get()
     .then((snap) => {
       const data = snap.exists ? snap.data() || {} : null;
+      if ((mutationEpochs.get(uid) || 0) !== startEpoch) {
+        return data;
+      }
       // Only cache active sessions; never cache expired or missing docs so reconnects
       // in another serverless container take effect immediately.
       if (data && data.status !== "expired") {
@@ -67,6 +77,8 @@ async function readSessionDoc(uid) {
 }
 
 async function saveSession(uid, { impeesaEmail, encrypted }) {
+  bumpEpoch(uid);
+  inFlightReads.delete(uid);
   await getCollection()
     .doc(uid)
     .set({
@@ -127,6 +139,8 @@ async function getSessionEnvelope(uid) {
 }
 
 async function markSessionExpired(uid) {
+  bumpEpoch(uid);
+  inFlightReads.delete(uid);
   const ref = getCollection().doc(uid);
   try {
     await ref.update({
@@ -145,6 +159,8 @@ async function markSessionExpired(uid) {
 }
 
 async function deleteSession(uid) {
+  bumpEpoch(uid);
+  inFlightReads.delete(uid);
   await getCollection().doc(uid).delete();
   sessionCache.delete(uid);
   inFlightReads.delete(uid);

@@ -41,8 +41,8 @@ function getBatchesPersistentKey(uid: string): string {
   return `batches:${uid}`;
 }
 
-function getColdBatchPersistentKey(batchId: number): string {
-  return `batch:${batchId}`;
+function getColdBatchPersistentKey(uid: string, batchId: number): string {
+  return `batch:${uid}:${batchId}`;
 }
 
 function sortBatchesDescending(batches: Batch[]): Batch[] {
@@ -70,7 +70,7 @@ async function resolveCachedBatchById(id: number, userId?: string): Promise<Batc
     return ramHit;
   }
 
-  const targetUid = userId ?? auth.currentUser?.uid;
+  const targetUid = auth.currentUser?.uid ?? userId ?? '';
   if (targetUid) {
     const inFlightBatches = batchesByUserCache.getInFlight(targetUid);
     if (inFlightBatches) {
@@ -99,12 +99,14 @@ async function resolveCachedBatchById(id: number, userId?: string): Promise<Batc
     return await inFlightCold;
   }
 
-  const persistedCold = await getPersistentEntry<PersistedColdBatchWrapper>(
-    getColdBatchPersistentKey(id)
-  );
-  if (persistedCold && 'batch' in persistedCold) {
-    coldBatchesByIdCache.set(id, persistedCold.batch);
-    return persistedCold.batch;
+  if (targetUid) {
+    const persistedCold = await getPersistentEntry<PersistedColdBatchWrapper>(
+      getColdBatchPersistentKey(targetUid, id)
+    );
+    if (persistedCold && 'batch' in persistedCold) {
+      coldBatchesByIdCache.set(id, persistedCold.batch);
+      return persistedCold.batch;
+    }
   }
 
   return undefined;
@@ -120,6 +122,11 @@ async function upsertBatchInCache(batch: Batch, userId?: string): Promise<void> 
     const next = sortBatchesDescending([batch, ...filtered]);
     batchesByUserCache.set(targetUserId, next);
     await setPersistentEntry(getBatchesPersistentKey(targetUserId), targetUserId, next);
+    await deletePersistentEntry(
+      getColdBatchPersistentKey(targetUserId, batch.id),
+      targetUserId,
+      false
+    );
     return;
   }
 
@@ -135,6 +142,7 @@ async function upsertBatchInCache(batch: Batch, userId?: string): Promise<void> 
     const list = batchesByUserCache.get(uid);
     if (list) {
       await setPersistentEntry(getBatchesPersistentKey(uid), uid, list);
+      await deletePersistentEntry(getColdBatchPersistentKey(uid, batch.id), uid, false);
     }
   }
 
@@ -145,27 +153,34 @@ async function upsertBatchInCache(batch: Batch, userId?: string): Promise<void> 
       const filtered = persisted.filter((b) => b.id !== batch.id);
       const next = sortBatchesDescending([batch, ...filtered]);
       await setPersistentEntry(getBatchesPersistentKey(targetUserId), targetUserId, next);
+      await deletePersistentEntry(
+        getColdBatchPersistentKey(targetUserId, batch.id),
+        targetUserId,
+        false
+      );
       updatedUserList = true;
     }
   }
 
-  if (!updatedUserList && persistedUids.length === 0) {
+  if (targetUserId && !updatedUserList && persistedUids.length === 0) {
     await setPersistentEntry<PersistedColdBatchWrapper>(
-      getColdBatchPersistentKey(batch.id),
+      getColdBatchPersistentKey(targetUserId, batch.id),
       targetUserId,
       { batch },
       undefined,
-      false
+      true
     );
   }
 }
 
 async function removeBatchesFromCache(batchIds: number[], userId?: string): Promise<void> {
   const idSet = new Set(batchIds);
-  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
+  const targetUserId = auth.currentUser?.uid ?? userId ?? '';
   for (const id of batchIds) {
     coldBatchesByIdCache.delete(id);
-    await deletePersistentEntry(getColdBatchPersistentKey(id), targetUserId);
+    if (targetUserId) {
+      await deletePersistentEntry(getColdBatchPersistentKey(targetUserId, id), targetUserId, false);
+    }
   }
 
   const persistedUids = new Set<string>();
@@ -405,14 +420,16 @@ export async function getBatchById(id: number): Promise<Batch | null> {
     const docRef = doc(db, 'batches', String(id));
     const docSnap = await getDoc(docRef);
     const result = docSnap.exists() ? (docSnap.data() as Batch) : null;
-    const ownerUid = result?.user_id ?? auth.currentUser?.uid ?? '';
-    await setPersistentEntry<PersistedColdBatchWrapper>(
-      getColdBatchPersistentKey(id),
-      ownerUid,
-      { batch: result },
-      undefined,
-      false
-    );
+    const readerUid = auth.currentUser?.uid ?? result?.user_id ?? '';
+    if (readerUid) {
+      await setPersistentEntry<PersistedColdBatchWrapper>(
+        getColdBatchPersistentKey(readerUid, id),
+        readerUid,
+        { batch: result },
+        undefined,
+        false
+      );
+    }
     return result;
   });
 }

@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   ReactNode,
 } from 'react';
 import { useAuth } from '../features/auth';
@@ -117,7 +118,12 @@ export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const { user } = useAuth();
   const currentUid = user?.uid ?? null;
+  const activeUidRef = useRef<string | null>(currentUid);
   const [prevUid, setPrevUid] = useState<string | null>(currentUid);
+
+  useEffect(() => {
+    activeUidRef.current = currentUid;
+  }, [currentUid]);
   const [isOpen, setIsOpen] = useState(false);
   const [sessionStatus, setSessionStatusState] =
     useState<ScraperSessionStatus | null>(() => readCachedScraperStatus(currentUid));
@@ -151,16 +157,22 @@ export const ScraperSettingsProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     setIsLoadingStatus(true);
+    const uidAtStart = currentUid;
     try {
-      const status = await fetchScraperSessionStatusDeduplicated(currentUid);
+      const status = await fetchScraperSessionStatusDeduplicated(uidAtStart);
+      if (activeUidRef.current !== uidAtStart) {
+        return null;
+      }
       setSessionStatusState(status);
-      writeCachedScraperStatus(currentUid, status);
+      writeCachedScraperStatus(uidAtStart, status);
       return status;
     } catch (error) {
       console.warn('Could not load scraper session status:', error);
       return null;
     } finally {
-      setIsLoadingStatus(false);
+      if (activeUidRef.current === uidAtStart) {
+        setIsLoadingStatus(false);
+      }
     }
   }, [currentUid]);
 

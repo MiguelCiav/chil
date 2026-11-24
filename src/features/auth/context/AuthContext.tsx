@@ -85,13 +85,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     const prevUid = activeUidRef.current;
-    await logoutUser();
+    // Clear activeUidRef before logoutUser() so onAuthStateChangedListener does not
+    // duplicate persistent-cache eviction while we await full cleanup here.
+    activeUidRef.current = null;
     clearAllSessionCaches();
+    clearBrowserStorageByPrefix(SCRAPER_STATUS_STORAGE_PREFIX);
+    await logoutUser();
     if (prevUid) {
       await clearPersistentCacheForUid(prevUid);
     }
-    clearBrowserStorageByPrefix(SCRAPER_STATUS_STORAGE_PREFIX);
-    activeUidRef.current = null;
     setUser(null);
   }, []);
 

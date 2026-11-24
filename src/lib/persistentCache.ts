@@ -70,104 +70,116 @@ function openIndexedDb(): Promise<IDBDatabase | null> {
   return idbPromise;
 }
 
+async function withDb<T>(
+  fallback: T,
+  operation: (db: IDBDatabase, resetIfSame: () => void) => Promise<T>
+): Promise<T> {
+  const openedPromise = openIndexedDb();
+  const db = await openedPromise;
+  if (!db) return fallback;
+  const resetIfSame = () => {
+    if (idbPromise === openedPromise) {
+      idbPromise = null;
+    }
+  };
+  return operation(db, resetIfSame);
+}
+
 const indexedDbAdapter: PersistentCacheAdapter = {
-  async get(key: string): Promise<PersistentRecord | null> {
-    const db = await openIndexedDb();
-    if (!db) return null;
-
-    return new Promise((resolve) => {
-      try {
-        const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readonly');
-        const req = tx.objectStore(PERSISTENT_CACHE_STORE_NAME).get(key);
-        req.onsuccess = () => {
-          resolve((req.result as PersistentRecord | undefined) ?? null);
-        };
-        req.onerror = () => resolve(null);
-      } catch {
-        idbPromise = null;
-        resolve(null);
-      }
+  get(key: string): Promise<PersistentRecord | null> {
+    return withDb<PersistentRecord | null>(null, (db, resetIfSame) => {
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readonly');
+          const req = tx.objectStore(PERSISTENT_CACHE_STORE_NAME).get(key);
+          req.onsuccess = () => {
+            resolve((req.result as PersistentRecord | undefined) ?? null);
+          };
+          req.onerror = () => resolve(null);
+          tx.onerror = () => resolve(null);
+          tx.onabort = () => resolve(null);
+        } catch {
+          resetIfSame();
+          resolve(null);
+        }
+      });
     });
   },
 
-  async set(record: PersistentRecord): Promise<void> {
-    const db = await openIndexedDb();
-    if (!db) return;
-
-    await new Promise<void>((resolve) => {
-      try {
-        const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readwrite');
-        tx.objectStore(PERSISTENT_CACHE_STORE_NAME).put(record);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-        tx.onabort = () => resolve();
-      } catch {
-        idbPromise = null;
-        resolve();
-      }
+  set(record: PersistentRecord): Promise<void> {
+    return withDb<void>(undefined, (db, resetIfSame) => {
+      return new Promise<void>((resolve) => {
+        try {
+          const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readwrite');
+          tx.objectStore(PERSISTENT_CACHE_STORE_NAME).put(record);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+          tx.onabort = () => resolve();
+        } catch {
+          resetIfSame();
+          resolve();
+        }
+      });
     });
   },
 
-  async delete(key: string): Promise<void> {
-    const db = await openIndexedDb();
-    if (!db) return;
-
-    await new Promise<void>((resolve) => {
-      try {
-        const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readwrite');
-        tx.objectStore(PERSISTENT_CACHE_STORE_NAME).delete(key);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-        tx.onabort = () => resolve();
-      } catch {
-        idbPromise = null;
-        resolve();
-      }
+  delete(key: string): Promise<void> {
+    return withDb<void>(undefined, (db, resetIfSame) => {
+      return new Promise<void>((resolve) => {
+        try {
+          const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readwrite');
+          tx.objectStore(PERSISTENT_CACHE_STORE_NAME).delete(key);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+          tx.onabort = () => resolve();
+        } catch {
+          resetIfSame();
+          resolve();
+        }
+      });
     });
   },
 
-  async deleteByUid(uid: string): Promise<void> {
-    const db = await openIndexedDb();
-    if (!db) return;
-
-    await new Promise<void>((resolve) => {
-      try {
-        const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readwrite');
-        const store = tx.objectStore(PERSISTENT_CACHE_STORE_NAME);
-        const index = store.index('by_uid');
-        const cursorReq = index.openKeyCursor(IDBKeyRange.only(uid));
-        cursorReq.onsuccess = () => {
-          const cursor = cursorReq.result;
-          if (cursor) {
-            store.delete(cursor.primaryKey);
-            cursor.continue();
-          }
-        };
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-        tx.onabort = () => resolve();
-      } catch {
-        idbPromise = null;
-        resolve();
-      }
+  deleteByUid(uid: string): Promise<void> {
+    return withDb<void>(undefined, (db, resetIfSame) => {
+      return new Promise<void>((resolve) => {
+        try {
+          const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readwrite');
+          const store = tx.objectStore(PERSISTENT_CACHE_STORE_NAME);
+          const index = store.index('by_uid');
+          const cursorReq = index.openKeyCursor(IDBKeyRange.only(uid));
+          cursorReq.onsuccess = () => {
+            const cursor = cursorReq.result;
+            if (cursor) {
+              store.delete(cursor.primaryKey);
+              cursor.continue();
+            }
+          };
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+          tx.onabort = () => resolve();
+        } catch {
+          resetIfSame();
+          resolve();
+        }
+      });
     });
   },
 
-  async clear(): Promise<void> {
-    const db = await openIndexedDb();
-    if (!db) return;
-
-    await new Promise<void>((resolve) => {
-      try {
-        const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readwrite');
-        tx.objectStore(PERSISTENT_CACHE_STORE_NAME).clear();
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-        tx.onabort = () => resolve();
-      } catch {
-        idbPromise = null;
-        resolve();
-      }
+  clear(): Promise<void> {
+    return withDb<void>(undefined, (db, resetIfSame) => {
+      return new Promise<void>((resolve) => {
+        try {
+          const tx = db.transaction(PERSISTENT_CACHE_STORE_NAME, 'readwrite');
+          tx.objectStore(PERSISTENT_CACHE_STORE_NAME).clear();
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+          tx.onabort = () => resolve();
+        } catch {
+          resetIfSame();
+          resolve();
+        }
+      });
     });
   }
 };
@@ -285,6 +297,9 @@ export async function setPersistentEntry<T>(
   ttlMs: number = DEFAULT_PERSISTENT_TTL_MS,
   notifyTabs = true
 ): Promise<void> {
+  if (!uid) {
+    return;
+  }
   const now = Date.now();
   const record: PersistentRecord<T> = {
     key,
