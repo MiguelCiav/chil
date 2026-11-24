@@ -33,7 +33,6 @@ dist-ssr
 .firebase/
 
 # Coverage
-src-tauri/lcov.info
 lcov.info
 coverage/
 .nyc_output/

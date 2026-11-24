@@ -43,7 +43,7 @@ npm test -- --run
 - **Unified test suite**: `vite.config.ts` runs Vitest (`jsdom`, 30s timeout) across `src/`, `functions/__tests__/`, and `scraper-api/__tests__/` (excluding `functions/node_modules/**`).
 - **Vercel `scraper-api/` trap**: `scraper-api/package.json` intentionally defines **no `build` or `test` script**. Do not run `npm run build` in `scraper-api/`, and leave Vercel's Build Command empty when Root Directory is `scraper-api`.
 - **Lint & TypeScript blind spots**:
-  - `eslint.config.js` checks `**/*.{ts,tsx}` only (ignoring `dist`, `src-tauri`, `coverage`); intentionally unused identifiers must be prefixed with `_`.
+  - `eslint.config.js` checks `**/*.{ts,tsx}` only (ignoring `dist`, `coverage`); intentionally unused identifiers must be prefixed with `_`.
   - `tsc` (`npm run build`) does not typecheck CommonJS `.js` files in `functions/` or `scraper-api/`—always verify backend `.js` edits with Vitest unit tests.
 - **Additional scripts**:
   - `npm run dev` — Vite dev server pinned to port `1420` (`strictPort: true` in `vite.config.ts`).

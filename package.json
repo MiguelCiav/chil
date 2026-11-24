@@ -9,7 +9,6 @@
     "preview": "vite preview",
     "test": "vitest",
     "lint": "eslint .",
-    "tauri": "tauri",
     "seed-hierarchy": "node scripts/seed-hierarchy.mjs"
   },
   "dependencies": {
