@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useScraperSettings } from '../../../context/ScraperSettingsContext';
 import { isScraperSessionError } from '../api';
 import type { ScraperAlertModalsProps } from '../components/shared/ScraperAlertModals';
@@ -56,16 +56,33 @@ export function useScraperSessionGuard(): UseScraperSessionGuardResult {
     setAuthError(null);
   }, []);
 
-  return {
-    ensureActiveSession,
-    handleScraperSessionFailure,
-    markSessionExpired,
-    clearAuthError,
-    alertModalProps: {
+  const onCloseAuthAlert = useCallback(() => setShowAuthAlert(false), []);
+  const onCloseAuthError = useCallback(() => setAuthError(null), []);
+
+  const alertModalProps = useMemo<ScraperAlertModalsProps>(
+    () => ({
       showAuthAlert,
-      onCloseAuthAlert: () => setShowAuthAlert(false),
+      onCloseAuthAlert,
       authError,
-      onCloseAuthError: () => setAuthError(null)
-    }
-  };
+      onCloseAuthError
+    }),
+    [showAuthAlert, onCloseAuthAlert, authError, onCloseAuthError]
+  );
+
+  return useMemo(
+    () => ({
+      ensureActiveSession,
+      handleScraperSessionFailure,
+      markSessionExpired,
+      clearAuthError,
+      alertModalProps
+    }),
+    [
+      ensureActiveSession,
+      handleScraperSessionFailure,
+      markSessionExpired,
+      clearAuthError,
+      alertModalProps
+    ]
+  );
 }

@@ -1170,6 +1170,86 @@ describe('Batches API Layer', () => {
       expect(byBatch[0].identity).toBe('V-55555555');
       expect(firestore.getDocs).toHaveBeenCalledTimes(1);
     });
+
+    it('persists cold deep-link batch and member lookups (including null misses) across simulated F5', async () => {
+      const adapter = createInMemoryPersistentAdapter();
+      setPersistentCacheAdapterForTests(adapter);
+      clearAllSessionCaches();
+
+      const coldBatch = {
+        id: 940,
+        comment: 'Deep Link F5',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge',
+        created_at: '2026-11-24T00:00:00.000Z',
+        user_id: 'test-user-uid'
+      };
+      const coldMember = {
+        ...mockMember,
+        identity: 'V-94000001',
+        batch_id: 940,
+        user_id: 'test-user-uid'
+      };
+
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => coldBatch
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false,
+          data: () => null
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [{ id: '940_V-94000001', data: () => coldMember }]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      expect((await getBatchById(940))?.comment).toBe('Deep Link F5');
+      expect(await getBatchById(941)).toBeNull();
+      expect(await getMembersByBatchId(940)).toHaveLength(1);
+      expect(firestore.getDoc).toHaveBeenCalledTimes(2);
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+
+      // Simulate F5 without ever loading getAllBatches/getAllMembers
+      clearAllSessionCaches();
+
+      expect((await getBatchById(940))?.comment).toBe('Deep Link F5');
+      expect(await getBatchById(941)).toBeNull();
+      expect(await getMembersByBatchId(940)).toHaveLength(1);
+      expect(firestore.getDoc).toHaveBeenCalledTimes(2);
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+
+      // updateBatch and deleteBatch resolve from persisted cache with 0 Firestore reads even when RAM is cold
+      clearAllSessionCaches();
+      vi.mocked(firestore.setDoc).mockResolvedValueOnce();
+      const updated = await updateBatch(940, {
+        comment: 'Updated Cold',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge'
+      });
+      expect(updated.created_at).toBe('2026-11-24T00:00:00.000Z');
+      expect(firestore.getDoc).toHaveBeenCalledTimes(2);
+
+      clearAllSessionCaches();
+      const deleteMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        delete: deleteMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      await deleteBatch(940, 'test-user-uid');
+      expect(firestore.getDocs).toHaveBeenCalledTimes(1);
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/940_V-94000001' })
+      );
+      expect(deleteMock).toHaveBeenCalledWith(expect.objectContaining({ path: 'batches/940' }));
+    });
   });
 
   describe('Recognition and Export Helpers', () => {

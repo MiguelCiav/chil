@@ -48,6 +48,9 @@ function openIndexedDb(): Promise<IDBDatabase | null> {
           db.close();
           idbPromise = null;
         };
+        db.onclose = () => {
+          idbPromise = null;
+        };
         resolve(db);
       };
       request.onerror = () => {
@@ -81,6 +84,7 @@ const indexedDbAdapter: PersistentCacheAdapter = {
         };
         req.onerror = () => resolve(null);
       } catch {
+        idbPromise = null;
         resolve(null);
       }
     });
@@ -98,6 +102,7 @@ const indexedDbAdapter: PersistentCacheAdapter = {
         tx.onerror = () => resolve();
         tx.onabort = () => resolve();
       } catch {
+        idbPromise = null;
         resolve();
       }
     });
@@ -115,6 +120,7 @@ const indexedDbAdapter: PersistentCacheAdapter = {
         tx.onerror = () => resolve();
         tx.onabort = () => resolve();
       } catch {
+        idbPromise = null;
         resolve();
       }
     });
@@ -141,6 +147,7 @@ const indexedDbAdapter: PersistentCacheAdapter = {
         tx.onerror = () => resolve();
         tx.onabort = () => resolve();
       } catch {
+        idbPromise = null;
         resolve();
       }
     });
@@ -158,6 +165,7 @@ const indexedDbAdapter: PersistentCacheAdapter = {
         tx.onerror = () => resolve();
         tx.onabort = () => resolve();
       } catch {
+        idbPromise = null;
         resolve();
       }
     });

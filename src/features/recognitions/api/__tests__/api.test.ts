@@ -352,6 +352,42 @@ describe('Recognition Types API Layer', () => {
       expect(firestore.getDocs).toHaveBeenCalledTimes(1);
       expect(firestore.getDoc).toHaveBeenCalledTimes(1);
     });
+
+    it('persists cold getRecognitionTypeById hits and null misses across simulated F5 with 0 Firestore reads', async () => {
+      const adapter = createInMemoryPersistentAdapter();
+      setPersistentCacheAdapterForTests(adapter);
+
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          id: 'sct-deep-link',
+          data: () => ({ name: 'Deep Link', created_at: '2026-02-01T00:00:00.000Z' })
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => false
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      expect((await getRecognitionTypeById('sct-deep-link'))?.name).toBe('Deep Link');
+      expect(await getRecognitionTypeById('sct-ghost')).toBeNull();
+      expect(firestore.getDoc).toHaveBeenCalledTimes(3);
+
+      // Simulate full F5 without catalog preloaded
+      clearAllSessionCaches();
+
+      expect((await getRecognitionTypeById('sct-deep-link'))?.name).toBe('Deep Link');
+      expect(await getRecognitionTypeById('sct-ghost')).toBeNull();
+      expect(firestore.getDoc).toHaveBeenCalledTimes(3);
+
+      // updateRecognitionType preserves created_at from persistent cache even when RAM is cold
+      clearAllSessionCaches();
+      vi.mocked(firestore.setDoc).mockResolvedValueOnce();
+      const updated = await updateRecognitionType('sct-deep-link', { name: 'Deep Link Editado' });
+      expect(updated.created_at).toBe('2026-02-01T00:00:00.000Z');
+      expect(firestore.getDoc).toHaveBeenCalledTimes(3);
+    });
   });
 
   describe('createRecognitionType', () => {

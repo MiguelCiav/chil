@@ -12,7 +12,11 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { createKeyedSessionCache } from '../../../lib/sessionCache';
-import { getPersistentEntry, setPersistentEntry } from '../../../lib/persistentCache';
+import {
+  deletePersistentEntry,
+  getPersistentEntry,
+  setPersistentEntry
+} from '../../../lib/persistentCache';
 import { ScoutMember } from '../types';
 import {
   isGenericIdentity,
@@ -34,6 +38,10 @@ interface PersistedMembersSnapshot {
 
 function getMembersPersistentKey(uid: string): string {
   return `members:${uid}`;
+}
+
+function getBatchMembersPersistentKey(batchId: number): string {
+  return `batch_members:${batchId}`;
 }
 
 function serializeLegacyDocIdsForMembers(members: ScoutMember[]): Record<string, string> {
@@ -65,6 +73,25 @@ async function persistMembersSnapshot(
   if (!uid) return;
   await setPersistentEntry<PersistedMembersSnapshot>(
     getMembersPersistentKey(uid),
+    uid,
+    {
+      members,
+      legacyDocIds: serializeLegacyDocIdsForMembers(members)
+    },
+    undefined,
+    notifyTabs
+  );
+}
+
+async function persistColdBatchMembersSnapshot(
+  batchId: number,
+  uid: string,
+  members: ScoutMember[],
+  notifyTabs = false
+): Promise<void> {
+  if (Number.isNaN(batchId)) return;
+  await setPersistentEntry<PersistedMembersSnapshot>(
+    getBatchMembersPersistentKey(batchId),
     uid,
     {
       members,
@@ -230,14 +257,15 @@ async function removeDocIdsFromCache(docIds: Set<string>, userId?: string): Prom
     }
   }
 
+  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
   for (const [cachedBatchId, list] of coldMembersByBatchCache.entries()) {
     const filtered = list.filter((m) => !docIds.has(getMemberDocId(m)));
     if (filtered.length !== list.length) {
       coldMembersByBatchCache.set(cachedBatchId, filtered);
+      await persistColdBatchMembersSnapshot(cachedBatchId, targetUserId, filtered, true);
     }
   }
 
-  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
   for (const uid of persistedUids) {
     const updated = membersByUserCache.get(uid);
     if (updated) {
@@ -262,7 +290,10 @@ async function removeDocIdsFromCache(docIds: Set<string>, userId?: string): Prom
 export function seedBatchMembersCache(batchId: number, members: ScoutMember[]): void {
   const numericBatchId = Number(batchId);
   if (Number.isNaN(numericBatchId)) return;
-  coldMembersByBatchCache.set(numericBatchId, deduplicateBatchMembers(members));
+  const deduped = deduplicateBatchMembers(members);
+  coldMembersByBatchCache.set(numericBatchId, deduped);
+  const resolvedUid = deduped[0]?.user_id ?? auth.currentUser?.uid ?? '';
+  void persistColdBatchMembersSnapshot(numericBatchId, resolvedUid, deduped, false);
 }
 
 export function getCachedMembersForBatch(batchId: number): ScoutMember[] | null {
@@ -275,6 +306,59 @@ export function getCachedMembersForBatch(batchId: number): ScoutMember[] | null 
   if (coldMembersByBatchCache.has(numericBatchId)) {
     return coldMembersByBatchCache.get(numericBatchId) ?? [];
   }
+  return null;
+}
+
+export async function resolveCachedMembersForBatch(
+  batchId: number,
+  userId?: string
+): Promise<ScoutMember[] | null> {
+  const numericBatchId = Number(batchId);
+  if (Number.isNaN(numericBatchId)) return null;
+
+  const targetUid = userId ?? auth.currentUser?.uid ?? '';
+  if (targetUid) {
+    if (membersByUserCache.has(targetUid)) {
+      const userMembers = membersByUserCache.get(targetUid) ?? [];
+      return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
+    }
+
+    const inFlightUser = membersByUserCache.getInFlight(targetUid);
+    if (inFlightUser) {
+      const userMembers = await inFlightUser;
+      return deduplicateBatchMembers(userMembers.filter((m) => m.batch_id === numericBatchId));
+    }
+
+    const persistedUser = await getPersistentEntry<PersistedMembersSnapshot>(
+      getMembersPersistentKey(targetUid)
+    );
+    if (persistedUser && Array.isArray(persistedUser.members)) {
+      restoreLegacyDocIds(persistedUser.legacyDocIds);
+      membersByUserCache.set(targetUid, persistedUser.members);
+      return deduplicateBatchMembers(
+        persistedUser.members.filter((m) => m.batch_id === numericBatchId)
+      );
+    }
+  }
+
+  if (coldMembersByBatchCache.has(numericBatchId)) {
+    return coldMembersByBatchCache.get(numericBatchId) ?? [];
+  }
+
+  const inFlightCold = coldMembersByBatchCache.getInFlight(numericBatchId);
+  if (inFlightCold) {
+    return await inFlightCold;
+  }
+
+  const persistedCold = await getPersistentEntry<PersistedMembersSnapshot>(
+    getBatchMembersPersistentKey(numericBatchId)
+  );
+  if (persistedCold && Array.isArray(persistedCold.members)) {
+    restoreLegacyDocIds(persistedCold.legacyDocIds);
+    coldMembersByBatchCache.set(numericBatchId, persistedCold.members);
+    return persistedCold.members;
+  }
+
   return null;
 }
 
@@ -306,7 +390,19 @@ export async function upsertMembersInCache(members: ScoutMember[], userId?: stri
   for (const [batchId, batchIncoming] of byBatch.entries()) {
     if (coldMembersByBatchCache.has(batchId)) {
       const existing = coldMembersByBatchCache.get(batchId) ?? [];
-      coldMembersByBatchCache.set(batchId, mergeMembersIntoList(existing, batchIncoming));
+      const mergedCold = mergeMembersIntoList(existing, batchIncoming);
+      coldMembersByBatchCache.set(batchId, mergedCold);
+      await persistColdBatchMembersSnapshot(batchId, targetUserId, mergedCold, true);
+    } else if (!membersByUserCache.has(targetUserId)) {
+      const persistedCold = await getPersistentEntry<PersistedMembersSnapshot>(
+        getBatchMembersPersistentKey(batchId)
+      );
+      if (persistedCold && Array.isArray(persistedCold.members)) {
+        restoreLegacyDocIds(persistedCold.legacyDocIds);
+        const mergedCold = mergeMembersIntoList(persistedCold.members, batchIncoming);
+        coldMembersByBatchCache.set(batchId, mergedCold);
+        await persistColdBatchMembersSnapshot(batchId, targetUserId, mergedCold, true);
+      }
     }
   }
 
@@ -329,6 +425,9 @@ export async function removeMembersByBatchIdFromCache(
   userId?: string
 ): Promise<void> {
   coldMembersByBatchCache.delete(batchId);
+  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
+  await deletePersistentEntry(getBatchMembersPersistentKey(batchId), targetUserId);
+
   const persistedUids = new Set<string>();
   for (const [uid, list] of membersByUserCache.entries()) {
     const filtered = list.filter((m) => m.batch_id !== batchId);
@@ -345,7 +444,6 @@ export async function removeMembersByBatchIdFromCache(
     }
   }
 
-  const targetUserId = userId ?? auth.currentUser?.uid ?? '';
   if (targetUserId && !persistedUids.has(targetUserId) && !membersByUserCache.has(targetUserId)) {
     const persisted = await getPersistentEntry<PersistedMembersSnapshot>(
       getMembersPersistentKey(targetUserId)
@@ -531,6 +629,14 @@ export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[
   }
 
   return coldMembersByBatchCache.getOrLoad(numericBatchId, async () => {
+    const persistedCold = await getPersistentEntry<PersistedMembersSnapshot>(
+      getBatchMembersPersistentKey(numericBatchId)
+    );
+    if (persistedCold && Array.isArray(persistedCold.members)) {
+      restoreLegacyDocIds(persistedCold.legacyDocIds);
+      return persistedCold.members;
+    }
+
     const q = buildMembersQueryForBatch(numericBatchId);
     const querySnapshot = await getDocs(q);
 
@@ -549,7 +655,10 @@ export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[
       return member;
     });
 
-    return deduplicateBatchMembers(members);
+    const deduped = deduplicateBatchMembers(members);
+    const resolvedUid = deduped[0]?.user_id ?? currentUid ?? '';
+    await persistColdBatchMembersSnapshot(numericBatchId, resolvedUid, deduped, false);
+    return deduped;
   });
 }
 
