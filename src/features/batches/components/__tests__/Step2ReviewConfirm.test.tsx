@@ -9,7 +9,7 @@ vi.mock('../../api', async (importOriginal) => {
   return {
     ...actual,
     updateMember: vi.fn(),
-    deleteMember: vi.fn(),
+    deleteBatchMember: vi.fn(),
     batchUpdateMembers: vi.fn(),
     getMembersByBatchId: vi.fn(),
     assignBatchRecognitionCodes: vi.fn((members: Record<string, unknown>[], mode: string) =>
@@ -134,17 +134,41 @@ describe('Step2ReviewConfirm component', () => {
     expect(screen.queryByText('Carlos Gomez')).not.toBeInTheDocument();
   });
 
-  it('allows inline modification of recognition code', () => {
-    render(<Step2ReviewConfirm {...defaultProps} />);
+  it('allows inline modification of recognition code and flips codeMode to manual for non-auto codes', () => {
+    const onCodeModeChange = vi.fn();
+    render(
+      <Step2ReviewConfirm
+        {...defaultProps}
+        codeMode="auto"
+        onCodeModeChange={onCodeModeChange}
+      />
+    );
 
     const codeInput = screen.getByLabelText(/Código de reconocimiento de Carlos Gomez/i);
     fireEvent.change(codeInput, { target: { value: 'CUSTOM-999' } });
 
+    expect(onCodeModeChange).toHaveBeenCalledWith('manual');
     expect(defaultProps.onMembersUpdated).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ identity: '29111222', recognition_code: 'CUSTOM-999' })
       ])
     );
+  });
+
+  it('flips codeMode to manual when clearing all codes', () => {
+    const onCodeModeChange = vi.fn();
+    render(
+      <Step2ReviewConfirm
+        {...defaultProps}
+        codeMode="auto"
+        onCodeModeChange={onCodeModeChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^Limpiar$/i }));
+
+    expect(onCodeModeChange).toHaveBeenCalledWith('manual');
+    expect(api.assignBatchRecognitionCodes).toHaveBeenCalledWith(mockMembers, 'manual');
   });
 
   it('uses standard Emitir Lote flow even when only 1 member is loaded and delegates persistence to onFinalizeBatch', async () => {
@@ -180,7 +204,7 @@ describe('Step2ReviewConfirm component', () => {
     });
   });
 
-  it('removes member in memory after user confirmation with 0 Firestore deleteMember calls', async () => {
+  it('removes member in memory after user confirmation with 0 Firestore deleteBatchMember calls', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(<Step2ReviewConfirm {...defaultProps} />);
@@ -189,7 +213,7 @@ describe('Step2ReviewConfirm component', () => {
     fireEvent.click(deleteBtn);
 
     await waitFor(() => {
-      expect(api.deleteMember).not.toHaveBeenCalled();
+      expect(api.deleteBatchMember).not.toHaveBeenCalled();
       expect(defaultProps.onMembersUpdated).toHaveBeenCalledWith([mockMembers[0], mockMembers[1]]);
     });
   });

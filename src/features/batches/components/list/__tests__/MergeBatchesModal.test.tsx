@@ -70,7 +70,7 @@ describe('MergeBatchesModal component', () => {
     expect(screen.getByText('5 miembros')).toBeInTheDocument();
 
     // Combined members: 3 + 5 = 8
-    expect(screen.getByText('8 miembros')).toBeInTheDocument();
+    expect(screen.getByText('8 miembros únicos')).toBeInTheDocument();
 
     // Newest date: 15 ago. 2026 appears in list and in preview summary
     expect(screen.getAllByText('15 ago. 2026').length).toBeGreaterThanOrEqual(1);
@@ -194,5 +194,78 @@ describe('MergeBatchesModal component', () => {
     fireEvent.click(cancelBtn);
 
     expect(onCloseMock).toHaveBeenCalled();
+  });
+
+  it('shows exact deduplicated count, consolidated duplicates, and non-blocking warning for repeated manual codes across distinct members', () => {
+    const batchesWithMembers: BatchMergeOption[] = [
+      {
+        ...mockBatches[0],
+        memberCount: 2,
+        members: [
+          {
+            identity: '12345678',
+            first_names: 'Ana',
+            last_names: 'Perez',
+            birth_date: '2005-01-01',
+            member_type: 'young',
+            status: 'pending',
+            batch_id: 101
+          },
+          {
+            identity: '11111111',
+            first_names: 'Juan',
+            last_names: 'Uno',
+            birth_date: '2005-01-01',
+            member_type: 'young',
+            status: 'active',
+            recognition_code: 'SP-001',
+            batch_id: 101
+          }
+        ]
+      },
+      {
+        ...mockBatches[1],
+        memberCount: 2,
+        members: [
+          {
+            identity: 'V-12.345.678',
+            first_names: 'Ana',
+            last_names: 'Perez',
+            birth_date: '2005-01-01',
+            member_type: 'young',
+            status: 'active',
+            recognition_code: 'SP-002',
+            batch_id: 102
+          },
+          {
+            identity: '22222222',
+            first_names: 'Maria',
+            last_names: 'Dos',
+            birth_date: '2005-01-01',
+            member_type: 'young',
+            status: 'active',
+            recognition_code: 'SP-001',
+            batch_id: 102
+          }
+        ]
+      }
+    ];
+
+    render(
+      <MergeBatchesModal
+        isOpen={true}
+        onClose={vi.fn()}
+        selectedBatches={batchesWithMembers}
+        onMergeSuccess={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('3 miembros únicos')).toBeInTheDocument();
+    expect(screen.getByText('(1 duplicado consolidado)')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Advertencia: 1 código manual repetido entre miembros distintos/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText('SP-001')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Fusionar lotes/i })).not.toBeDisabled();
   });
 });

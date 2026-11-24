@@ -4,6 +4,9 @@
 *   **Status:** Implemented
 *   **Date:** 2026-11-16
 
+> [!NOTE]
+> **Historical Evolution:** Follow-up UI cleanups subsequently retired `SuccessPage.tsx` (`/lotes/exito`) from `src/features/batches/` (leaving `BatchDetail` and `BatchList` as the consumers of `useCertificateZipDownload` / `CertificateZipProgressModal`) and standardized `BatchDetailHeader`'s ZIP `ScopedExportSplitButton` to `variant="primary"` (removing custom `bg-[#5c371d]`).
+
 --------------------------------------------------------------------------------
 
 ## Overview
@@ -11,7 +14,7 @@
 This design introduces two client-side improvements to certificate ZIP exports across Chil's batch workflows:
 
 1.  **Per-group certificate ZIP downloads on Batch Detail:** Converts both `"Descargar lista (PDF)"` and `"Descargar Reconocimientos (ZIP)"` inside [`BatchDetailHeader`](../../src/features/batches/components/detail/BatchDetailHeader.tsx) into matching split buttons so coordinators can download all certificates in one click or select an individual bucket (Scout group, `"Miembros no scout"`, or eligible institutional/`exceptional` members under `"Sin grupo asignado"`) from the attached chevron menu.
-2.  **Shared ZIP generation progress and cancellation modal:** Connects the existing `onProgress` and `AbortSignal` hooks in [`generateBatchCertificatesZip`](../../src/features/recognitions/services/certificatePdfGenerator.ts) to a shared modal and React hook reused by [`BatchDetail`](../../src/features/batches/components/BatchDetail.tsx), [`BatchList`](../../src/features/batches/components/BatchList.tsx), and [`SuccessPage`](../../src/features/batches/components/SuccessPage.tsx), showing `"Generando certificados"`, completed certificate counts (`current / total` and `percentage%`), and a `"Cancelar"` control.
+2.  **Shared ZIP generation progress and cancellation modal:** Connects the existing `onProgress` and `AbortSignal` hooks in [`generateBatchCertificatesZip`](../../src/features/recognitions/services/certificatePdfGenerator.ts) to a shared modal and React hook reused by [`BatchDetail`](../../src/features/batches/components/BatchDetail.tsx), [`BatchList`](../../src/features/batches/components/BatchList.tsx), and `SuccessPage` *(since retired)*, showing `"Generando certificados"`, completed certificate counts (`current / total` and `percentage%`), and a `"Cancelar"` control.
 
 ## The Problem
 

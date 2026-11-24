@@ -341,19 +341,23 @@ export const BatchList: React.FC = () => {
     }
   };
 
-  // Format table rows
-  const tableData = useMemo<BatchRowData[]>(() => {
-    const membersByBatchId = new Map<number, ScoutMember[]>();
+  // Group members by batch ID (shared by tableData and MergeBatchesModal preview)
+  const membersByBatchId = useMemo(() => {
+    const grouped = new Map<number, ScoutMember[]>();
     for (const member of members) {
       if (member.batch_id === undefined) continue;
-      const list = membersByBatchId.get(member.batch_id);
+      const list = grouped.get(member.batch_id);
       if (list) {
         list.push(member);
       } else {
-        membersByBatchId.set(member.batch_id, [member]);
+        grouped.set(member.batch_id, [member]);
       }
     }
+    return grouped;
+  }, [members]);
 
+  // Format table rows
+  const tableData = useMemo<BatchRowData[]>(() => {
     const hierarchy = { regions, districts, groups };
 
     return batches.map(batch => {
@@ -377,7 +381,7 @@ export const BatchList: React.FC = () => {
         memberCount: projection.memberCount
       };
     });
-  }, [batches, members, regions, districts, groups, resolveRecognitionName]);
+  }, [batches, membersByBatchId, regions, districts, groups, resolveRecognitionName]);
 
   const filteredData = useMemo(() => {
     return getFilteredBatchRows(tableData, filters);
@@ -420,7 +424,7 @@ export const BatchList: React.FC = () => {
   const selectedBatches = useMemo<BatchMergeOption[]>(() => {
     const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
     return selectedIds
-      .map(id => {
+      .map((id): BatchMergeOption | null => {
         const row = tableData.find(r => String(r.id) === id);
         if (!row) return null;
         return {
@@ -431,11 +435,12 @@ export const BatchList: React.FC = () => {
           groupTokens: row.groupTokens,
           groupName: consolidateMergedGroupTokens([row.groupTokens]),
           recognitionName: row.recognitionName,
-          memberCount: row.memberCount
+          memberCount: row.memberCount,
+          members: membersByBatchId.get(row.id) ?? []
         };
       })
       .filter((b): b is BatchMergeOption => b !== null);
-  }, [rowSelection, tableData]);
+  }, [rowSelection, tableData, membersByBatchId]);
 
   const handleMergeSuccess = useCallback(async (newBatch: Batch) => {
     // 1. Show success toast

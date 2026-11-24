@@ -272,14 +272,14 @@ motion:
 - **Terminology**: Use consistent domain terms across every feature: `Lote` (not `Grupo de envío`), `Miembro` (not `Usuario` for Scout recipients), `Reconocimiento`, `Región`, `Distrito`, `Grupo Scout`, and canonical validation labels `Registro Válido`, `Emisión Excepcional`, and `Registro Inválido` (preserving `Solvente hasta <fecha>` in Step 2 batch review when solvency metadata exists).
 - **Button & Action Labels**: Use explicit verb-object phrases naming the outcome (`"Crear Reconocimiento"`, `"Guardar Cambios"`, `"Eliminar Lote"`, `"Limpiar filtros"`, `"Reintentar"`), avoiding ambiguous `"OK"` or `"Enviar"`.
 - **Mandatory Data-View States (Non-Color Feedback)**: Every data view (`BatchList`, `BatchDetail`, `SummaryView`, `StatisticsDashboard`, `RecognitionCatalog`) must combine text with an icon or recovery action:
-  - **Loading**: Spanish status text (`Cargando...`) or skeleton matching the loaded grid (e.g., 4 KPI cards in `StatisticsDashboard`) with `role="status"` and `aria-busy="true"`.
+  - **Loading**: Spanish status text (`Cargando...`) or skeleton matching the loaded grid (e.g., header, filter bar, and breakdown table skeletons in `StatisticsDashboard`) with `role="status"` and `aria-busy="true"`.
   - **Empty**: Explicit Spanish explanation inside `DataTable`'s single `emptyState` slot distinguishing empty datasets from active filter mismatches, paired with a clear recovery action (`Limpiar filtros` or creation CTA). Never stack a second empty box outside `DataTable`.
   - **Error & Feedback Routing**: Field validation errors render inline via `Field`/`Select` `errorText` (`role="alert"`); in-form/modal mutation failures render `<ErrorAlert variant="compact">`; view-level recoverable failures render `<ErrorAlert variant="inline" onRetry={...}>` when page chrome remains visible or `<ErrorAlert variant="centered" onRetry={...}>` when initial view load fails; transient success/warning outcomes render `Toast` with `onDismiss` and unmount timeout cleanup.
 - **Numbers, Dates & Identifiers**: Format batch codes as `LT-YYYY-id` in monospace (`font-mono`), display member identities and recognition codes in `font-mono`, and format display dates in Spanish locale (`es-ES`) or ISO `YYYY-MM-DD` when showing solvency expiration dates.
 
 ## Components
 
-Domain-agnostic UI primitives live in `src/components/` with zero imports from `src/features/`, `src/domain/`, `src/types/`, `src/utils/`, or `src/context/`. Cross-feature Scout-domain widgets (`MemberStatusBadge`, `HierarchyFilterSelects`, `MemberHierarchySelects`) and relocated app-shell navigation (`Sidebar`, `ScraperSettingsModal`) live in `src/domain/components/`.
+Domain-agnostic UI primitives live in `src/components/` with zero imports from `src/features/`, `src/domain/`, `src/types/`, `src/utils/`, or `src/context/`. Cross-feature Scout-domain widgets (`MemberStatusBadge`, `HierarchyFilterSelects`, `MemberHierarchySelects`, `FilterCard`, `filterBadges`) and relocated app-shell navigation (`Sidebar`, `ScraperSettingsModal`) live in `src/domain/components/`.
 
 ```yaml
 components:
@@ -371,8 +371,9 @@ components:
 ### Tier 2 Shared Domain Components (`src/domain/components/`)
 
 - **`MemberStatusBadge`** (`src/domain/components/MemberStatusBadge.tsx`): Renders canonical Member Validation Status pills (`emerald`/`purple`/`rose` + `CheckCircle2`/`AlertTriangle`/`XCircle`) with optional `solventUntil` (`Solvente hasta ...`) and `labelOverride`.
-- **`HierarchyFilterSelects`** (`src/domain/components/HierarchyFilterSelects.tsx`): String-keyed Region / District / optional Group cascading filters built on `<Select size="sm">` with `aria-label="Filtrar por región"|"Filtrar por distrito"|"Filtrar por grupo"`.
-- **`MemberHierarchySelects`** (`src/domain/components/MemberHierarchySelects.tsx`): Numeric-ID (`0 | number`) Region / District / Group selectors built on `<Select>` with upward parent resolution (`resolveParentHierarchyForSelection`).
+- **`HierarchyFilterSelects`** (`src/domain/components/HierarchyFilterSelects.tsx`): String-keyed Region / District / optional Group cascading filters (`showGroup`, `includeNoAplicaAlways`, `includeNoScoutInGroup`, `'nacional'`/`'0'`/`'no_scout'`) built on `<Select size="sm">` with `aria-label="Filtrar por región"|"Filtrar por distrito"|"Filtrar por grupo"`.
+- **`MemberHierarchySelects`** (`src/domain/components/MemberHierarchySelects.tsx`): Numeric-ID (`0 | number`) Region / District / Group selectors (`size`, `layout: 'stacked' | 'grid'`, `hideWhenEmpty`) built on `<Select>` with upward parent resolution (`resolveParentHierarchyForSelection`).
+- **`FilterCard` & `filterBadges`** (`src/domain/components/FilterCard.tsx`, `src/domain/components/filterBadges.ts`): Shared titleless collapsible filter panel (`SearchInput size="sm"`, `"Filtros"` toggle with active badge count, removable `ActiveFilterBadge` chips via `buildCommonFilterBadges`, `DATE_PERIOD_OPTIONS` period selector, conditional `'custom'` date fields, and reset action) shared across `BatchList`, `Statistics` `FilterBar`, and `SummaryView`.
 - **`navigation/`** (`Sidebar.tsx`, `ScraperSettingsModal.tsx`): App-shell navigation rail (`border-r border-gray-200`, active link `bg-primary/10 text-primary border-primary/20`, mobile `role="dialog"` with focus trap) and server-encrypted Impeesa session settings modal.
 
 ### Interaction Affordances & Web-to-PDF Congruency
@@ -382,7 +383,7 @@ components:
 
 ## Do's and Don'ts
 
-- **Do** use `Button`, `Card`, `Field`, `Select`, `SearchInput`, `ErrorAlert`, `DataTable`, `Pagination`, `Modal`, and `Toast` from `src/components/` and `MemberStatusBadge` / hierarchy selects from `src/domain/components/` across all authenticated features.
+- **Do** use `Button`, `Card`, `Field`, `Select`, `SearchInput`, `ErrorAlert`, `DataTable`, `Pagination`, `Modal`, and `Toast` from `src/components/` and `MemberStatusBadge`, `FilterCard`, `filterBadges`, and hierarchy selects from `src/domain/components/` across all authenticated features.
 - **Do** keep `src/components/` strictly free of imports from `src/features/`, `src/domain/`, `src/types/`, `src/utils/`, and `src/context/`.
 - **Do** use `border-primary/70` (`>= 3.0:1`) and `bg-primary/5` across every `'sm'` and `'md'` input, select, and search field, and keep all text at `>= 12px` (`text-xs`) and `>= 4.5:1` contrast (`text-neutral/75` floor).
 - **Do** use `Button variant="destructive"` solely for irreversible delete/remove actions, and `Button variant="outline"` for reversible toolbar resets such as `"Limpiar filtros"`.

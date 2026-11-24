@@ -5,7 +5,7 @@
 *   **Date:** 2026-11-13
 
 > [!NOTE]
-> **Historical Evolution:** Follow-up spec [scoped-certificate-zip-and-progress-modal.md](./scoped-certificate-zip-and-progress-modal.md) refactored `BatchReportControls` and `BatchDetailHeader` to use `ScopedExportSplitButton` (`chevronAriaLabel="Opciones de lista por grupo"`), added `eligibleBuckets` and `onDownloadCertificatesZip` to `BatchDetailHeaderProps`, and updated `BATCH_DETAIL_TOUR_STEPS[0].content` to mention scoped ZIP certificate downloads.
+> **Historical Evolution:** Follow-up spec [scoped-certificate-zip-and-progress-modal.md](./scoped-certificate-zip-and-progress-modal.md) refactored `BatchReportControls` and `BatchDetailHeader` to use `ScopedExportSplitButton` (`chevronAriaLabel="Opciones de lista por grupo"`), added `eligibleBuckets` and `onDownloadCertificatesZip` to `BatchDetailHeaderProps`, and updated `BATCH_DETAIL_TOUR_STEPS[0].content` to mention scoped ZIP certificate downloads. Later cleanups also retired `SuccessPage.tsx` and `/emision-rapida` (`QuickRecognition`) from `src/`.
 
 --------------------------------------------------------------------------------
 

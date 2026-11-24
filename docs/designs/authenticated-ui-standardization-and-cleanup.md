@@ -1,8 +1,11 @@
 # Authenticated UI Standardization and Redundancy Removal
 
 *   **Author:** Miguel Ciavato
-*   **Status:** Proposed
+*   **Status:** Implemented
 *   **Date:** 2026-11-22
+
+> [!NOTE]
+> **Historical Evolution:** Subsequent UI iterations (including `Feat/batches edition`) retired `SuccessPage.tsx` (`/lotes/exito`), `StatKpiGrid.tsx` (leaving `StatisticsDashboard` without KPI cards), and `AddFilterModal.tsx` (replaced alongside inline filter rows by shared `FilterCard` and `filterBadges` in `src/domain/components/`), simplified `Step1DataLoad.tsx` to omit `<CardHeader>` / `Paso 1 de 2`, and kept `<Card>` at default `overflow="hidden"` across `BatchList` and `BatchMembersTable` (relying on `scrollContainerClassName="min-h-[260px] pb-12"` for row menu clearance).
 
 --------------------------------------------------------------------------------
 

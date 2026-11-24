@@ -12,16 +12,18 @@ The `auth` feature subsystem manages Firebase Authentication and session state f
 ## Subdirectories & System Boundaries
 - **API**: [`./api/README.md`](./api/README.md) — Firebase Auth SDK wrappers (`loginWithEmail`, `registerWithEmail`, `logoutUser`, `resetPasswordEmail`, `getCurrentUser`, `onAuthStateChangedListener`), `AuthUser` mapping, and Spanish error code mapping.
 - **Components**: [`./components/README.md`](./components/README.md) — `LoginPage`, `RegisterPage`, `ForgotPasswordModal`, `ProtectedRoute`, `UserProfileMenu`, `AuthLayout`, `PasswordField`, and `SessionLoadingState`.
-- **Context**: [`./context/README.md`](./context/README.md) — `AuthContext` and `AuthProvider` subscribing to Firebase auth state and exposing memoized auth actions.
+- **Context**: [`./context/README.md`](./context/README.md) — `AuthContext` and `AuthProvider` subscribing to Firebase auth state, clearing registered session caches on UID transitions and logout, and exposing memoized auth actions.
 - **Hooks**: [`./hooks/README.md`](./hooks/README.md) — `useAuth` consumer hook enforcing `AuthProvider` boundary.
 - **Types**: [`./types/README.md`](./types/README.md) — `EMAIL_REGEX`, Zod schemas (`loginSchema`, `registerSchema`, `forgotPasswordSchema`), and `AuthUser` / `AuthContextType` interfaces.
 
 ## Global Invariants
-- **Provider & Route Boundary**: `hooks/useAuth.ts:useAuth` throws if invoked outside `AuthProvider`; `components/ProtectedRoute.tsx:ProtectedRoute` renders a loading spinner while `loading` is `true` and redirects unauthenticated users (`!loading && !user`) to `/login` preserving `location.state.from`.
+- **Provider & Route Boundary**: `hooks/useAuth.ts:useAuth` throws if invoked outside `AuthProvider`; `components/ProtectedRoute.tsx:ProtectedRoute` renders `<SessionLoadingState />` while `loading` is `true` and redirects unauthenticated users (`!loading && !user`) to `/login` preserving `location.state.from`.
+- **Session Cache Isolation**: `context/AuthContext.tsx:AuthProvider` tracks the active user UID via `activeUidRef` and clears all registered session caches (`src/lib/sessionCache.ts:clearAllSessionCaches`) whenever the authenticated UID changes in `onAuthStateChangedListener` or upon `logout`.
 - **Credential Validation & Trimming**: `types/index.ts` enforces `EMAIL_REGEX` and minimum 6-character passwords across `loginSchema`, `registerSchema` (plus 2–100 char `full_name` and matching `confirm_password`), and `forgotPasswordSchema`; `api/index.ts` trims `email` and `full_name` before Firebase calls and maps Firebase error codes to Spanish messages via `mapAuthError`.
 
 ## Global Side Effects
 - **Firebase Authentication**: Calls `signInWithEmailAndPassword`, `createUserWithEmailAndPassword`, `updateProfile`, `signOut`, `sendPasswordResetEmail`, `auth.currentUser`, and `onAuthStateChanged` via `src/lib/firebase.ts`.
+- **Session Cache Invalidation**: Invokes `clearAllSessionCaches()` from `src/lib/sessionCache.ts` on UID transitions in `onAuthStateChangedListener` and after `logoutUser()` resolves in `AuthProvider`.
 - **Browser & Navigation**: Manages React Router redirects/navigation (`/login`, `/registro`, `/lotes`), `document` `'mousedown'` / `'keydown'` listeners (`UserProfileMenu`), and `console.error` logging on logout failure.
 
 ## System Verification

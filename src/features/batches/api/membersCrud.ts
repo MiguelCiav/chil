@@ -13,51 +13,18 @@ import {
 import { db, auth } from '../../../lib/firebase';
 import { createKeyedSessionCache } from '../../../lib/sessionCache';
 import { ScoutMember } from '../types';
+import {
+  isGenericIdentity,
+  getMemberDocId,
+  normalizeCedula
+} from '../utils/memberIdentity';
 import { commitChunkedBatches } from './batchesCrud';
+
+export { isGenericIdentity, getMemberDocId };
 
 const membersByUserCache = createKeyedSessionCache<string, ScoutMember[]>();
 const coldMembersByBatchCache = createKeyedSessionCache<number, ScoutMember[]>();
-
-export function isGenericIdentity(id?: string): boolean {
-  if (!id) return true;
-  const clean = id.trim().toUpperCase();
-  return (
-    clean === '' ||
-    clean === 'S/C' ||
-    clean === 'N/A' ||
-    clean === 'NO_DISPONIBLE' ||
-    clean === 'SIN CEDULA' ||
-    clean === 'NONE'
-  );
-}
-
-export function getMemberDocId(
-  member: Pick<ScoutMember, 'identity' | 'batch_id' | 'recognition_code'> &
-    Partial<Pick<ScoutMember, 'first_names' | 'last_names'>>
-): string {
-  const hasValidBatchId = member.batch_id !== undefined && !Number.isNaN(member.batch_id);
-  const batchPrefix = hasValidBatchId ? `${member.batch_id}_` : '';
-  const cleanId = member.identity?.trim() ?? '';
-
-  if (!isGenericIdentity(cleanId)) {
-    return `${batchPrefix}${cleanId}`;
-  }
-
-  const cleanCode = member.recognition_code?.trim() ?? '';
-  if (cleanCode !== '') {
-    return `${batchPrefix}${cleanCode}`;
-  }
-
-  const nameParts = `${member.first_names ?? ''}_${member.last_names ?? ''}`
-    .trim()
-    .replace(/\s+/g, '_')
-    .toUpperCase();
-  if (nameParts && nameParts !== '_') {
-    return `${batchPrefix}SC_${nameParts}`;
-  }
-
-  return `${batchPrefix}SC`;
-}
+const legacyDocIdByCanonicalKey = createKeyedSessionCache<string, string>();
 
 interface FirestoreDocLike {
   id?: string;
@@ -65,16 +32,21 @@ interface FirestoreDocLike {
   data?: () => unknown;
 }
 
+export interface MemberUpdateEntry {
+  previous?: ScoutMember;
+  next: ScoutMember;
+}
+
 export function buildMembersQueryForBatch(batchId: number) {
-  return query(collection(db, "scout_members"), where("batch_id", "==", batchId));
+  return query(collection(db, 'scout_members'), where('batch_id', '==', batchId));
 }
 
 export function buildMembersQueryForBatchChunk(batchIds: number[]) {
-  return query(collection(db, "scout_members"), where("batch_id", "in", batchIds));
+  return query(collection(db, 'scout_members'), where('batch_id', 'in', batchIds));
 }
 
 export function buildMembersQueryForUser(userId: string) {
-  return query(collection(db, "scout_members"), where("user_id", "==", userId));
+  return query(collection(db, 'scout_members'), where('user_id', '==', userId));
 }
 
 const OPTIONAL_MEMBER_STRING_FIELDS = [
@@ -146,6 +118,19 @@ export function sanitizeMemberForSave(member: ScoutMember, userId?: string): Sco
   return sanitized;
 }
 
+function recordLegacyDocIdIfNeeded(docSnapshot: FirestoreDocLike, member: ScoutMember): void {
+  if (!docSnapshot.id) return;
+  const canonical = getMemberDocId(member);
+  if (docSnapshot.id !== canonical) {
+    legacyDocIdByCanonicalKey.set(canonical, docSnapshot.id);
+  }
+}
+
+function resolveActualFirestoreDocId(member: ScoutMember): string {
+  const canonical = getMemberDocId(member);
+  return legacyDocIdByCanonicalKey.get(canonical) ?? canonical;
+}
+
 function deduplicateMembersByBatch(allRaw: ScoutMember[]): ScoutMember[] {
   const byBatch = new Map<number, ScoutMember[]>();
   for (const m of allRaw) {
@@ -182,6 +167,26 @@ function mergeMembersIntoList(existing: ScoutMember[], incoming: ScoutMember[]):
   return deduplicateMembersByBatch(merged);
 }
 
+function removeDocIdsFromCache(docIds: Set<string>): void {
+  if (docIds.size === 0) {
+    return;
+  }
+
+  for (const [uid, list] of membersByUserCache.entries()) {
+    const filtered = list.filter((m) => !docIds.has(getMemberDocId(m)));
+    if (filtered.length !== list.length) {
+      membersByUserCache.set(uid, filtered);
+    }
+  }
+
+  for (const [cachedBatchId, list] of coldMembersByBatchCache.entries()) {
+    const filtered = list.filter((m) => !docIds.has(getMemberDocId(m)));
+    if (filtered.length !== list.length) {
+      coldMembersByBatchCache.set(cachedBatchId, filtered);
+    }
+  }
+}
+
 export function upsertMembersInCache(members: ScoutMember[], userId?: string): void {
   if (!members || members.length === 0) {
     return;
@@ -213,50 +218,6 @@ export function upsertMembersInCache(members: ScoutMember[], userId?: string): v
   }
 }
 
-function matchesDeletedMember(
-  member: ScoutMember,
-  identityOrCode: string,
-  alternativeKey?: string,
-  batchId?: number
-): boolean {
-  if (batchId !== undefined && !Number.isNaN(batchId) && member.batch_id !== batchId) {
-    return false;
-  }
-  const docId = getMemberDocId(member);
-  const candidateKeys = new Set<string>([identityOrCode]);
-  if (alternativeKey) {
-    candidateKeys.add(alternativeKey);
-  }
-  if (batchId !== undefined && !Number.isNaN(batchId)) {
-    candidateKeys.add(`${batchId}_${alternativeKey || identityOrCode}`);
-  }
-  return (
-    candidateKeys.has(docId) ||
-    candidateKeys.has(member.identity) ||
-    (Boolean(member.recognition_code) && candidateKeys.has(member.recognition_code!))
-  );
-}
-
-export function removeMemberFromCache(
-  identityOrCode: string,
-  alternativeKey?: string,
-  batchId?: number
-): void {
-  for (const [uid, list] of membersByUserCache.entries()) {
-    const filtered = list.filter((m) => !matchesDeletedMember(m, identityOrCode, alternativeKey, batchId));
-    if (filtered.length !== list.length) {
-      membersByUserCache.set(uid, filtered);
-    }
-  }
-
-  for (const [cachedBatchId, list] of coldMembersByBatchCache.entries()) {
-    const filtered = list.filter((m) => !matchesDeletedMember(m, identityOrCode, alternativeKey, batchId));
-    if (filtered.length !== list.length) {
-      coldMembersByBatchCache.set(cachedBatchId, filtered);
-    }
-  }
-}
-
 export function removeMembersByBatchIdFromCache(batchId: number): void {
   coldMembersByBatchCache.delete(batchId);
   for (const [uid, list] of membersByUserCache.entries()) {
@@ -270,7 +231,7 @@ export function removeMembersByBatchIdFromCache(batchId: number): void {
 export async function createMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
   const newMember = sanitizeMemberForSave(member, userId);
   const docId = getMemberDocId(newMember);
-  await setDoc(doc(db, "scout_members", docId), newMember);
+  await setDoc(doc(db, 'scout_members', docId), newMember);
   upsertMembersInCache([newMember], newMember.user_id ?? userId);
   return newMember;
 }
@@ -278,9 +239,58 @@ export async function createMember(member: ScoutMember, userId?: string): Promis
 export async function updateMember(member: ScoutMember, userId?: string): Promise<ScoutMember> {
   const updatedMember = sanitizeMemberForSave(member, userId);
   const targetDocId = getMemberDocId(updatedMember);
-  await setDoc(doc(db, "scout_members", targetDocId), updatedMember);
+  await setDoc(doc(db, 'scout_members', targetDocId), updatedMember);
   upsertMembersInCache([updatedMember], updatedMember.user_id ?? userId);
   return updatedMember;
+}
+
+export async function saveBatchMemberUpdates(
+  updates: MemberUpdateEntry[],
+  userId?: string,
+  chunkSize = 450
+): Promise<ScoutMember[]> {
+  if (!updates || updates.length === 0) {
+    return [];
+  }
+
+  const sanitizedMembers: ScoutMember[] = [];
+  const operations: ((batch: WriteBatch) => void)[] = [];
+  const removedCanonicalDocIds = new Set<string>();
+  const targetDocIds = new Set<string>();
+
+  for (const entry of updates) {
+    const sanitized = sanitizeMemberForSave(entry.next, userId);
+    const newDocId = getMemberDocId(sanitized);
+    sanitizedMembers.push(sanitized);
+    targetDocIds.add(newDocId);
+
+    const newDocRef = doc(db, 'scout_members', newDocId);
+    operations.push((batch) => batch.set(newDocRef, sanitized));
+
+    if (entry.previous) {
+      const prevCanonical = getMemberDocId(entry.previous);
+      const oldActualDocId = resolveActualFirestoreDocId(entry.previous);
+      if (oldActualDocId !== newDocId) {
+        const oldDocRef = doc(db, 'scout_members', oldActualDocId);
+        operations.push((batch) => batch.delete(oldDocRef));
+        legacyDocIdByCanonicalKey.delete(prevCanonical);
+      }
+      if (prevCanonical !== newDocId) {
+        removedCanonicalDocIds.add(prevCanonical);
+      }
+    }
+  }
+
+  // Never evict a doc ID that is also being written in the same update set
+  for (const kept of targetDocIds) {
+    removedCanonicalDocIds.delete(kept);
+  }
+
+  await commitChunkedBatches(operations, chunkSize);
+
+  removeDocIdsFromCache(removedCanonicalDocIds);
+  upsertMembersInCache(sanitizedMembers, userId);
+  return sanitizedMembers;
 }
 
 export async function batchUpdateMembers(
@@ -291,42 +301,21 @@ export async function batchUpdateMembers(
   if (!members || members.length === 0) {
     return [];
   }
-  const sanitizedMembers = members.map((member) => sanitizeMemberForSave(member, userId));
-  const operations = sanitizedMembers.map((sanitized) => (batch: WriteBatch) => {
-    const docRef = doc(db, "scout_members", getMemberDocId(sanitized));
-    batch.set(docRef, sanitized);
-  });
-  await commitChunkedBatches(operations, chunkSize);
-  upsertMembersInCache(sanitizedMembers, userId);
-  return sanitizedMembers;
+  return saveBatchMemberUpdates(
+    members.map((next) => ({ next })),
+    userId,
+    chunkSize
+  );
 }
 
 export const batchSaveMembers = batchUpdateMembers;
 
-export async function deleteMember(
-  identityOrCode: string,
-  alternativeKey?: string,
-  batchId?: number
-): Promise<void> {
-  await deleteDoc(doc(db, "scout_members", identityOrCode));
-  if (alternativeKey && alternativeKey !== identityOrCode) {
-    try {
-      await deleteDoc(doc(db, "scout_members", alternativeKey));
-    } catch {
-      // Ignore if alternative doc does not exist
-    }
-  }
-  if (batchId !== undefined && !Number.isNaN(batchId)) {
-    const compositeKey = `${batchId}_${alternativeKey || identityOrCode}`;
-    if (compositeKey !== identityOrCode && compositeKey !== alternativeKey) {
-      try {
-        await deleteDoc(doc(db, "scout_members", compositeKey));
-      } catch {
-        // Ignore if composite doc does not exist
-      }
-    }
-  }
-  removeMemberFromCache(identityOrCode, alternativeKey, batchId);
+export async function deleteBatchMember(member: ScoutMember): Promise<void> {
+  const canonicalDocId = getMemberDocId(member);
+  const actualDocId = resolveActualFirestoreDocId(member);
+  await deleteDoc(doc(db, 'scout_members', actualDocId));
+  legacyDocIdByCanonicalKey.delete(canonicalDocId);
+  removeDocIdsFromCache(new Set([canonicalDocId]));
 }
 
 function filterUniqueDraftMembers(
@@ -337,11 +326,13 @@ function filterUniqueDraftMembers(
   const drafts: ScoutMember[] = [];
 
   for (const m of withoutCode) {
-    const id = m.identity?.trim().toUpperCase();
-    if (!id || isGenericIdentity(id)) {
+    if (isGenericIdentity(m.identity)) {
       drafts.push(m);
-    } else if (!excludedIdentities.has(id) && !seenDraftIdentities.has(id)) {
-      seenDraftIdentities.add(id);
+      continue;
+    }
+    const normalizedId = normalizeCedula(m.identity);
+    if (!excludedIdentities.has(normalizedId) && !seenDraftIdentities.has(normalizedId)) {
+      seenDraftIdentities.add(normalizedId);
       drafts.push(m);
     }
   }
@@ -357,20 +348,22 @@ function deduplicateBatchMembers(batchMembers: ScoutMember[]): ScoutMember[] {
     return filterUniqueDraftMembers(withoutCode, new Set<string>());
   }
 
-  const seenCodes = new Set<string>();
+  const seenCodedIdentities = new Set<string>();
   const finalized: ScoutMember[] = [];
   const finalizedIdentities = new Set<string>();
 
   for (const m of withCode) {
-    const code = m.recognition_code?.trim();
-    if (code && !seenCodes.has(code)) {
-      seenCodes.add(code);
+    if (isGenericIdentity(m.identity)) {
+      // Preserve all generic-identity coded members without collapsing them
+      finalized.push(m);
+      continue;
+    }
+    const normalizedId = normalizeCedula(m.identity);
+    if (!seenCodedIdentities.has(normalizedId)) {
+      seenCodedIdentities.add(normalizedId);
       finalized.push(m);
     }
-    const id = m.identity?.trim().toUpperCase();
-    if (id && !isGenericIdentity(id)) {
-      finalizedIdentities.add(id);
-    }
+    finalizedIdentities.add(normalizedId);
   }
 
   const remainingDrafts = filterUniqueDraftMembers(withoutCode, finalizedIdentities);
@@ -401,8 +394,11 @@ export async function getMembersByBatchId(batchId: number): Promise<ScoutMember[
     }
 
     const members = rawDocs.map((docSnapshot) => {
-      const rawData = typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot;
-      return rawData as ScoutMember;
+      const rawData =
+        typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot;
+      const member = rawData as ScoutMember;
+      recordLegacyDocIdIfNeeded(docSnapshot, member);
+      return member;
     });
 
     return deduplicateBatchMembers(members);
@@ -425,9 +421,13 @@ export async function getAllMembers(userId?: string): Promise<ScoutMember[]> {
       snap.forEach((docSnap) => snapDocs.push(docSnap));
     }
 
-    const allRaw = snapDocs.map(
-      (docSnapshot) => (typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot) as ScoutMember
-    );
+    const allRaw = snapDocs.map((docSnapshot) => {
+      const member = (
+        typeof docSnapshot.data === 'function' ? docSnapshot.data() : docSnapshot
+      ) as ScoutMember;
+      recordLegacyDocIdIfNeeded(docSnapshot, member);
+      return member;
+    });
 
     return deduplicateMembersByBatch(allRaw);
   });

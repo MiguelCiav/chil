@@ -14,7 +14,7 @@ The `statistics` feature subsystem aggregates recognition batch and member recor
 - **Hooks**: [`./hooks/README.md`](./hooks/README.md) — `useStatisticsData` reactive data loader/filter hook and pure filtering/YoY year helpers.
 - **Types**: [`./types/README.md`](./types/README.md) — Filter, KPI, chart, breakdown, YoY, and `StatisticsDataset` TypeScript interfaces.
 - **Utils**: [`./utils/README.md`](./utils/README.md) — Statistical/YoY aggregators (`statsCalculators.ts`) and A4 portrait PDF export (`statsPdfExport.ts`).
-- **Shared Cross-Feature Resolver (`../../utils/memberHierarchy.ts`)**: Canonical member-first hierarchy resolver (`resolveMemberHierarchy`, `isNoAplicaDistrict`) re-exported by `statsCalculators.ts`.
+- **Shared Cross-Feature Resolver & UI (`../../utils/memberHierarchy.ts`, `../../utils/datePeriod.ts`, `../../domain/components/`)**: Canonical member-first hierarchy resolver (`resolveMemberHierarchy` and `ResolvedMemberHierarchy` re-exported by `statsCalculators.ts`; `isNoAplicaDistrict` and `getAvailableDistricts` imported directly by `hooks/useStatisticsData.ts`), `matchesDateRange`, and shared filter UI (`FilterCard`, `HierarchyFilterSelects`, `buildCommonFilterBadges`).
 
 ## Global Invariants
 - **Territory & Unit Attribution**: `statsCalculators.ts` and `useStatisticsData.ts` resolve member territory via `resolveMemberHierarchy` (`isNationalInstitutional` -> `'nacional'` / `'Nacional'`; numeric regions/districts/groups require `id > 0`), and `FilterBar`/`buildAvailableDistricts` exclude `id === 0` and `isNoAplicaDistrict(d)` from dynamic lists while exposing `'nacional'` / `'0'` (`'No aplica'`) options where applicable.

@@ -9,11 +9,17 @@ import * as recognitions from '../../../recognitions';
 vi.mock('../../api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../api')>();
   return {
+    ...actual,
     getBatchById: vi.fn(),
     getMembersByBatchId: vi.fn(),
     getHierarchyData: vi.fn(),
     updateMember: vi.fn(),
+    saveBatchMemberUpdates: vi.fn(),
+    createMember: vi.fn(),
+    deleteBatchMember: vi.fn(),
     deleteBatch: vi.fn(),
+    getMemberStatus: vi.fn(),
+    getScraperSessionStatus: vi.fn(),
     generateBatchReport: vi.fn(),
     resolveBatchReportBuckets: actual.resolveBatchReportBuckets,
     filterEligibleReportBuckets: actual.filterEligibleReportBuckets,
@@ -21,6 +27,24 @@ vi.mock('../../api', async (importOriginal) => {
     getRecognitionName: vi.fn((name) => name || 'Servicio Prolongado')
   };
 });
+
+const mockScraperSettings = {
+  sessionStatus: {
+    connected: true,
+    status: 'connected' as const,
+    impeesaEmail: 'coord@scouts.org.ve',
+    updatedAt: '2026-11-24T00:00:00.000Z'
+  },
+  isModalOpen: false,
+  openModal: vi.fn(),
+  closeModal: vi.fn(),
+  refreshSessionStatus: vi.fn(),
+  setSessionStatus: vi.fn()
+};
+
+vi.mock('../../../../context/ScraperSettingsContext', () => ({
+  useScraperSettings: vi.fn(() => mockScraperSettings)
+}));
 
 vi.mock('../../../recognitions', () => ({
   generateBatchCertificatesZip: vi.fn(),
@@ -238,8 +262,8 @@ describe('BatchDetail component', () => {
     const menuBtn = screen.getByLabelText(/Opciones de Ana Perez/i);
     fireEvent.click(menuBtn);
 
-    // Click Descargar Reconocimiento (PDF)
-    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar Reconocimiento \(PDF\)/i });
+    // Click Descargar PDF
+    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar PDF/i });
     fireEvent.click(downloadDiplomaBtn);
 
     await waitFor(() => {
@@ -484,15 +508,17 @@ describe('BatchDetail component', () => {
       groups: [{ id: 100, name: 'Grupo San Luis', district_id: 10 }]
     });
 
-    vi.mocked(api.updateMember).mockResolvedValueOnce({
-      identity: 'V-11111111',
-      first_names: 'Ana Maria',
-      last_names: 'Perez',
-      birth_date: '2005-01-01',
-      member_type: 'young',
-      status: 'active',
-      batch_id: 101
-    });
+    vi.mocked(api.saveBatchMemberUpdates).mockResolvedValueOnce([
+      {
+        identity: 'V-11111111',
+        first_names: 'Ana Maria',
+        last_names: 'Perez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        status: 'active',
+        batch_id: 101
+      }
+    ]);
 
     render(
       <MemoryRouter initialEntries={['/lotes/101']}>
@@ -538,14 +564,21 @@ describe('BatchDetail component', () => {
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(api.updateMember).toHaveBeenCalledWith(expect.objectContaining({
-        first_names: 'Ana Maria',
-        last_names: 'Perez Gomez',
-        email: 'anamaria@scouts.org',
-        phone: '04120000000',
-        recognition_code: 'REC-ANAMARIA',
-        member_type: 'adult'
-      }));
+      expect(api.saveBatchMemberUpdates).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            next: expect.objectContaining({
+              first_names: 'Ana Maria',
+              last_names: 'Perez Gomez',
+              email: 'anamaria@scouts.org',
+              phone: '04120000000',
+              recognition_code: 'REC-ANAMARIA',
+              member_type: 'adult'
+            })
+          })
+        ],
+        'test-user-id'
+      );
       expect(screen.getByText(/Datos del miembro actualizados con éxito/i)).toBeInTheDocument();
     });
   });
@@ -580,7 +613,7 @@ describe('BatchDetail component', () => {
       groups: []
     });
 
-    vi.mocked(api.updateMember).mockRejectedValueOnce(new Error('Update failed'));
+    vi.mocked(api.saveBatchMemberUpdates).mockRejectedValueOnce(new Error('Update failed'));
 
     render(
       <MemoryRouter initialEntries={['/lotes/101']}>
@@ -657,7 +690,7 @@ describe('BatchDetail component', () => {
 
     // Trigger Single recognition error
     fireEvent.click(screen.getByLabelText(/Opciones de Ana Perez/i));
-    fireEvent.click(screen.getByRole('button', { name: /Descargar Reconocimiento \(PDF\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Descargar PDF/i }));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith('Error al descargar el reconocimiento.');
@@ -781,7 +814,7 @@ describe('BatchDetail component', () => {
     await waitFor(() => {
       expect(screen.queryByText('Editar Datos de Miembro')).not.toBeInTheDocument();
     });
-    expect(api.updateMember).not.toHaveBeenCalled();
+    expect(api.saveBatchMemberUpdates).not.toHaveBeenCalled();
   });
 
   it('renders quick view modal for pending adult member with empty contact fields and closes it', async () => {
@@ -998,11 +1031,13 @@ describe('BatchDetail component', () => {
       groups: []
     });
 
-    vi.mocked(api.updateMember).mockResolvedValueOnce({
-      ...pendingMember,
-      status: 'exceptional',
-      recognition_code: 'REC-9999'
-    });
+    vi.mocked(api.saveBatchMemberUpdates).mockResolvedValueOnce([
+      {
+        ...pendingMember,
+        status: 'exceptional',
+        recognition_code: 'REC-999999'
+      }
+    ]);
 
     render(
       <MemoryRouter initialEntries={['/lotes/101']}>
@@ -1039,13 +1074,18 @@ describe('BatchDetail component', () => {
     fireEvent.click(screen.getByText('Guardar Cambios'));
 
     await waitFor(() => {
-      expect(api.updateMember).toHaveBeenCalledWith(
-        expect.objectContaining({
-          identity: 'V-99999999',
-          status: 'exceptional',
-          exceptional_reason: 'Comprobante de inscripción presentado',
-          recognition_code: expect.stringMatching(/^REC-/)
-        })
+      expect(api.saveBatchMemberUpdates).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            next: expect.objectContaining({
+              identity: 'V-99999999',
+              status: 'exceptional',
+              exceptional_reason: 'Comprobante de inscripción presentado',
+              recognition_code: expect.stringMatching(/^REC-[A-HJ-NP-Z2-9]{6}$/)
+            })
+          })
+        ],
+        'test-user-id'
       );
     });
   });
@@ -1098,8 +1138,8 @@ describe('BatchDetail component', () => {
     // Open row menu
     fireEvent.click(screen.getByLabelText(/Opciones de Rosa Morales/i));
 
-    // Descargar Reconocimiento (PDF) should be present and clickable for exceptional member
-    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar Reconocimiento \(PDF\)/i });
+    // Descargar PDF should be present and clickable for exceptional member
+    const downloadDiplomaBtn = screen.getByRole('button', { name: /Descargar PDF/i });
     expect(downloadDiplomaBtn).toBeInTheDocument();
     fireEvent.click(downloadDiplomaBtn);
 
@@ -1217,19 +1257,26 @@ describe('BatchDetail component', () => {
     fireEvent.change(unitSelect, { target: { value: 'caminantes' } });
     expect(unitSelect).toHaveValue('caminantes');
 
-    vi.mocked(api.updateMember).mockResolvedValueOnce({
-      ...member,
-      unit: 'caminantes'
-    });
+    vi.mocked(api.saveBatchMemberUpdates).mockResolvedValueOnce([
+      {
+        ...member,
+        unit: 'caminantes'
+      }
+    ]);
 
     fireEvent.click(screen.getByText('Guardar Cambios'));
 
     await waitFor(() => {
-      expect(api.updateMember).toHaveBeenCalledWith(
-        expect.objectContaining({
-          identity: 'V-77777777',
-          unit: 'caminantes'
-        })
+      expect(api.saveBatchMemberUpdates).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            next: expect.objectContaining({
+              identity: 'V-77777777',
+              unit: 'caminantes'
+            })
+          })
+        ],
+        'test-user-id'
       );
     });
   });
@@ -1270,7 +1317,7 @@ describe('BatchDetail component', () => {
     expect(screen.queryByText(/Detalles del Lote/i)).not.toBeInTheDocument();
   });
 
-  it('changes status to pending when editing an unverified no_scout member to a scout unit in BatchDetail', async () => {
+  it('locks no_scout unit boundary while keeping identity editable for no_scout members in BatchDetail', async () => {
     const unverifiedMember: ScoutMember = {
       identity: 'V-88888888',
       first_names: 'Externo',
@@ -1295,7 +1342,7 @@ describe('BatchDetail component', () => {
       created_at: '2026-08-20T10:00:00.000Z'
     });
 
-    vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([unverifiedMember]);
+    vi.mocked(api.getMembersByBatchId).mockResolvedValue([unverifiedMember]);
     vi.mocked(api.getHierarchyData).mockResolvedValueOnce({
       regions: [{ id: 1, name: 'Región Capital' }],
       districts: [{ id: 10, name: 'Distrito Sucre', region_id: 1 }],
@@ -1323,30 +1370,36 @@ describe('BatchDetail component', () => {
 
     const unitSelect = screen.getByLabelText(/Unidad Scout \*/i);
     expect(unitSelect).toHaveValue('no_scout');
+    expect(unitSelect).toBeDisabled();
 
-    // Change unit to troop (scout unit)
-    fireEvent.change(unitSelect, { target: { value: 'tropa' } });
+    const identityInput = screen.getByLabelText(/Cédula \*/i);
+    expect(identityInput).not.toBeDisabled();
+    fireEvent.change(identityInput, { target: { value: 'V-88888889' } });
 
-    // Exceptional toggle is now visible because status is pending
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i)).toBeInTheDocument();
-    });
+    expect(screen.getByLabelText(/Código de Reconocimiento/i)).toBeDisabled();
 
-    vi.mocked(api.updateMember).mockResolvedValueOnce({
-      ...unverifiedMember,
-      unit: 'tropa',
-      status: 'pending'
-    });
+    vi.mocked(api.saveBatchMemberUpdates).mockResolvedValueOnce([
+      {
+        ...unverifiedMember,
+        identity: 'V-88888889'
+      }
+    ]);
 
     fireEvent.click(screen.getByText('Guardar Cambios'));
 
     await waitFor(() => {
-      expect(api.updateMember).toHaveBeenCalledWith(
-        expect.objectContaining({
-          identity: 'V-88888888',
-          unit: 'tropa',
-          status: 'pending'
-        })
+      expect(api.saveBatchMemberUpdates).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            previous: expect.objectContaining({ identity: 'V-88888888' }),
+            next: expect.objectContaining({
+              identity: 'V-88888889',
+              unit: 'no_scout',
+              status: 'active'
+            })
+          })
+        ],
+        'test-user-id'
       );
     });
   });
@@ -1721,7 +1774,7 @@ describe('BatchDetail component', () => {
       vi.mocked(api.getBatchById).mockResolvedValueOnce(baseBatch);
       vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([member]);
       vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
-      vi.mocked(api.updateMember).mockResolvedValueOnce({ ...member, group_id: 0 });
+      vi.mocked(api.saveBatchMemberUpdates).mockResolvedValueOnce([{ ...member, group_id: 0 }]);
       vi.mocked(api.getMembersByBatchId).mockResolvedValueOnce([{ ...member, group_id: 0 }]);
 
       renderBatchDetail();
@@ -1739,11 +1792,16 @@ describe('BatchDetail component', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Guardar Cambios' }));
 
       await waitFor(() => {
-        expect(api.updateMember).toHaveBeenCalledWith(
-          expect.objectContaining({
-            identity: 'V-55',
-            group_id: 0
-          })
+        expect(api.saveBatchMemberUpdates).toHaveBeenCalledWith(
+          [
+            expect.objectContaining({
+              next: expect.objectContaining({
+                identity: 'V-55',
+                group_id: 0
+              })
+            })
+          ],
+          'test-user-id'
         );
       });
     });
@@ -1925,6 +1983,361 @@ describe('BatchDetail component', () => {
       expect(screen.getByRole('button', { name: /Descargar Reconocimientos \(ZIP\)/i })).toBeEnabled();
       expect(alertSpy).not.toHaveBeenCalled();
       alertSpy.mockRestore();
+    });
+  });
+
+  describe('Post-Emission Lifecycle: Re-verification, Deletion & Single-Member Addition', () => {
+    const hierarchy = {
+      regions: [{ id: 1, name: 'Metropolitana' }],
+      districts: [{ id: 10, name: 'Chacao', region_id: 1 }],
+      groups: [{ id: 100, name: 'San Jorge', district_id: 10 }]
+    };
+
+    const renderDetail = (id = '401') =>
+      render(
+        <MemoryRouter initialEntries={[`/lotes/${id}`]}>
+          <Routes>
+            <Route path="/lotes/:id" element={<BatchDetail />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+    it('re-verifies pending and exceptional members in auto mode, issues new code distinct from prior exceptional code, and warns to re-download PDF', async () => {
+      const batch: Batch = {
+        id: 401,
+        comment: 'Lote Auto',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        code_mode: 'auto',
+        created_at: '2026-11-20T10:00:00.000Z',
+        user_id: 'test-user-id'
+      };
+      const pendingMember: ScoutMember = {
+        identity: '11111111',
+        first_names: 'Usuario',
+        last_names: 'No Registrado',
+        birth_date: '1990-01-01',
+        member_type: 'young',
+        unit: 'tropa',
+        status: 'pending',
+        batch_id: 401
+      };
+      const exceptionalMember: ScoutMember = {
+        identity: '22222222',
+        first_names: 'Luis',
+        last_names: 'Excepcional',
+        birth_date: '2004-01-01',
+        member_type: 'young',
+        unit: 'clan',
+        status: 'exceptional',
+        recognition_code: 'REC-OLD999',
+        exceptional_reason: 'Autorizado',
+        batch_id: 401
+      };
+
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(batch);
+      vi.mocked(api.getMembersByBatchId)
+        .mockResolvedValueOnce([pendingMember, exceptionalMember])
+        .mockResolvedValueOnce([
+          { ...pendingMember, first_names: 'Pedro', last_names: 'Activo', status: 'active', recognition_code: 'REC-NEW111' },
+          { ...exceptionalMember, status: 'active', recognition_code: 'REC-NEW222', exceptional_reason: undefined }
+        ]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+      vi.mocked(api.getMemberStatus)
+        .mockResolvedValueOnce({
+          cedula: '11111111',
+          nombre_completo: 'Pedro Activo',
+          status: 'Activo',
+          fecha_nacimiento: '2008-01-01',
+          telefono: '',
+          correo_electronico: '',
+          region: 'Metropolitana',
+          distrito: 'Chacao',
+          grupo: 'San Jorge',
+          unidad: 'Tropa'
+        })
+        .mockResolvedValueOnce({
+          cedula: '22222222',
+          nombre_completo: 'Luis Activo',
+          status: 'Activo',
+          fecha_nacimiento: '2004-01-01',
+          telefono: '',
+          correo_electronico: '',
+          region: 'Metropolitana',
+          distrito: 'Chacao',
+          grupo: 'San Jorge',
+          unidad: 'Clan'
+        });
+      vi.mocked(api.saveBatchMemberUpdates).mockResolvedValueOnce([]);
+
+      renderDetail('401');
+      await waitFor(() => expect(screen.getByText('Re-verificar (2)')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-verificar \(2\)/i }));
+
+      await waitFor(() => {
+        expect(api.saveBatchMemberUpdates).toHaveBeenCalledTimes(1);
+        const [updates] = vi.mocked(api.saveBatchMemberUpdates).mock.calls[0];
+        expect(updates).toHaveLength(2);
+        const excUpdate = updates.find((u) => u.previous?.identity === '22222222');
+        expect(excUpdate?.next.status).toBe('active');
+        expect(excUpdate?.next.exceptional_reason).toBeUndefined();
+        expect(excUpdate?.next.recognition_code).not.toBe('REC-OLD999');
+        expect(excUpdate?.next.recognition_code).toMatch(/^REC-[A-HJ-NP-Z2-9]{6}$/);
+        expect(
+          screen.getByText(/Recuerda volver a descargar el certificado PDF actualizado/i)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('opens ManualCodeAssignmentModal in manual-code batches, rejects reusing prior exceptional code, and commits atomically', async () => {
+      const batch: Batch = {
+        id: 402,
+        comment: 'Lote Manual',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        code_mode: 'manual',
+        created_at: '2026-11-20T10:00:00.000Z',
+        user_id: 'test-user-id'
+      };
+      const exceptionalMember: ScoutMember = {
+        identity: '33333333',
+        first_names: 'Carla',
+        last_names: 'Mendez',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        unit: 'tropa',
+        status: 'exceptional',
+        recognition_code: 'SP-EXC-01',
+        exceptional_reason: 'Permiso',
+        batch_id: 402
+      };
+
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(batch);
+      vi.mocked(api.getMembersByBatchId)
+        .mockResolvedValueOnce([exceptionalMember])
+        .mockResolvedValueOnce([
+          { ...exceptionalMember, status: 'active', recognition_code: 'SP-ACT-02', exceptional_reason: undefined }
+        ]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+      vi.mocked(api.getMemberStatus).mockResolvedValueOnce({
+        cedula: '33333333',
+        nombre_completo: 'Carla Mendez',
+        status: 'Activo',
+        fecha_nacimiento: '2005-01-01',
+        telefono: '',
+        correo_electronico: '',
+        region: 'Metropolitana',
+        distrito: 'Chacao',
+        grupo: 'San Jorge',
+        unidad: 'Tropa'
+      });
+      vi.mocked(api.saveBatchMemberUpdates).mockResolvedValueOnce([]);
+
+      renderDetail('402');
+      await waitFor(() => expect(screen.getByText('Carla Mendez')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByLabelText(/Opciones de Carla Mendez/i));
+      fireEvent.click(screen.getByText('Re-verificar en Impeesa'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Asignar Códigos a Miembros Activados')).toBeInTheDocument();
+      });
+
+      const codeInput = screen.getByLabelText(/Nuevo Código de Reconocimiento \*/i);
+      const confirmBtn = screen.getByRole('button', { name: /Guardar y Activar/i });
+      expect(confirmBtn).toBeDisabled();
+
+      // Rejects prior exceptional code
+      fireEvent.change(codeInput, { target: { value: 'SP-EXC-01' } });
+      expect(
+        screen.getByText('El nuevo código no puede ser igual al código excepcional anterior.')
+      ).toBeInTheDocument();
+      expect(confirmBtn).toBeDisabled();
+
+      // Accepts distinct code
+      fireEvent.change(codeInput, { target: { value: 'sp-act-02' } });
+      expect(confirmBtn).toBeEnabled();
+      fireEvent.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(api.saveBatchMemberUpdates).toHaveBeenCalledWith(
+          [
+            expect.objectContaining({
+              next: expect.objectContaining({
+                identity: '33333333',
+                status: 'active',
+                recognition_code: 'SP-ACT-02'
+              })
+            })
+          ],
+          'test-user-id'
+        );
+      });
+    });
+
+    it('deletes a member via DeleteMemberModal and blocks deleting the last remaining member', async () => {
+      const batch: Batch = {
+        id: 403,
+        comment: 'Lote Delete',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        created_at: '2026-11-20T10:00:00.000Z',
+        user_id: 'test-user-id'
+      };
+      const m1: ScoutMember = {
+        identity: '44444444',
+        first_names: 'Uno',
+        last_names: 'Miembro',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        unit: 'tropa',
+        status: 'active',
+        recognition_code: 'REC-DEL001',
+        batch_id: 403
+      };
+      const m2: ScoutMember = {
+        identity: '55555555',
+        first_names: 'Dos',
+        last_names: 'Miembro',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        unit: 'tropa',
+        status: 'pending',
+        batch_id: 403
+      };
+
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(batch);
+      vi.mocked(api.getMembersByBatchId)
+        .mockResolvedValueOnce([m1, m2])
+        .mockResolvedValueOnce([m2]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+      vi.mocked(api.deleteBatchMember).mockResolvedValueOnce();
+
+      renderDetail('403');
+      await waitFor(() => expect(screen.getByText('Uno Miembro')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByLabelText(/Opciones de Uno Miembro/i));
+      fireEvent.click(screen.getByText('Eliminar miembro'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Confirmar Eliminación de Miembro')).toBeInTheDocument();
+        expect(
+          screen.getByText(/Este miembro ya tiene un código de reconocimiento emitido \(REC-DEL001\)/)
+        ).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Eliminar Miembro' }));
+
+      await waitFor(() => {
+        expect(api.deleteBatchMember).toHaveBeenCalledWith(m1);
+        expect(screen.queryByText('Uno Miembro')).not.toBeInTheDocument();
+      });
+
+      // Now only 1 member remains -> Eliminar miembro must be disabled
+      fireEvent.click(screen.getByLabelText(/Opciones de Dos Miembro/i));
+      expect(screen.getByText('Eliminar miembro').closest('button')).toBeDisabled();
+    });
+
+    it('adds a single missing member via AddSingleMemberCard handling found, not_found, and transient error', async () => {
+      const batch: Batch = {
+        id: 404,
+        comment: 'Lote Add',
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        code_mode: 'auto',
+        created_at: '2026-11-20T10:00:00.000Z',
+        user_id: 'test-user-id'
+      };
+      const existing: ScoutMember = {
+        identity: '66666666',
+        first_names: 'Existente',
+        last_names: 'Scout',
+        birth_date: '2005-01-01',
+        member_type: 'young',
+        unit: 'tropa',
+        status: 'active',
+        recognition_code: 'REC-EXIST1',
+        batch_id: 404
+      };
+
+      vi.mocked(api.getBatchById).mockResolvedValueOnce(batch);
+      vi.mocked(api.getMembersByBatchId)
+        .mockResolvedValueOnce([existing])
+        .mockResolvedValueOnce([
+          existing,
+          {
+            identity: '77777777',
+            first_names: 'Usuario',
+            last_names: 'No Registrado',
+            birth_date: '1990-01-01',
+            member_type: 'young',
+            unit: 'tropa',
+            status: 'pending',
+            batch_id: 404
+          }
+        ]);
+      vi.mocked(api.getHierarchyData).mockResolvedValueOnce(hierarchy);
+      vi.mocked(api.getMemberStatus)
+        .mockRejectedValueOnce(new Error('504 Gateway Timeout'))
+        .mockRejectedValueOnce(new Error('No registrado'));
+      vi.mocked(api.createMember).mockResolvedValueOnce({
+        identity: '77777777',
+        first_names: 'Usuario',
+        last_names: 'No Registrado',
+        birth_date: '1990-01-01',
+        member_type: 'young',
+        unit: 'tropa',
+        status: 'pending',
+        batch_id: 404
+      });
+
+      renderDetail('404');
+      await waitFor(() => expect(screen.getByText('Añadir Miembro al Lote')).toBeInTheDocument());
+
+      const cedulaInput = screen.getByLabelText(/Cédula del miembro/i);
+      const verifyBtn = screen.getByRole('button', { name: /Verificar en Impeesa/i });
+
+      // Duplicate rejected inline
+      fireEvent.change(cedulaInput, { target: { value: 'V-66.666.666' } });
+      fireEvent.click(verifyBtn);
+      expect(screen.getByText('Esta cédula ya pertenece a un miembro del lote.')).toBeInTheDocument();
+
+      // Transient network error stays on Step 1 without entering pending preview
+      fireEvent.change(cedulaInput, { target: { value: '77777777' } });
+      fireEvent.click(verifyBtn);
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Error de conexión al consultar Impeesa/i)
+        ).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Agregar al lote/i })).not.toBeInTheDocument();
+      });
+
+      // Not found enters Step 2 amber pending preview and adds as pending
+      fireEvent.click(verifyBtn);
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Esta cédula no figura registrada en Impeesa/i)
+        ).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Agregar al lote/i }));
+
+      await waitFor(() => {
+        expect(api.createMember).toHaveBeenCalledWith(
+          expect.objectContaining({
+            identity: '77777777',
+            status: 'pending',
+            batch_id: 404,
+            user_id: 'test-user-id'
+          }),
+          'test-user-id'
+        );
+      });
     });
   });
 });

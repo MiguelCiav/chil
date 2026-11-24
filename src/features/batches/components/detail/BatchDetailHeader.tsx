@@ -19,6 +19,7 @@ export interface BatchDetailHeaderProps {
   onDownloadCertificatesZip: (bucketKey?: ReportBucketKey) => void;
   downloadingCertificatesZip: boolean;
   isEligibleZero: boolean;
+  disableDelete?: boolean;
 }
 
 export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
@@ -32,7 +33,8 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
   downloadingReport,
   onDownloadCertificatesZip,
   downloadingCertificatesZip,
-  isEligibleZero
+  isEligibleZero,
+  disableDelete = false
 }) => {
   return (
     <div
@@ -58,6 +60,7 @@ export const BatchDetailHeader: React.FC<BatchDetailHeaderProps> = ({
         <Button
           variant="destructive"
           onClick={onDeleteClick}
+          disabled={disableDelete}
           icon={<Trash2 size={16} />}
         >
           Eliminar Lote

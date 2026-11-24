@@ -11,7 +11,9 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../../../lib/firebase';
 import { createKeyedSessionCache } from '../../../lib/sessionCache';
-import { Batch, BatchCreationParams, ScoutMember } from '../types';
+import { Batch, BatchCodeMode, BatchCreationParams, ScoutMember } from '../types';
+import { inferBatchCodeMode } from '../utils/codeGenerator';
+import { deduplicateMergedMembers } from '../utils/memberMerge';
 import {
   getMembersByBatchId,
   getMemberDocId,
@@ -100,7 +102,7 @@ export async function commitChunkedBatches(
 }
 
 export function buildBatchQueryForUser(userId: string) {
-  return query(collection(db, "batches"), where("user_id", "==", userId));
+  return query(collection(db, 'batches'), where('user_id', '==', userId));
 }
 
 function buildBatchRecord(numericId: number, params: BatchCreationParams, userId?: string): Batch {
@@ -118,6 +120,7 @@ function buildBatchRecord(numericId: number, params: BatchCreationParams, userId
     unit_scope: params.unit_scope ?? 'mixed',
     recognition_type: params.recognition_type,
     recognition_duration: params.recognition_duration ?? '',
+    ...(params.code_mode ? { code_mode: params.code_mode } : {}),
     created_at: new Date().toISOString(),
     ...(targetUserId ? { user_id: targetUserId } : {})
   };
@@ -127,7 +130,7 @@ export async function createBatch(params: BatchCreationParams, userId?: string):
   const numericId = generateSecureBatchId();
   const newBatch = buildBatchRecord(numericId, params, userId);
 
-  await setDoc(doc(db, "batches", String(numericId)), newBatch);
+  await setDoc(doc(db, 'batches', String(numericId)), newBatch);
   upsertBatchInCache(newBatch, newBatch.user_id ?? userId);
   return newBatch;
 }
@@ -153,11 +156,11 @@ export async function createBatchWithMembers(
   );
 
   const operations: ((batchOp: WriteBatch) => void)[] = [];
-  const batchDocRef = doc(db, "batches", String(numericId));
+  const batchDocRef = doc(db, 'batches', String(numericId));
   operations.push((batchOp) => batchOp.set(batchDocRef, newBatch));
 
   for (const sanitized of sanitizedMembers) {
-    const memberRef = doc(db, "scout_members", getMemberDocId(sanitized));
+    const memberRef = doc(db, 'scout_members', getMemberDocId(sanitized));
     operations.push((batchOp) => batchOp.set(memberRef, sanitized));
   }
 
@@ -170,7 +173,7 @@ export async function createBatchWithMembers(
 }
 
 export async function updateBatch(id: number, params: BatchCreationParams, userId?: string): Promise<Batch> {
-  const batchRef = doc(db, "batches", String(id));
+  const batchRef = doc(db, 'batches', String(id));
   let existingData = findCachedBatchById(id);
   if (!existingData) {
     const docSnap = await getDoc(batchRef);
@@ -180,6 +183,7 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
   const regionId = typeof params.region_id === 'number' && !Number.isNaN(params.region_id) ? params.region_id : (existingData?.region_id ?? 0);
   const districtId = typeof params.district_id === 'number' && !Number.isNaN(params.district_id) ? params.district_id : (existingData?.district_id ?? 0);
   const groupId = typeof params.group_id === 'number' && !Number.isNaN(params.group_id) ? params.group_id : (existingData?.group_id ?? 0);
+  const resolvedCodeMode = params.code_mode ?? existingData?.code_mode;
 
   const updatedBatch: Batch = {
     id,
@@ -190,6 +194,7 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
     unit_scope: params.unit_scope ?? existingData?.unit_scope ?? 'mixed',
     recognition_type: params.recognition_type ?? existingData?.recognition_type,
     recognition_duration: params.recognition_duration ?? existingData?.recognition_duration ?? '',
+    ...(resolvedCodeMode ? { code_mode: resolvedCodeMode } : {}),
     created_at: existingData ? existingData.created_at : new Date().toISOString(),
     ...(targetUserId ? { user_id: targetUserId } : {})
   };
@@ -200,7 +205,7 @@ export async function updateBatch(id: number, params: BatchCreationParams, userI
 }
 
 export async function deleteBatch(batchId: number): Promise<void> {
-  const membersQuery = query(collection(db, "scout_members"), where("batch_id", "==", batchId));
+  const membersQuery = query(collection(db, 'scout_members'), where('batch_id', '==', batchId));
   const membersSnapshot = await getDocs(membersQuery);
 
   const operations: ((batch: WriteBatch) => void)[] = [];
@@ -214,7 +219,7 @@ export async function deleteBatch(batchId: number): Promise<void> {
     });
   }
 
-  const batchDocRef = doc(db, "batches", String(batchId));
+  const batchDocRef = doc(db, 'batches', String(batchId));
   operations.push((batchOp) => batchOp.delete(batchDocRef));
 
   await commitChunkedBatches(operations);
@@ -245,7 +250,7 @@ export async function getBatchById(id: number): Promise<Batch | null> {
     return cached;
   }
 
-  const docRef = doc(db, "batches", String(id));
+  const docRef = doc(db, 'batches', String(id));
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
     return docSnap.data() as Batch;
@@ -260,8 +265,8 @@ export interface MergeBatchesParams {
 }
 
 function computeLatestBatchTimestamp(existingBatches: Batch[]): string {
-  const timestamps = existingBatches.map(b => new Date(b.created_at).getTime());
-  const validTimestamps = timestamps.filter(t => !Number.isNaN(t));
+  const timestamps = existingBatches.map((b) => new Date(b.created_at).getTime());
+  const validTimestamps = timestamps.filter((t) => !Number.isNaN(t));
   if (validTimestamps.length === 0) {
     return new Date().toISOString();
   }
@@ -271,16 +276,17 @@ function computeLatestBatchTimestamp(existingBatches: Batch[]): string {
 function buildMergedBatchRecord(
   existingBatches: Batch[],
   params: MergeBatchesParams,
+  mergedCodeMode: BatchCodeMode,
   userId?: string
 ): { mergedBatch: Batch; targetUserId: string } {
   const first = existingBatches[0];
-  const allSameRegion = existingBatches.every(b => b.region_id === first.region_id);
-  const allSameDistrict = existingBatches.every(b => b.district_id === first.district_id);
-  const allSameGroup = existingBatches.every(b => b.group_id === first.group_id);
-  const allSameType = existingBatches.every(b => b.recognition_type === first.recognition_type);
-  const allSameUnit = existingBatches.every(b => b.unit_scope === first.unit_scope);
+  const allSameRegion = existingBatches.every((b) => b.region_id === first.region_id);
+  const allSameDistrict = existingBatches.every((b) => b.district_id === first.district_id);
+  const allSameGroup = existingBatches.every((b) => b.group_id === first.group_id);
+  const allSameType = existingBatches.every((b) => b.recognition_type === first.recognition_type);
+  const allSameUnit = existingBatches.every((b) => b.unit_scope === first.unit_scope);
   const allSameDuration = existingBatches.every(
-    b => b.recognition_duration === first.recognition_duration
+    (b) => b.recognition_duration === first.recognition_duration
   );
 
   const targetUserId =
@@ -296,6 +302,7 @@ function buildMergedBatchRecord(
     unit_scope: allSameUnit && first.unit_scope ? first.unit_scope : 'mixed',
     recognition_type: allSameType ? first.recognition_type : (first.recognition_type ?? ''),
     recognition_duration: allSameDuration ? first.recognition_duration : '',
+    code_mode: mergedCodeMode,
     created_at: computeLatestBatchTimestamp(existingBatches),
     ...(targetUserId ? { user_id: targetUserId } : {})
   };
@@ -303,81 +310,82 @@ function buildMergedBatchRecord(
   return { mergedBatch, targetUserId };
 }
 
-function resolveMergedMemberGroupId(member: ScoutMember, sourceBatch: Batch): number {
-  if (member.group_id !== undefined && !Number.isNaN(member.group_id)) {
-    return member.group_id;
-  }
-  if (sourceBatch.group_id !== undefined && !Number.isNaN(sourceBatch.group_id)) {
-    return sourceBatch.group_id;
-  }
-  return 0;
-}
-
 export async function mergeBatches(params: MergeBatchesParams, userId?: string): Promise<Batch> {
-  const { batchIds } = params;
-  if (!batchIds || batchIds.length < 2) {
+  const uniqueBatchIds = Array.from(new Set(params.batchIds ?? []));
+  if (uniqueBatchIds.length < 2) {
     throw new Error('Se requieren al menos 2 lotes para fusionar');
   }
 
-  // Fetch all batches
-  const fetchedBatches = await Promise.all(batchIds.map(id => getBatchById(id)));
+  // Fetch all source batches
+  const fetchedBatches = await Promise.all(uniqueBatchIds.map((id) => getBatchById(id)));
   const existingBatches = fetchedBatches.filter((b): b is Batch => b !== null);
 
   if (existingBatches.length < 2) {
     throw new Error('No se encontraron suficientes lotes válidos para fusionar');
   }
 
-  const { mergedBatch, targetUserId } = buildMergedBatchRecord(existingBatches, params, userId);
-  const newNumericId = mergedBatch.id;
-
+  // Fetch members for all source batches first so merged code_mode can be resolved accurately
   const membersByBatch = await Promise.all(
-    existingBatches.map(async b => {
+    existingBatches.map(async (b) => {
       const members = await getMembersByBatchId(b.id);
       return { batch: b, members };
     })
   );
 
-  const operations: ((batch: WriteBatch) => void)[] = [];
+  const sourceModes = membersByBatch.map(({ batch, members }) =>
+    inferBatchCodeMode(members, batch)
+  );
+  const mergedCodeMode: BatchCodeMode = sourceModes.every((m) => m === sourceModes[0])
+    ? sourceModes[0]
+    : 'manual';
 
-  // 1. Create the new merged batch
+  const { mergedBatch, targetUserId } = buildMergedBatchRecord(
+    existingBatches,
+    params,
+    mergedCodeMode,
+    userId
+  );
+  const newNumericId = mergedBatch.id;
+
+  const resolution = deduplicateMergedMembers(membersByBatch, {
+    targetBatchId: newNumericId,
+    targetUserId
+  });
+
+  const sanitizedEntries = resolution.survivingEntries.map(({ member, docId }) => ({
+    docId,
+    member: sanitizeMemberForSave(member, targetUserId)
+  }));
+  const survivingDocIds = new Set(sanitizedEntries.map((entry) => entry.docId));
+
+  const createOps: ((batch: WriteBatch) => void)[] = [];
   const newBatchRef = doc(db, 'batches', String(newNumericId));
-  operations.push((batchOp) => batchOp.set(newBatchRef, mergedBatch));
+  createOps.push((batchOp) => batchOp.set(newBatchRef, mergedBatch));
 
-  // 2. Member reassignment
-  const reassignedMembers: ScoutMember[] = [];
-  for (const { batch: sourceBatch, members } of membersByBatch) {
-    for (const member of members) {
-      const memberGroupId = resolveMergedMemberGroupId(member, sourceBatch);
+  for (const { docId, member } of sanitizedEntries) {
+    const memberRef = doc(db, 'scout_members', docId);
+    createOps.push((batchOp) => batchOp.set(memberRef, member));
+  }
 
-      const updatedMember: ScoutMember = {
-        ...member,
-        batch_id: newNumericId,
-        group_id: memberGroupId,
-        ...(targetUserId ? { user_id: targetUserId } : {})
-      };
-      reassignedMembers.push(updatedMember);
-      const newDocId = getMemberDocId(updatedMember);
-      const memberRef = doc(db, 'scout_members', newDocId);
-      operations.push((batchOp) => batchOp.set(memberRef, updatedMember));
-
-      const oldDocId = getMemberDocId({
-        ...member,
-        batch_id: member.batch_id ?? sourceBatch.id
-      });
-      if (oldDocId !== newDocId) {
-        const oldMemberRef = doc(db, 'scout_members', oldDocId);
-        operations.push((batchOp) => batchOp.delete(oldMemberRef));
-      }
+  const deleteOps: ((batch: WriteBatch) => void)[] = [];
+  for (const oldDocId of resolution.allSourceDocIds) {
+    if (!survivingDocIds.has(oldDocId)) {
+      const oldMemberRef = doc(db, 'scout_members', oldDocId);
+      deleteOps.push((batchOp) => batchOp.delete(oldMemberRef));
     }
   }
-
-  // 3. Delete original batches
   for (const sourceBatch of existingBatches) {
     const oldBatchRef = doc(db, 'batches', String(sourceBatch.id));
-    operations.push((batchOp) => batchOp.delete(oldBatchRef));
+    deleteOps.push((batchOp) => batchOp.delete(oldBatchRef));
   }
 
-  await commitChunkedBatches(operations);
+  // Single atomic WriteBatch fast path when <= 450 ops; create-before-delete chunk barrier otherwise
+  if (createOps.length + deleteOps.length <= 450) {
+    await commitChunkedBatches([...createOps, ...deleteOps]);
+  } else {
+    await commitChunkedBatches(createOps);
+    await commitChunkedBatches(deleteOps);
+  }
 
   const sourceBatchIds = existingBatches.map((b) => b.id);
   removeBatchesFromCache(sourceBatchIds);
@@ -385,7 +393,10 @@ export async function mergeBatches(params: MergeBatchesParams, userId?: string):
     removeMembersByBatchIdFromCache(sourceId);
   }
   upsertBatchInCache(mergedBatch, targetUserId);
-  upsertMembersInCache(reassignedMembers, targetUserId);
+  upsertMembersInCache(
+    sanitizedEntries.map((entry) => entry.member),
+    targetUserId
+  );
 
   return mergedBatch;
 }

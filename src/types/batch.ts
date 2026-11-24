@@ -2,6 +2,8 @@ import { ScoutUnit } from './member';
 
 export type BatchUnitScope = 'mixed' | ScoutUnit;
 
+export type BatchCodeMode = 'auto' | 'manual';
+
 export interface Batch {
   id: number;
   comment?: string;
@@ -11,6 +13,7 @@ export interface Batch {
   unit_scope?: BatchUnitScope;
   recognition_type?: string;
   recognition_duration?: string;
+  code_mode?: BatchCodeMode;
   created_at: string;
   user_id?: string;
 }
@@ -23,5 +26,6 @@ export interface BatchCreationParams {
   unit_scope?: BatchUnitScope;
   recognition_type: string;
   recognition_duration?: string;
+  code_mode?: BatchCodeMode;
   user_id?: string;
 }

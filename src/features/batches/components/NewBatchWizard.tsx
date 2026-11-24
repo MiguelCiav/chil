@@ -6,25 +6,29 @@ import {
   getHierarchyData,
   createBatchWithMembers,
   getMemberStatus,
-  getScraperSessionStatus,
   isScraperSessionError,
   assignBatchRecognitionCodes
 } from '../api';
-import { Region, District, ScoutGroup, ScoutMember } from '../types';
+import { BatchCodeMode, Region, District, ScoutGroup, ScoutMember } from '../types';
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { useAuth } from '../../auth';
-import { useScraperSettings } from '../../../context/ScraperSettingsContext';
 import {
   useWalkthrough,
   WalkthroughOverlay,
   WalkthroughHelpButton
 } from '../../../components/walkthrough';
 
+import { useScraperSessionGuard } from '../hooks/useScraperSessionGuard';
+import { AUTO_CODE_PATTERN } from '../utils/codeGenerator';
+import {
+  VERIFICATION_POOL_CONCURRENCY,
+  runVerificationPool
+} from '../utils/scraperVerificationPool';
+import { ScraperAlertModals } from './shared';
 import {
   Step1DataLoad,
   Step2ReviewConfirm,
   WizardStepper,
-  ScraperAlertModals,
   NEW_BATCH_WIZARD_TOUR_STEPS,
   Step1DataLoadFormData,
   parseCedulasFromText,
@@ -32,13 +36,12 @@ import {
   buildUnregisteredMemberRecord
 } from './wizard';
 
-const VERIFICATION_POOL_CONCURRENCY = 4;
-
 export const NewBatchWizard: React.FC = () => {
   const navigate = useNavigate();
-  const { sessionStatus, refreshSessionStatus, setSessionStatus } = useScraperSettings();
+  const sessionGuard = useScraperSessionGuard();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [batchId, setBatchId] = useState<number | null>(null);
+  const [codeMode, setCodeMode] = useState<BatchCodeMode>('auto');
   const [batchMetadata, setBatchMetadata] = useState<{
     comment: string;
     recognitionType: string;
@@ -57,8 +60,6 @@ export const NewBatchWizard: React.FC = () => {
   // Verification & Progress State
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyProgress, setVerifyProgress] = useState({ current: 0, total: 0 });
-  const [showAuthAlert, setShowAuthAlert] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,10 +107,7 @@ export const NewBatchWizard: React.FC = () => {
 
   // Load Hierarchy & Recognition Data
   useEffect(() => {
-    Promise.all([
-      getHierarchyData(),
-      getAllRecognitionTypes(user?.uid)
-    ])
+    Promise.all([getHierarchyData(), getAllRecognitionTypes(user?.uid)])
       .then(([hierarchy, recTypes]) => {
         setRegions(hierarchy.regions);
         setDistricts(hierarchy.districts);
@@ -123,22 +121,6 @@ export const NewBatchWizard: React.FC = () => {
         setLoadingHierarchy(false);
       });
   }, [user?.uid]);
-
-  const handleScraperSessionFailure = (err: Error) => {
-    const isNotConfigured =
-      isScraperSessionError(err) && err.reason === 'SCRAPER_NOT_CONFIGURED';
-    setSessionStatus((prev) => ({
-      connected: false,
-      status: isNotConfigured ? 'none' : 'expired',
-      impeesaEmail: isNotConfigured ? null : (prev?.impeesaEmail ?? null),
-      updatedAt: new Date().toISOString()
-    }));
-    if (isNotConfigured) {
-      setShowAuthAlert(true);
-    } else {
-      setAuthError(err.message);
-    }
-  };
 
   const verifySingleCedulaInMemory = async (cedula: string): Promise<ScoutMember> => {
     try {
@@ -165,14 +147,12 @@ export const NewBatchWizard: React.FC = () => {
     }
 
     setIsVerifying(true);
-    setAuthError(null);
+    sessionGuard.clearAuthError();
 
     try {
-      const activeSession =
-        sessionStatus ?? (await refreshSessionStatus()) ?? (await getScraperSessionStatus());
-      if (!activeSession?.connected) {
+      const hasActiveSession = await sessionGuard.ensureActiveSession();
+      if (!hasActiveSession) {
         setIsVerifying(false);
-        setShowAuthAlert(true);
         return;
       }
 
@@ -190,60 +170,17 @@ export const NewBatchWizard: React.FC = () => {
       }
 
       const deltaCedulas = cedulas.filter((c) => !existingByIdentity.has(c));
-      const newlyVerifiedMap = new Map<string, ScoutMember>();
-      let sessionError: Error | null = null;
-
       if (deltaCedulas.length > 0) {
         setVerifyProgress({ current: 0, total: deltaCedulas.length });
-
-        // 1. Probe request on first delta cedula (warms container & fails fast on expired session)
-        try {
-          const probeMember = await verifySingleCedulaInMemory(deltaCedulas[0]);
-          newlyVerifiedMap.set(deltaCedulas[0], probeMember);
-          setVerifyProgress((prev) => ({ ...prev, current: prev.current + 1 }));
-        } catch (probeErr) {
-          if (isScraperSessionError(probeErr)) {
-            handleScraperSessionFailure(probeErr);
-            return;
-          }
-          throw probeErr;
-        }
-
-        // 2. Remaining delta cedulas via 4-worker concurrency pool with mid-batch circuit breaker
-        const remaining = deltaCedulas.slice(1);
-        if (remaining.length > 0) {
-          let nextIndex = 0;
-          let sessionExpired = false;
-
-          const runWorker = async () => {
-            while (!sessionExpired) {
-              const currentIdx = nextIndex++;
-              if (currentIdx >= remaining.length) {
-                return;
-              }
-              const cedula = remaining[currentIdx];
-              try {
-                const member = await verifySingleCedulaInMemory(cedula);
-                newlyVerifiedMap.set(cedula, member);
-              } catch (workerErr) {
-                if (isScraperSessionError(workerErr)) {
-                  sessionExpired = true;
-                  if (!sessionError) {
-                    sessionError = workerErr;
-                  }
-                  return;
-                }
-                throw workerErr;
-              } finally {
-                setVerifyProgress((prev) => ({ ...prev, current: prev.current + 1 }));
-              }
-            }
-          };
-
-          const workerCount = Math.min(VERIFICATION_POOL_CONCURRENCY, remaining.length);
-          await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
-        }
       }
+
+      const { results: newlyVerifiedMap, sessionError } = await runVerificationPool({
+        items: deltaCedulas,
+        verifyItem: verifySingleCedulaInMemory,
+        concurrency: VERIFICATION_POOL_CONCURRENCY,
+        shouldAbort: isScraperSessionError,
+        onProgress: setVerifyProgress
+      });
 
       if (sessionError) {
         // Retain all already-verified members so resuming after re-auth skips completed cedulas
@@ -255,7 +192,7 @@ export const NewBatchWizard: React.FC = () => {
           }
         }
         setMembersList([...partialMembers, ...manualMembers]);
-        handleScraperSessionFailure(sessionError);
+        sessionGuard.handleScraperSessionFailure(sessionError);
         return;
       }
 
@@ -268,8 +205,9 @@ export const NewBatchWizard: React.FC = () => {
       }
       combined.push(...manualMembers);
 
-      const withCodes = assignBatchRecognitionCodes(combined, 'auto');
-      setMembersList(withCodes);
+      const nextList =
+        codeMode === 'auto' ? assignBatchRecognitionCodes(combined, 'auto') : combined;
+      setMembersList(nextList);
       setCurrentStep(2);
     } catch (err) {
       console.error('Failed to process Step 1:', err);
@@ -280,6 +218,13 @@ export const NewBatchWizard: React.FC = () => {
   };
 
   const handleFinalizeBatch = async () => {
+    const hasNonAutoCode = membersList.some((m) => {
+      const clean = m.recognition_code?.trim().toUpperCase();
+      return Boolean(clean) && !AUTO_CODE_PATTERN.test(clean!);
+    });
+    const effectiveCodeMode: BatchCodeMode =
+      codeMode === 'manual' || hasNonAutoCode ? 'manual' : 'auto';
+
     const batchParams = {
       comment: batchMetadata.comment || '',
       region_id: 0,
@@ -287,6 +232,7 @@ export const NewBatchWizard: React.FC = () => {
       group_id: 0,
       unit_scope: 'mixed' as const,
       recognition_type: batchMetadata.recognitionType,
+      code_mode: effectiveCodeMode,
       user_id: user?.uid
     };
 
@@ -354,6 +300,8 @@ export const NewBatchWizard: React.FC = () => {
           onMembersUpdated={setMembersList}
           onBack={() => setCurrentStep(1)}
           onFinalizeBatch={handleFinalizeBatch}
+          codeMode={codeMode}
+          onCodeModeChange={setCodeMode}
           regions={regions}
           districts={districts}
           groups={groups}
@@ -362,12 +310,7 @@ export const NewBatchWizard: React.FC = () => {
       )}
 
       {/* Scraper Authorization and Error Modals */}
-      <ScraperAlertModals
-        showAuthAlert={showAuthAlert}
-        onCloseAuthAlert={() => setShowAuthAlert(false)}
-        authError={authError}
-        onCloseAuthError={() => setAuthError(null)}
-      />
+      <ScraperAlertModals {...sessionGuard.alertModalProps} />
 
       {/* Walkthrough Interactive Guide Overlay */}
       <WalkthroughOverlay

@@ -5,12 +5,12 @@ The public-facing landing page (`/` and `/inicio`) for **Chil** (Sistema de Emis
 ## Module Structure
 
 - **Components**: [`./components/README.md`](./components/README.md) — `LandingPage`, `HeroSection`, `FeatureGridSection`, `ShowcaseVisuals`, `WorkflowSection`, `LandingFooter`, `TopoBackdrop`, `RevealOnScroll`.
-- **Hooks**: [`./hooks/`](./hooks) — `useScrollProgress` (CSS variable scroll progress) and `useActiveChapter` (sticky storytelling chapter tracking).
+- **Hooks**: [`./hooks/README.md`](./hooks/README.md) — `useScrollProgress` (CSS variable scroll progress) and `useActiveChapter` (sticky storytelling chapter tracking).
 - **Types**: [`./types/README.md`](./types/README.md) — Shared landing TypeScript interfaces (`ShowcaseVisualProps`, `LandingChapter`, `ManifestoLine`, `ProductFactItem`).
 
 ## Public Exports ([`index.ts`](./index.ts))
 
-- `LandingPage`, `HeroSection`, `FeatureGridSection`, `WorkflowSection`, `LandingFooter`, `RevealOnScroll`, and `./types`.
+- `LandingPage`, `HeroSection`, `FeatureGridSection`, `WorkflowSection`, `LandingFooter`, `RevealOnScroll`, `RevealOnScrollProps`, and `./types`.
 
 ## Routing & Integration
 

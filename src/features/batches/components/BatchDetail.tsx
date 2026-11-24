@@ -6,7 +6,7 @@ import {
   useReactTable
 } from '@tanstack/react-table';
 import { ErrorAlert } from '../../../components/ErrorAlert';
-import { Toast } from '../../../components/Toast';
+import { Toast, type ToastVariant } from '../../../components/Toast';
 import {
   useWalkthrough,
   WalkthroughOverlay
@@ -14,9 +14,13 @@ import {
 import {
   getBatchById,
   getMembersByBatchId,
-  updateMember,
+  saveBatchMemberUpdates,
+  createMember,
+  deleteBatchMember,
   deleteBatch,
   getHierarchyData,
+  getMemberStatus,
+  isScraperSessionError,
   generateBatchReport,
   resolveBatchReportBuckets,
   filterEligibleReportBuckets,
@@ -47,15 +51,23 @@ import {
   BatchSummaryCards,
   BatchTerritorialCard,
   MemberQuickViewModal,
+  ManualCodeAssignmentModal,
+  DeleteMemberModal,
+  AddSingleMemberCard,
+  type VerifySingleAddResult,
   BatchDetailTotals
 } from './detail';
 import {
   CertificateZipProgressModal,
   DeleteBatchModal,
-  EditMemberModal
+  EditMemberModal,
+  ScraperAlertModals
 } from './shared';
 import { useCertificateZipDownload } from '../hooks/useCertificateZipDownload';
+import { useScraperSessionGuard } from '../hooks/useScraperSessionGuard';
+import { useBatchReverification } from '../hooks/useBatchReverification';
 import { calculateBatchTerritorialBreakdown } from '../utils/batchTerritorial';
+import { getMemberDocId } from '../utils/memberIdentity';
 
 export const BatchDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -89,18 +101,23 @@ export const BatchDetail: React.FC = () => {
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastVariant, setToastVariant] = useState<ToastVariant>('success');
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const triggerToast = useCallback((msg: string, durationMs = 3000) => {
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-    setToastMessage(msg);
-    setShowToast(true);
-    toastTimeoutRef.current = setTimeout(() => {
-      setShowToast(false);
-    }, durationMs);
-  }, []);
+  const triggerToast = useCallback(
+    (msg: string, durationMs = 3000, variant: ToastVariant = 'success') => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+      setToastMessage(msg);
+      setToastVariant(variant);
+      setShowToast(true);
+      toastTimeoutRef.current = setTimeout(() => {
+        setShowToast(false);
+      }, durationMs);
+    },
+    []
+  );
 
   useEffect(() => {
     return () => {
@@ -109,6 +126,8 @@ export const BatchDetail: React.FC = () => {
       }
     };
   }, []);
+
+  const sessionGuard = useScraperSessionGuard();
 
   // Dropdown action menu per member row
   const [activeMenuMemberId, setActiveMenuMemberId] = useState<string | null>(null);
@@ -120,7 +139,11 @@ export const BatchDetail: React.FC = () => {
   const [editingMember, setEditingMember] = useState<ScoutMember | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Deletion modal state
+  // Deleting Member Modal
+  const [deletingMember, setDeletingMember] = useState<ScoutMember | null>(null);
+  const [isDeletingMember, setIsDeletingMember] = useState(false);
+
+  // Batch deletion modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -178,6 +201,15 @@ export const BatchDetail: React.FC = () => {
   useEffect(() => {
     loadBatchDetails();
   }, [loadBatchDetails]);
+
+  const reverification = useBatchReverification({
+    batch,
+    members,
+    userId: user?.uid,
+    onMembersChanged: setMembers,
+    triggerToast,
+    sessionGuard
+  });
 
   const handleDownloadPDF = (bucketKey?: ReportBucketKey) => {
     if (!batch) return;
@@ -263,12 +295,24 @@ export const BatchDetail: React.FC = () => {
   }, []);
 
   const handleSaveMemberEdit = async (updatedMember: ScoutMember) => {
-    if (!batch) return;
+    if (!batch || !editingMember) return;
+    const targetUserId = batch.user_id ?? user?.uid;
+    const stampedNext: ScoutMember = {
+      ...updatedMember,
+      batch_id: batch.id,
+      ...(targetUserId ? { user_id: targetUserId } : {})
+    };
 
     try {
-      await updateMember(updatedMember);
+      await saveBatchMemberUpdates(
+        [{ previous: editingMember, next: stampedNext }],
+        targetUserId
+      );
       const updated = await getMembersByBatchId(batch.id);
       setMembers(updated);
+      if (viewingMember && getMemberDocId(viewingMember) === getMemberDocId(editingMember)) {
+        setViewingMember(stampedNext);
+      }
       setIsEditModalOpen(false);
       setEditingMember(null);
       triggerToast('Datos del miembro actualizados con éxito.');
@@ -277,6 +321,91 @@ export const BatchDetail: React.FC = () => {
       alert('Error al actualizar la información del miembro.');
     }
   };
+
+  const handleDeleteMemberClick = useCallback(
+    (member: ScoutMember) => {
+      if (members.length <= 1 || reverification.isReverifying) return;
+      setActiveMenuMemberId(null);
+      setDeletingMember(member);
+    },
+    [members.length, reverification.isReverifying]
+  );
+
+  const handleConfirmDeleteMember = async () => {
+    if (!batch || !deletingMember || members.length <= 1) return;
+    setIsDeletingMember(true);
+    try {
+      const deletedDocId = getMemberDocId(deletingMember);
+      await deleteBatchMember(deletingMember);
+      const updated = await getMembersByBatchId(batch.id);
+      setMembers(updated);
+      if (activeMenuMemberId === deletedDocId) {
+        setActiveMenuMemberId(null);
+      }
+      if (viewingMember && getMemberDocId(viewingMember) === deletedDocId) {
+        setViewingMember(null);
+      }
+      setDeletingMember(null);
+      triggerToast('Miembro eliminado del lote.');
+    } catch (err) {
+      console.error('Error deleting member:', err);
+      alert('Error al eliminar el miembro del lote.');
+    } finally {
+      setIsDeletingMember(false);
+    }
+  };
+
+  const handleVerifySingleAddCedula = useCallback(
+    async (normalizedCedula: string): Promise<VerifySingleAddResult> => {
+      const hasSession = await sessionGuard.ensureActiveSession();
+      if (!hasSession) {
+        return { status: 'aborted' };
+      }
+
+      try {
+        const details = await getMemberStatus(normalizedCedula);
+        return { status: 'found', details };
+      } catch (err) {
+        if (isScraperSessionError(err)) {
+          sessionGuard.handleScraperSessionFailure(err);
+          return { status: 'aborted' };
+        }
+        const errStr = err instanceof Error ? err.message : String(err);
+        if (errStr.includes('No registrado')) {
+          return { status: 'not_found' };
+        }
+        return {
+          status: 'error',
+          message: 'Error de conexión al consultar Impeesa. Inténtalo de nuevo.'
+        };
+      }
+    },
+    [sessionGuard]
+  );
+
+  const handleAddSingleMember = useCallback(
+    async (newMember: ScoutMember) => {
+      if (!batch) return;
+      const targetUserId = batch.user_id ?? user?.uid;
+      try {
+        await createMember(
+          {
+            ...newMember,
+            batch_id: batch.id,
+            ...(targetUserId ? { user_id: targetUserId } : {})
+          },
+          targetUserId
+        );
+        const updated = await getMembersByBatchId(batch.id);
+        setMembers(updated);
+        triggerToast('Miembro agregado al lote exitosamente.');
+      } catch (err) {
+        console.error('Error adding member to batch:', err);
+        triggerToast('Error al agregar el miembro al lote.', 4000, 'error');
+      }
+    },
+    [batch, triggerToast, user?.uid]
+  );
 
   const handleConfirmDelete = async () => {
     if (!batch) return;
@@ -332,6 +461,28 @@ export const BatchDetail: React.FC = () => {
     });
   }, [members, searchQuery]);
 
+  // Duplicate validation lists for EditMemberModal (excluding edited member by docId)
+  const editingOtherIdentities = useMemo(() => {
+    const editedDocId = editingMember ? getMemberDocId(editingMember) : null;
+    return members
+      .filter((m) => !editedDocId || getMemberDocId(m) !== editedDocId)
+      .map((m) => m.identity);
+  }, [members, editingMember]);
+
+  const editingOtherCodes = useMemo(() => {
+    const editedDocId = editingMember ? getMemberDocId(editingMember) : null;
+    return members
+      .filter((m) => !editedDocId || getMemberDocId(m) !== editedDocId)
+      .map((m) => m.recognition_code ?? '')
+      .filter(Boolean);
+  }, [members, editingMember]);
+
+  const allExistingIdentities = useMemo(() => members.map((m) => m.identity), [members]);
+  const allExistingCodes = useMemo(
+    () => members.map((m) => m.recognition_code ?? '').filter(Boolean),
+    [members]
+  );
+
   // TanStack Table columns
   const columns = useMemo(
     () =>
@@ -341,17 +492,32 @@ export const BatchDetail: React.FC = () => {
           setActiveMenuMemberId,
           setViewingMember,
           handleEditClick,
-          handleDownloadSingleRecognition
+          handleDownloadSingleRecognition,
+          handleReverifySingleMember: reverification.handleReverifySingle,
+          handleDeleteMemberClick,
+          canDeleteMembers: members.length > 1,
+          isReverifying: reverification.isReverifying
         },
         groups,
         batch
       ),
-    [activeMenuMemberId, handleEditClick, handleDownloadSingleRecognition, groups, batch]
+    [
+      activeMenuMemberId,
+      handleEditClick,
+      handleDownloadSingleRecognition,
+      reverification.handleReverifySingle,
+      reverification.isReverifying,
+      handleDeleteMemberClick,
+      members.length,
+      groups,
+      batch
+    ]
   );
 
   const table = useReactTable({
     data: filteredMembers,
     columns,
+    autoResetPageIndex: false,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
@@ -360,6 +526,15 @@ export const BatchDetail: React.FC = () => {
       }
     }
   });
+
+  // Clamp pagination pageIndex when filteredMembers shrinks (e.g. after deleting last row on page N > 1)
+  const { pageIndex, pageSize } = table.getState().pagination;
+  useEffect(() => {
+    const maxPageIndex = Math.max(0, Math.ceil(filteredMembers.length / pageSize) - 1);
+    if (pageIndex > maxPageIndex) {
+      table.setPageIndex(maxPageIndex);
+    }
+  }, [filteredMembers.length, pageIndex, pageSize, table]);
 
   if (loading) {
     return (
@@ -408,7 +583,7 @@ export const BatchDetail: React.FC = () => {
       {showToast && (
         <Toast
           message={toastMessage}
-          variant="success"
+          variant={toastVariant}
           onDismiss={() => setShowToast(false)}
         />
       )}
@@ -426,6 +601,7 @@ export const BatchDetail: React.FC = () => {
         onDownloadCertificatesZip={handleDownloadPDF}
         downloadingCertificatesZip={zipDownload.isDownloading}
         isEligibleZero={totals.eligible === 0}
+        disableDelete={reverification.isReverifying}
       />
 
       {/* Top 3 Information Cards */}
@@ -445,17 +621,52 @@ export const BatchDetail: React.FC = () => {
         table={table}
         columnsCount={columns.length}
         totalMembersCount={filteredMembers.length}
+        reverifiableCount={reverification.reverifiableMembers.length}
+        isReverifying={reverification.isReverifying}
+        reverifyProgress={reverification.reverifyProgress}
+        onReverifyAll={reverification.handleReverifyAll}
       />
 
-      {/* Manual Member Edit Modal */}
+      {/* Minimal Single-Member Addition Card */}
+      <AddSingleMemberCard
+        batch={batch}
+        userId={user?.uid}
+        batchCodeMode={reverification.batchCodeMode}
+        existingIdentities={allExistingIdentities}
+        existingCodes={allExistingCodes}
+        groups={groups}
+        onVerifyCedula={handleVerifySingleAddCedula}
+        onAddMember={handleAddSingleMember}
+        disabled={reverification.isReverifying}
+      />
+
+      {/* Manual Member Edit Modal (Post-Emission Immutability Mode) */}
       <EditMemberModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingMember(null);
+        }}
         member={editingMember}
         onSave={handleSaveMemberEdit}
         regions={regions}
         districts={districts}
         groups={groups}
+        lifecycle="emitted"
+        batchCodeMode={reverification.batchCodeMode}
+        existingIdentities={editingOtherIdentities}
+        existingCodes={editingOtherCodes}
+      />
+
+      {/* Two-Phase Manual Code Assignment Modal */}
+      <ManualCodeAssignmentModal
+        isOpen={reverification.stagedManualItems.length > 0}
+        items={reverification.stagedManualItems}
+        existingCodes={reverification.manualModalExistingCodes}
+        sessionExpiredMidRun={reverification.stagedSessionExpiredNotice}
+        saving={reverification.savingManualCodes}
+        onCancel={reverification.handleCancelManualCodes}
+        onConfirm={reverification.handleConfirmManualCodes}
       />
 
       {/* Member Quick View Details Modal */}
@@ -464,6 +675,15 @@ export const BatchDetail: React.FC = () => {
         onClose={() => setViewingMember(null)}
         groups={groups}
         batch={batch}
+      />
+
+      {/* Modal: Confirmar Eliminación de Miembro */}
+      <DeleteMemberModal
+        isOpen={deletingMember !== null}
+        member={deletingMember}
+        deleting={isDeletingMember}
+        onClose={() => !isDeletingMember && setDeletingMember(null)}
+        onConfirm={handleConfirmDeleteMember}
       />
 
       {/* Modal: Confirmar Eliminación de Lote */}
@@ -485,6 +705,9 @@ export const BatchDetail: React.FC = () => {
         scopeLabel={zipDownload.scopeLabel}
         onCancel={zipDownload.cancelDownload}
       />
+
+      {/* Scraper Authorization and Error Modals */}
+      <ScraperAlertModals {...sessionGuard.alertModalProps} />
 
       {/* Walkthrough Interactive Guide Overlay */}
       <WalkthroughOverlay

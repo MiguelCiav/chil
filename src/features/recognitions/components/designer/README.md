@@ -17,11 +17,11 @@ Provides the core visual canvas, header toolbar, draggable field nodes, alignmen
 - `CanvasFormatBar.tsx:CanvasFormatBar`: `React.FC` displaying format badge, orientation label, and positioned field count.
 - `GuidelinesOverlay.tsx:GuidelinesOverlayProps`: Props interface for `GuidelinesOverlay`.
 - `GuidelinesOverlay.tsx:GuidelinesOverlay`: `React.memo` component (`displayName = 'GuidelinesOverlay'`) rendering horizontal/vertical snap guide lines.
-- `DraggableField.tsx:DraggableFieldProps`: Props interface for `DraggableField` (including optional `isDragging`).
+- `DraggableField.tsx:DraggableFieldProps`: Props interface for `DraggableField` (including optional `isDragging`, `onNudgeField`, and `onUpdateFieldCoordinates`).
 - `DraggableField.tsx:DraggableField`: `React.memo` component (`displayName = 'DraggableField'`) rendering a positioned field (static `div` in preview mode, interactive `button` with `touch-none`, pointer drag, and keyboard nudging in edit mode).
 - `DesignerCanvas.tsx:GuidelinesOverlay`: Re-exported component from `./GuidelinesOverlay`.
 - `DesignerCanvas.tsx:GuidelinesOverlayProps`: Re-exported type from `./GuidelinesOverlay`.
-- `DesignerCanvas.tsx:DesignerCanvasProps`: Props interface for `DesignerCanvas` (including optional `draggingFieldId` and `onDeselectField`).
+- `DesignerCanvas.tsx:DesignerCanvasProps`: Props interface for `DesignerCanvas` (including optional `draggingFieldId`, `activeGuides`, `recognitionName`, `onDeselectField`, `onUpdateFieldCoordinates`, and `onNudgeField`).
 - `DesignerCanvas.tsx:DesignerCanvas`: `React.FC` rendering the aspect-ratio canvas, custom/default background, `DraggableField` items, `GuidelinesOverlay`, and `CanvasFormatBar`.
 - `DesignerHeader.tsx:DesignerHeaderProps`: Props interface for `DesignerHeader` (including optional `isSnapEnabled` and `onToggleSnap`).
 - `DesignerHeader.tsx:DesignerHeader`: `React.FC` rendering back button, title, optional walkthrough button, undo/redo, optional snap-to-guides toggle, preview toggle, background upload, and save controls.

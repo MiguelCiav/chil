@@ -6,7 +6,7 @@ Este documento describe los pasos para revertir la arquitectura temporal de Verc
 
 ## Resumen del Estado Temporal Actual
 
-Durante este PR:
+Arquitectura temporal vigente:
 * **Microservicio temporal:** Los endpoints del scraper (`saveScraperSession`, `getScraperSessionStatus`, `clearScraperSession` y `getMemberStatus`) están alojados en Vercel (`https://chil-scraper-api.vercel.app/api`).
 * **Frontend:** Consume la API de Vercel a través de la variable `VITE_SCRAPER_API_URL` en `.env` y `.env.production`.
 * **CI/CD:** El flujo `.github/workflows/ci.yml` despliega a Firebase únicamente Hosting y Firestore (`--only hosting,firestore`) para evitar el error 403 de Cloud Functions.
@@ -45,7 +45,7 @@ En `.env` y `.env.production`:
 > **Nota técnica:** [`scraperApi.ts`](file:///home/miguel-ciavato/Documents/github-repos/chil/src/features/batches/api/scraperApi.ts) detecta automáticamente la ausencia de esta variable y conmuta de vuelta al SDK nativo de Firebase (`httpsCallable(functions, ...)`).
 
 ### Paso 4: Restaurar el Pipeline de CI/CD
-En [.github/workflows/ci.yml](file:///home/miguel-ciavato/Documents/github-repos/chil/.github/workflows/ci.yml#L83-L86), restaura el comando de despliegue completo:
+En [.github/workflows/ci.yml](file:///home/miguel-ciavato/Documents/github-repos/chil/.github/workflows/ci.yml#L83-L86) (actualmente `- name: Deploy to Firebase (Hosting & Firestore)` con `--only hosting,firestore`), restaura el comando de despliegue completo:
 ```yaml
       - name: Deploy to Firebase
         run: npx firebase-tools deploy

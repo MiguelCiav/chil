@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { GitMerge, Calendar, Users, Award, MapPin } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { GitMerge, Calendar, Users, Award, MapPin, AlertTriangle } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../../../components/Modal';
 import { Button } from '../../../../components/Button';
 import { ErrorAlert } from '../../../../components/ErrorAlert';
 import { Field } from '../../../../components/Field';
 import { mergeBatches } from '../../api';
-import { Batch } from '../../types';
+import { Batch, ScoutMember } from '../../types';
 import {
   consolidateMergedGroupTokens,
   type TerritorialToken
 } from '../../utils/batchTerritorial';
+import { deduplicateMergedMembers } from '../../utils/memberMerge';
 
 export interface BatchMergeOption {
   id: number;
@@ -20,6 +21,7 @@ export interface BatchMergeOption {
   groupName: string;
   recognitionName: string;
   memberCount: number;
+  members?: ScoutMember[];
 }
 
 export interface MergeBatchesModalProps {
@@ -41,8 +43,26 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
   const [merging, setMerging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Compute preview metrics
-  const totalCombinedMembers = selectedBatches.reduce((acc, b) => acc + b.memberCount, 0);
+  const hasMemberSnapshots =
+    selectedBatches.length > 0 && selectedBatches.every((b) => Array.isArray(b.members));
+
+  const mergePreview = useMemo(() => {
+    if (!hasMemberSnapshots) {
+      return null;
+    }
+    return deduplicateMergedMembers(
+      selectedBatches.map((b) => ({
+        batch: b.batch,
+        members: b.members ?? []
+      }))
+    );
+  }, [hasMemberSnapshots, selectedBatches]);
+
+  const totalUniqueMembers = mergePreview
+    ? mergePreview.survivingMembers.length
+    : selectedBatches.reduce((acc, b) => acc + b.memberCount, 0);
+  const duplicateCount = mergePreview?.duplicateCount ?? 0;
+  const codeConflicts = mergePreview?.crossIdentityCodeConflicts ?? [];
 
   // Determine latest date among selected batches
   const latestBatch = [...selectedBatches].sort(
@@ -53,12 +73,12 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
   // Group summary preview: consolidate all distinct resolved group tokens across selected batches
   const consolidatedGroupLabel =
     selectedBatches.length > 0
-      ? consolidateMergedGroupTokens(selectedBatches.map(b => b.groupTokens))
+      ? consolidateMergedGroupTokens(selectedBatches.map((b) => b.groupTokens))
       : '-';
 
   // Recognition type preview
   const firstRecType = selectedBatches[0]?.batch.recognition_type;
-  const allSameRecType = selectedBatches.every(b => b.batch.recognition_type === firstRecType);
+  const allSameRecType = selectedBatches.every((b) => b.batch.recognition_type === firstRecType);
   const consolidatedRecLabel = allSameRecType
     ? (selectedBatches[0]?.recognitionName || '-')
     : `${selectedBatches[0]?.recognitionName || '-'} (combinado)`;
@@ -71,7 +91,7 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
     setError(null);
 
     try {
-      const batchIds = selectedBatches.map(b => b.id);
+      const batchIds = selectedBatches.map((b) => b.id);
       const merged = await mergeBatches(
         {
           batchIds,
@@ -116,7 +136,7 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
               Lotes a fusionar ({selectedBatches.length})
             </span>
             <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-48 overflow-y-auto bg-gray-50/50">
-              {selectedBatches.map(b => (
+              {selectedBatches.map((b) => (
                 <div key={b.id} className="p-3 flex items-center justify-between text-xs hover:bg-white transition-colors">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
@@ -164,7 +184,14 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
                   <Users className="w-3.5 h-3.5 text-primary" />
                   <span>Total miembros</span>
                 </div>
-                <div className="font-bold text-neutral">{totalCombinedMembers} miembros</div>
+                <div className="font-bold text-neutral">
+                  {totalUniqueMembers} {totalUniqueMembers === 1 ? 'miembro único' : 'miembros únicos'}
+                </div>
+                {duplicateCount > 0 && (
+                  <div className="text-[11px] text-primary font-medium">
+                    ({duplicateCount} {duplicateCount === 1 ? 'duplicado consolidado' : 'duplicados consolidados'})
+                  </div>
+                )}
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1 text-neutral/75 text-xs">
@@ -187,6 +214,31 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
             </div>
           </div>
 
+          {codeConflicts.length > 0 && (
+            <div
+              role="alert"
+              className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 space-y-1.5"
+            >
+              <div className="flex items-center gap-1.5 font-bold">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  Advertencia: {codeConflicts.length}{' '}
+                  {codeConflicts.length === 1
+                    ? 'código manual repetido'
+                    : 'códigos manuales repetidos'}{' '}
+                  entre miembros distintos
+                </span>
+              </div>
+              <p className="text-amber-800">
+                La fusión conservará ambos miembros sin borrar a nadie. Códigos repetidos:{' '}
+                <span className="font-mono font-semibold">
+                  {codeConflicts.map((c) => c.code).join(', ')}
+                </span>
+                .
+              </p>
+            </div>
+          )}
+
           {/* New Comment Field */}
           <div>
             <Field
@@ -195,7 +247,7 @@ export const MergeBatchesModal: React.FC<MergeBatchesModalProps> = ({
               multiline
               rows={3}
               value={newComment}
-              onChange={e => setNewComment(e.target.value)}
+              onChange={(e) => setNewComment(e.target.value)}
               placeholder="Ej.: Lote fusionado correspondiente a las actividades conjuntas de distrito..."
               disabled={merging}
             />

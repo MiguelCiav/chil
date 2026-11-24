@@ -5,7 +5,7 @@
 *   **Date:** 2026-11-12
 
 > [!NOTE]
-> **Historical Evolution:** The `QuickRecognition` flow (`quickRecognitionHelpers.ts`, `useQuickRecognition.ts`, and `__tests__/useQuickRecognition.test.ts`) referenced in Section 4 was subsequently retired from `src/`; `src/features/batches/hooks/` now retains only `useCertificateZipDownload.ts`.
+> **Historical Evolution:** The `QuickRecognition` flow (`quickRecognitionHelpers.ts`, `useQuickRecognition.ts`, and `__tests__/useQuickRecognition.test.ts`) referenced in Section 4 was subsequently retired from `src/`; `src/features/batches/hooks/` now retains only `useCertificateZipDownload.ts`. In addition, `SuccessPage.tsx` (`/lotes/exito`) and `Navbar.tsx` were later retired (`NewBatchWizard` now navigates directly to `/lotes/${batchId}`), and `Sidebar` and `ScraperSettingsModal` were relocated from `src/components/navigation/` into `src/domain/components/navigation/`.
 
 --------------------------------------------------------------------------------
 

@@ -15,7 +15,7 @@ vi.mock('../../api', async (importOriginal) => {
     getMemberStatus: vi.fn(),
     createMember: vi.fn(),
     updateMember: vi.fn(),
-    deleteMember: vi.fn(),
+    deleteBatchMember: vi.fn(),
     batchUpdateMembers: vi.fn(),
     getMembersByBatchId: vi.fn(),
     getScraperSessionStatus: vi.fn(),
@@ -144,6 +144,97 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
     await waitFor(() => {
       expect(api.createBatchWithMembers).toHaveBeenCalled();
       expect(mockNavigate).toHaveBeenCalledWith('/lotes/777');
+    });
+  });
+
+  it('persists manual code_mode across Step 1 <-> Step 2 navigation and passes it to createBatchWithMembers', async () => {
+    vi.mocked(api.createBatchWithMembers).mockResolvedValue({
+      batch: {
+        id: 778,
+        comment: 'Lote Manual Persistido',
+        region_id: 0,
+        district_id: 0,
+        group_id: 0,
+        recognition_type: 'sct-wood-badge',
+        code_mode: 'manual',
+        created_at: '2026-08-21T12:00:00.000Z'
+      },
+      members: []
+    });
+
+    vi.mocked(api.getScraperSessionStatus).mockResolvedValue({
+      connected: true,
+      status: 'active',
+      impeesaEmail: 'scout@scouts.org.ve',
+      updatedAt: null
+    });
+    vi.mocked(api.getMemberStatus).mockResolvedValue({
+      nombre_completo: 'Carlos Eduardo Gomez Perez',
+      status: 'activo',
+      telefono: '04121234567',
+      correo_electronico: 'c@g.com',
+      fecha_nacimiento: '2004-10-25',
+      region: 'DISTRITO CAPITAL',
+      distrito: 'AVILA',
+      grupo: 'DON BOSCO 21',
+      unidad: 'Comunidad',
+      edad: 17
+    });
+
+    render(
+      <MemoryRouter>
+        <NewBatchWizard />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Tipo de Reconocimiento/i)).not.toBeDisabled();
+    });
+    fireEvent.change(screen.getByLabelText(/Tipo de Reconocimiento/i), {
+      target: { value: 'sct-wood-badge' }
+    });
+    fireEvent.change(screen.getByLabelText(/Título o Comentario del Lote/i), {
+      target: { value: 'Lote Manual Persistido' }
+    });
+    fireEvent.change(screen.getByLabelText(/Cédulas de Identidad/i), {
+      target: { value: '29111222' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Cargar y Verificar Miembros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Revisión y Confirmación del Lote')).toBeInTheDocument();
+    });
+
+    // Switch to manual mode and enter a custom code
+    fireEvent.click(screen.getByRole('button', { name: /Editar Códigos Manualmente/i }));
+    expect(screen.getByText(/Modo manual activo/i)).toBeInTheDocument();
+
+    const codeInput = screen.getByLabelText(/Código de reconocimiento de Carlos Eduardo Gomez Perez/i);
+    fireEvent.change(codeInput, { target: { value: 'SP-CUSTOM-01' } });
+
+    // Navigate back to Step 1 and re-verify
+    fireEvent.click(screen.getByRole('button', { name: /Atrás \(Modificar Cédulas\)/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Cargar y Verificar Miembros/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Cargar y Verificar Miembros/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Modo manual activo/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Emitir Lote/i }));
+
+    await waitFor(() => {
+      expect(api.createBatchWithMembers).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code_mode: 'manual',
+          comment: 'Lote Manual Persistido'
+        }),
+        expect.any(Array),
+        'test-user-id'
+      );
+      expect(mockNavigate).toHaveBeenCalledWith('/lotes/778');
     });
   });
 

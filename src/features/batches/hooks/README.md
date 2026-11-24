@@ -1,19 +1,22 @@
 # Batches Hooks
 
 ## Overview
-Provides shared React hooks for the `batches` feature: certificate ZIP download progress tracking and cancellation (`useCertificateZipDownload`).
+Provides shared React hooks for the `batches` feature: certificate ZIP download progress/cancellation (`useCertificateZipDownload`), Impeesa scraper session guard (`useScraperSessionGuard`), and post-emission batch re-verification orchestration (`useBatchReverification`).
 
 ## Interface
-- [useCertificateZipDownload.ts:CertificateZipPhase](file:///home/miguel-ciavato/Documents/github-repos/chil/src/features/batches/hooks/useCertificateZipDownload.ts#L4) — Phase union `'preparing' | 'rendering' | 'compressing' | 'cancelling'`.
-- [useCertificateZipDownload.ts:StartCertificateZipOptions](file:///home/miguel-ciavato/Documents/github-repos/chil/src/features/batches/hooks/useCertificateZipDownload.ts#L6-L11) — Options (`scopeLabel`, `initialTotal`, `onSuccess`, `onError`) for `startDownload`.
-- [useCertificateZipDownload.ts:UseCertificateZipDownloadReturn](file:///home/miguel-ciavato/Documents/github-repos/chil/src/features/batches/hooks/useCertificateZipDownload.ts#L13-L28) — Hook return contract exposing modal state, `phase`, `scopeLabel`, `progress`, `startDownload`, and `cancelDownload`.
-- [useCertificateZipDownload.ts:useCertificateZipDownload](file:///home/miguel-ciavato/Documents/github-repos/chil/src/features/batches/hooks/useCertificateZipDownload.ts#L40-L145) — Coordinates live progress tracking, `'preparing' -> 'rendering' -> 'compressing' -> 'cancelling'` phase transitions, synchronous re-entry locking, `AbortController` cancellation, and unmount abort.
+- `useCertificateZipDownload.ts`: `CertificateZipPhase`, `StartCertificateZipOptions`, `UseCertificateZipDownloadReturn`, `useCertificateZipDownload`.
+- `useScraperSessionGuard.ts`: `UseScraperSessionGuardResult`, `useScraperSessionGuard` — Checks `ScraperSettingsContext` session state, marks expired/unconfigured sessions, and provides `ScraperAlertModalsProps` for `NewBatchWizard` and `BatchDetail`.
+- `useBatchReverification.ts`: `StagedManualActivation`, `UseBatchReverificationParams`, `useBatchReverification` — Orchestrates single and batch-wide Impeesa re-verification in `BatchDetail`, `isReverifying` mutation locking, unmount cancellation, immediate `refreshedPending` persistence, auto code assignment, and two-phase `ManualCodeAssignmentModal` staging.
 
 ## Invariants
-- `[useCertificateZipDownload.ts:useCertificateZipDownload]`: Synchronously guards concurrent `startDownload` calls via `abortControllerRef`, ignores stale callbacks via `runIdRef`, maintains `'preparing'` phase until the first `onProgress` tick (`'rendering'` while `current < total`, `'compressing'` when `total > 0 && current === total`, `'cancelling'` on cancel), suppresses `AbortError` alerts, and aborts active work on unmount.
+- `[useCertificateZipDownload.ts:useCertificateZipDownload]`: Synchronously guards concurrent `startDownload` calls via `abortControllerRef`, ignores stale callbacks via `runIdRef`, maintains `'preparing'` -> `'rendering'` -> `'compressing'` -> `'cancelling'` transitions, suppresses `AbortError` alerts, and aborts active work on unmount.
+- `[useScraperSessionGuard.ts:useScraperSessionGuard]`: Reuses warm `sessionStatus` from `ScraperSettingsContext` before falling back to `refreshSessionStatus` / `getScraperSessionStatus`; classifies `SCRAPER_NOT_CONFIGURED` vs expired session failures into `showAuthAlert` vs `authError`.
+- `[useBatchReverification.ts:useBatchReverification]`: Skips `no_scout` and generic-identity members (`isReverifiableMember`), stops dequeuing and state updates via `cancelledRef` on unmount, commits code-free `refreshedPending` updates immediately, never stacks `ManualCodeAssignmentModal` and `ScraperAlertModals` simultaneously, excludes prior exceptional codes on `exceptional -> active`, and emits warning toasts reminding operators to re-download updated PDFs.
 
 ## Side Effects
-- `[useCertificateZipDownload.ts:useCertificateZipDownload]`: Triggers browser download tasks, aborts active `AbortController` on cancel or unmount, and logs/alerts via `console.error` and `window.alert` when a non-abort error occurs without `options.onError`.
+- `[useCertificateZipDownload.ts:useCertificateZipDownload]`: Triggers browser download tasks, aborts active `AbortController` on cancel/unmount, and logs/alerts on non-abort failures.
+- `[useScraperSessionGuard.ts:useScraperSessionGuard]`: Updates `ScraperSettingsContext` and invokes `getScraperSessionStatus`.
+- `[useBatchReverification.ts:useBatchReverification]`: Invokes `getMemberStatus`, `saveBatchMemberUpdates`, and `getMembersByBatchId`, updates local state, and triggers `Toast` notifications.
 
 ## Verification
-- Run: `npm test`
+- Run: `npm test -- --run`

@@ -5,7 +5,7 @@
 *   **Date:** 2026-11-13
 
 > [!NOTE]
-> **Historical Evolution:** The inactive `QuickRecognition` module (`executeQuickEmission`) referenced in `Non-Goals` and the Technical Plan was subsequently removed from `src/`.
+> **Historical Evolution:** The inactive `QuickRecognition` module (`executeQuickEmission`) referenced in `Non-Goals` and the Technical Plan was subsequently removed from `src/`. Later UI iterations also deleted `GeographicBarChart` and replaced `AddFilterModal` / `ActiveFilterChip` in `BatchList` with the shared `FilterCard`, `HierarchyFilterSelects`, `buildCommonFilterBadges`, and `BatchListFilterValues` inline filter contract.
 
 --------------------------------------------------------------------------------
 

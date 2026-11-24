@@ -11,7 +11,8 @@ import {
   updateMember,
   batchUpdateMembers,
   batchSaveMembers,
-  deleteMember,
+  saveBatchMemberUpdates,
+  deleteBatchMember,
   getMembersByBatchId,
   getAllMembers,
   getMemberDocId,
@@ -33,6 +34,7 @@ import {
 } from '../index';
 import * as firestore from 'firebase/firestore';
 import * as functionsSdk from 'firebase/functions';
+import { clearAllSessionCaches } from '../../../../lib/sessionCache';
 
 const createStorageMock = () => {
   let store: Record<string, string> = {};
@@ -456,6 +458,108 @@ describe('Batches API Layer', () => {
 
       // 5. Atomic commit executed
       expect(commitMock).toHaveBeenCalledTimes(1);
+      expect(result.code_mode).toBe('auto');
+    });
+
+    it('rejects duplicate batchIds that reduce below 2 distinct batches', async () => {
+      await expect(mergeBatches({ batchIds: [101, 101] })).rejects.toThrow(
+        'Se requieren al menos 2 lotes para fusionar'
+      );
+    });
+
+    it('deduplicates colliding cedulas deterministically regardless of selection order and resolves mixed code_mode to manual', async () => {
+      clearAllSessionCaches();
+      const activeBatch = {
+        id: 201,
+        region_id: 1,
+        district_id: 10,
+        group_id: 100,
+        recognition_type: 'sct-wood-badge',
+        code_mode: 'manual' as const,
+        created_at: '2026-08-01T10:00:00.000Z',
+        user_id: 'user-merge'
+      };
+      const pendingBatch = {
+        id: 202,
+        region_id: 1,
+        district_id: 10,
+        group_id: 0,
+        recognition_type: 'sct-wood-badge',
+        code_mode: 'auto' as const,
+        created_at: '2026-08-20T10:00:00.000Z',
+        user_id: 'user-merge'
+      };
+
+      vi.mocked(firestore.getDoc)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => activeBatch
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>)
+        .mockResolvedValueOnce({
+          exists: () => true,
+          data: () => pendingBatch
+        } as unknown as Awaited<ReturnType<typeof firestore.getDoc>>);
+
+      vi.mocked(firestore.getDocs)
+        .mockResolvedValueOnce({
+          docs: [
+            {
+              id: '201_12345678',
+              data: () => ({
+                identity: '12345678',
+                first_names: 'Ana',
+                last_names: 'Activa',
+                birth_date: '2005-01-01',
+                member_type: 'young',
+                status: 'active',
+                recognition_code: 'SP-001',
+                batch_id: 201,
+                group_id: 100
+              })
+            }
+          ]
+        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
+        .mockResolvedValueOnce({
+          docs: [
+            {
+              id: '202_V-12.345.678',
+              data: () => ({
+                identity: 'V-12.345.678',
+                first_names: 'Usuario',
+                last_names: 'No Registrado',
+                birth_date: '1990-01-01',
+                member_type: 'young',
+                status: 'pending',
+                batch_id: 202,
+                group_id: 0
+              })
+            }
+          ]
+        } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const setMock = vi.fn();
+      const deleteMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: setMock,
+        delete: deleteMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      const merged = await mergeBatches({ batchIds: [201, 202] }, 'user-merge');
+      expect(merged.code_mode).toBe('manual');
+      // 1 batch set + 1 surviving member set
+      expect(setMock).toHaveBeenCalledTimes(2);
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: `scout_members/${merged.id}_12345678` }),
+        expect.objectContaining({ status: 'active', recognition_code: 'SP-001' })
+      );
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/201_12345678' })
+      );
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/202_V-12.345.678' })
+      );
     });
   });
 
@@ -570,10 +674,148 @@ describe('Batches API Layer', () => {
       expect(setMock).toHaveBeenCalledTimes(500);
     });
 
-    it('deletes a scout member', async () => {
+    it('deletes a scout member by exact doc ID without evicting other S/C members from cache', async () => {
+      clearAllSessionCaches();
+      const sc1 = {
+        ...mockMember,
+        identity: 'S/C',
+        recognition_code: 'REC-SC0001',
+        first_names: 'Ana',
+        batch_id: 700,
+        user_id: 'uid-del'
+      };
+      const sc2 = {
+        ...mockMember,
+        identity: 'S/C',
+        recognition_code: 'REC-SC0002',
+        first_names: 'Beto',
+        batch_id: 700,
+        user_id: 'uid-del'
+      };
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [
+          { id: '700_REC-SC0001', data: () => sc1 },
+          { id: '700_REC-SC0002', data: () => sc2 }
+        ]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const loaded = await getAllMembers('uid-del');
+      expect(loaded).toHaveLength(2);
+
       vi.mocked(firestore.deleteDoc).mockResolvedValueOnce();
-      await deleteMember('V-12345678');
-      expect(firestore.deleteDoc).toHaveBeenCalled();
+      await deleteBatchMember(sc1);
+
+      expect(firestore.deleteDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/700_REC-SC0001' })
+      );
+      const remaining = await getAllMembers('uid-del');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].recognition_code).toBe('REC-SC0002');
+    });
+
+    it('deletes legacy non-canonical Firestore doc ID recorded on read', async () => {
+      clearAllSessionCaches();
+      const legacyMember = {
+        ...mockMember,
+        identity: '12345678',
+        batch_id: 701,
+        user_id: 'uid-legacy'
+      };
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [{ id: 'LEGACY_RAW_12345678', data: () => legacyMember }]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      await getMembersByBatchId(701);
+
+      vi.mocked(firestore.deleteDoc).mockResolvedValueOnce();
+      await deleteBatchMember(legacyMember);
+
+      expect(firestore.deleteDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/LEGACY_RAW_12345678' })
+      );
+    });
+
+    it('atomically migrates member doc ID and swaps warm session cache via saveBatchMemberUpdates', async () => {
+      clearAllSessionCaches();
+      const previousMember = {
+        ...mockMember,
+        identity: '11111119',
+        status: 'pending' as const,
+        batch_id: 702,
+        user_id: 'uid-mig'
+      };
+      const nextMember = {
+        ...previousMember,
+        identity: '11111118'
+      };
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [{ id: '702_11111119', data: () => previousMember }]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+      await getAllMembers('uid-mig');
+
+      const setMock = vi.fn();
+      const deleteMock = vi.fn();
+      const commitMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(firestore.writeBatch).mockReturnValueOnce({
+        set: setMock,
+        delete: deleteMock,
+        commit: commitMock
+      } as unknown as ReturnType<typeof firestore.writeBatch>);
+
+      await saveBatchMemberUpdates([{ previous: previousMember, next: nextMember }], 'uid-mig');
+
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/702_11111118' }),
+        expect.objectContaining({ identity: '11111118' })
+      );
+      expect(deleteMock).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'scout_members/702_11111119' })
+      );
+      expect(commitMock).toHaveBeenCalledTimes(1);
+
+      const cached = await getAllMembers('uid-mig');
+      expect(cached).toHaveLength(1);
+      expect(cached[0].identity).toBe('11111118');
+    });
+
+    it('preserves distinct people sharing the same manual recognition_code and suppresses normalized V- drafts', async () => {
+      clearAllSessionCaches();
+      const personA = {
+        ...mockMember,
+        identity: '11111111',
+        recognition_code: 'SP-001',
+        first_names: 'Juan',
+        batch_id: 703
+      };
+      const personB = {
+        ...mockMember,
+        identity: '22222222',
+        recognition_code: 'SP-001',
+        first_names: 'Maria',
+        batch_id: 703
+      };
+      const staleDraftA = {
+        ...mockMember,
+        identity: 'V-11.111.111',
+        recognition_code: '',
+        first_names: 'Juan Draft',
+        batch_id: 703
+      };
+
+      vi.mocked(firestore.getDocs).mockResolvedValueOnce({
+        docs: [
+          { id: '703_11111111', data: () => personA },
+          { id: '703_22222222', data: () => personB },
+          { id: '703_V-11.111.111', data: () => staleDraftA }
+        ]
+      } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
+
+      const list = await getMembersByBatchId(703);
+      expect(list).toHaveLength(2);
+      expect(list.map((m) => m.identity).sort()).toEqual(['11111111', '22222222']);
     });
 
     it('gets members by batch ID', async () => {

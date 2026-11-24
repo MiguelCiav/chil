@@ -200,8 +200,7 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
       expect(screen.queryByLabelText(/Teléfono de Contacto/i)).not.toBeInTheDocument();
     });
 
-    it('validates exceptional emission reason and alerts if empty on submit', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    it('validates exceptional emission reason inline and generates a unique 6-char auto code', async () => {
       const onSave = vi.fn().mockResolvedValue(undefined);
 
       render(
@@ -223,9 +222,9 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
       const form = reasonTextarea.closest('form')!;
       fireEvent.submit(form);
 
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Debe ingresar una justificación para la emisión excepcional.'
-      );
+      expect(
+        screen.getAllByText('Debe ingresar una justificación para la emisión excepcional.').length
+      ).toBeGreaterThanOrEqual(1);
       expect(onSave).not.toHaveBeenCalled();
 
       // Now enter valid reason
@@ -237,12 +236,160 @@ describe('Shared Modals (DeleteBatchModal & EditMemberModal)', () => {
           expect.objectContaining({
             status: 'exceptional',
             exceptional_reason: 'Autorizado por Comisionado Nacional',
-            recognition_code: 'REC-5678'
+            recognition_code: expect.stringMatching(/^REC-[A-HJ-NP-Z2-9]{6}$/)
           })
         );
       });
+    });
 
-      alertSpy.mockRestore();
+    it('enforces emitted lifecycle immutability rules across active Scout, no_scout, exceptional, and pending members', async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+
+      // 1. Active Scout: identity locked, recognition_code locked, unit cannot switch to no_scout
+      const activeScout: ScoutMember = {
+        ...mockMember,
+        status: 'active',
+        unit: 'tropa',
+        recognition_code: 'REC-ABCDEF'
+      };
+      const { rerender } = render(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={activeScout}
+          onSave={onSave}
+          lifecycle="emitted"
+          batchCodeMode="auto"
+          existingIdentities={['99999999']}
+          existingCodes={['REC-OTHER1']}
+        />
+      );
+
+      expect(screen.getByLabelText(/Cédula \*/i)).toBeDisabled();
+      expect(screen.getByLabelText(/Código de Reconocimiento/i)).toBeDisabled();
+      expect(screen.queryByRole('option', { name: 'No scout' })).not.toBeInTheDocument();
+
+      // 2. Active no_scout: identity editable, unit locked to no_scout, recognition_code locked
+      const activeNoScout: ScoutMember = {
+        ...mockMember,
+        identity: 'S/C',
+        status: 'active',
+        unit: 'no_scout',
+        recognition_code: 'REC-NOSC01'
+      };
+      rerender(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={activeNoScout}
+          onSave={onSave}
+          lifecycle="emitted"
+          batchCodeMode="auto"
+          existingIdentities={['99999999']}
+          existingCodes={['REC-OTHER1']}
+        />
+      );
+
+      expect(screen.getByLabelText(/Cédula \*/i)).not.toBeDisabled();
+      expect(screen.getByLabelText(/Unidad Scout \*/i)).toBeDisabled();
+      expect(screen.getByLabelText(/Código de Reconocimiento/i)).toBeDisabled();
+
+      // 3. Saved exceptional with code: exceptional checkbox and code locked, identity editable
+      const savedExceptional: ScoutMember = {
+        ...mockMember,
+        status: 'exceptional',
+        unit: 'tropa',
+        recognition_code: 'SP-EXC-01',
+        exceptional_reason: 'Autorizado'
+      };
+      rerender(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={savedExceptional}
+          onSave={onSave}
+          lifecycle="emitted"
+          batchCodeMode="manual"
+          existingIdentities={['99999999']}
+          existingCodes={['SP-TAKEN']}
+        />
+      );
+
+      expect(screen.getByLabelText(/Cédula \*/i)).not.toBeDisabled();
+      expect(
+        screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i)
+      ).toBeDisabled();
+      expect(screen.getByLabelText(/Código de Reconocimiento/i)).toBeDisabled();
+
+      // Rejects duplicate identity inline
+      fireEvent.change(screen.getByLabelText(/Cédula \*/i), { target: { value: 'V-99.999.999' } });
+      fireEvent.submit(screen.getByLabelText(/Cédula \*/i).closest('form')!);
+      expect(
+        screen.getByText('Ya existe otro miembro con esta cédula en el lote.')
+      ).toBeInTheDocument();
+      expect(onSave).not.toHaveBeenCalled();
+
+      // Rejects '/' in identity inline
+      fireEvent.change(screen.getByLabelText(/Cédula \*/i), { target: { value: '123/456' } });
+      fireEvent.submit(screen.getByLabelText(/Cédula \*/i).closest('form')!);
+      expect(
+        screen.getByText('La cédula no puede contener el carácter "/".')
+      ).toBeInTheDocument();
+      expect(onSave).not.toHaveBeenCalled();
+
+      // 4. Pending Scout in manual mode promoting to exceptional: requires unique manual code once
+      const pendingScout: ScoutMember = {
+        ...mockMember,
+        identity: '12345678',
+        status: 'pending',
+        unit: 'tropa',
+        recognition_code: ''
+      };
+      rerender(
+        <EditMemberModal
+          isOpen={true}
+          onClose={vi.fn()}
+          member={pendingScout}
+          onSave={onSave}
+          lifecycle="emitted"
+          batchCodeMode="manual"
+          existingIdentities={['99999999']}
+          existingCodes={['SP-TAKEN']}
+        />
+      );
+
+      expect(screen.getByLabelText(/Código de Reconocimiento/i)).toBeDisabled();
+      fireEvent.click(
+        screen.getByLabelText(/Autorizar emisión de reconocimiento \(Caso Excepcional\)/i)
+      );
+      expect(screen.getByLabelText(/Código de Reconocimiento/i)).not.toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText(/Justificación de la emisión excepcional/i), {
+        target: { value: 'Motivo oficial' }
+      });
+      fireEvent.change(screen.getByLabelText(/Código de Reconocimiento/i), {
+        target: { value: 'sp-taken' }
+      });
+      fireEvent.submit(screen.getByLabelText(/Cédula \*/i).closest('form')!);
+      expect(
+        screen.getAllByText('Este código ya está asignado a otro miembro del lote.').length
+      ).toBeGreaterThanOrEqual(1);
+      expect(onSave).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByLabelText(/Código de Reconocimiento/i), {
+        target: { value: 'sp-new-01' }
+      });
+      fireEvent.submit(screen.getByLabelText(/Cédula \*/i).closest('form')!);
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            identity: '12345678',
+            status: 'exceptional',
+            recognition_code: 'SP-NEW-01'
+          })
+        );
+      });
     });
 
     it('resets incompatible district and group when region changes', async () => {

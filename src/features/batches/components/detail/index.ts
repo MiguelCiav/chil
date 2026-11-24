@@ -8,3 +8,6 @@ export * from './BatchMembersTable';
 export * from './BatchSummaryCards';
 export * from './BatchTerritorialCard';
 export * from './MemberQuickViewModal';
+export * from './ManualCodeAssignmentModal';
+export * from './DeleteMemberModal';
+export * from './AddSingleMemberCard';

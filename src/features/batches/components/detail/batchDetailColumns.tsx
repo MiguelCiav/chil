@@ -1,11 +1,13 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { Award, Edit2, Eye, MoreVertical } from 'lucide-react';
+import { Download, Edit2, Eye, MoreVertical, RefreshCw, Trash2 } from 'lucide-react';
 import {
   Batch,
   ScoutMember,
   ScoutGroup
 } from '../../types';
 import { resolveMemberHierarchy } from '../../../../utils/memberHierarchy';
+import { getMemberDocId } from '../../utils/memberIdentity';
+import { isReverifiableMember } from '../../utils/scraperVerificationPool';
 import {
   renderMemberIdentityCell,
   renderMemberNameCell,
@@ -33,15 +35,21 @@ export function renderMemberActionsCell(props: MemberActionsCellProps) {
     setActiveMenuMemberId,
     setViewingMember,
     handleEditClick,
-    handleDownloadSingleRecognition
+    handleDownloadSingleRecognition,
+    handleReverifySingleMember,
+    handleDeleteMemberClick,
+    canDeleteMembers,
+    isReverifying
   } = props;
   const rowData = row.original;
-  const menuKey = rowData.recognition_code || rowData.identity;
+  const menuKey = getMemberDocId(rowData);
   const isMenuOpen = activeMenuMemberId === menuKey;
   const totalRows = table.getRowModel().rows.length;
   const isNearBottom =
     (row.index >= totalRows - 2 && totalRows > 1) || (totalRows <= 3 && row.index > 0);
   const dropdownPosition = isNearBottom ? 'bottom-full mb-1' : 'top-full mt-1';
+  const canReverify = isReverifiableMember(rowData);
+  const deleteDisabled = !canDeleteMembers || isReverifying;
 
   return (
     <div
@@ -72,12 +80,16 @@ export function renderMemberActionsCell(props: MemberActionsCellProps) {
 
         {isMenuOpen && (
           <div
-            className={`absolute right-0 ${dropdownPosition} w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}
+            className={`absolute right-0 ${dropdownPosition} w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 font-sans`}
           >
             <button
               type="button"
-              onClick={() => handleEditClick(rowData)}
-              className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
+              disabled={isReverifying}
+              onClick={() => {
+                setActiveMenuMemberId(null);
+                handleEditClick(rowData);
+              }}
+              className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Edit2 className="w-3.5 h-3.5 text-primary" />
               Editar
@@ -93,16 +105,51 @@ export function renderMemberActionsCell(props: MemberActionsCellProps) {
               <Eye className="w-3.5 h-3.5 text-primary" />
               Ver Ficha
             </button>
+            {canReverify && (
+              <button
+                type="button"
+                disabled={isReverifying}
+                onClick={() => {
+                  setActiveMenuMemberId(null);
+                  handleReverifySingleMember(rowData);
+                }}
+                className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-primary" />
+                Re-verificar en Impeesa
+              </button>
+            )}
             {(rowData.status === 'active' || rowData.status === 'exceptional') && (
               <button
                 type="button"
-                onClick={() => handleDownloadSingleRecognition(rowData)}
+                onClick={() => {
+                  setActiveMenuMemberId(null);
+                  handleDownloadSingleRecognition(rowData);
+                }}
                 className="w-full text-left px-3 py-2 text-xs font-medium text-neutral hover:bg-primary/5 flex items-center gap-2"
               >
-                <Award className="w-3.5 h-3.5 text-primary" />
-                Descargar Reconocimiento (PDF)
+                <Download className="w-3.5 h-3.5 text-primary" />
+                Descargar PDF
               </button>
             )}
+            <hr className="my-1 border-gray-100" />
+            <button
+              type="button"
+              disabled={deleteDisabled}
+              title={
+                !canDeleteMembers
+                  ? 'No se puede eliminar el último miembro del lote. Elimina el lote completo si deseas vaciarlo.'
+                  : undefined
+              }
+              onClick={() => {
+                setActiveMenuMemberId(null);
+                handleDeleteMemberClick(rowData);
+              }}
+              className="w-full text-left px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-45 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-600" />
+              Eliminar miembro
+            </button>
           </div>
         )}
       </div>

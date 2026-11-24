@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { generateRecognitionCode, assignBatchRecognitionCodes } from '../codeGenerator';
+import {
+  AUTO_CODE_PATTERN,
+  generateRecognitionCode,
+  assignBatchRecognitionCodes,
+  inferBatchCodeMode,
+  generateUniqueRecognitionCode,
+  validateManualRecognitionCode
+} from '../codeGenerator';
 import { ScoutMember } from '../../types';
 
 describe('codeGenerator utility', () => {
@@ -119,6 +126,79 @@ describe('codeGenerator utility', () => {
       const uniqueCodes = new Set(codes);
 
       expect(uniqueCodes.size).toBe(100);
+    });
+  });
+
+  describe('inferBatchCodeMode', () => {
+    const baseMember: ScoutMember = {
+      identity: '12345678',
+      first_names: 'Ana',
+      last_names: 'Perez',
+      birth_date: '2005-01-01',
+      member_type: 'young',
+      status: 'active',
+      batch_id: 101
+    };
+
+    it('uses explicit batch.code_mode when present', () => {
+      expect(
+        inferBatchCodeMode([{ ...baseMember, recognition_code: 'REC-ABCDEF' }], {
+          code_mode: 'manual'
+        })
+      ).toBe('manual');
+      expect(
+        inferBatchCodeMode([{ ...baseMember, recognition_code: 'SP-001' }], {
+          code_mode: 'auto'
+        })
+      ).toBe('auto');
+    });
+
+    it('infers auto for empty/all-pending batches, 6-char REC codes, and legacy 4-digit/EXC exceptional codes', () => {
+      expect(inferBatchCodeMode([{ ...baseMember, status: 'pending', recognition_code: '' }])).toBe(
+        'auto'
+      );
+      expect(
+        inferBatchCodeMode([
+          { ...baseMember, recognition_code: 'REC-8F3A2B' },
+          { ...baseMember, identity: '222', status: 'exceptional', recognition_code: 'REC-1234' },
+          { ...baseMember, identity: '333', status: 'exceptional', recognition_code: 'REC-EXC' }
+        ])
+      ).toBe('auto');
+    });
+
+    it('infers manual when any assigned code does not match auto/legacy patterns', () => {
+      expect(
+        inferBatchCodeMode([
+          { ...baseMember, recognition_code: 'REC-8F3A2B' },
+          { ...baseMember, identity: '222', recognition_code: 'SP-5Y-001' }
+        ])
+      ).toBe('manual');
+    });
+  });
+
+  describe('generateUniqueRecognitionCode', () => {
+    it('generates a 6-char auto code distinct from existing and excluded codes', () => {
+      const code = generateUniqueRecognitionCode(['REC-AAAAAA', 'REC-BBBBBB'], ['REC-CCCCCC']);
+      expect(code).toMatch(AUTO_CODE_PATTERN);
+      expect(['REC-AAAAAA', 'REC-BBBBBB', 'REC-CCCCCC']).not.toContain(code);
+    });
+  });
+
+  describe('validateManualRecognitionCode', () => {
+    it('normalizes valid codes and rejects empty, excluded, and duplicate codes', () => {
+      expect(validateManualRecognitionCode(' sp-001 ', ['SP-002'], ['SP-OLD'])).toEqual({
+        normalized: 'SP-001',
+        error: null
+      });
+      expect(validateManualRecognitionCode('   ', []).error).toBe(
+        'Debe ingresar un código de reconocimiento.'
+      );
+      expect(validateManualRecognitionCode('sp-old', [], ['SP-OLD']).error).toBe(
+        'El nuevo código no puede ser igual al código excepcional anterior.'
+      );
+      expect(validateManualRecognitionCode('sp-002', ['SP-002']).error).toBe(
+        'Este código ya está asignado a otro miembro del lote.'
+      );
     });
   });
 });

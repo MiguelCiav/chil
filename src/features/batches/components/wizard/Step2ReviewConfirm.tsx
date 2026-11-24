@@ -23,8 +23,13 @@ import {
 } from '../../../../components';
 import { MemberStatusBadge } from '../../../../domain/components';
 import { ColumnDef, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { ScoutGroup, ScoutMember, Region, District, getUnitBadge } from '../../types';
+import { BatchCodeMode, ScoutGroup, ScoutMember, Region, District, getUnitBadge } from '../../types';
 import { assignBatchRecognitionCodes } from '../../api';
+import {
+  AUTO_CODE_PATTERN,
+  generateUniqueRecognitionCode
+} from '../../utils/codeGenerator';
+import { getMemberDocId } from '../../utils/memberIdentity';
 import { EditMemberModal, ManualMemberModal } from '../shared';
 
 export interface Step2ReviewConfirmProps {
@@ -33,6 +38,8 @@ export interface Step2ReviewConfirmProps {
   onMembersUpdated: (members: ScoutMember[]) => void;
   onBack: () => void;
   onFinalizeBatch: () => void | Promise<void>;
+  codeMode?: BatchCodeMode;
+  onCodeModeChange?: (mode: BatchCodeMode) => void;
   regions?: Region[];
   districts?: District[];
   groups?: ScoutGroup[];
@@ -173,12 +180,25 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
   onMembersUpdated,
   onBack,
   onFinalizeBatch,
+  codeMode: controlledCodeMode,
+  onCodeModeChange,
   regions = [],
   districts = [],
   groups = [],
   userId
 }) => {
-  const [codeMode, setCodeMode] = useState<'auto' | 'manual'>('auto');
+  const [internalCodeMode, setInternalCodeMode] = useState<BatchCodeMode>('auto');
+  const codeMode = controlledCodeMode ?? internalCodeMode;
+  const setCodeMode = useCallback(
+    (mode: BatchCodeMode) => {
+      if (onCodeModeChange) {
+        onCodeModeChange(mode);
+      } else {
+        setInternalCodeMode(mode);
+      }
+    },
+    [onCodeModeChange]
+  );
   const [activeTab, setActiveTab] = useState<'all' | 'valid' | 'pending'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingMember, setEditingMember] = useState<ScoutMember | null>(null);
@@ -199,7 +219,7 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
     }
   }, [membersList, codeMode, onMembersUpdated]);
 
-  const handleModeChange = (mode: 'auto' | 'manual') => {
+  const handleModeChange = (mode: BatchCodeMode) => {
     setCodeMode(mode);
     if (mode === 'auto') {
       const updated = assignBatchRecognitionCodes(membersList, 'auto');
@@ -213,24 +233,39 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
   };
 
   const handleClearCodes = () => {
+    setCodeMode('manual');
     const updated = assignBatchRecognitionCodes(membersList, 'manual');
     onMembersUpdated(updated);
   };
 
-  const handleInlineCodeChange = useCallback((identity: string, newCode: string) => {
-    const updated = membersList.map((m) =>
-      m.identity === identity ? { ...m, recognition_code: newCode.toUpperCase() } : m
-    );
-    onMembersUpdated(updated);
-  }, [membersList, onMembersUpdated]);
+  const handleInlineCodeChange = useCallback(
+    (identity: string, newCode: string) => {
+      const upper = newCode.toUpperCase();
+      if (upper.trim() && !AUTO_CODE_PATTERN.test(upper.trim())) {
+        setCodeMode('manual');
+      }
+      const updated = membersList.map((m) =>
+        m.identity === identity ? { ...m, recognition_code: upper } : m
+      );
+      onMembersUpdated(updated);
+    },
+    [membersList, onMembersUpdated, setCodeMode]
+  );
 
-  const handleDeleteMember = useCallback((member: ScoutMember) => {
-    if (!window.confirm(`¿Seguro que deseas quitar a ${member.first_names} ${member.last_names} del lote?`)) {
-      return;
-    }
-    const remaining = membersList.filter((m) => m.identity !== member.identity);
-    onMembersUpdated(remaining);
-  }, [membersList, onMembersUpdated]);
+  const handleDeleteMember = useCallback(
+    (member: ScoutMember) => {
+      if (
+        !window.confirm(
+          `¿Seguro que deseas quitar a ${member.first_names} ${member.last_names} del lote?`
+        )
+      ) {
+        return;
+      }
+      const remaining = membersList.filter((m) => m.identity !== member.identity);
+      onMembersUpdated(remaining);
+    },
+    [membersList, onMembersUpdated]
+  );
 
   const handleEditMemberClick = useCallback((member: ScoutMember) => {
     setEditingMember({ ...member });
@@ -238,12 +273,30 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
   }, []);
 
   const handleSaveEditedMember = async (updatedMember: ScoutMember) => {
+    const originalDocId = editingMember
+      ? getMemberDocId(editingMember)
+      : getMemberDocId(updatedMember);
+    const existingOtherCodes = membersList
+      .filter((m) => getMemberDocId(m) !== originalDocId)
+      .map((m) => m.recognition_code ?? '')
+      .filter(Boolean);
+
+    let normalizedMember = updatedMember;
+    if (
+      codeMode === 'auto' &&
+      (updatedMember.status === 'active' || updatedMember.status === 'exceptional') &&
+      !updatedMember.recognition_code?.trim()
+    ) {
+      normalizedMember = {
+        ...updatedMember,
+        recognition_code: generateUniqueRecognitionCode(existingOtherCodes)
+      };
+    }
+
     const replaced = membersList.map((m) =>
-      m.identity === updatedMember.identity ? updatedMember : m
+      getMemberDocId(m) === originalDocId ? normalizedMember : m
     );
-    const nextList =
-      codeMode === 'auto' ? assignBatchRecognitionCodes(replaced, 'auto') : replaced;
-    onMembersUpdated(nextList);
+    onMembersUpdated(replaced);
     setIsEditModalOpen(false);
     setEditingMember(null);
   };
@@ -544,6 +597,11 @@ export const Step2ReviewConfirm: React.FC<Step2ReviewConfirmProps> = ({
         groups={groups}
         title="Editar Datos de Miembro"
         showContactFields={true}
+        batchCodeMode={codeMode}
+        existingCodes={membersList
+          .filter((m) => !editingMember || getMemberDocId(m) !== getMemberDocId(editingMember))
+          .map((m) => m.recognition_code ?? '')
+          .filter(Boolean)}
       />
 
       {/* Modal Rápido de Adición Manual */}

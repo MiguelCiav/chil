@@ -14,7 +14,7 @@ vi.mock('../../api', async (importOriginal) => {
     getMemberStatus: vi.fn(),
     createMember: vi.fn(),
     updateMember: vi.fn(),
-    deleteMember: vi.fn(),
+    deleteBatchMember: vi.fn(),
     getMembersByBatchId: vi.fn(),
     getScraperSessionStatus: vi.fn()
   };

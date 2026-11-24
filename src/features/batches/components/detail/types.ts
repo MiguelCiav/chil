@@ -20,4 +20,8 @@ export interface MemberActionsCellProps {
   setViewingMember: (member: ScoutMember) => void;
   handleEditClick: (member: ScoutMember) => void;
   handleDownloadSingleRecognition: (member: ScoutMember) => void;
+  handleReverifySingleMember: (member: ScoutMember) => void;
+  handleDeleteMemberClick: (member: ScoutMember) => void;
+  canDeleteMembers: boolean;
+  isReverifying: boolean;
 }

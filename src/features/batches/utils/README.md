@@ -1,11 +1,13 @@
 # Batches Utils
 
 ## Overview
-Pure utility functions for the `batches` feature that handle recognition code generation, Scout hierarchy matching and unit classification from Impeesa scraped data, full-name splitting, batch-level unit inference and filtering, and read-time multi-territory projections and breakdowns (`batchTerritorial.ts`).
+Pure, Firebase-free utility functions for the `batches` feature handling member identity normalization and doc IDs (`memberIdentity.ts`), recognition code generation/mode inference/validation (`codeGenerator.ts`), shared scraper verification pool and re-verification transitions (`scraperVerificationPool.ts`), deterministic merge deduplication (`memberMerge.ts`), Scout hierarchy matching/classification, full-name splitting, unit inference, and read-time multi-territory projections (`batchTerritorial.ts`).
 
 ## Interface
-- [codeGenerator.ts:generateRecognitionCode] Generates a random alphanumeric recognition code with a cleaned uppercase prefix.
-- [codeGenerator.ts:assignBatchRecognitionCodes] Assigns unique recognition codes in `'auto'` mode (or clears them in `'manual'` mode) across a `ScoutMember[]` batch.
+- `[memberIdentity.ts:isGenericIdentity]`, `[memberIdentity.ts:hasInvalidDocPathChars]`, `[memberIdentity.ts:normalizeCedula]`, `[memberIdentity.ts:isSameIdentity]`, `[memberIdentity.ts:getMemberDocId]` — Canonical cédula normalization, `/` path-safety check, generic placeholder detection, and deterministic Firestore member document ID resolution.
+- `[codeGenerator.ts:AUTO_CODE_PATTERN]`, `[codeGenerator.ts:LEGACY_AUTO_CODE_PATTERN]`, `[codeGenerator.ts:generateRecognitionCode]`, `[codeGenerator.ts:inferBatchCodeMode]`, `[codeGenerator.ts:generateUniqueRecognitionCode]`, `[codeGenerator.ts:validateManualRecognitionCode]`, `[codeGenerator.ts:assignBatchRecognitionCodes]` — Recognition code generation, `auto`/`manual` mode inference (with legacy 4-digit/`EXC` support), unique code minting, and manual code validation.
+- `[scraperVerificationPool.ts:VERIFICATION_POOL_CONCURRENCY]`, `[scraperVerificationPool.ts:VerificationProgress]`, `[scraperVerificationPool.ts:InitialMemberHierarchy]`, `[scraperVerificationPool.ts:buildUnregisteredMemberRecord]`, `[scraperVerificationPool.ts:buildScrapedMemberRecord]`, `[scraperVerificationPool.ts:RunVerificationPoolOptions]`, `[scraperVerificationPool.ts:runVerificationPool]`, `[scraperVerificationPool.ts:ReverificationOutcomeKind]`, `[scraperVerificationPool.ts:ReverificationOutcome]`, `[scraperVerificationPool.ts:isReverifiableMember]`, `[scraperVerificationPool.ts:applyReverificationResult]` — Pure probe-first 4-worker pool with injected abort/cancellation checks, scraped/unregistered record builders, and post-emission re-verification state transitions.
+- `[memberMerge.ts:BatchMemberSourceEntry]`, `[memberMerge.ts:CrossIdentityCodeConflict]`, `[memberMerge.ts:SurvivingMemberEntry]`, `[memberMerge.ts:MergedMembersResolution]`, `[memberMerge.ts:findCrossIdentityCodeConflicts]`, `[memberMerge.ts:deduplicateMergedMembers]` — Deterministic duplicate-cédula merge resolution (`active > exceptional > pending`, newest `created_at`, highest numeric `batch.id`, same-tier code inheritance, generic doc-ID suffixing) and cross-identity duplicate manual-code detection.
 - [hierarchyMatcher.ts:MatchedHierarchy] Interface representing matched region, district, and group IDs and names.
 - [hierarchyMatcher.ts:normalizeScoutName] Normalizes strings by uppercasing, stripping diacritics/punctuation, and collapsing whitespace.
 - [hierarchyMatcher.ts:matchHierarchy] Maps raw region, district, and group strings/UUIDs to canonical `hierarchy.json` entries.
@@ -44,4 +46,4 @@ Pure utility functions for the `batches` feature that handle recognition code ge
 - [codeGenerator.ts:generateRecognitionCode] Reads entropy from `crypto.getRandomValues`.
 
 ## Verification
-- Run: `npm test`
+- Run: `npm test -- --run`

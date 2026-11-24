@@ -16,11 +16,11 @@ Table columns, inline filter matching/formatting utilities, tour steps, and `Mer
 - `batchListColumns.tsx:renderTerritorialTokensCell` renders up to 3 territorial pills per cell and a `+N` overflow badge (`title` listing hidden token labels) when `tokens.length > 3`.
 - `batchListColumns.tsx:renderBatchActionsCell` disables `"Descargar reconocimientos (ZIP)"` when `downloadingId === rowData.id || rowData.eligibleCount === 0`.
 - `batchListFilters.ts:matchesBatchListFilters` evaluates search text, recognition, territorial filters (`toTerritorialTokenKey` normalizing numeric IDs to `'id:<n>'` alongside `'nacional'`, `'0'`, `'no_scout'`), completeness, and date ranges (`matchesDateRange` from `src/utils/datePeriod.ts`).
-- `MergeBatchesModal.tsx:MergeBatchesModal` uses `<ErrorAlert variant="compact">` and `<Field multiline>` primitives, computes its consolidated group preview via `consolidateMergedGroupTokens`, prevents submission and disables the merge button when `selectedBatches.length < 2` or `merging` is true, and blocks closing the modal while `merging` is true.
+- `MergeBatchesModal.tsx:MergeBatchesModal` uses `<ErrorAlert variant="compact">` and `<Field multiline>` primitives, computes consolidated group preview via `consolidateMergedGroupTokens`, computes exact deduplicated member counts (`"<K> miembros únicos"` + consolidated duplicates) and non-blocking amber cross-identity duplicate manual-code warnings via `deduplicateMergedMembers` when `BatchMergeOption.members` is provided, prevents submission when `selectedBatches.length < 2` or `merging` is true, and blocks closing while `merging` is true.
 
 ## Side Effects
 - `MergeBatchesModal.tsx:MergeBatchesModal` invokes `mergeBatches` from `../../api` on form submit, mutating backend batch records and logging errors to `console.error` on failure.
 - `batchListColumns.tsx:renderBatchActionsCell` closes the row action menu (`setOpenActionMenuId(null)`), triggers client-side navigation via `navigate(\`/lotes/${rowData.id}\`)`, and invokes parent callbacks `handleDownloadPDF(rowData.id)` (ZIP export + progress modal) and `handleDeleteClick(rowData)` (delete confirmation modal).
 
 ## Verification
-- Run: `npm test`
+- Run: `npm test -- --run`
