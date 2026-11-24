@@ -693,11 +693,11 @@ describe('CertificateDesigner component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Siguiente ▶/i }));
 
     // Step 2: Lienzo de Diseño WYSIWYG
-    expect(screen.getByText('Lienzo del Diploma (Canvas 1:1)')).toBeInTheDocument();
+    expect(screen.getByText('Lienzo de la Plantilla (Canvas 1:1)')).toBeInTheDocument();
     expect(screen.getByText('Paso 2 de 6')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Este es el lienzo interactivo de tu diploma. Los campos posicionados aquí se estamparán en el PDF con exacta fidelidad de tamaño, posición y proporciones físicas milimétricas.'
+        'Esta es la plantilla de tu reconocimiento. Los campos posicionados aquí se estamparán en el PDF con exacta fidelidad de tamaño, posición y proporciones físicas milimétricas.'
       )
     ).toBeInTheDocument();
 
@@ -709,7 +709,7 @@ describe('CertificateDesigner component', () => {
     expect(screen.getByText('Paso 3 de 6')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Sube la imagen del diploma o certificado en formato PNG, JPEG o WebP. El editor adaptará automáticamente las dimensiones y orientación física sin distorsión.'
+        'Sube la imagen del reconocimiento en formato PNG, JPEG o WebP. El editor adaptará automáticamente las dimensiones y orientación física sin distorsión.'
       )
     ).toBeInTheDocument();
 
@@ -733,7 +733,7 @@ describe('CertificateDesigner component', () => {
     expect(screen.getByText('Paso 5 de 6')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Usa el modo vista previa (icono del ojo) para previsualizar el diploma con datos de prueba realistas antes de guardar.'
+        'Usa el modo vista previa (icono del ojo) para previsualizar la plantilla con datos de prueba realistas antes de guardar.'
       )
     ).toBeInTheDocument();
 

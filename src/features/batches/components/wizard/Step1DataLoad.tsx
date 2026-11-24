@@ -62,7 +62,7 @@ export const Step1DataLoad: React.FC<Step1DataLoadProps> = ({
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm font-medium text-amber-900">
-              No tienes tipos de reconocimientos registrados. Debes crear al menos un tipo de reconocimiento en el Catálogo antes de crear un nuevo lote.
+              No tienes reconocimientos registrados. Debes crear al menos un tipo de reconocimiento en el Catálogo antes de crear un nuevo lote.
             </p>
           </div>
           <Link

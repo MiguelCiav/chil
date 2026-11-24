@@ -81,7 +81,7 @@ describe('NewBatchWizard error cases & edge branches', () => {
     fireEvent.click(verifyBtn);
 
     await waitFor(() => {
-      expect(screen.getByText(/Autenticación del Scraper Requerida/i)).toBeInTheDocument();
+      expect(screen.getByText(/Autenticación del Impeesa requerida/i)).toBeInTheDocument();
     });
 
     const cancelBtn = screen.getByText('Cancelar');
@@ -215,7 +215,7 @@ describe('NewBatchWizard error cases & edge branches', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/No tienes tipos de reconocimientos registrados. Debes crear al menos un tipo de reconocimiento en el Catálogo antes de crear un nuevo lote./i)
+        screen.getByText(/No tienes reconocimientos registrados. Debes crear al menos un tipo de reconocimiento en el Catálogo antes de crear un nuevo lote./i)
       ).toBeInTheDocument();
     });
 

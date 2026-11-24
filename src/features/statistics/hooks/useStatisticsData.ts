@@ -8,7 +8,12 @@ import {
 import { getAllRecognitionTypes, RecognitionType } from '../../recognitions';
 import { Batch, ScoutMember, Region, District, ScoutGroup, getUnitLabel } from '../../../types';
 import { StatisticsFilterState } from '../types';
-import { buildStatisticsDataset, calculateYoYComparison, resolveMemberHierarchy } from '../utils/statsCalculators';
+import {
+  buildStatisticsDataset,
+  calculateYoYComparison,
+  isVerifiedRecognitionMember,
+  resolveMemberHierarchy
+} from '../utils/statsCalculators';
 import { getAvailableDistricts, isNoAplicaDistrict } from '../../../utils/memberHierarchy';
 import { matchesDateRange } from '../../../utils/datePeriod';
 import { FilterSummaryLabels } from '../utils/statsPdfExport';
@@ -385,9 +390,12 @@ export function computeFilteredStatisticsDataset(params: ComputeFilteredStatisti
   const batchMap = new Map<number, Batch>();
   batches.forEach(b => batchMap.set(b.id, b));
 
+  // Only verified/delivered recognitions (active or exceptional) are included in statistics
+  const verifiedMembers = members.filter(isVerifiedRecognitionMember);
+
   // Filter members
   const filteredMembers = filterMembersByCriteria(
-    members,
+    verifiedMembers,
     batchMap,
     filters,
     groups,
@@ -413,14 +421,14 @@ export function computeFilteredStatisticsDataset(params: ComputeFilteredStatisti
     batches,
     currentYear,
     filters,
-    members,
+    verifiedMembers,
     lookupContext
   );
   const previousYearBatches = extractYearBatches(
     batches,
     previousYear,
     filters,
-    members,
+    verifiedMembers,
     lookupContext
   );
 
@@ -428,14 +436,14 @@ export function computeFilteredStatisticsDataset(params: ComputeFilteredStatisti
   const previousYearBatchIds = new Set<number>(previousYearBatches.map(b => b.id));
 
   const currentYearMembers = extractYearMembers(
-    members,
+    verifiedMembers,
     currentYearBatchIds,
     filters,
     batchMap,
     lookupContext
   );
   const previousYearMembers = extractYearMembers(
-    members,
+    verifiedMembers,
     previousYearBatchIds,
     filters,
     batchMap,

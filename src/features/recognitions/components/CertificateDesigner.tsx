@@ -43,9 +43,9 @@ const CERTIFICATE_DESIGNER_TOUR_STEPS: WalkthroughStep[] = [
   {
     id: 'designer-canvas',
     targetSelector: '[data-walkthrough="designer-canvas"]',
-    title: 'Lienzo del Diploma (Canvas 1:1)',
+    title: 'Lienzo de la Plantilla (Canvas 1:1)',
     content:
-      'Este es el lienzo interactivo de tu diploma. Los campos posicionados aquí se estamparán en el PDF con exacta fidelidad de tamaño, posición y proporciones físicas milimétricas.',
+      'Esta es la plantilla de tu reconocimiento. Los campos posicionados aquí se estamparán en el PDF con exacta fidelidad de tamaño, posición y proporciones físicas milimétricas.',
     placement: 'right'
   },
   {
@@ -53,7 +53,7 @@ const CERTIFICATE_DESIGNER_TOUR_STEPS: WalkthroughStep[] = [
     targetSelector: '[data-walkthrough="designer-background-btn"]',
     title: 'Cargar Imagen de Fondo',
     content:
-      'Sube la imagen del diploma o certificado en formato PNG, JPEG o WebP. El editor adaptará automáticamente las dimensiones y orientación física sin distorsión.',
+      'Sube la imagen del reconocimiento en formato PNG, JPEG o WebP. El editor adaptará automáticamente las dimensiones y orientación física sin distorsión.',
     placement: 'bottom'
   },
   {
@@ -69,7 +69,7 @@ const CERTIFICATE_DESIGNER_TOUR_STEPS: WalkthroughStep[] = [
     targetSelector: '[data-walkthrough="designer-mode-switch"]',
     title: 'Vista Previa con Datos Scout',
     content:
-      'Usa el modo vista previa (icono del ojo) para previsualizar el diploma con datos de prueba realistas antes de guardar.',
+      'Usa el modo vista previa (icono del ojo) para previsualizar la plantilla con datos de prueba realistas antes de guardar.',
     placement: 'bottom'
   },
   {

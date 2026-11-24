@@ -441,6 +441,9 @@ describe('statsPdfExport', () => {
         districts: [
           { id: 10, name: 'Distrito Sucre', parentName: 'Región Capital', currentCount: 8, previousCount: 5, diff: 3, percentChange: 60, currentPercentage: 53.3, previousPercentage: 50 }
         ],
+        groups: [
+          { id: 100, name: 'Grupo San Jorge', parentName: 'Distrito Sucre', currentCount: 6, previousCount: 4, diff: 2, percentChange: 50, currentPercentage: 40, previousPercentage: 40 }
+        ],
         units: [
           { unit: 'manada', label: 'Manada', currentCount: 4, previousCount: 2, diff: 2, percentChange: 100, currentPercentage: 26.7, previousPercentage: 20, badgeClass: '' }
         ],
@@ -475,15 +478,23 @@ describe('statsPdfExport', () => {
     );
     expect(borderedRects).toHaveLength(0);
 
-    // Bottom-right YoY section totals rendered on Region, District, and Monthly (before chart)
+    // Bottom-right YoY section totals rendered on Region, District, Group, and Monthly (before chart)
     const yoyCurrCalls = mockDocInstance.text.mock.calls.filter(
       call => call[0] === 'Año 2025' && call[3]?.align === 'right'
     );
     const yoyPrevCalls = mockDocInstance.text.mock.calls.filter(
       call => call[0] === 'Año 2024' && call[3]?.align === 'right'
     );
-    expect(yoyCurrCalls).toHaveLength(3);
-    expect(yoyPrevCalls).toHaveLength(3);
+    expect(yoyCurrCalls).toHaveLength(4);
+    expect(yoyPrevCalls).toHaveLength(4);
+
+    // Donut center displays YoY current-year total (15) instead of all-years total (20)
+    expect(mockDocInstance.text).toHaveBeenCalledWith(
+      '15',
+      expect.any(Number),
+      expect.any(Number),
+      { align: 'center' }
+    );
 
     // Monthly comparative chart renders below the Monthly YoY Total
     const lastYoYTotalIdx = mockDocInstance.text.mock.calls.reduce(

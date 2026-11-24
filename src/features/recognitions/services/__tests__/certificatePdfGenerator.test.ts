@@ -246,9 +246,9 @@ describe('certificatePdfGenerator service', () => {
   };
 
   const mockHierarchy = {
-    regions: [{ id: 1, name: 'Región Capital' }],
-    districts: [{ id: 10, name: 'Distrito Metropolitano', region_id: 1 }],
-    groups: [{ id: 100, name: 'Grupo Scouts 45 San Jorge', district_id: 10 }]
+    regions: [{ id: 1, name: 'Región Ejemplo' }],
+    districts: [{ id: 10, name: 'Distrito Ejemplo', region_id: 1 }],
+    groups: [{ id: 100, name: 'Grupo Scout Ejemplo', district_id: 10 }]
   };
 
   const mockRecognition: RecognitionType = {
@@ -306,19 +306,19 @@ describe('certificatePdfGenerator service', () => {
         { align: 'center', baseline: 'middle' }
       );
       expect(mockDocInstance.text).toHaveBeenCalledWith(
-        'Región Capital',
+        'Región Ejemplo',
         expect.any(Number),
         expect.any(Number),
         { align: 'left', baseline: 'middle' }
       );
       expect(mockDocInstance.text).toHaveBeenCalledWith(
-        'Distrito Metropolitano',
+        'Distrito Ejemplo',
         expect.any(Number),
         expect.any(Number),
         { align: 'left', baseline: 'middle' }
       );
       expect(mockDocInstance.text).toHaveBeenCalledWith(
-        'Grupo Scouts 45 San Jorge',
+        'Grupo Scout Ejemplo',
         expect.any(Number),
         expect.any(Number),
         { align: 'left', baseline: 'middle' }
@@ -661,7 +661,7 @@ describe('certificatePdfGenerator service', () => {
           docs: [{ data: () => ({ id: 10, name: 'Distrito Metropolitano', region_id: 1 }) }]
         } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>)
         .mockResolvedValueOnce({
-          docs: [{ data: () => ({ id: 100, name: 'Grupo Scouts 45 San Jorge', district_id: 10 }) }]
+          docs: [{ data: () => ({ id: 100, name: 'Grupo Scout Ejemplo', district_id: 10 }) }]
         } as unknown as Awaited<ReturnType<typeof firestore.getDocs>>);
 
       // Mock getRecognitionTypeById (Firestore getDoc)

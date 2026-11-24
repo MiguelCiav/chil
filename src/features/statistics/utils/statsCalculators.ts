@@ -20,6 +20,7 @@ import {
   YoYCountMetric,
   YoYRegionItem,
   YoYDistrictItem,
+  YoYGroupItem,
   YoYUnitItem,
   YoYDemographics,
   YoYMonthlyItem,
@@ -34,6 +35,14 @@ export const MONTH_LABELS_ES = [
 export type { ResolvedMemberHierarchy };
 export type EffectiveHierarchy = ResolvedMemberHierarchy;
 export { resolveMemberHierarchy };
+
+/**
+ * Returns true if the member has a verified/delivered recognition (active or exceptional).
+ * Pending members have not received a recognition and are excluded from delivered totals.
+ */
+export function isVerifiedRecognitionMember(member: Pick<ScoutMember, 'status'>): boolean {
+  return member.status === 'active' || member.status === 'exceptional';
+}
 
 /**
  * Calculates percentage variation between current and previous values
@@ -278,6 +287,82 @@ function buildYoYDistrictComparison(
   });
 }
 
+function buildYoYGroupComparison(
+  options: BuildYoYDistrictComparisonOptions
+): YoYGroupItem[] {
+  const {
+    currentMembers,
+    previousMembers,
+    currentBatchMap,
+    previousBatchMap,
+    regions,
+    districts,
+    groups,
+    currentMembersCount,
+    previousMembersCount
+  } = options;
+  const gList = groups && groups.length > 0 ? groups : (hierarchyData.groups as ScoutGroup[]);
+  const hierarchy = { regions, districts, groups: gList };
+
+  const currentGroupCounts = new Map<number, number>();
+  currentMembers.forEach(m => {
+    const b = m.batch_id ? currentBatchMap.get(m.batch_id) : undefined;
+    const { groupId } = resolveMemberHierarchy(m, b, hierarchy);
+    if (groupId > 0) {
+      currentGroupCounts.set(groupId, (currentGroupCounts.get(groupId) ?? 0) + 1);
+    }
+  });
+
+  const previousGroupCounts = new Map<number, number>();
+  previousMembers.forEach(m => {
+    const b = m.batch_id ? previousBatchMap.get(m.batch_id) : undefined;
+    const { groupId } = resolveMemberHierarchy(m, b, hierarchy);
+    if (groupId > 0) {
+      previousGroupCounts.set(groupId, (previousGroupCounts.get(groupId) ?? 0) + 1);
+    }
+  });
+
+  const allGroupIds = new Set<number>([
+    ...currentGroupCounts.keys(),
+    ...previousGroupCounts.keys()
+  ]);
+
+  const yoyGroups: YoYGroupItem[] = Array.from(allGroupIds).map(groupId => {
+    const groupObj = gList.find(g => g.id === groupId);
+    const distObj = groupObj ? districts.find(d => d.id === groupObj.district_id) : undefined;
+    const name = groupObj?.name ?? `Grupo ${groupId}`;
+    const parentName = distObj?.name ?? undefined;
+    const currentCount = currentGroupCounts.get(groupId) ?? 0;
+    const previousCount = previousGroupCounts.get(groupId) ?? 0;
+    const diff = currentCount - previousCount;
+    const percentChange = calculatePercentChange(currentCount, previousCount);
+    const currentPercentage =
+      currentMembersCount > 0 ? Number(((currentCount / currentMembersCount) * 100).toFixed(1)) : 0;
+    const previousPercentage =
+      previousMembersCount > 0
+        ? Number(((previousCount / previousMembersCount) * 100).toFixed(1))
+        : 0;
+
+    return {
+      id: groupId,
+      name,
+      parentName,
+      currentCount,
+      previousCount,
+      diff,
+      percentChange,
+      currentPercentage,
+      previousPercentage
+    };
+  });
+
+  return yoyGroups.sort((a, b) => {
+    if (b.currentCount !== a.currentCount) return b.currentCount - a.currentCount;
+    if (b.previousCount !== a.previousCount) return b.previousCount - a.previousCount;
+    return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+  });
+}
+
 function buildYoYUnitComparison(
   currentMembers: ScoutMember[],
   previousMembers: ScoutMember[],
@@ -437,20 +522,22 @@ export function calculateYoYComparison(options: CalculateYoYOptions): YoYCompari
 
   const cYear = currentYear ?? new Date().getFullYear();
   const pYear = previousYear ?? cYear - 1;
-  const hasPreviousYearData = previousMembers.length > 0;
+
+  // Only verified/delivered recognitions (active or exceptional) are counted across YoY breakdowns
+  const verifiedCurrentMembers = currentMembers.filter(isVerifiedRecognitionMember);
+  const verifiedPreviousMembers = previousMembers.filter(isVerifiedRecognitionMember);
+  const hasPreviousYearData = verifiedPreviousMembers.length > 0;
 
   // 1. KPI Diplomas
-  const currentTotalDiplomas = currentMembers.filter(m => m.status === 'active' || m.status === 'exceptional').length;
-  const previousTotalDiplomas = previousMembers.filter(m => m.status === 'active' || m.status === 'exceptional').length;
+  const currentTotalDiplomas = verifiedCurrentMembers.length;
+  const previousTotalDiplomas = verifiedPreviousMembers.length;
   const totalDiplomas = calculateYoYCountMetric(currentTotalDiplomas, previousTotalDiplomas);
 
   // 2. KPI Batches
   const totalBatches = calculateYoYCountMetric(currentBatches.length, previousBatches.length);
 
   // 3. KPI Total Members
-  const currentMembersCount = currentMembers.length;
-  const previousMembersCount = previousMembers.length;
-  const totalMembers = calculateYoYCountMetric(currentMembersCount, previousMembersCount);
+  const totalMembers = calculateYoYCountMetric(currentMembers.length, previousMembers.length);
 
   // Batch Maps
   const currentBatchMap = new Map<number, Batch>();
@@ -460,50 +547,63 @@ export function calculateYoYComparison(options: CalculateYoYOptions): YoYCompari
 
   // 4. Region Comparison
   const yoyRegions = buildYoYRegionComparison({
-    currentMembers,
-    previousMembers,
+    currentMembers: verifiedCurrentMembers,
+    previousMembers: verifiedPreviousMembers,
     currentBatchMap,
     previousBatchMap,
     regions,
     districts,
     groups,
-    currentMembersCount,
-    previousMembersCount
+    currentMembersCount: currentTotalDiplomas,
+    previousMembersCount: previousTotalDiplomas
   });
 
   // 5. District Comparison
   const yoyDistricts = buildYoYDistrictComparison({
-    currentMembers,
-    previousMembers,
+    currentMembers: verifiedCurrentMembers,
+    previousMembers: verifiedPreviousMembers,
     currentBatchMap,
     previousBatchMap,
     regions,
     districts,
     groups,
-    currentMembersCount,
-    previousMembersCount
+    currentMembersCount: currentTotalDiplomas,
+    previousMembersCount: previousTotalDiplomas
+  });
+
+  // 5b. Scout Group Comparison
+  const yoyGroups = buildYoYGroupComparison({
+    currentMembers: verifiedCurrentMembers,
+    previousMembers: verifiedPreviousMembers,
+    currentBatchMap,
+    previousBatchMap,
+    regions,
+    districts,
+    groups,
+    currentMembersCount: currentTotalDiplomas,
+    previousMembersCount: previousTotalDiplomas
   });
 
   // 6. Unit Comparison
   const yoyUnits = buildYoYUnitComparison(
-    currentMembers,
-    previousMembers,
-    currentMembersCount,
-    previousMembersCount
+    verifiedCurrentMembers,
+    verifiedPreviousMembers,
+    currentTotalDiplomas,
+    previousTotalDiplomas
   );
 
   // 7. Demographics Comparison
   const demographics = buildYoYDemographicsComparison(
-    currentMembers,
-    previousMembers,
-    currentMembersCount,
-    previousMembersCount
+    verifiedCurrentMembers,
+    verifiedPreviousMembers,
+    currentTotalDiplomas,
+    previousTotalDiplomas
   );
 
   // 8. Monthly Comparison (1..12)
   const monthly = buildYoYMonthlyComparison(
-    currentMembers,
-    previousMembers,
+    verifiedCurrentMembers,
+    verifiedPreviousMembers,
     currentBatchMap,
     previousBatchMap,
     cYear,
@@ -519,6 +619,7 @@ export function calculateYoYComparison(options: CalculateYoYOptions): YoYCompari
     totalMembers,
     regions: yoyRegions,
     districts: yoyDistricts,
+    groups: yoyGroups,
     units: yoyUnits,
     demographics,
     monthly

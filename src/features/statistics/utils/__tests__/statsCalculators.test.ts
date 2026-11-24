@@ -439,6 +439,42 @@ describe('statsCalculators', () => {
       const feb = yoy.monthly.find(m => m.monthIndex === 1);
       expect(feb?.currentCount).toBe(2);
       expect(feb?.previousCount).toBe(2);
+
+      // Groups
+      expect(yoy.groups).toBeDefined();
+      expect(yoy.groups?.length).toBe(2);
+      const group1000 = yoy.groups?.find(g => g.id === 1000);
+      expect(group1000?.currentCount).toBe(2);
+      expect(group1000?.previousCount).toBe(2);
+      expect(group1000?.diff).toBe(0);
+    });
+
+    it('excludes pending members from all YoY delivered recognition metrics', () => {
+      const yoy = calculateYoYComparison({
+        currentMembers: [
+          ...currentMembers,
+          { identity: 'C-PEND', batch_id: 101, member_type: 'young', unit: 'tropa', status: 'pending', birth_date: '2011-01-01', first_names: 'Pend', last_names: 'Curr' }
+        ],
+        previousMembers: [
+          ...previousMembers,
+          { identity: 'P-PEND', batch_id: 201, member_type: 'adult', unit: 'institucional', status: 'pending', birth_date: '1980-01-01', first_names: 'Pend', last_names: 'Prev' }
+        ],
+        currentBatches,
+        previousBatches,
+        regions: mockRegions,
+        districts: mockDistricts,
+        currentYear: 2025,
+        previousYear: 2024
+      });
+
+      expect(yoy.totalDiplomas.current).toBe(3);
+      expect(yoy.totalDiplomas.previous).toBe(2);
+      expect(yoy.demographics.total.current).toBe(3);
+      expect(yoy.demographics.total.previous).toBe(2);
+      expect(yoy.demographics.young.current).toBe(2);
+      expect(yoy.demographics.adult.previous).toBe(1);
+      expect(yoy.monthly.reduce((acc, m) => acc + m.currentCount, 0)).toBe(3);
+      expect(yoy.units.reduce((acc, u) => acc + u.currentCount, 0)).toBe(3);
     });
 
     it('sets hasPreviousYearData to false when previous year members is empty', () => {

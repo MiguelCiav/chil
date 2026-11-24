@@ -74,7 +74,7 @@ export const UnitDistributionCard: React.FC<UnitDistributionCardProps> = ({ data
 
         {/* Segmented Stacked Progress Bar */}
         <div className="w-full bg-gray-100 h-3.5 rounded-full overflow-hidden flex">
-          {items.map(item => {
+          {tableRows.map(item => {
             if (item.count === 0) return null;
             const barColor = UNIT_BAR_COLORS[item.unit] ?? 'bg-primary';
             return (

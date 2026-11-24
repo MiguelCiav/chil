@@ -521,6 +521,69 @@ function drawDistrictTableStandard(doc: jsPDF, stats: StatisticsDataset, startY:
   return y;
 }
 
+function drawGroupTableYoY(doc: jsPDF, stats: StatisticsDataset, startY: number, onBreak: PageBreakChecker): number {
+  let y = startY;
+  const yoy = stats.yoyComparison!;
+  const groups = yoy.groups ?? [];
+  const maxCount = Math.max(...groups.map(g => g.currentCount), 1);
+
+  drawTableHeaderBar(doc, y);
+  doc.text('DISTRITO', MARGIN + 4, y + 4.7);
+  doc.text('GRUPO SCOUT', MARGIN + 44, y + 4.7);
+  doc.text(`TOTAL (${yoy.currentYear})`, MARGIN + 86, y + 4.7);
+  doc.text(`ANT. (${yoy.previousYear})`, MARGIN + 110, y + 4.7);
+  doc.text('VARIACIÓN', MARGIN + 132, y + 4.7);
+  doc.text('% TOTAL', MARGIN + 157, y + 4.7);
+  y += 7;
+
+  if (groups.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    setRgbText(doc, COLORS.subtle);
+    doc.text('No hay registros disponibles por grupo scout para los filtros seleccionados.', MARGIN + 4, y + 5);
+    return y + 8;
+  }
+
+  groups.forEach((group, idx) => {
+    y = onBreak(doc, y, 7);
+    if (idx % 2 === 1) {
+      setRgbFill(doc, COLORS.warmSurface);
+      doc.rect(MARGIN, y, CONTENT_WIDTH, 6.2, 'F');
+    }
+    setRgbDraw(doc, COLORS.rowDivider);
+    doc.line(MARGIN, y + 6.2, MARGIN + CONTENT_WIDTH, y + 6.2);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.3);
+    setRgbText(doc, COLORS.muted);
+    doc.text((group.parentName ?? '-').substring(0, 20), MARGIN + 4, y + 4.2);
+    setRgbText(doc, COLORS.neutral);
+    doc.text(`${idx + 1}. ${group.name.substring(0, 22)}`, MARGIN + 44, y + 4.2);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(group.currentCount), MARGIN + 94, y + 4.2);
+    doc.setFont('helvetica', 'normal');
+    setRgbText(doc, COLORS.muted);
+    doc.text(String(group.previousCount), MARGIN + 117, y + 4.2);
+
+    setRgbText(doc, group.diff >= 0 ? COLORS.emeraldDark : COLORS.rose);
+    doc.text(formatVariationText(group.diff, group.percentChange), MARGIN + 132, y + 4.2);
+
+    setRgbText(doc, COLORS.neutral);
+    doc.text(`${group.currentPercentage}%`, MARGIN + 163, y + 4.2, { align: 'right' });
+    drawMiniProgressBar(
+      doc,
+      MARGIN + 166,
+      y + 2.2,
+      13,
+      group.currentCount / maxCount,
+      getRatioBarColor(group.currentCount, maxCount, [COLORS.indigoDark, COLORS.indigoMed, COLORS.indigoLight])
+    );
+    y += 6.2;
+  });
+
+  return y;
+}
+
 function drawGroupTableStandard(doc: jsPDF, stats: StatisticsDataset, startY: number, onBreak: PageBreakChecker): number {
   const groups = stats.geographic.groups ?? [];
   let y = startY;
@@ -637,14 +700,17 @@ export function drawGeographicTables(
   );
 
   // Scout Group Table (matching GroupSummaryTable)
-  if (stats.geographic.groups) {
+  if (stats.geographic.groups || (hasYoY && yoy?.groups)) {
+    const hasGroupYoY = Boolean(hasYoY && yoy?.groups);
     y = beginNextSection(doc, y, 35, onBreak);
     y = drawSectionHeader(doc, 'Reconocimientos Entregados por Grupo Scout', y);
-    y = drawGroupTableStandard(doc, stats, y, onBreak);
+    y = hasGroupYoY
+      ? drawGroupTableYoY(doc, stats, y, onBreak)
+      : drawGroupTableStandard(doc, stats, y, onBreak);
     y = drawSectionTotalFooter(
       doc,
       y,
-      { totalLabel: 'Total de grupos', currentTotal: stats.geographic.groups.length },
+      getGeographicFooterOptions('Total de grupos', stats.geographic.groups?.length ?? 0, yoy?.groups, yoy, hasGroupYoY),
       onBreak
     );
   }
@@ -653,7 +719,11 @@ export function drawGeographicTables(
 }
 
 function drawUnitSegmentedBar(doc: jsPDF, stats: StatisticsDataset, y: number): number {
-  const items = stats.unitDistribution.items;
+  const yoy = stats.yoyComparison;
+  const hasYoY = Boolean(yoy?.hasPreviousYearData);
+  const items = hasYoY && yoy
+    ? yoy.units.map(u => ({ unit: u.unit, count: u.currentCount, percentage: u.currentPercentage }))
+    : stats.unitDistribution.items;
   setRgbFill(doc, COLORS.trackBg);
   doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 3.2, 1.5, 1.5, 'F');
 
@@ -809,17 +879,24 @@ function drawDemographicsDonutGraphic(
 ): void {
   const outerR = 14;
   const innerR = 9.2;
+  const yoy = stats.yoyComparison;
+  const hasYoY = Boolean(yoy?.hasPreviousYearData);
+  const youngPct = hasYoY && yoy ? yoy.demographics.young.currentPercentage : stats.demographics.youngPercentage;
+  const adultPct = hasYoY && yoy ? yoy.demographics.adult.currentPercentage : stats.demographics.adultPercentage;
+  const youngCount = hasYoY && yoy ? yoy.demographics.young.current : stats.demographics.youngCount;
+  const adultCount = hasYoY && yoy ? yoy.demographics.adult.current : stats.demographics.adultCount;
+  const totalCount = hasYoY && yoy ? yoy.demographics.total.current : stats.demographics.totalCount;
 
   if (typeof doc.circle === 'function') {
     setRgbFill(doc, COLORS.trackBg);
     doc.circle(cx, cy, outerR, 'F');
   }
 
-  const youngSweep = (stats.demographics.youngPercentage / 100) * 360;
-  const adultSweep = (stats.demographics.adultPercentage / 100) * 360;
+  const youngSweep = (youngPct / 100) * 360;
+  const adultSweep = (adultPct / 100) * 360;
   const startAngle = -90;
 
-  if (stats.demographics.youngCount > 0 && youngSweep > 0) {
+  if (youngCount > 0 && youngSweep > 0) {
     drawAnnularSector(doc, {
       cx,
       cy,
@@ -831,7 +908,7 @@ function drawDemographicsDonutGraphic(
     });
   }
 
-  if (stats.demographics.adultCount > 0 && adultSweep > 0) {
+  if (adultCount > 0 && adultSweep > 0) {
     drawAnnularSector(doc, {
       cx,
       cy,
@@ -851,7 +928,7 @@ function drawDemographicsDonutGraphic(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   setRgbText(doc, COLORS.neutral);
-  doc.text(String(stats.demographics.totalCount), cx, cy + 1, { align: 'center' });
+  doc.text(String(totalCount), cx, cy + 1, { align: 'center' });
 
   doc.setFontSize(5.5);
   setRgbText(doc, COLORS.muted);

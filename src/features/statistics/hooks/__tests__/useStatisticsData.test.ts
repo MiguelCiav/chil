@@ -452,4 +452,43 @@ describe('useStatisticsData hook', () => {
     expect(result.current.filters.searchTerm).toBe('');
     expect(result.current.stats.filteredMembersCount).toBe(3);
   });
+
+  it('excludes pending members from all statistics datasets and YoY comparisons', async () => {
+    vi.mocked(batchApi.getAllMembers).mockResolvedValue([
+      ...mockMembers,
+      {
+        identity: 'V-9991',
+        first_names: 'Pendiente',
+        last_names: 'Joven',
+        birth_date: '2011-01-01',
+        member_type: 'young',
+        status: 'pending',
+        batch_id: 1
+      },
+      {
+        identity: 'V-9992',
+        first_names: 'Pendiente',
+        last_names: 'Adulto',
+        birth_date: '1985-01-01',
+        member_type: 'adult',
+        status: 'pending',
+        batch_id: 2
+      }
+    ]);
+
+    const { result } = renderHook(() => useStatisticsData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Only the 3 verified members (2 in 2026 + 1 in 2025) are counted everywhere
+    expect(result.current.stats.kpis.totalDiplomas).toBe(3);
+    expect(result.current.stats.demographics.totalCount).toBe(3);
+    expect(result.current.stats.demographics.youngCount).toBe(2);
+    expect(result.current.stats.demographics.adultCount).toBe(1);
+    expect(result.current.stats.unitDistribution.totalCount).toBe(3);
+    expect(result.current.yoyComparison.totalDiplomas.current).toBe(2);
+    expect(result.current.yoyComparison.totalDiplomas.previous).toBe(1);
+    expect(result.current.yoyComparison.demographics.total.current).toBe(2);
+    expect(result.current.yoyComparison.demographics.total.previous).toBe(1);
+    expect(result.current.yoyComparison.groups).toHaveLength(2);
+  });
 });

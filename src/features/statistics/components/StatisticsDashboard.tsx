@@ -119,7 +119,7 @@ export const StatisticsDashboard: React.FC = () => {
 
       {/* Section 2b: Tabla de reconocimientos entregados por Grupo Scout */}
       <div>
-        <GroupSummaryTable groups={stats.geographic.groups} />
+        <GroupSummaryTable groups={stats.geographic.groups} yoy={yoyComparison} />
       </div>
 
       {/* Section 3: Tabla de reconocimientos entregados por Unidad */}

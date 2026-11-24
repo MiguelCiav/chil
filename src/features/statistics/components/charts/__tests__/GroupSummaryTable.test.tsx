@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { GroupSummaryTable } from '../GroupSummaryTable';
-import { GeographicItem } from '../../../types';
+import { GeographicItem, YoYComparisonData } from '../../../types';
 
 describe('GroupSummaryTable Component', () => {
   const mockGroups: GeographicItem[] = [
@@ -53,5 +53,60 @@ describe('GroupSummaryTable Component', () => {
     expect(
       screen.getByText('No hay registros disponibles por grupo scout para los filtros seleccionados.')
     ).toBeInTheDocument();
+  });
+
+  it('renders YoY comparative columns and splits Total de grupos by current and previous year', () => {
+    const yoy: YoYComparisonData = {
+      hasPreviousYearData: true,
+      currentYear: 2026,
+      previousYear: 2025,
+      totalDiplomas: { current: 10, previous: 5, diff: 5, percentChange: 100 },
+      totalBatches: { current: 2, previous: 1, diff: 1, percentChange: 100 },
+      totalMembers: { current: 10, previous: 5, diff: 5, percentChange: 100 },
+      regions: [],
+      districts: [],
+      groups: [
+        {
+          id: 1,
+          name: 'Grupo San Luis',
+          parentName: 'Distrito Sucre',
+          currentCount: 7,
+          previousCount: 5,
+          diff: 2,
+          percentChange: 40,
+          currentPercentage: 70,
+          previousPercentage: 100
+        },
+        {
+          id: 2,
+          name: 'Grupo La Salle',
+          parentName: 'Distrito Chacao',
+          currentCount: 3,
+          previousCount: 0,
+          diff: 3,
+          percentChange: null,
+          currentPercentage: 30,
+          previousPercentage: 0
+        }
+      ],
+      units: [],
+      demographics: {
+        young: { current: 6, previous: 3, diff: 3, percentChange: 100, currentPercentage: 60, previousPercentage: 60 },
+        adult: { current: 4, previous: 2, diff: 2, percentChange: 100, currentPercentage: 40, previousPercentage: 40 },
+        total: { current: 10, previous: 5, diff: 5, percentChange: 100 }
+      },
+      monthly: []
+    };
+
+    render(<GroupSummaryTable groups={mockGroups} yoy={yoy} />);
+
+    expect(screen.getByText('Total (2026)')).toBeInTheDocument();
+    expect(screen.getByText('Año Anterior (2025)')).toBeInTheDocument();
+    expect(screen.getByText('Variación')).toBeInTheDocument();
+    expect(screen.getByText('Total de grupos')).toBeInTheDocument();
+    expect(screen.getByText('Año 2026')).toBeInTheDocument();
+    expect(screen.getByText('Año 2025')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
   });
 });

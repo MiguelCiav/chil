@@ -101,7 +101,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     default_align: 'left',
     default_x: 20,
     default_y: 65,
-    mock_value: 'Región Capital'
+    mock_value: 'Región Ejemplo'
   },
   {
     field_key: 'district',
@@ -113,7 +113,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     default_align: 'left',
     default_x: 20,
     default_y: 72,
-    mock_value: 'Distrito Metropolitano'
+    mock_value: 'Distrito Ejemplo'
   },
   {
     field_key: 'group',
@@ -125,7 +125,7 @@ export const AVAILABLE_TEMPLATE_FIELDS: TemplateFieldDefinition[] = [
     default_align: 'left',
     default_x: 20,
     default_y: 79,
-    mock_value: 'Grupo Scouts 45 San Jorge'
+    mock_value: 'Grupo Scout Ejemplo'
   },
   {
     field_key: 'unit',
@@ -169,9 +169,9 @@ export const MOCK_CERTIFICATE_DATA: Record<RecognitionFieldKey, string> = {
   full_name: 'Carlos Eduardo Mendoza',
   identity: 'V-18.234.567',
   recognition_name: 'Insignia de Madera',
-  region: 'Región Capital',
-  district: 'Distrito Metropolitano',
-  group: 'Grupo Scouts 45 San Jorge',
+  region: 'Región Ejemplo',
+  district: 'Distrito Ejemplo',
+  group: 'Grupo Scout Ejemplo',
   unit: 'Tropa',
   issue_date: '12 Oct 2026',
   recognition_code: 'REC-45-001'

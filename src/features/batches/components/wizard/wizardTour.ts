@@ -12,7 +12,7 @@ export const NEW_BATCH_WIZARD_TOUR_STEPS: WalkthroughStep[] = [
     id: 'wizard-stepper',
     targetSelector: '[data-walkthrough="wizard-stepper"]',
     title: 'Progreso del Asistente',
-    content: 'El flujo se compone de: 1. Carga de Datos y Verificación en el Sistema de Registro, y 2. Edición, Códigos y Confirmación Final.',
+    content: 'El flujo se compone de dos pasos, primero cargas las cédulas para verificar en el sistema de registro IMPEESA. Luego, en el segundo paso, se verifican los datos y se emite el lote.',
     placement: 'bottom'
   },
   {

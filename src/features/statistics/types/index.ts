@@ -141,6 +141,18 @@ export interface YoYDistrictItem {
   previousPercentage: number;
 }
 
+export interface YoYGroupItem {
+  id: number;
+  name: string;
+  parentName?: string;
+  currentCount: number;
+  previousCount: number;
+  diff: number;
+  percentChange: number | null;
+  currentPercentage: number;
+  previousPercentage: number;
+}
+
 export interface YoYUnitItem {
   unit: ScoutUnit;
   label: string;
@@ -177,6 +189,7 @@ export interface YoYComparisonData {
   totalMembers: YoYCountMetric;
   regions: YoYRegionItem[];
   districts: YoYDistrictItem[];
+  groups?: YoYGroupItem[];
   units: YoYUnitItem[];
   demographics: YoYDemographics;
   monthly: YoYMonthlyItem[];

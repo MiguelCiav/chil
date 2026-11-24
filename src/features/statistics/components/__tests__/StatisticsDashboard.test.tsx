@@ -291,12 +291,51 @@ describe('StatisticsDashboard Component', () => {
       expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
     });
 
-    // Check comparative column headers & bottom-right year totals on Region, District, and Monthly sections
+    // Check comparative column headers & bottom-right year totals on Region, District, Group, and Monthly sections
     expect(screen.getAllByText('Total (2026)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Año Anterior (2025)').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Variación').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Año 2026')).toHaveLength(3);
-    expect(screen.getAllByText('Año 2025')).toHaveLength(3);
+    expect(screen.getAllByText('Año 2026')).toHaveLength(4);
+    expect(screen.getAllByText('Año 2025')).toHaveLength(4);
+  });
+
+  it('excludes pending members from demographics and matches total verified recognitions', async () => {
+    const membersWithPending: ScoutMember[] = [
+      ...mockMembers,
+      {
+        identity: 'V-4444',
+        first_names: 'Carlos',
+        last_names: 'Pendiente',
+        birth_date: '2011-03-10',
+        member_type: 'young',
+        status: 'pending',
+        batch_id: 101
+      },
+      {
+        identity: 'V-5555',
+        first_names: 'Marta',
+        last_names: 'Pendiente',
+        birth_date: '1982-06-15',
+        member_type: 'adult',
+        status: 'pending',
+        batch_id: 102
+      }
+    ];
+
+    vi.mocked(batchApi.getAllMembers).mockResolvedValue(membersWithPending);
+
+    render(<StatisticsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Estadísticas y Análisis')).toBeInTheDocument();
+    });
+
+    // Demographics table (index 4: Region, District, Group, Unit, Demographics, Monthly)
+    const demographicsTable = screen.getAllByRole('table')[4];
+    const totalRow = within(demographicsTable).getByText('Total').closest('tr');
+    expect(totalRow).not.toBeNull();
+    // Only the 3 verified members (2 active + 1 exceptional) should be counted, not 5
+    expect(within(totalRow!).getByText('3')).toBeInTheDocument();
   });
 
   it('renders loading skeletons without the removed KPI skeleton grid while loading', () => {

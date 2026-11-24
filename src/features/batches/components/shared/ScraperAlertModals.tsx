@@ -32,12 +32,12 @@ export const ScraperAlertModals: React.FC<ScraperAlertModalsProps> = ({
         <ModalHeader onClose={onCloseAuthAlert}>
           <span className="flex items-center gap-2 text-amber-600 font-bold">
             <AlertTriangle className="w-5 h-5" />
-            Autenticación del Scraper Requerida
+            Autenticación del Impeesa requerida
           </span>
         </ModalHeader>
         <ModalBody className="space-y-4 text-neutral">
           <p className="text-sm">
-            Para realizar la consulta automatizada en el Registro Nacional de Scouts, primero debe conectar su sesión de Impeesa en los Ajustes del sistema.
+            Para realizar consultas en el sistema de registro, primero debe conectar su sesión de Impeesa en los Ajustes del sistema.
           </p>
           <p className="text-xs text-neutral/75 bg-amber-50 border border-amber-100 p-3 rounded-xl font-medium">
             Chil no almacena tu contraseña; solo guarda las cookies de sesión cifradas en el servidor para tus consultas.

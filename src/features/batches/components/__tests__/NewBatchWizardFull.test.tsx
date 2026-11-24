@@ -479,7 +479,7 @@ describe('NewBatchWizard full flow (2-Step Unified)', () => {
       expect(screen.getByText('Paso 2 de 4')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'El flujo se compone de: 1. Carga de Datos y Verificación en el Sistema de Registro, y 2. Edición, Códigos y Confirmación Final.'
+          'El flujo se compone de dos pasos, primero cargas las cédulas para verificar en el sistema de registro IMPEESA. Luego, en el segundo paso, se verifican los datos y se emite el lote.'
         )
       ).toBeInTheDocument();
 

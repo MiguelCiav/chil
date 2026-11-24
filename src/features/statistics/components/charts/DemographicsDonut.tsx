@@ -20,22 +20,22 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
 
   const hasYoY = Boolean(yoy?.hasPreviousYearData);
 
-  const radius = 38;
-  const strokeWidth = 14;
-  const circumference = 2 * Math.PI * radius;
-
-  // Calculate arc lengths
-  const youngOffset = 0;
-  const youngArc = (youngPercentage / 100) * circumference;
-
-  const adultOffset = -youngArc;
-  const adultArc = (adultPercentage / 100) * circumference;
-
   const youngDisplay = hasYoY && yoy ? yoy.demographics.young.current : youngCount;
   const adultDisplay = hasYoY && yoy ? yoy.demographics.adult.current : adultCount;
   const totalDisplay = hasYoY && yoy ? yoy.demographics.total.current : totalCount;
   const youngPct = hasYoY && yoy ? yoy.demographics.young.currentPercentage : youngPercentage;
   const adultPct = hasYoY && yoy ? yoy.demographics.adult.currentPercentage : adultPercentage;
+
+  const radius = 38;
+  const strokeWidth = 14;
+  const circumference = 2 * Math.PI * radius;
+
+  // Calculate arc lengths matching the displayed table values
+  const youngOffset = 0;
+  const youngArc = (youngPct / 100) * circumference;
+
+  const adultOffset = -youngArc;
+  const adultArc = (adultPct / 100) * circumference;
 
   return (
     <Card>
@@ -59,7 +59,7 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
                 viewBox="0 0 100 100"
                 className="w-full h-full -rotate-90 transform"
                 role="img"
-                aria-label={`Gráfico circular demográfico: ${youngPercentage}% Jóvenes, ${adultPercentage}% Adultos`}
+                aria-label={`Gráfico circular demográfico: ${youngPct}% Jóvenes, ${adultPct}% Adultos`}
               >
                 {/* Background circle track */}
                 <circle
@@ -72,7 +72,7 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
                 />
 
                 {/* Young arc (Sky Blue) */}
-                {youngCount > 0 && (
+                {youngDisplay > 0 && (
                   <circle
                     cx="50"
                     cy="50"
@@ -87,7 +87,7 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
                 )}
 
                 {/* Adult arc (Amber) */}
-                {adultCount > 0 && (
+                {adultDisplay > 0 && (
                   <circle
                     cx="50"
                     cy="50"
@@ -105,7 +105,7 @@ export const DemographicsDonut: React.FC<DemographicsDonutProps> = ({ data, yoy 
               {/* Central Donut Text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="text-xl font-extrabold text-neutral leading-none">
-                  {totalCount}
+                  {totalDisplay}
                 </span>
                 <span className="text-xs font-semibold text-neutral/75 uppercase tracking-wider mt-0.5">
                   Total
